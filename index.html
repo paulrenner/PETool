@@ -705,6 +705,12 @@
                 font-size: 10px;
             }
 
+            /* Hide Actions column in print view */
+            thead tr th:last-child,
+            tbody tr td:last-child {
+                display: none;
+            }
+
             tbody tr:last-child {
                 border-top: 2px solid #2C3E50;
                 border-bottom: 2px solid #2C3E50;
