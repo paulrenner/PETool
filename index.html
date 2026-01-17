@@ -202,6 +202,12 @@
             opacity: 1;
         }
 
+        th.wrap-header {
+            white-space: normal;
+            line-height: 1.3;
+            padding: 10px 8px;
+        }
+
         td {
             padding: 12px;
             border-bottom: 1px solid #F0F0F0;
@@ -655,10 +661,10 @@
                             <th onclick="sortTable('totalContributions')" class="number">Contributions</th>
                             <th onclick="sortTable('totalDistributions')" class="number">Distributions</th>
                             <th onclick="sortTable('nav')" class="number">Value (NAV)</th>
-                            <th onclick="sortTable('investmentReturn')" class="number">Investment Return</th>
+                            <th onclick="sortTable('investmentReturn')" class="number wrap-header">Investment<br>Return</th>
                             <th onclick="sortTable('moic')" class="number">MOIC</th>
                             <th onclick="sortTable('irr')" class="number">IRR</th>
-                            <th onclick="sortTable('outstandingCommitment')" class="number">Outstanding Commitment</th>
+                            <th onclick="sortTable('outstandingCommitment')" class="number wrap-header">Outstanding<br>Commitment</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
