@@ -804,6 +804,12 @@
                 <button class="btn-info" onclick="showManageGroupsModal()">Manage Groups</button>
             </div>
             <div class="control-group">
+                <label for="groupFilter">Filter by Group</label>
+                <select id="groupFilter" onchange="applyFilters()">
+                    <option value="">All Groups</option>
+                </select>
+            </div>
+            <div class="control-group">
                 <label for="fundFilter">Filter by Fund</label>
                 <select id="fundFilter" onchange="applyFilters()">
                     <option value="">All Funds</option>
@@ -1055,6 +1061,7 @@
         let currentFunds = [];
         let fundNames = new Set();
         let groups = [];
+        let currentGroupDescendants = null; // Cache for selected group and its descendants
         let sortColumn = null;
         let sortDirection = 'asc';
         let currentActionFundId = null;
@@ -1702,10 +1709,20 @@
         function applyCurrentFilters(funds) {
             const fundFilter = document.getElementById('fundFilter').value;
             const accountFilter = document.getElementById('accountFilter').value;
+            const groupFilter = document.getElementById('groupFilter').value;
 
             return funds.filter(fund => {
                 if (fundFilter && fund.fundName !== fundFilter) return false;
                 if (accountFilter && fund.accountNumber !== accountFilter) return false;
+                if (groupFilter) {
+                    // Check if fund's groupId matches or is descendant of selected group
+                    const groupId = parseInt(groupFilter);
+                    if (!fund.groupId) return false;
+                    if (!currentGroupDescendants || currentGroupDescendants.groupId !== groupId) {
+                        return false; // Will be set by async filter
+                    }
+                    if (!currentGroupDescendants.ids.includes(fund.groupId)) return false;
+                }
                 return true;
             });
         }
@@ -1738,16 +1755,40 @@
                 accountFilter.appendChild(option);
             });
             accountFilter.value = currentAccountValue;
+
+            // Update group filter
+            const groupFilter = document.getElementById('groupFilter');
+            const currentGroupValue = groupFilter.value;
+
+            groupFilter.innerHTML = '<option value="">All Groups</option>';
+            if (groups.length > 0) {
+                const tree = buildGroupsTree(groups, null);
+                addGroupOptionsToSelect(groupFilter, tree, 0);
+            }
+            groupFilter.value = currentGroupValue;
         }
 
-        function applyFilters() {
+        async function applyFilters() {
+            const groupFilterValue = document.getElementById('groupFilter').value;
+
+            // Precompute descendants if group filter is active
+            if (groupFilterValue) {
+                const groupId = parseInt(groupFilterValue);
+                const descendants = await getAllDescendantGroupIds(groupId);
+                currentGroupDescendants = { groupId, ids: descendants };
+            } else {
+                currentGroupDescendants = null;
+            }
+
             renderTable();
         }
 
         function resetFilters() {
             document.getElementById('fundFilter').value = '';
             document.getElementById('accountFilter').value = '';
+            document.getElementById('groupFilter').value = '';
             document.getElementById('cutoffDate').value = '';
+            currentGroupDescendants = null;
             renderTable();
         }
 
@@ -1828,6 +1869,7 @@
             document.getElementById('duplicateMultiplierContainer').style.display = 'none';
 
             await populateFundNamesDropdown();
+            await populateFundGroupDropdown();
 
             // Reset other form fields (not the fund name dropdown which we just populated)
             document.getElementById('accountNumber').value = '';
@@ -1855,6 +1897,7 @@
                 document.getElementById('duplicateMultiplierContainer').style.display = 'none';
 
                 await populateFundNamesDropdown(fund.fundName);
+                await populateFundGroupDropdown(fund.groupId);
                 document.getElementById('accountNumber').value = fund.accountNumber;
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
                 document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
@@ -1882,6 +1925,7 @@
                 document.getElementById('duplicateMultiplier').value = '1';
 
                 await populateFundNamesDropdown(fund.fundName);
+                await populateFundGroupDropdown(fund.groupId);
                 document.getElementById('accountNumber').value = fund.accountNumber + ' (Copy)';
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
                 document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
@@ -1905,6 +1949,7 @@
                 const isDuplicate = document.getElementById('isDuplicate').value;
                 const fundName = document.getElementById('fundName').value.trim();
                 const accountNumber = document.getElementById('accountNumber').value.trim();
+                const groupId = document.getElementById('fundGroup').value;
                 const commitmentText = document.getElementById('commitment').value.trim();
                 const cashFlowsText = document.getElementById('cashFlows').value.trim();
                 const monthlyNavText = document.getElementById('monthlyNav').value.trim();
@@ -1982,6 +2027,7 @@
                 const fundData = {
                     fundName,
                     accountNumber,
+                    groupId: groupId ? parseInt(groupId) : null,
                     commitment: commitment.toString(),
                     cashFlows,
                     monthlyNav,
@@ -2613,6 +2659,27 @@
             }
         }
 
+        async function populateFundGroupDropdown(valueToSet = null) {
+            const select = document.getElementById('fundGroup');
+
+            try {
+                groups = await getAllGroups();
+
+                select.innerHTML = '<option value="">No Group</option>';
+
+                // Build hierarchical options
+                const tree = buildGroupsTree(groups, null);
+                addGroupOptionsToSelect(select, tree, 0);
+
+                // Set the value if provided
+                if (valueToSet) {
+                    select.value = valueToSet;
+                }
+            } catch (err) {
+                console.error('Error populating fund group dropdown:', err);
+            }
+        }
+
         async function populateFundNamesDropdown(valueToSet = null) {
             const select = document.getElementById('fundName');
             const currentValue = valueToSet !== null ? valueToSet : select.value;
@@ -2679,10 +2746,12 @@
             try {
                 const funds = await getAllFunds();
                 const names = await getAllFundNames();
+                const groupsData = await getAllGroups();
 
                 const exportData = {
                     funds,
                     fundNames: names,
+                    groups: groupsData,
                     exportDate: new Date().toISOString()
                 };
 
@@ -2762,6 +2831,24 @@
                 const data = JSON.parse(text);
 
                 let imported = 0;
+                const oldGroupIdToNew = {}; // Map old group IDs to new ones
+
+                // Import groups first (since funds may reference them)
+                if (data.groups && Array.isArray(data.groups)) {
+                    for (const group of data.groups) {
+                        // Save old ID before removing it
+                        const oldId = group.id;
+                        const { id, ...groupData } = group;
+
+                        // Save group and get new ID
+                        const newId = await saveGroup(groupData);
+                        if (oldId && newId) {
+                            oldGroupIdToNew[oldId] = newId;
+                        }
+                    }
+                    // Reload groups cache
+                    groups = await getAllGroups();
+                }
 
                 // Import fund names
                 if (data.fundNames && Array.isArray(data.fundNames)) {
@@ -2808,9 +2895,16 @@
                         amount: parseCurrency(nav.amount)
                     }));
 
+                    // Map old groupId to new groupId if applicable
+                    let groupId = null;
+                    if (fund.groupId && oldGroupIdToNew[fund.groupId]) {
+                        groupId = oldGroupIdToNew[fund.groupId];
+                    }
+
                     const fundData = {
                         fundName: fund.fundName,
                         accountNumber: fund.accountNumber,
+                        groupId: groupId,
                         commitment: parseCurrency(fund.commitment),
                         cashFlows: cashFlows,
                         monthlyNav: monthlyNav,
@@ -2852,6 +2946,9 @@
                 // Load fund names
                 const names = await getAllFundNames();
                 fundNames = new Set(names);
+
+                // Load groups
+                groups = await getAllGroups();
 
                 // Set default cutoff date to latest quarter end
                 const quarterEnd = getLatestQuarterEnd();
