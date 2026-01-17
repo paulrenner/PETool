@@ -643,6 +643,54 @@
             margin-right: 10px;
         }
 
+        /* Manage Groups Modal */
+        .group-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            margin-bottom: 4px;
+            background: #FAFAFA;
+            border: 1px solid #E0E0E0;
+            border-radius: 3px;
+        }
+
+        .group-item.level-0 {
+            margin-left: 0;
+            font-weight: 600;
+        }
+
+        .group-item.level-1 {
+            margin-left: 20px;
+            font-weight: 500;
+        }
+
+        .group-item.level-2 {
+            margin-left: 40px;
+        }
+
+        .group-item.level-3 {
+            margin-left: 60px;
+        }
+
+        .group-item-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .group-item-type {
+            font-size: 0.85em;
+            color: #7F8C8D;
+            font-style: italic;
+        }
+
+        .group-item-actions {
+            display: flex;
+            gap: 5px;
+        }
+
         @media (max-width: 1400px) {
             .controls-bar {
                 flex-direction: column;
@@ -751,6 +799,9 @@
             </div>
             <div class="control-group">
                 <button class="btn-info" onclick="showManageFundsModal()">Manage Funds</button>
+            </div>
+            <div class="control-group">
+                <button class="btn-info" onclick="showManageGroupsModal()">Manage Groups</button>
             </div>
             <div class="control-group">
                 <label for="fundFilter">Filter by Fund</label>
@@ -896,6 +947,42 @@
 
             <div class="form-actions">
                 <button class="btn-secondary" onclick="closeManageFundsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Groups Modal -->
+    <div id="manageGroupsModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" onclick="closeManageGroupsModal()">&times;</span>
+            <h2>Manage Account Groups</h2>
+
+            <div class="form-group">
+                <label for="newGroupName">Add New Group</label>
+                <input type="text" id="newGroupName" placeholder="Enter group name">
+            </div>
+
+            <div class="form-group">
+                <label for="newGroupParent">Parent Group (optional)</label>
+                <select id="newGroupParent">
+                    <option value="">None (Top Level)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="newGroupType">Type (optional)</label>
+                <input type="text" id="newGroupType" placeholder="e.g., Client, Trust, Account">
+            </div>
+
+            <button class="btn-primary" onclick="addNewGroup()">Add Group</button>
+
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #E0E0E0;">
+
+            <h3 style="margin-bottom: 15px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Existing Groups</h3>
+            <div id="groupsList" style="max-height: 400px; overflow-y: auto;"></div>
+
+            <div class="form-actions">
+                <button class="btn-secondary" onclick="closeManageGroupsModal()">Close</button>
             </div>
         </div>
     </div>
@@ -2348,6 +2435,174 @@
                 showStatus('Fund name deleted successfully');
             } catch (err) {
                 showStatus('Error deleting fund name: ' + err.message, 'error');
+            }
+        }
+
+        // ===========================
+        // Manage Groups Modal Functions
+        // ===========================
+
+        async function showManageGroupsModal() {
+            await loadGroupsList();
+            await populateGroupParentDropdown();
+            document.getElementById('manageGroupsModal').classList.add('show');
+        }
+
+        function closeManageGroupsModal() {
+            document.getElementById('manageGroupsModal').classList.remove('show');
+        }
+
+        async function loadGroupsList() {
+            try {
+                groups = await getAllGroups();
+                const container = document.getElementById('groupsList');
+                container.innerHTML = '';
+
+                if (groups.length === 0) {
+                    container.innerHTML = '<p style="color: #95A5A6;">No groups yet</p>';
+                    return;
+                }
+
+                // Build hierarchical tree
+                const tree = buildGroupsTree(groups, null);
+                renderGroupsTree(container, tree, 0);
+            } catch (err) {
+                showStatus('Error loading groups: ' + err.message, 'error');
+            }
+        }
+
+        function buildGroupsTree(allGroups, parentId) {
+            return allGroups
+                .filter(g => g.parentGroupId === parentId)
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(group => ({
+                    ...group,
+                    children: buildGroupsTree(allGroups, group.id)
+                }));
+        }
+
+        function renderGroupsTree(container, tree, level) {
+            tree.forEach(group => {
+                const div = document.createElement('div');
+                div.className = `group-item level-${Math.min(level, 3)}`;
+
+                const typeText = group.type ? `<span class="group-item-type">(${escapeHtml(group.type)})</span>` : '';
+
+                div.innerHTML = `
+                    <div class="group-item-info">
+                        <span>${escapeHtml(group.name)}</span>
+                        ${typeText}
+                    </div>
+                    <div class="group-item-actions">
+                        <button class="btn-danger btn-sm" onclick="removeGroup(${group.id})">Delete</button>
+                    </div>
+                `;
+                container.appendChild(div);
+
+                // Recursively render children
+                if (group.children && group.children.length > 0) {
+                    renderGroupsTree(container, group.children, level + 1);
+                }
+            });
+        }
+
+        async function populateGroupParentDropdown() {
+            const select = document.getElementById('newGroupParent');
+
+            try {
+                groups = await getAllGroups();
+
+                select.innerHTML = '<option value="">None (Top Level)</option>';
+
+                // Build hierarchical options
+                const tree = buildGroupsTree(groups, null);
+                addGroupOptionsToSelect(select, tree, 0);
+            } catch (err) {
+                console.error('Error populating group parent dropdown:', err);
+            }
+        }
+
+        function addGroupOptionsToSelect(select, tree, level) {
+            tree.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group.id;
+                const indent = '  '.repeat(level);
+                option.textContent = indent + (level > 0 ? '└─ ' : '') + group.name;
+                select.appendChild(option);
+
+                // Recursively add children
+                if (group.children && group.children.length > 0) {
+                    addGroupOptionsToSelect(select, group.children, level + 1);
+                }
+            });
+        }
+
+        async function addNewGroup() {
+            const name = document.getElementById('newGroupName').value.trim();
+            const parentId = document.getElementById('newGroupParent').value;
+            const type = document.getElementById('newGroupType').value.trim();
+
+            if (!name) {
+                showStatus('Please enter a group name', 'error');
+                return;
+            }
+
+            try {
+                const groupData = {
+                    name,
+                    parentGroupId: parentId ? parseInt(parentId) : null,
+                    type: type || null
+                };
+
+                await saveGroup(groupData);
+
+                // Clear inputs
+                document.getElementById('newGroupName').value = '';
+                document.getElementById('newGroupParent').value = '';
+                document.getElementById('newGroupType').value = '';
+
+                await loadGroupsList();
+                await populateGroupParentDropdown();
+                showStatus('Group added successfully');
+            } catch (err) {
+                showStatus('Error adding group: ' + err.message, 'error');
+            }
+        }
+
+        async function removeGroup(id) {
+            const group = groups.find(g => g.id === id);
+            if (!group) return;
+
+            // Check if group has children
+            const children = await getGroupsByParent(id);
+            if (children.length > 0) {
+                showStatus('Cannot delete group with subgroups. Delete subgroups first.', 'error');
+                return;
+            }
+
+            // Check if any funds use this group
+            const funds = await getAllFunds();
+            const fundsInGroup = funds.filter(f => f.groupId === id);
+            if (fundsInGroup.length > 0) {
+                if (!confirm(`This group contains ${fundsInGroup.length} fund(s). Deleting the group will remove the group assignment from these funds. Continue?`)) {
+                    return;
+                }
+
+                // Remove groupId from affected funds
+                for (const fund of fundsInGroup) {
+                    fund.groupId = null;
+                    await saveFundToDB(fund);
+                }
+            }
+
+            try {
+                await deleteGroup(id);
+                await loadGroupsList();
+                await populateGroupParentDropdown();
+                await renderTable();
+                showStatus('Group deleted successfully');
+            } catch (err) {
+                showStatus('Error deleting group: ' + err.message, 'error');
             }
         }
 
