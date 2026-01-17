@@ -645,7 +645,7 @@
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" class="btn-primary">💾 Save</button>
+                    <button type="submit" class="btn-primary">Save</button>
                     <button type="button" class="btn-secondary" onclick="closeFundModal()">Cancel</button>
                 </div>
             </form>
@@ -681,9 +681,9 @@
                 </div>
             </div>
 
-            <hr style="margin: 20px 0;">
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #E0E0E0;">
 
-            <h3 style="margin-bottom: 15px;">Existing Fund Names</h3>
+            <h3 style="margin-bottom: 15px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Existing Fund Names</h3>
             <div id="fundNamesList"></div>
 
             <div class="form-actions">
@@ -698,7 +698,7 @@
             <span class="close" onclick="closeDetailsModal()">&times;</span>
             <h2 id="detailsModalTitle">Fund Details</h2>
 
-            <h3 style="margin-top: 20px;">Cash Flows</h3>
+            <h3 style="margin-top: 20px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Cash Flows</h3>
             <table class="details-table" id="cashFlowsTable">
                 <thead>
                     <tr>
@@ -711,9 +711,9 @@
                 </thead>
                 <tbody></tbody>
             </table>
-            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" onclick="addCashFlowRow()">+ Add Cash Flow</button>
+            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" onclick="addCashFlowRow()">Add Cash Flow</button>
 
-            <h3 style="margin-top: 30px;">Monthly NAV</h3>
+            <h3 style="margin-top: 30px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Monthly NAV</h3>
             <table class="details-table" id="navTable">
                 <thead>
                     <tr>
@@ -724,10 +724,10 @@
                 </thead>
                 <tbody></tbody>
             </table>
-            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" onclick="addNavRow()">+ Add NAV</button>
+            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" onclick="addNavRow()">Add NAV</button>
 
             <div class="form-actions">
-                <button class="btn-primary" onclick="saveDetailsChanges()">💾 Save Changes</button>
+                <button class="btn-primary" onclick="saveDetailsChanges()">Save Changes</button>
                 <button class="btn-secondary" onclick="closeDetailsModal()">Cancel</button>
             </div>
         </div>
@@ -1922,7 +1922,7 @@
                 container.innerHTML = '';
 
                 if (names.length === 0) {
-                    container.innerHTML = '<p style="color: #999;">No fund names yet</p>';
+                    container.innerHTML = '<p style="color: #95A5A6;">No fund names yet</p>';
                     return;
                 }
 
