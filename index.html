@@ -151,6 +151,51 @@
             cursor: not-allowed;
         }
 
+        /* Dropdown Menu */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid #E0E0E0;
+            border-radius: 3px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            min-width: 160px;
+            z-index: 1000;
+            margin-top: 4px;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-menu a {
+            display: block;
+            padding: 10px 16px;
+            color: #2C3E50;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background 0.15s ease;
+        }
+
+        .dropdown-menu a:hover {
+            background: #F8F9FA;
+        }
+
+        .dropdown-menu a:first-child {
+            border-radius: 3px 3px 0 0;
+        }
+
+        .dropdown-menu a:last-child {
+            border-radius: 0 0 3px 3px;
+        }
+
         .content {
             padding: 30px;
         }
@@ -608,6 +653,83 @@
                 width: 100%;
             }
         }
+
+        /* Print Styles for PDF Export */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+
+            .controls-bar,
+            .btn-sm,
+            button {
+                display: none !important;
+            }
+
+            header {
+                background: white;
+                color: #2C3E50;
+                border-bottom: 2px solid #2C3E50;
+                padding: 15px;
+            }
+
+            .content {
+                padding: 15px;
+            }
+
+            table {
+                min-width: 100%;
+                page-break-inside: auto;
+                border: 1px solid #2C3E50;
+            }
+
+            thead {
+                background: #2C3E50 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+
+            th, td {
+                padding: 8px 6px;
+                font-size: 10px;
+            }
+
+            tbody tr:last-child {
+                border-top: 2px solid #2C3E50;
+                border-bottom: 2px solid #2C3E50;
+                background: #F0F0F0 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .positive {
+                color: #27AE60 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .negative {
+                color: #E74C3C !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            @page {
+                size: landscape;
+                margin: 0.5in;
+            }
+        }
     </style>
 </head>
 <body>
@@ -643,8 +765,14 @@
             <div class="control-group">
                 <button class="btn-secondary" onclick="resetFilters()">Reset Filters</button>
             </div>
-            <div style="margin-left: auto; display: flex; gap: 10px;">
-                <button class="btn-success" onclick="exportDatabase()">Export</button>
+            <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+                <div class="dropdown">
+                    <button class="btn-success" onclick="toggleExportDropdown()">Export ▾</button>
+                    <div id="exportDropdown" class="dropdown-menu">
+                        <a href="#" onclick="exportDatabase(); return false;">Export to JSON</a>
+                        <a href="#" onclick="exportToPDF(); return false;">Export to PDF</a>
+                    </div>
+                </div>
                 <label for="importFile" class="file-input-label">Import</label>
                 <input type="file" id="importFile" accept=".json" onchange="importDatabase(event)">
             </div>
@@ -2223,6 +2351,29 @@
                 console.error(err);
             }
         }
+
+        function toggleExportDropdown() {
+            const dropdown = document.getElementById('exportDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        function exportToPDF() {
+            // Close the dropdown
+            document.getElementById('exportDropdown').classList.remove('show');
+
+            // Use the browser's print dialog to save as PDF
+            window.print();
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.querySelector('.dropdown');
+            const dropdownMenu = document.getElementById('exportDropdown');
+
+            if (dropdown && !dropdown.contains(event.target)) {
+                dropdownMenu.classList.remove('show');
+            }
+        });
 
         async function importDatabase(event) {
             const file = event.target.files[0];
