@@ -795,16 +795,6 @@
 
         <div class="controls-bar">
             <div class="control-group">
-                <div class="dropdown">
-                    <button class="btn-primary" onclick="toggleManageDropdown()">Manage ▾</button>
-                    <div id="manageDropdown" class="dropdown-menu">
-                        <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showAddFundModal(); return false;">New Investment</a>
-                        <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showManageFundsModal(); return false;">Manage Funds</a>
-                        <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showManageGroupsModal(); return false;">Manage Groups</a>
-                    </div>
-                </div>
-            </div>
-            <div class="control-group">
                 <label for="groupFilter">Filter by Group</label>
                 <select id="groupFilter" onchange="applyFilters()">
                     <option value="">All Groups</option>
@@ -830,6 +820,14 @@
                 <button class="btn-secondary" onclick="resetFilters()">Reset Filters</button>
             </div>
             <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+                <div class="dropdown">
+                    <button class="btn-primary" onclick="toggleManageDropdown()">Manage ▾</button>
+                    <div id="manageDropdown" class="dropdown-menu">
+                        <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showAddFundModal(); return false;">New Investment</a>
+                        <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showManageFundsModal(); return false;">Manage Funds</a>
+                        <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showManageGroupsModal(); return false;">Manage Groups</a>
+                    </div>
+                </div>
                 <div class="dropdown">
                     <button class="btn-success" onclick="toggleExportDropdown()">Export ▾</button>
                     <div id="exportDropdown" class="dropdown-menu">
