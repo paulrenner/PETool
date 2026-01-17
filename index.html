@@ -462,20 +462,22 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 0.85em;
+            table-layout: fixed;
         }
 
         .details-table th {
             background-color: #34495E;
             color: #fff;
-            padding: 8px;
+            padding: 6px 4px;
             text-align: left;
             border: 1px solid #2C3E50;
             font-weight: 500;
             white-space: nowrap;
+            font-size: 0.85em;
         }
 
         .details-table td {
-            padding: 6px 8px;
+            padding: 4px;
             border: 1px solid #E0E0E0;
         }
 
@@ -486,8 +488,7 @@
         .details-table input,
         .details-table select {
             width: 100%;
-            min-width: 100px;
-            padding: 5px;
+            padding: 4px 6px;
             border: 1px solid #BDC3C7;
             border-radius: 3px;
             font-size: 0.85em;
@@ -500,17 +501,59 @@
 
         .details-table input[type="date"] {
             text-align: left;
-            min-width: 130px;
         }
 
         .details-table select {
             text-align: left;
-            min-width: 120px;
         }
 
         .details-table input[type="checkbox"] {
             width: auto;
-            min-width: auto;
+        }
+
+        /* Cash Flows Table Column Widths */
+        #cashFlowsTable th:nth-child(1),
+        #cashFlowsTable td:nth-child(1) {
+            width: 22%;
+        }
+
+        #cashFlowsTable th:nth-child(2),
+        #cashFlowsTable td:nth-child(2) {
+            width: 24%;
+        }
+
+        #cashFlowsTable th:nth-child(3),
+        #cashFlowsTable td:nth-child(3) {
+            width: 20%;
+        }
+
+        #cashFlowsTable th:nth-child(4),
+        #cashFlowsTable td:nth-child(4) {
+            width: 20%;
+            text-align: center;
+        }
+
+        #cashFlowsTable th:nth-child(5),
+        #cashFlowsTable td:nth-child(5) {
+            width: 14%;
+            text-align: center;
+        }
+
+        /* NAV Table Column Widths */
+        #navTable th:nth-child(1),
+        #navTable td:nth-child(1) {
+            width: 35%;
+        }
+
+        #navTable th:nth-child(2),
+        #navTable td:nth-child(2) {
+            width: 45%;
+        }
+
+        #navTable th:nth-child(3),
+        #navTable td:nth-child(3) {
+            width: 20%;
+            text-align: center;
         }
 
         .delete-row-btn {
