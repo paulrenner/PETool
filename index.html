@@ -2399,39 +2399,80 @@
                     return;
                 }
 
+                // Store original counts for comparison
+                const originalCashFlowCount = (fund.cashFlows || []).length;
+                const originalNavCount = (fund.monthlyNav || []).length;
+
                 // Read cash flows from table
                 const cashFlowsTable = document.getElementById('cashFlowsTable').querySelector('tbody');
                 const cashFlows = [];
-                Array.from(cashFlowsTable.children).forEach(row => {
+                const invalidCashFlows = [];
+
+                Array.from(cashFlowsTable.children).forEach((row, index) => {
                     const date = row.querySelector('[data-field="date"]').value;
                     const amount = row.querySelector('[data-field="amount"]').value;
                     const type = row.querySelector('[data-field="type"]').value;
                     const affectsCommitment = row.querySelector('[data-field="affectsCommitment"]').checked;
 
                     if (date && amount) {
-                        cashFlows.push({
-                            date,
-                            amount: parseCurrency(amount),
-                            type,
-                            affectsCommitment
-                        });
+                        // Validate date format (YYYY-MM-DD)
+                        if (!isValidDate(date)) {
+                            invalidCashFlows.push(index + 1);
+                        } else {
+                            cashFlows.push({
+                                date,
+                                amount: parseCurrency(amount),
+                                type,
+                                affectsCommitment
+                            });
+                        }
                     }
                 });
+
+                if (invalidCashFlows.length > 0) {
+                    showStatus(`Invalid date format in cash flow row(s): ${invalidCashFlows.join(', ')}. Use YYYY-MM-DD format.`, 'error');
+                    return;
+                }
 
                 // Read NAV from table
                 const navTable = document.getElementById('navTable').querySelector('tbody');
                 const monthlyNav = [];
-                Array.from(navTable.children).forEach(row => {
+                const invalidNav = [];
+
+                Array.from(navTable.children).forEach((row, index) => {
                     const date = row.querySelector('[data-field="date"]').value;
                     const amount = row.querySelector('[data-field="amount"]').value;
 
                     if (date && amount) {
-                        monthlyNav.push({
-                            date,
-                            amount: parseCurrency(amount)
-                        });
+                        // Validate date format (YYYY-MM-DD)
+                        if (!isValidDate(date)) {
+                            invalidNav.push(index + 1);
+                        } else {
+                            monthlyNav.push({
+                                date,
+                                amount: parseCurrency(amount)
+                            });
+                        }
                     }
                 });
+
+                if (invalidNav.length > 0) {
+                    showStatus(`Invalid date format in NAV row(s): ${invalidNav.join(', ')}. Use YYYY-MM-DD format.`, 'error');
+                    return;
+                }
+
+                // Warn if significant data is being deleted
+                if (originalCashFlowCount > 0 && cashFlows.length < originalCashFlowCount / 2) {
+                    if (!confirm(`Warning: You are deleting ${originalCashFlowCount - cashFlows.length} cash flow(s). Continue?`)) {
+                        return;
+                    }
+                }
+
+                if (originalNavCount > 0 && monthlyNav.length < originalNavCount / 2) {
+                    if (!confirm(`Warning: You are deleting ${originalNavCount - monthlyNav.length} NAV entr(ies). Continue?`)) {
+                        return;
+                    }
+                }
 
                 // Update fund
                 fund.cashFlows = cashFlows;
@@ -2475,10 +2516,21 @@
                 names.forEach(name => {
                     const div = document.createElement('div');
                     div.className = 'fund-name-item';
-                    div.innerHTML = `
-                        <input type="text" value="${escapeHtml(name)}" data-original-name="${escapeHtml(name)}" onchange="updateFundName(this)">
-                        <button class="btn-danger btn-sm" onclick="removeFundName('${escapeHtml(name)}')">Delete</button>
-                    `;
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = name;
+                    input.setAttribute('data-original-name', name);
+                    input.onchange = function() { updateFundName(this); };
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn-danger btn-sm';
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.setAttribute('data-fund-name', name);
+                    deleteBtn.onclick = function() { removeFundName(this.getAttribute('data-fund-name')); };
+
+                    div.appendChild(input);
+                    div.appendChild(deleteBtn);
                     container.appendChild(div);
                 });
             } catch (err) {
@@ -2530,17 +2582,33 @@
             }
 
             try {
-                // Delete old name, save new name
-                await deleteFundName(oldName);
-                await saveFundName(newName);
-
-                // Update all funds with this name
+                // Get all funds that use this name first
                 const funds = await getAllFunds();
-                for (const fund of funds) {
-                    if (fund.fundName === oldName) {
+                const fundsToUpdate = funds.filter(f => f.fundName === oldName);
+
+                // Update funds first (most critical operation)
+                const updateErrors = [];
+                for (const fund of fundsToUpdate) {
+                    try {
                         fund.fundName = newName;
                         await saveFundToDB(fund);
+                    } catch (err) {
+                        updateErrors.push(fund.accountNumber);
+                        console.error(`Failed to update fund ${fund.accountNumber}:`, err);
                     }
+                }
+
+                if (updateErrors.length > 0) {
+                    throw new Error(`Failed to update ${updateErrors.length} fund(s): ${updateErrors.join(', ')}`);
+                }
+
+                // Now update the fund names list (less critical)
+                try {
+                    await deleteFundName(oldName);
+                    await saveFundName(newName);
+                } catch (err) {
+                    console.error('Error updating fund names list:', err);
+                    // Funds are already updated, so just log this error
                 }
 
                 fundNames.delete(oldName);
@@ -2548,10 +2616,12 @@
                 input.dataset.originalName = newName;
 
                 await renderTable();
-                showStatus('Fund name updated successfully');
+                showStatus(`Fund name updated successfully (${fundsToUpdate.length} fund(s) updated)`);
             } catch (err) {
                 showStatus('Error updating fund name: ' + err.message, 'error');
                 input.value = oldName;
+                // Reload to show current state
+                await loadFundNamesList();
             }
         }
 
