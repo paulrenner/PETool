@@ -1493,7 +1493,7 @@
                 }
 
                 // Parse commitment
-                const commitment = parseCurrency(commitmentText);
+                let commitment = parseCurrency(commitmentText);
                 if (isNaN(commitment)) {
                     showStatus('Invalid commitment amount', 'error');
                     return;
@@ -1537,6 +1537,8 @@
                 // Handle duplicate multiplier
                 if (isDuplicate) {
                     const multiplier = parseFloat(document.getElementById('duplicateMultiplier').value) || 1;
+
+                    commitment = commitment * multiplier;
 
                     cashFlows = cashFlows.map(cf => ({
                         ...cf,
