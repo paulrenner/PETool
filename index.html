@@ -1364,6 +1364,14 @@
             return NaN;
         }
 
+        function formatNumberWithCommas(num) {
+            if (num === null || num === undefined || isNaN(num)) return '';
+            // Format with commas and up to 2 decimal places if needed
+            const parts = num.toString().split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            return parts.join('.');
+        }
+
         function formatCurrency(value, showCents = false) {
             const val = parseFloat(value);
             if (!isFinite(val) || isNaN(val)) return '$0';
@@ -2255,7 +2263,7 @@
                     try {
                         const row = document.createElement('tr');
                         const amountValue = parseCurrency(cf.amount);
-                        const displayAmount = isNaN(amountValue) ? '' : amountValue;
+                        const displayAmount = isNaN(amountValue) ? '' : formatNumberWithCommas(amountValue);
 
                         row.innerHTML = `
                             <td><input type="date" value="${escapeHtml(cf.date || '')}" data-field="date" data-index="${index}"></td>
@@ -2300,7 +2308,7 @@
                     try {
                         const row = document.createElement('tr');
                         const amountValue = parseCurrency(nav.amount);
-                        const displayAmount = isNaN(amountValue) ? '' : amountValue;
+                        const displayAmount = isNaN(amountValue) ? '' : formatNumberWithCommas(amountValue);
 
                         row.innerHTML = `
                             <td><input type="date" value="${escapeHtml(nav.date || '')}" data-field="date" data-index="${index}"></td>
