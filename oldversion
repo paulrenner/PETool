@@ -1,0 +1,2769 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PE Manager</title>
+  <!-- Keep original CSP since we are staying in a single file -->
+  <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+  <style>
+    /* --- Original CSS Content --- */
+    /* Basic styling */
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+    }
+    input,
+    textarea,
+    select {
+        margin: 5px 0;
+        padding: 5px;
+        width: 100%;
+        max-width: 400px;
+        box-sizing: border-box; /* Added for consistency */
+    }
+    label {
+        display: block;
+        margin-top: 10px;
+    }
+    button {
+        margin-right: 5px;
+        padding: 5px 10px;
+        cursor: pointer; /* Added */
+    }
+    #headerBar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        background-color: #f1f1f1;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    #fundFormContainer { /* Kept for potential future use, maybe hide/show form inline */
+        border: 1px solid #ccc;
+        padding: 15px;
+        background-color: #fafafa;
+        margin-bottom: 20px;
+        max-width: 800px;
+    }
+    .fund-table {
+        border-collapse: collapse;
+        margin: 25px 0;
+        font-size: 0.9em;
+        font-family: sans-serif;
+        min-width: 400px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        width: 100%; /* Make table take full width */
+        display: block; /* Needed for overflow-x */
+        overflow-x: auto; /* Enable horizontal scroll */
+    }
+    .fund-table thead th {
+        background-color: #009879;
+        color: #ffffff;
+        text-align: left;
+        cursor: pointer;
+        white-space: normal; /* Allow wrapping in header */
+        position: sticky; /* Make header sticky */
+        top: 0; /* Stick to the top */
+        z-index: 1; /* Ensure header stays above body */
+    }
+    .fund-table th,
+    .fund-table td {
+        padding: 12px 15px;
+        white-space: nowrap; /* Prevent wrapping in cells */
+    }
+     .fund-table td.wrap { /* Add class for specific columns if needed */
+        white-space: normal;
+    }
+    .fund-table tbody tr {
+        border-bottom: 1px solid #dddddd;
+    }
+    .fund-table tbody tr:nth-of-type(even) {
+        background-color: #f3f3f3;
+    }
+    .fund-table tbody tr:last-of-type { /* Style totals row */
+        border-top: 2px solid #009879;
+        border-bottom: 2px solid #009879;
+        font-weight: bold;
+    }
+    .fund-table td:last-child, /* Ensure Actions column doesn't scroll away */
+    .fund-table th:last-child {
+         /* Optional: if you want actions sticky too, more complex CSS needed */
+    }
+
+    /* Fund Details Table Styling */
+    #detailsSection table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 0.95em;
+        background-color: #fff;
+    }
+    #detailsSection table th {
+        background-color: #009879;
+        color: #fff;
+        padding: 10px;
+        text-align: left;
+        border: 1px solid #ccc;
+    }
+    #detailsSection table td {
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        vertical-align: middle;
+    }
+    #detailsSection table tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+    #detailsSection input[type="text"],
+    #detailsSection input[type="number"],
+    #detailsSection input[type="date"],
+    #detailsSection select {
+        width: 100%;
+        padding: 6px;
+        box-sizing: border-box;
+        font-size: 0.95em;
+        text-align: right;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    #detailsSection input[type="date"],
+    #detailsSection select {
+         text-align: left; /* Dates/Selects usually left-aligned */
+    }
+    #detailsSection input[type="checkbox"] {
+        width: auto;
+        margin-left: 10px;
+    }
+    #detailsSection .deleteRowBtn {
+        background-color: #e74c3c;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    #detailsSection .deleteRowBtn:hover {
+        background-color: #c0392b;
+    }
+    #detailsSection h2,
+    #detailsSection h3 {
+        color: #333;
+        border-bottom: 2px solid #ccc;
+        padding-bottom: 5px;
+    }
+    #detailsSection button {
+        margin-top: 10px;
+    }
+    #detailsSection input[type="number"]::placeholder {
+        text-align: right;
+    }
+
+    /* Notification Styling */
+    .notification {
+        position: fixed;
+        top: 20px; /* Position at top */
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 12px 20px;
+        color: #fff;
+        border-radius: 6px;
+        z-index: 10001;
+        opacity: 0;
+        transition: opacity 0.3s ease, top 0.3s ease;
+        max-width: 90%;
+        text-align: center;
+        font-size: 1rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .notification.show {
+        opacity: 1;
+        top: 50px; /* Slide down slightly */
+    }
+    .notification.success { background-color: #2ecc71; }
+    .notification.error { background-color: #e74c3c; }
+    .notification.warning { background-color: #f39c12; }
+    .notification.info { background-color: #3498db; } /* Added info style */
+
+    /* Modal Styling */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 10000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow-y: auto; /* Enable scroll if content overflows */
+        background-color: rgba(0, 0, 0, 0.6);
+    }
+    .modal-content {
+        background-color: #fff;
+        margin: 80px auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 600px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        position: relative;
+    }
+    .modal .close {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        font-size: 28px;
+        font-weight: bold;
+        color: #aaa;
+        cursor: pointer;
+        line-height: 1; /* Ensure consistent positioning */
+    }
+    .modal .close:hover { color: #000; }
+
+    /* Fund Name Management Modal List Styling */
+    #fundNameList { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
+    #fundNameList li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center; /* Vertically align items */
+        margin-bottom: 6px;
+        padding: 6px 8px;
+        background-color: #f8f8f8;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    #fundNameList input.edit-name {
+        flex: 1; /* Allow input to grow */
+        padding: 4px;
+        margin-right: 6px;
+        border: 1px solid #ccc; /* Added border */
+        border-radius: 3px;
+    }
+    #fundNameList button {
+        background-color: #e74c3c;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 8px;
+        cursor: pointer;
+        flex-shrink: 0; /* Prevent button from shrinking */
+    }
+    #fundNameList button:hover { background-color: #c0392b; }
+    #fundNameList button:disabled { background-color: #ccc; cursor: not-allowed; opacity: 0.7;}
+
+    /* Validation Styling */
+    input.invalid,
+    textarea.invalid,
+    select.invalid {
+        border: 2px solid #e74c3c !important; /* Use important to override */
+        background-color: #fff5f5;
+    }
+    .inline-error {
+        color: #e74c3c;
+        font-size: 0.85em;
+        margin-top: 2px;
+        display: block;
+    }
+    /* --- End Original CSS Content --- */
+  </style>
+</head>
+<body>
+  <!-- Header Bar -->
+  <header id="headerBar">
+    <div>
+        <button id="addNewAccountBtn">New Investment</button>
+        <button id="manageFundNamesBtn">Manage Funds</button>
+    </div>
+    <div>
+      <label for="fundFilter">Filter by Fund:</label>
+      <select id="fundFilter">
+        <option value="">All</option>
+      </select>
+    </div>
+    <div>
+      <label for="accountFilter">Filter by Account Number:</label>
+      <select id="accountFilter">
+        <option value="">All</option>
+      </select>
+    </div>
+    <div>
+      <label for="cutoffDate">Cutoff Date:</label>
+      <input type="date" id="cutoffDate" />
+    </div>
+     <div>
+      <button id="resetFiltersBtn">Reset Filters</button>
+    </div>
+    <div>
+      <button id="exportBtn">Export Data</button>
+      <input type="file" id="fileInput" accept=".json" style="display: inline-block; width: auto;"/>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main>
+      <!-- Data Table -->
+      <table id="dataTable" class="fund-table">
+        <thead>
+            <tr>
+              <!-- Header cells generated by JS -->
+            </tr>
+        </thead>
+        <tbody>
+          <!-- Table rows generated by JS -->
+        </tbody>
+      </table>
+
+    <!-- Action Modal -->
+    <div id="actionModal" class="modal">
+      <div class="modal-content">
+        <span class="close" id="closeActionModal" title="Close">&times;</span>
+        <h3>Fund Actions</h3>
+        <p id="actionFundInfo"></p>
+        <button id="actionEditBtn">Edit</button>
+        <button id="actionDuplicateBtn">Duplicate</button>
+        <button id="actionDeleteBtn">Delete</button>
+        <button id="actionDetailsBtn">Details</button>
+        <button id="actionCloseBtn">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Fund Edit/Add/Duplicate Modal -->
+    <div id="fundModal" class="modal">
+      <div class="modal-content">
+        <span class="close" id="closeFundModal" title="Close">&times;</span>
+        <h3 id="fundModalTitle">Edit Fund</h3>
+        <form id="fundForm">
+            <div>
+                <label for="fundName">Fund Name:</label>
+                <select id="fundName" required></select>
+            </div>
+            <div>
+              <label for="accountNumber">Account Number:</label>
+              <input type="text" id="accountNumber" required />
+            </div>
+             <div>
+              <label for="commitment">Commitment (USD):</label>
+              <input type="text" id="commitment" required placeholder="e.g., 1,000,000" />
+            </div>
+             <div id="duplicateMultiplierContainer" style="display:none;">
+              <label for="duplicateMultiplier">Duplicate Multiplier:</label>
+              <input type="number" id="duplicateMultiplier" step="any" value="1" />
+            </div>
+            <div>
+              <label for="cashFlows">Cash Flows (JSON):</label>
+              <textarea id="cashFlows" rows="4" placeholder='[{"date": "YYYY-MM-DD", "amount": 10000, "type": "Contribution", "affectsCommitment": true}]'></textarea>
+            </div>
+            <div>
+              <label for="monthlyNav">Monthly NAV (JSON):</label>
+              <textarea id="monthlyNav" rows="4" placeholder='[{"date": "YYYY-MM-DD", "amount": 50000}]'></textarea>
+            </div>
+            <!-- Hidden field for editing existing entries -->
+            <input type="hidden" id="fundId" />
+            <div>
+              <button type="submit" id="saveFundBtn">Save Fund</button> <!-- Changed to type=submit -->
+              <button type="button" id="cancelFundBtn">Cancel</button> <!-- Explicit type=button -->
+            </div>
+        </form>
+        </div>
+    </div>
+
+    <!-- Manage Fund Names Modal -->
+    <div id="manageFundNamesModal" class="modal">
+      <div class="modal-content">
+        <span class="close" id="closeManageFundNamesModal" title="Close">&times;</span>
+        <h3>Manage Fund Names</h3>
+        <div>
+            <label for="newFundNameInput">Add New Fund Name:</label>
+            <input type="text" id="newFundNameInput" style="max-width: 300px; display: inline-block; width: auto; margin-right: 10px;" />
+            <button type="button" id="saveNewFundNameBtn">Add</button> <!-- Changed ID and type -->
+        </div>
+        <hr style="margin: 15px 0;"/>
+        <h4>Existing Fund Names:</h4>
+        <ul id="fundNameList"></ul>
+      </div>
+    </div>
+
+      <!-- Fund Details Section (initially hidden) -->
+      <div id="detailsSection" style="display:none; margin-top:20px; border:1px solid #ccc; padding:15px; max-width:900px;"> <!-- Increased max-width -->
+          <h2 id="detailsHeader">Fund Details</h2>
+          <form id="detailsForm">
+            <h3>Cash Flows</h3>
+            <table id="cashFlowsTable">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount (USD)</th>
+                  <th>Type</th>
+                  <th>Affects Commitment?</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody><!-- Cash flow rows will be generated here -->
+              </tbody>
+            </table>
+            <button type="button" id="addCashFlowBtn">Add Cash Flow</button>
+            <br/><br/>
+            <h3>Monthly NAV</h3>
+            <table id="navTable">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount (USD)</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody><!-- NAV rows will be generated here -->
+              </tbody>
+            </table>
+            <button type="button" id="addNavBtn">Add NAV</button>
+            <br/><br/>
+            <button type="submit" id="saveDetailsBtn">Save Details</button> <!-- Changed to type=submit -->
+            <button type="button" id="cancelDetailsBtn">Close</button>
+        </form>
+      </div>
+  </main>
+
+  <!-- JavaScript Section -->
+  <script>
+    (function() { // Start IIFE
+
+    // ===========================
+    // Constants
+    // ===========================
+    const DB_NAME = "FundsDB2";
+    const DB_VERSION = 2; // Increment if schema changes
+    const FUND_STORE = "funds";
+    const FUND_NAME_STORE = "fundNames";
+    const CASH_FLOW_CONTRIBUTION = "Contribution";
+    const CASH_FLOW_DISTRIBUTION = "Distribution";
+    const IRR_MAX_ITERATIONS = 1000;
+    const IRR_PRECISION = 1e-6;
+    const IRR_DEFAULT_GUESS = 0.1;
+    const IRR_CLAMP_HIGH = 10; // 1000%
+    const IRR_CLAMP_LOW = -1; // -100%
+    const DEFAULT_DUPLICATE_MULTIPLIER = 1;
+    const CLASS_INVALID = "invalid";
+    const CLASS_INLINE_ERROR = "inline-error";
+    const CLASS_ACTIONS_BTN = "actionsBtn";
+    const CLASS_DELETE_ROW_BTN = "deleteRowBtn";
+    const NOTIFICATION_TIMEOUT = 3000; // ms
+    const NOTIFICATION_FADEOUT = 300; // ms
+    const ID_PREFIX = { // Optional: Prefix IDs for easier selection/debugging
+        MODAL_FUND: "fundModal",
+        MODAL_ACTION: "actionModal",
+        MODAL_MANAGE_NAMES: "manageFundNamesModal",
+        // Add other element IDs if needed
+    };
+
+    // ===========================
+    // State Variables (Scoped to IIFE)
+    // ===========================
+    let db;
+    let sortKeys = [];
+    let skipPopulateSelects = false; // Flag to prevent filter dropdown redraw during selection
+    let fundDataCache = []; // Raw data from DB
+    let processedDataCache = []; // Data with calculated metrics (_cache)
+    let fundNames = new Set(); // Set of available fund names
+    let currentFundIdForDetails = null; // ID of fund being viewed/edited in details section
+    let currentFundIdForActions = null; // ID of fund selected for modal actions
+    let currentCutoffDateKey = null; // Cache key for processed data based on cutoff date
+
+
+    // ===========================
+    // DOM Element Access Helper
+    // ===========================
+    const $ = (id) => document.getElementById(id);
+
+
+    // ===========================
+    // Core Application Logic & Calculations
+    // ===========================
+
+    const getLatestQuarterEnd = () => {
+        const now = new Date();
+        const currentMonth = now.getMonth(); // 0-11
+        const currentQuarter = Math.floor(currentMonth / 3); // 0, 1, 2, 3
+        // Month of the start of the current quarter (0, 3, 6, 9)
+        const currentQuarterStartMonth = currentQuarter * 3;
+        // Use day 0 of the quarter start month to get the last day of the *previous* month
+        // This gives the end date of the previous quarter.
+        return new Date(now.getFullYear(), currentQuarterStartMonth, 0);
+    };
+
+    const sanitize = (str) => { // Basic sanitizer
+        if (typeof str !== 'string') return '';
+        return str.replace(/&/g, "&amp;")
+                  .replace(/</g, "&lt;")
+                  .replace(/>/g, "&gt;")
+                  .replace(/"/g, "&quot;")
+                  .replace(/'/g, "&#x27;");
+    };
+
+    const isValidDate = (value) => {
+        // 1. Check if it's a string and matches YYYY-MM-DD format
+        if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            return false;
+        }
+
+        // 2. Parse the components as numbers
+        const parts = value.split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10); // Month is 1-based in the string
+        const day = parseInt(parts[2], 10);
+
+        // 3. Basic range checks (simple sanity checks)
+        if (year < 1000 || year > 3000 || month < 1 || month > 12 || day < 1 || day > 31) {
+             console.warn(`isValidDate: Basic range check failed for ${year}-${month}-${day}`);
+             return false;
+        }
+
+        // 4. Create a date object and verify components match *exactly*
+        // Create the date using the components. Using new Date(year, monthIndex, day)
+        // is generally safer than parsing the string directly due to timezones.
+        // Note: JavaScript Date month is 0-indexed (0-11), so subtract 1 from parsed month.
+        const date = new Date(year, month - 1, day);
+
+        // Check if the constructed Date object is valid AND
+        // if the components match what we put in (guards against invalid dates like Feb 30th).
+        // Checking components helps ensure that Feb 30 didn't roll over to March 2 etc.
+        if (isNaN(date.getTime()) || // Check if date is valid at all
+            date.getFullYear() !== year ||
+            date.getMonth() !== month - 1 ||
+            date.getDate() !== day)
+        {
+             console.warn(`isValidDate: Component check failed for ${value}. Date Object:`, date);
+             return false;
+        }
+
+        // If all checks pass, it's a valid date string representing a real date.
+        return true;
+    };
+
+    // Updated to explicitly check for finite numbers, excluding NaN, Infinity
+    const isNumber = (value) => typeof value === 'number' && isFinite(value);
+
+    const formatCurrencyValue = (value, showCents = false) => {
+        const val = parseFloat(value);
+        if (!isNumber(val)) return '';
+        return val.toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: showCents ? 2 : 0,
+            maximumFractionDigits: showCents ? 2 : 0
+        });
+    };
+
+    const parseCurrency = (val) => {
+        if (val === null || typeof val === 'undefined') return NaN; // Return NaN for null/undefined
+
+        // Allow numbers directly
+        if (typeof val === 'number') {
+            return isFinite(val) ? val : NaN; // Return NaN for Infinity/-Infinity
+        }
+
+        if (typeof val === 'string') {
+            // Remove $, ,, handle potential () for negatives (basic)
+            const cleaned = val.replace(/[$,]/g, '').replace(/^\((.*)\)$/, '-$1').trim();
+            if (cleaned === '') return NaN; // Handle empty string after cleaning
+            const num = parseFloat(cleaned);
+            return isFinite(num) ? num : NaN; // Return NaN if parseFloat results in Infinity/-Infinity or NaN
+        }
+        return NaN; // Not a string or number
+    };
+
+    const getTotal = (entry, type, cutoffDate) =>
+        (entry.cashFlows || [])
+            .filter(cf =>
+                cf &&
+                cf.type === type &&
+                isValidDate(cf.date) &&
+                (!cutoffDate || new Date(cf.date) <= cutoffDate)
+            )
+            .reduce((sum, cf) => sum + Math.abs(parseCurrency(cf.amount) || 0), 0);
+
+    const getLatestNav = (entry, cutoffDate) => {
+        const cashFlows = entry.cashFlows || [];
+        const navs = (entry.monthlyNav || [])
+                        .filter(n => isValidDate(n.date) && (!cutoffDate || new Date(n.date) <= cutoffDate))
+                        .sort((a, b) => new Date(b.date) - new Date(a.date)); // Descending date sort
+
+        if (!navs.length) return 0;
+
+        const latestNavRecord = navs[0];
+        const navDate = new Date(latestNavRecord.date);
+        let navAmount = parseCurrency(latestNavRecord.amount);
+
+        if (!isNumber(navAmount)) return 0; // Handle invalid NAV amount
+
+        // Find cash flows that occurred *after* the NAV date but *on or before* the cutoff date
+        const subsequentFlows = cashFlows.filter(cf => {
+            if (!isValidDate(cf.date)) return false;
+            const cfDate = new Date(cf.date);
+            return cfDate > navDate && (!cutoffDate || cfDate <= cutoffDate);
+        });
+
+        // Adjust the NAV amount based on subsequent flows
+        let adjustmentDelta = 0;
+        subsequentFlows.forEach(cf => {
+            const flowAmount = parseCurrency(cf.amount);
+            if (!isNumber(flowAmount)) return; // Skip invalid flow amounts
+
+            if (cf.type === CASH_FLOW_CONTRIBUTION) {
+                navAmount -= flowAmount; // Contributions decrease the interpolated NAV
+                adjustmentDelta -= flowAmount;
+            } else if (cf.type === CASH_FLOW_DISTRIBUTION) {
+                navAmount += flowAmount; // Distributions increase the interpolated NAV
+                adjustmentDelta += flowAmount;
+            }
+        });
+
+        // Cache the adjustment info for highlighting/tooltips
+        entry._cache = entry._cache || {};
+        entry._cache.adjustedNavDelta = adjustmentDelta;
+
+        return navAmount;
+    };
+
+    const getVintageYear = (entry) => {
+      const firstContribution = (entry.cashFlows || [])
+        .filter(cf => cf.type === CASH_FLOW_CONTRIBUTION && isValidDate(cf.date))
+        .sort((a, b) => new Date(a.date) - new Date(b.date))[0]; // Ascending sort
+
+      return firstContribution ? new Date(firstContribution.date).getFullYear() : null; // Return null if no contributions
+    };
+
+    const getOutstandingCommitment = (entry, cutoffDate) => {
+      let outstanding = parseCurrency(entry.commitment);
+      if (!isNumber(outstanding)) return 0; // Start with 0 if commitment is invalid
+
+      if (Array.isArray(entry.cashFlows)) {
+        const applicableFlows = cutoffDate
+            ? entry.cashFlows.filter(cf => isValidDate(cf.date) && new Date(cf.date) <= cutoffDate)
+            : entry.cashFlows;
+
+        applicableFlows.forEach(cf => {
+          // Affects commitment unless explicitly set to false
+          if (cf.affectsCommitment !== false) {
+             const flowAmount = parseCurrency(cf.amount);
+             if (isNumber(flowAmount)) {
+                 // Contributions are negative, Distributions positive in raw data typically
+                 // Subtract contributions (make commitment smaller), add back distributions
+                 if (cf.type === CASH_FLOW_CONTRIBUTION) {
+                    outstanding -= Math.abs(flowAmount); // Subtract contribution amount
+                 } else if (cf.type === CASH_FLOW_DISTRIBUTION && flowAmount < 0) {
+                    // Handle recalled capital / negative distributions if they reduce outstanding
+                    // This logic might need refinement based on specific accounting rules
+                    // Assuming standard distributions don't usually increase outstanding commitment
+                 }
+             }
+          }
+        });
+      }
+      // Outstanding commitment cannot be negative
+      return Math.max(0, outstanding);
+    };
+
+    const parseCashFlowsForIRR = (cashFlows = [], navList = [], cutoffDate = null) => {
+      // 1. Filter and map primary cash flows
+      const flows = (cashFlows || [])
+        .filter(cf => isValidDate(cf.date) && (!cutoffDate || new Date(cf.date) <= cutoffDate))
+        .map(cf => {
+             const amount = parseCurrency(cf.amount);
+             if (!isNumber(amount)) return null; // Skip invalid amounts
+             return {
+                 date: cf.date,
+                 // IRR convention: Contributions negative, Distributions positive
+                 amount: cf.type === CASH_FLOW_CONTRIBUTION ? -Math.abs(amount) : Math.abs(amount)
+             };
+        })
+        .filter(f => f !== null); // Remove null entries from invalid amounts
+
+      // 2. Find the latest valid NAV within the cutoff period
+      const validNavs = (navList || [])
+        .filter(nav => isValidDate(nav.date) && (!cutoffDate || new Date(nav.date) <= cutoffDate))
+        .sort((a, b) => new Date(b.date) - new Date(a.date)); // Descending date
+
+      if (validNavs.length > 0) {
+        const latestNavRecord = validNavs[0];
+        const navDate = new Date(latestNavRecord.date);
+        let navAmount = parseCurrency(latestNavRecord.amount);
+
+        if (isNumber(navAmount)) {
+            // 3. Adjust NAV for flows *between* NAV date and cutoff date (if any)
+            // Note: This adjustment differs slightly from getLatestNav as it affects the final flow *at* the NAV date
+            const subsequentFlows = (cashFlows || []).filter(cf => {
+                 if (!isValidDate(cf.date)) return false;
+                 const cfDate = new Date(cf.date);
+                 return cfDate > navDate && (!cutoffDate || cfDate <= cutoffDate);
+            });
+
+            subsequentFlows.forEach(cf => {
+                 const flowAmount = parseCurrency(cf.amount);
+                 if (!isNumber(flowAmount)) return;
+                 if (cf.type === CASH_FLOW_CONTRIBUTION) navAmount -= flowAmount;
+                 else if (cf.type === CASH_FLOW_DISTRIBUTION) navAmount += flowAmount;
+            });
+
+            // 4. Add the (adjusted) NAV as the final positive cash flow *at the NAV date*
+            flows.push({ date: latestNavRecord.date, amount: navAmount });
+        }
+      }
+
+      return flows.sort((a, b) => new Date(a.date) - new Date(b.date)); // Ensure chronological order for IRR
+    };
+
+    const calculateIRR = (cashFlows, guess = IRR_DEFAULT_GUESS) => {
+        if (!Array.isArray(cashFlows) || cashFlows.length < 2) return null; // Need at least two flows for IRR
+
+        // Ensure flows are sorted chronologically (should be done by parseCashFlowsForIRR, but double-check)
+        const flows = [...cashFlows].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const firstDate = new Date(flows[0].date);
+
+        // NPV function
+        const npv = rate => flows.reduce((acc, cf) => {
+            // Time difference in years from the first cash flow
+            const yearsDiff = (new Date(cf.date) - firstDate) / (365.25 * 24 * 60 * 60 * 1000); // Use 365.25 for avg year length
+            return acc + cf.amount / Math.pow(1 + rate, yearsDiff);
+        }, 0);
+
+        // Derivative of NPV function
+        const dNpv = rate => flows.reduce((acc, cf) => {
+            const yearsDiff = (new Date(cf.date) - firstDate) / (365.25 * 24 * 60 * 60 * 1000);
+            if (yearsDiff === 0) return acc; // Avoid division by zero or issues with first flow derivative
+            return acc - (yearsDiff * cf.amount) / Math.pow(1 + rate, yearsDiff + 1);
+        }, 0);
+
+        let rate = guess;
+        for (let i = 0; i < IRR_MAX_ITERATIONS; i++) {
+            const npvValue = npv(rate);
+            const derivativeValue = dNpv(rate);
+
+            // Check for convergence or problematic derivative
+            if (Math.abs(npvValue) < IRR_PRECISION) {
+                 // Check for unreasonable IRRs before returning
+                 if (rate > IRR_CLAMP_HIGH || rate < IRR_CLAMP_LOW) return null; // Return null if clamped
+                return rate;
+            }
+            if (Math.abs(derivativeValue) < IRR_PRECISION) {
+                // Derivative is too small, Newton-Raphson might fail or diverge
+                console.warn("IRR calculation: Derivative too small.", flows);
+                return null;
+            }
+
+            const newRate = rate - npvValue / derivativeValue;
+
+            // Check if the change is small enough
+            if (Math.abs(newRate - rate) < IRR_PRECISION) {
+                 if (newRate > IRR_CLAMP_HIGH || newRate < IRR_CLAMP_LOW) return null; // Return null if clamped
+                return newRate;
+            }
+
+            rate = newRate;
+        }
+
+        console.warn("IRR failed to converge after max iterations.", flows);
+        return null; // Failed to converge
+    };
+
+    const calculateMoic = (cashFlowsForIRR) => {
+        if (!Array.isArray(cashFlowsForIRR) || cashFlowsForIRR.length === 0) return null;
+
+        const totalContributions = cashFlowsForIRR
+            .filter(f => f.amount < 0) // Contributions are negative
+            .reduce((sum, f) => sum + Math.abs(f.amount), 0);
+
+        const totalDistributionsAndNav = cashFlowsForIRR
+            .filter(f => f.amount > 0) // Distributions + final NAV are positive
+            .reduce((sum, f) => sum + f.amount, 0);
+
+        if (totalContributions === 0) {
+            // Avoid division by zero. Could return Infinity, 0, or null depending on desired meaning.
+            // If there are positive flows but no contributions, MOIC is technically infinite.
+            // If no flows at all, arguably null or 0.
+            return totalDistributionsAndNav > 0 ? Infinity : null;
+        }
+
+        return totalDistributionsAndNav / totalContributions;
+    };
+
+    const getInvestmentReturn = (entry, cutoffDate) => {
+         // Investment return = Total Distributions + Current NAV - Total Contributions
+         const totalContributions = getTotal(entry, CASH_FLOW_CONTRIBUTION, cutoffDate);
+         const totalDistributions = getTotal(entry, CASH_FLOW_DISTRIBUTION, cutoffDate);
+         const nav = getLatestNav(entry, cutoffDate); // Use the adjusted NAV
+
+         return totalDistributions + nav - totalContributions;
+    };
+
+    /**
+     * Calculates all derived metrics for a single fund entry based on a cutoff date.
+     * @param {object} entry - The raw fund entry from the database.
+     * @param {Date | null} cutoffDate - The date to calculate metrics up to.
+     * @returns {object} An object containing the calculated metrics (_cache).
+     */
+    function calculateFundMetrics(entry, cutoffDate) {
+        console.log(entry);
+        const cashFlowsForIRR = parseCashFlowsForIRR(entry.cashFlows, entry.monthlyNav, cutoffDate);
+
+        const nav = getLatestNav(entry, cutoffDate); // Recalculates delta in entry._cache
+        const adjustedNavDelta = entry._cache?.adjustedNavDelta ?? 0;
+        const hasPostNavFlows = Math.abs(adjustedNavDelta) > 0.001; // Check if adjustment occurred
+
+        const irr = calculateIRR(cashFlowsForIRR);
+        const moic = calculateMoic(cashFlowsForIRR);
+        const investmentReturn = getInvestmentReturn(entry, cutoffDate); // Uses getLatestNav internally
+        const totalContributions = getTotal(entry, CASH_FLOW_CONTRIBUTION, cutoffDate);
+        const totalDistributions = getTotal(entry, CASH_FLOW_DISTRIBUTION, cutoffDate);
+        const outstandingCommitment = getOutstandingCommitment(entry, cutoffDate);
+        const vintage = getVintageYear(entry);
+        console.log("Metrics for", entry.id, { nav, irr, moic, totalContributions });
+        return {
+            nav,
+            irr,
+            moic,
+            investmentReturn,
+            totalContributions,
+            totalDistributions,
+            outstandingCommitment,
+            adjustedNavDelta,
+            hasPostNavFlows,
+            vintage
+        };
+    }
+
+    /**
+     * Processes raw fund data, calculates metrics for each entry based on cutoff date,
+     * and updates the processedDataCache.
+     * @param {Array<object>} rawData - Array of fund entries from the DB.
+     * @param {Date | null} cutoffDate - The cutoff date for calculations.
+     */
+    function processFundData(rawData, cutoffDate) {
+        const cutoffKey = cutoffDate ? cutoffDate.toISOString().split("T")[0] : 'none';
+        currentCutoffDateKey = cutoffKey; // Store the key for potential caching later if needed
+
+        processedDataCache = rawData.map(entry => {
+            // Ensure entry._cache exists before calculations, calculations will populate it
+            entry._cache = {};
+            const metrics = calculateFundMetrics(entry, cutoffDate);
+
+            return {
+                ...entry, // Spread original entry data
+                _cache: metrics // Add the calculated metrics under _cache
+            };
+        });
+         console.log("Processed data cache updated for cutoff:", cutoffKey);
+    }
+
+
+    const calculateTotals = (processedData, cutoffDate) => {
+      const totals = {
+        commitment: 0,
+        nav: 0,
+        contributions: 0,
+        distributions: 0,
+        outstandingCommitment: 0,
+        investmentReturn: 0,
+        // Aggregate IRR/MOIC needs combined cash flows
+        aggregateFlows: [],
+        moic: null,
+        irr: null
+      };
+
+      processedData.forEach(entry => {
+        const commitment = parseCurrency(entry.commitment);
+        if (isNumber(commitment)) {
+            totals.commitment += commitment;
+        }
+        // Sum up cached values
+        totals.nav += entry._cache?.nav ?? 0;
+        totals.contributions += entry._cache?.totalContributions ?? 0;
+        totals.distributions += entry._cache?.totalDistributions ?? 0;
+        totals.outstandingCommitment += entry._cache?.outstandingCommitment ?? 0;
+        totals.investmentReturn += entry._cache?.investmentReturn ?? 0;
+
+        // Collect flows for aggregate calculations
+        const flows = parseCashFlowsForIRR(entry.cashFlows, entry.monthlyNav, cutoffDate);
+        totals.aggregateFlows.push(...flows);
+      });
+
+      // Calculate aggregate IRR and MOIC
+      totals.irr = calculateIRR(totals.aggregateFlows);
+      totals.moic = calculateMoic(totals.aggregateFlows);
+
+      return totals;
+    };
+
+
+    // ===========================
+    // Database Functions
+    // ===========================
+    const initDB = () => {
+        try {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+            request.onupgradeneeded = event => {
+                db = event.target.result;
+                const transaction = event.target.transaction; // Get transaction from event
+                console.log(`Upgrading database from version ${event.oldVersion} to ${event.newVersion}`);
+
+                // Funds Store
+                if (!db.objectStoreNames.contains(FUND_STORE)) {
+                    const fundStore = db.createObjectStore(FUND_STORE, { keyPath: "id", autoIncrement: true });
+                    fundStore.createIndex("fundName", "fundName", { unique: false });
+                    fundStore.createIndex("accountNumber", "accountNumber", { unique: false });
+                    console.log(`Object store '${FUND_STORE}' created.`);
+                } else {
+                    // Example: If you needed to add an index later
+                    // const fundStore = transaction.objectStore(FUND_STORE);
+                    // if (!fundStore.indexNames.contains('newIndex')) {
+                    //     fundStore.createIndex('newIndex', 'fieldName', { unique: false });
+                    //     console.log("Added newIndex to funds store.");
+                    // }
+                }
+
+                // Fund Names Store
+                if (!db.objectStoreNames.contains(FUND_NAME_STORE)) {
+                    db.createObjectStore(FUND_NAME_STORE, { keyPath: "name" });
+                     console.log(`Object store '${FUND_NAME_STORE}' created.`);
+                }
+                 console.log("Database upgrade complete.");
+            };
+
+            request.onsuccess = event => {
+                db = event.target.result;
+                console.log("Database initialized successfully.");
+                // Load initial data after successful connection
+                loadFundNames(() => { // Load names first
+                    loadFundsFromDB(renderTable); // Then load funds & render
+                });
+            };
+
+            request.onerror = event => {
+                console.error("Database error:", event.target.errorCode, event.target.error);
+                showNotification("Error initializing database. Please check browser permissions or refresh.", "error");
+            };
+        } catch (err) {
+            console.error("initDB unexpected error:", err);
+            showNotification("An unexpected error occurred initializing the database.", "error");
+        }
+    };
+
+    const loadFundNames = (callback) => {
+      if (!db) {
+          console.error("loadFundNames: Database not initialized.");
+          if (callback) callback();
+          return;
+      }
+      const tx = db.transaction(FUND_NAME_STORE, "readonly");
+      const store = tx.objectStore(FUND_NAME_STORE);
+      const request = store.getAll();
+      const loadedNames = new Set(); // Load into a temp set
+
+      request.onsuccess = () => {
+        request.result.forEach(item => loadedNames.add(item.name));
+        fundNames = loadedNames; // Assign to the main state variable
+        console.log(`Loaded ${fundNames.size} fund names from DB.`);
+        if (callback) callback();
+      };
+      request.onerror = (event) => {
+          console.error("Error loading fund names:", event.target.error);
+          showNotification("Could not load fund names.", "warning");
+          if (callback) callback(); // Continue even if names fail to load
+      };
+    };
+
+    const saveFundNameToDB = (name, callback) => {
+        if (!db) { console.error("DB not init."); return; }
+        const tx = db.transaction(FUND_NAME_STORE, "readwrite");
+        const store = tx.objectStore(FUND_NAME_STORE);
+        const request = store.put({ name }); // Add or update
+        request.onsuccess = () => {
+             console.log(`Fund name '${name}' saved.`);
+             if (callback) callback(true);
+        }
+        request.onerror = (event) => {
+            console.error(`Error saving fund name '${name}':`, event.target.error);
+            showNotification(`Failed to save fund name '${name}'.`, "error");
+            if (callback) callback(false);
+        }
+    };
+
+     const deleteFundNameFromDB = (name, callback) => {
+        if (!db) { console.error("DB not init."); return; }
+        const tx = db.transaction(FUND_NAME_STORE, "readwrite");
+        const store = tx.objectStore(FUND_NAME_STORE);
+        const request = store.delete(name);
+        request.onsuccess = () => {
+             console.log(`Fund name '${name}' deleted.`);
+             if (callback) callback(true);
+        }
+        request.onerror = (event) => {
+            console.error(`Error deleting fund name '${name}':`, event.target.error);
+            showNotification(`Failed to delete fund name '${name}'.`, "error");
+            if (callback) callback(false);
+        }
+    };
+
+    const loadFundsFromDB = (callback) => {
+        if (!db) {
+            console.error("loadFundsFromDB: Database not initialized.");
+            if (callback) callback();
+            return;
+        }
+        const tx = db.transaction([FUND_STORE], "readonly");
+        const store = tx.objectStore(FUND_STORE);
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+            fundDataCache = request.result; // Update raw cache
+            console.log(`✅ Loaded ${fundDataCache.length} funds from IndexedDB.`);
+
+            const cutoffInput = $("cutoffDate").value;
+            const cutoffDate = cutoffInput ? new Date(cutoffInput) : null;
+            // Process data immediately after loading
+            processFundData(fundDataCache, cutoffDate);
+
+            if (callback) callback(); // Usually renderTable
+        };
+         request.onerror = (event) => {
+            console.error("Error loading funds:", event.target.error);
+            showNotification("Could not load fund data.", "error");
+            if (callback) callback(); // Proceed even if funds fail? Maybe clear table?
+        };
+    };
+
+    const getFundById = (id, callback) => {
+        if (!db) { console.error("DB not init."); return; }
+        try {
+            const tx = db.transaction([FUND_STORE], "readonly");
+            const store = tx.objectStore(FUND_STORE);
+            const request = store.get(Number(id)); // Ensure ID is a number
+
+            request.onsuccess = () => {
+                 if (!request.result) {
+                     console.warn(`Fund with ID ${id} not found.`);
+                     showNotification(`Fund with ID ${id} not found.`, "warning");
+                 }
+                callback(request.result); // Pass result (or undefined if not found)
+            };
+            request.onerror = event => {
+                console.error("Error fetching fund by ID:", event.target.error);
+                showNotification("An error occurred retrieving fund data.", "error");
+                callback(null); // Indicate failure
+            };
+        } catch (err) {
+            console.error("getFundById unexpected error:", err);
+            showNotification("An unexpected error occurred retrieving fund data.", "error");
+            callback(null);
+        }
+    };
+
+    const saveFundEntryToDB = (entry, callback) => {
+         console.log("--- saveFundEntryToDB: Started ---"); // DEBUG
+         console.log("saveFundEntryToDB: Entry to save:", entry); // DEBUG
+         if (!db) {
+            console.error("saveFundEntryToDB: DB not init."); // DEBUG
+            if (callback) callback(false);
+            return;
+         }
+         const tx = db.transaction([FUND_STORE], "readwrite");
+         const store = tx.objectStore(FUND_STORE);
+         let request;
+         const isUpdate = !!entry.id; // Check if it's an update
+
+         console.log(`saveFundEntryToDB: Performing ${isUpdate ? 'put (update)' : 'add (new)'} operation.`); // DEBUG
+
+         if (isUpdate) { // Existing entry (Update)
+            request = store.put(entry);
+         } else { // New entry (Add)
+            delete entry.id; // Let autoIncrement handle it
+            request = store.add(entry);
+         }
+
+         // Log request success/error
+         request.onsuccess = (event) => {
+              console.log(`saveFundEntryToDB: IDBRequest successful. Result (key/id):`, event.target.result); // DEBUG
+              // Note: The transaction might not be complete yet here.
+         };
+          request.onerror = (event) => {
+              console.error(`saveFundEntryToDB: IDBRequest failed!`, event.target.error); // DEBUG
+         };
+
+         // Log transaction completion/abortion/error
+         tx.oncomplete = () => {
+             console.log(`saveFundEntryToDB: Transaction completed.`); // DEBUG
+             const action = isUpdate ? 'updated' : 'saved';
+             showNotification(`Fund ${action} successfully!`, "success"); // Moved notification here
+             console.log("saveFundEntryToDB: Calling loadFundsFromDB for refresh..."); // DEBUG
+             loadFundsFromDB(renderTable); // Refresh data and UI *after* successful transaction
+             if (callback) callback(true); // Signal success
+         };
+
+         tx.onerror = event => {
+             console.error("saveFundEntryToDB: Transaction error!", event.target.error); // DEBUG
+             const action = isUpdate ? 'updating' : 'saving';
+             showNotification(`Error ${action} fund. Check console for details.`, "error");
+             if (callback) callback(false); // Signal failure
+         };
+          tx.onabort = event => {
+             console.error("saveFundEntryToDB: Transaction aborted!", event); // DEBUG
+             const action = isUpdate ? 'updating' : 'saving';
+             showNotification(`Fund ${action} aborted. Check console for details.`, "error");
+              if (callback) callback(false);
+          };
+         console.log("--- saveFundEntryToDB: Exiting function (transaction pending) ---"); // DEBUG
+    };
+
+     const deleteFundFromDB = (id, callback) => {
+        if (!db) { console.error("DB not init."); return; }
+        const numericId = Number(id);
+        if (isNaN(numericId)) {
+            console.error("Invalid ID for deletion:", id);
+            showNotification("Invalid ID provided for deletion.", "error");
+            if (callback) callback(false);
+            return;
+        }
+
+        const tx = db.transaction([FUND_STORE], "readwrite");
+        const store = tx.objectStore(FUND_STORE);
+        const request = store.delete(numericId);
+
+        tx.oncomplete = () => {
+            console.log(`Fund with ID ${numericId} deleted.`);
+            if (callback) callback(true);
+            // Refresh data and UI
+            loadFundsFromDB(renderTable);
+            showNotification("Fund deleted successfully!", "success");
+        };
+        tx.onerror = event => {
+            console.error(`Error deleting fund ID ${numericId}:`, event.target.error);
+            showNotification("Error deleting fund.", "error");
+            if (callback) callback(false);
+        };
+    };
+
+    // ===========================
+    // UI Notification Function
+    // ===========================
+    function showNotification(message, type = "info") { // types: info, success, warning, error
+        const notification = document.createElement("div");
+        notification.textContent = message;
+        notification.className = `notification ${type}`; // Base class + type class
+
+        document.body.appendChild(notification);
+
+        // Trigger reflow to enable transition
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                 notification.classList.add("show");
+            });
+        });
+
+
+        // Automatically remove the notification after a delay
+        setTimeout(() => {
+            notification.classList.remove("show");
+            setTimeout(() => notification.remove(), NOTIFICATION_FADEOUT); // Remove from DOM after fade out
+        }, NOTIFICATION_TIMEOUT);
+    }
+
+    // ===========================
+    // Form Handling Functions
+    // ===========================
+
+    const clearForm = (formId = 'fundForm') => {
+        const form = $(formId);
+        if (!form) return;
+
+        // Reset standard inputs
+        form.querySelectorAll('input[type="text"], input[type="number"], input[type="hidden"], textarea').forEach(input => {
+             input.value = '';
+             input.classList.remove(CLASS_INVALID);
+        });
+        form.querySelectorAll('select').forEach(select => {
+             select.selectedIndex = 0; // Reset to the first option (usually "Select..." or "All")
+             select.classList.remove(CLASS_INVALID);
+        });
+         form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+             checkbox.checked = false; // Or set to a default state if needed
+        });
+         form.querySelectorAll(`.${CLASS_INLINE_ERROR}`).forEach(errorMsg => errorMsg.remove());
+
+
+        // Specific resets for fund form
+        if (formId === 'fundForm') {
+            $('fundId').value = '';
+            $('duplicateMultiplierContainer').style.display = 'none';
+            $('duplicateMultiplier').value = DEFAULT_DUPLICATE_MULTIPLIER;
+            $('fundName').disabled = false; // Re-enable fund name dropdown if it was disabled
+            $('fundModalTitle').textContent = 'New Investment'; // Reset title
+        }
+        if (formId === 'detailsForm') {
+            // Clear dynamically added rows
+            $('cashFlowsTable').querySelector('tbody').innerHTML = '';
+            $('navTable').querySelector('tbody').innerHTML = '';
+        }
+    };
+
+    /**
+     * Applies currency formatting listeners (focus/blur) to an input element.
+     * @param {HTMLInputElement} input - The input element.
+     * @param {boolean} showCents - Whether to format with cents.
+     */
+    const formatAmountField = (input, showCents = false) => {
+        input.addEventListener('blur', () => {
+            const numericValue = parseCurrency(input.value); // Parse first
+            input.value = formatCurrencyValue(numericValue, showCents); // Format the parsed number
+        });
+        input.addEventListener('focus', () => {
+            const numericValue = parseCurrency(input.value); // Parse to get raw number
+            if (isNumber(numericValue)) {
+                input.value = numericValue; // Display raw number on focus
+            } else {
+                input.value = ''; // Clear if not a valid number
+            }
+            // Select text on focus for easier editing
+             input.select();
+        });
+        // Initial format on load (if value exists)
+        const initialValue = parseCurrency(input.value);
+        input.value = formatCurrencyValue(initialValue, showCents);
+    };
+
+
+    /**
+     * Validates various input types and adds/removes error indicators.
+     * @param {HTMLElement} inputElement - The input/select/textarea element to validate.
+     * @param {Function} validationFn - A function that takes the element's value and returns true if valid, false otherwise.
+     * @param {string} errorMessage - The message to display if validation fails.
+     * @returns {boolean} - True if valid, false otherwise.
+     */
+    function validateField(inputElement, validationFn, errorMessage) {
+         // Clear previous error message for this field
+        const existingError = inputElement.parentNode.querySelector(`.${CLASS_INLINE_ERROR}`);
+        if (existingError) {
+            existingError.remove();
+        }
+        inputElement.classList.remove(CLASS_INVALID);
+
+        if (!validationFn(inputElement.value)) {
+            inputElement.classList.add(CLASS_INVALID);
+            const errorMsg = document.createElement("span");
+            errorMsg.className = CLASS_INLINE_ERROR;
+            errorMsg.textContent = errorMessage;
+            // Insert after the input element
+            inputElement.parentNode.insertBefore(errorMsg, inputElement.nextSibling);
+            return false;
+        }
+        return true;
+    }
+
+     // Specific Validation Functions
+    const validateRequired = (value) => value && value.trim() !== '';
+    const validateFundNameFormat = (value) => /^[\w\s\-&.+]+$/.test(value.trim()); // Allow '.', '+'
+    const validateAccountNumberFormat = (value) => /^[\w\-\s]+$/.test(value.trim()); // Simple alphanumeric, space, dash
+    const validateIsNumber = (value) => isNumber(parseCurrency(value)); // Use parseCurrency
+    const validateIsJSONObjectOrEmpty = (value) => {
+        const trimmed = value.trim();
+        if (trimmed === '') return true; // Allow empty
+        try {
+            JSON.parse(trimmed);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    };
+    const validateJSONArray = (value) => { // Validates if it's a parseable array
+         const trimmed = value.trim();
+         if (trimmed === '') return true;
+         try {
+             const parsed = JSON.parse(trimmed);
+             return Array.isArray(parsed);
+         } catch (e) {
+             return false;
+         }
+    };
+
+
+    // ===========================
+    // Fund Form (Add/Edit/Duplicate) Logic
+    // ===========================
+
+    /**
+     * Retrieves data from the main fund form.
+     * @returns {object} Raw data from form fields.
+     */
+    function getFundFormData() {
+        return {
+            fundName: $('fundName').value, // Keep original case from select
+            accountNumber: $('accountNumber').value.trim(),
+            cashFlowsText: $('cashFlows').value.trim(),
+            monthlyNavText: $('monthlyNav').value.trim(),
+            commitmentText: $('commitment').value, // Get potentially formatted value
+            id: $('fundId').value,
+            multiplier: parseFloat($('duplicateMultiplier').value) || DEFAULT_DUPLICATE_MULTIPLIER
+        };
+    }
+
+    /**
+     * Parses JSON strings for cash flows and NAV.
+     * @param {string} cashFlowsText
+     * @param {string} monthlyNavText
+     * @returns {object} { cashFlows: array | null, monthlyNav: array | null, error: string | null }
+     */
+    function parseFundInputJSON(cashFlowsText, monthlyNavText) {
+        let cashFlows = [];
+        let monthlyNav = [];
+        let error = null;
+
+        try {
+            if (cashFlowsText) cashFlows = JSON.parse(cashFlowsText);
+        } catch (e) {
+            error = "Invalid JSON format in Cash Flows.";
+            $(cashFlows).classList.add(CLASS_INVALID); // Mark textarea as invalid
+            return { cashFlows: null, monthlyNav: null, error };
+        }
+
+        try {
+            if (monthlyNavText) monthlyNav = JSON.parse(monthlyNavText);
+        } catch (e) {
+             error = "Invalid JSON format in Monthly NAV.";
+             $(monthlyNav).classList.add(CLASS_INVALID); // Mark textarea as invalid
+             return { cashFlows: null, monthlyNav: null, error };
+        }
+
+         // Basic validation of array structure
+         if (!Array.isArray(cashFlows)) {
+            error = "Cash Flows data must be a JSON array.";
+             $(cashFlows).classList.add(CLASS_INVALID);
+             return { cashFlows: null, monthlyNav: null, error };
+         }
+          if (!Array.isArray(monthlyNav)) {
+            error = "Monthly NAV data must be a JSON array.";
+             $(monthlyNav).classList.add(CLASS_INVALID);
+             return { cashFlows: null, monthlyNav: null, error };
+         }
+
+        return { cashFlows, monthlyNav, error };
+    }
+
+    /**
+     * Validates the structure and content of parsed cash flow/NAV arrays.
+     * @param {Array} cashFlows
+     * @param {Array} monthlyNav
+     * @returns {string | null} Error message or null if valid.
+     */
+    function validateParsedFundData(cashFlows, monthlyNav) {
+        // Validate Cash Flows structure
+        for (const cf of cashFlows) {
+            if (!cf || typeof cf !== 'object' ||
+                !isValidDate(cf.date) ||
+                !isNumber(parseCurrency(cf.amount)) || // Check amount validity
+                ![CASH_FLOW_CONTRIBUTION, CASH_FLOW_DISTRIBUTION].includes(cf.type)) {
+                $(cashFlows).classList.add(CLASS_INVALID); // Mark textarea
+                return "Cash Flows array contains invalid entries. Each must have valid 'date', 'amount', and 'type' ('Contribution' or 'Distribution').";
+            }
+             // Ensure affectsCommitment defaults to true if missing
+             if (typeof cf.affectsCommitment === 'undefined') {
+                 cf.affectsCommitment = true;
+             }
+        }
+
+        // Validate NAV structure
+        for (const nav of monthlyNav) {
+            if (!nav || typeof nav !== 'object' ||
+                !isValidDate(nav.date) ||
+                !isNumber(parseCurrency(nav.amount))) { // Check amount validity
+                 $(monthlyNav).classList.add(CLASS_INVALID); // Mark textarea
+                return "Monthly NAV array contains invalid entries. Each must have valid 'date' and 'amount'.";
+            }
+        }
+
+        return null; // All valid
+    }
+
+
+     /**
+     * Applies a multiplier to amounts in cash flows, NAV, and commitment.
+     * @param {Array} cashFlows
+     * @param {Array} monthlyNav
+     * @param {number | null} commitment
+     * @param {number} multiplier
+     * @returns {object} Updated { cashFlows, monthlyNav, commitment }
+     */
+    function applyDuplicateMultiplier(cashFlows, monthlyNav, commitment, multiplier) {
+         if (!multiplier || multiplier === 1 || !isNumber(multiplier)) {
+            return { cashFlows, monthlyNav, commitment }; // No change needed
+        }
+
+        const roundToCents = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
+
+        const multipliedCashFlows = cashFlows.map(cf => ({
+            ...cf,
+            amount: roundToCents(parseCurrency(cf.amount) * multiplier)
+        }));
+
+        const multipliedNav = monthlyNav.map(nav => ({
+            ...nav,
+            amount: roundToCents(parseCurrency(nav.amount) * multiplier)
+        }));
+
+        const multipliedCommitment = isNumber(commitment) ? roundToCents(commitment * multiplier) : commitment;
+
+         return { cashFlows: multipliedCashFlows, monthlyNav: multipliedNav, commitment: multipliedCommitment };
+    }
+
+    /**
+     * Handles the overall fund saving process.
+     * @param {Event} event - The form submission event.
+     */
+    const saveFund = (event) => {
+        event.preventDefault(); // Prevent default form submission
+        console.log("Attempting to save fund...");
+
+        // 1. Get Form Data
+        const formData = getFundFormData();
+        let isValid = true;
+
+        // 2. Validate Basic Fields
+        isValid &= validateField($('fundName'), validateRequired, "Fund Name is required.");
+        isValid &= validateField($('accountNumber'), validateRequired, "Account Number is required.");
+        isValid &= validateField($('accountNumber'), validateAccountNumberFormat, "Account Number contains invalid characters.");
+        isValid &= validateField($('commitment'), validateRequired, "Commitment is required.");
+        isValid &= validateField($('commitment'), validateIsNumber, "Commitment must be a valid number.");
+        isValid &= validateField($('cashFlows'), validateJSONArray, "Cash Flows must be a valid JSON array or empty.");
+        isValid &= validateField($('monthlyNav'), validateJSONArray, "Monthly NAV must be a valid JSON array or empty.");
+
+
+        if (!isValid) {
+            showNotification("Please fix the errors in the form.", "warning");
+            return;
+        }
+
+        // 3. Parse JSON Data
+        const { cashFlows: parsedCf, monthlyNav: parsedNav, error: parseError } = parseFundInputJSON(formData.cashFlowsText, formData.monthlyNavText);
+        if (parseError) {
+            showNotification(parseError, "error");
+            return;
+        }
+
+        // 4. Validate Parsed Data Structure
+        const validationError = validateParsedFundData(parsedCf, parsedNav);
+        if (validationError) {
+            showNotification(validationError, "error");
+            return;
+        }
+
+        // 5. Finalize Data (parse commitment, apply multiplier if duplicating)
+        let commitmentValue = parseCurrency(formData.commitmentText);
+        let finalCashFlows = parsedCf;
+        let finalNav = parsedNav;
+
+        // Apply multiplier only when creating a new entry (no ID) and multiplier is set
+        if (!formData.id && formData.multiplier !== 1) {
+             console.log(`Applying multiplier: ${formData.multiplier}`);
+            const multiplied = applyDuplicateMultiplier(parsedCf, parsedNav, commitmentValue, formData.multiplier);
+            finalCashFlows = multiplied.cashFlows;
+            finalNav = multiplied.monthlyNav;
+            commitmentValue = multiplied.commitment;
+        }
+
+
+        // 6. Construct Final Entry Object
+        const entry = {
+            fundName: formData.fundName, // Use selected value directly
+            accountNumber: formData.accountNumber, // Use trimmed value
+            cashFlows: finalCashFlows,
+            monthlyNav: finalNav,
+            commitment: commitmentValue,
+            timestamp: new Date().toISOString() // Add/update timestamp
+        };
+
+        if (formData.id) {
+            entry.id = Number(formData.id); // Ensure ID is number for update
+        }
+
+        // 7. Save to Database
+        saveFundEntryToDB(entry, (success) => {
+            if (success) {
+                hideFundForm(); // Close modal on successful save
+                // Data reload and render table happens in saveFundEntryToDB callback
+            }
+            // Error notification ics handled within saveFundEntryToDB
+        });
+    };
+
+    // ===========================
+    // Details Section Logic (Cash Flow / NAV Tables)
+    // ===========================
+
+     /**
+      * Parses rows from the details tables (Cash Flow or NAV).
+      * @param {string} tableBodySelector - CSS selector for the table body (e.g., "#cashFlowsTable tbody").
+      * @param {boolean} isCashFlowTable - True if parsing cash flows (includes type and checkbox).
+      * @returns {{data: Array<object>, errors: Array<string>}} Parsed data and any validation errors.
+      */
+     function parseDetailsTableRows(tableBodySelector, isCashFlowTable) {
+        const rows = document.querySelectorAll(`${tableBodySelector} tr`);
+        const parsedData = [];
+        const errors = [];
+        let rowIndex = 0;
+
+        rows.forEach(row => {
+            if (!row || row.querySelectorAll("td").length < (isCashFlowTable ? 4 : 2)) {
+              console.warn(`Skipping invalid row ${rowIndex}:`, row.innerHTML);
+              return;
+            }
+            rowIndex++;
+            // Clear previous errors within the row
+            row.querySelectorAll(`.${CLASS_INLINE_ERROR}`).forEach(e => e.remove());
+            row.querySelectorAll(`.${CLASS_INVALID}`).forEach(el => el.classList.remove(CLASS_INVALID));
+
+            const inputs = row.querySelectorAll("input"); // Date, Amount, [Checkbox]
+            const select = isCashFlowTable ? row.querySelector("select") : null; // Type
+
+            const dateInput = inputs[0];
+            const amountInput = inputs[1];
+            const typeSelect = select;
+            const checkboxInput = isCashFlowTable && inputs.length > 2 ? inputs[2] : null;
+
+            const date = dateInput.value;
+            const amount = parseCurrency(amountInput.value); // Use consistent parsing
+            const type = isCashFlowTable ? typeSelect.value : null;
+            const affectsCommitment = isCashFlowTable ? !!(checkboxInput && checkboxInput.checked) : undefined;
+            
+            // ***** START DEBUGGING LOG *****
+            console.log(`DEBUG: Parsing Row ${rowIndex} (isCashFlow=${isCashFlowTable}) - Date Input Value: '${date}' (Type: ${typeof date})`);
+            // ***** END DEBUGGING LOG *****
+
+            let rowIsValid = true;
+
+            // Helper to add error message
+            const addRowError = (inputElem, message) => {
+                inputElem.classList.add(CLASS_INVALID);
+                const errorMsg = document.createElement("span");
+                errorMsg.className = CLASS_INLINE_ERROR;
+                errorMsg.textContent = message;
+                // Append error message relative to the input's parent cell for better placement
+                inputElem.closest('td').appendChild(errorMsg); // Append to TD instead of input parent
+                rowIsValid = false;
+                if (!errors.includes(`Row ${rowIndex}: ${message}`)) {
+                    errors.push(`Row ${rowIndex}: ${message}`);
+                }
+            };
+
+            // Validate Date (Check for empty first)
+            if (!date) { // Check if the date string is empty
+                addRowError(dateInput, "Date is required.");
+            } else if (!isValidDate(date)) { // Then check format/validity
+                // This log will help if isValidDate returns false unexpectedly
+                //console.log(`DEBUG: isValidDate returned false for '${date}'`);
+                addRowError(dateInput, "Invalid date format/value (use YYYY-MM-DD).");
+            }
+
+            // Validate Amount
+            if (!isNumber(amount)) {
+                addRowError(amountInput, "Invalid amount.");
+            }
+
+            // ... rest of the function ...
+
+            if (rowIsValid) {
+              const rowData = {
+                date,
+                amount,
+                ...(isCashFlowTable && { type, affectsCommitment })
+              };
+              parsedData.push(rowData);
+            }
+        });
+
+        /*
+        console.log(`Found ${rows.length} rows in ${tableBodySelector}`);
+        rows.forEach((row, i) => {
+          console.log(`Row ${i + 1}:`, row.innerHTML);
+        });
+         */
+        
+        return { data: parsedData, errors: errors };
+    }
+
+    /**
+     * Saves the edited cash flows and NAV from the details section to the DB.
+      * @param {Event} event - The form submission event.
+     */
+    const saveDetails = (event) => {
+        event.preventDefault();
+        console.log("--- saveDetails: Started ---"); // DEBUG
+        if (!currentFundIdForDetails) {
+            console.error("saveDetails: No currentFundIdForDetails set.");
+            showNotification("Cannot save details: No fund selected.", "error");
+            return;
+        }
+        console.log(`saveDetails: currentFundIdForDetails = ${currentFundIdForDetails}`); // DEBUG
+
+        // 1. Parse both tables
+        const cfResult = parseDetailsTableRows("#cashFlowsTable tbody", true);
+        const navResult = parseDetailsTableRows("#navTable tbody", false);
+        console.log("saveDetails: Parsed CF Data:", cfResult.data); // DEBUG
+        console.log("saveDetails: Parsed NAV Data:", navResult.data); // DEBUG
+
+        // 2. Check for validation errors
+        const allErrors = [...cfResult.errors, ...navResult.errors];
+        if (allErrors.length > 0) {
+            showNotification(`Please fix the errors in the tables: ${allErrors.join(' ')}`, "warning");
+            console.warn("saveDetails: Validation errors:", allErrors); // DEBUG
+            return;
+        }
+        console.log("saveDetails: Validation passed."); // DEBUG
+
+        // 3. Get the original fund entry
+        console.log("saveDetails: Calling getFundById..."); // DEBUG
+        getFundById(currentFundIdForDetails, (entry) => {
+            console.log("saveDetails: getFundById callback executed. Entry found:", !!entry); // DEBUG
+            if (!entry) {
+                showNotification("Error: Could not retrieve fund to save details.", "error");
+                return;
+            }
+
+            // 4. Update the entry with new data
+            console.log("saveDetails: Updating entry object..."); // DEBUG
+            entry.cashFlows = cfResult.data;
+            entry.monthlyNav = navResult.data;
+            entry.timestamp = new Date().toISOString(); // Update timestamp
+            console.log("saveDetails: Updated Entry Object:", entry); // DEBUG
+
+            // 5. Save updated entry back to DB
+            console.log("saveDetails: Calling saveFundEntryToDB..."); // DEBUG
+            saveFundEntryToDB(entry, (success) => {
+                 console.log(`saveDetails: saveFundEntryToDB callback executed. Success = ${success}`); // DEBUG
+                if (success) {
+                     hideDetailsSection(); // Hide on success
+                     // Data reload & render happens in saveFundEntryToDB callback
+                }
+                 // Error notification handled in saveFundEntryToDB
+            });
+        });
+        console.log("--- saveDetails: Finished initiating save ---"); // DEBUG
+    };
+
+    /** Populates the details section tables for a given fund ID */
+    const populateDetailsSection = (entry) => {
+         if (!entry) return;
+
+         $('detailsHeader').textContent = `Details for: ${sanitize(entry.fundName)} (${sanitize(entry.accountNumber)})`;
+
+         const cashFlowsTableBody = $("cashFlowsTable").querySelector("tbody");
+         const navTableBody = $("navTable").querySelector("tbody");
+         cashFlowsTableBody.innerHTML = ''; // Clear existing
+         navTableBody.innerHTML = '';    // Clear existing
+
+        // Populate Cash Flows Table
+        (entry.cashFlows || []).forEach(cf => {
+            const tr = document.createElement("tr");
+
+            // Date Cell
+            const dateTd = document.createElement("td");
+            const dateInput = document.createElement("input");
+            dateInput.type = "date";
+            dateInput.value = cf.date || '';
+            dateTd.appendChild(dateInput);
+            tr.appendChild(dateTd);
+
+            // Amount Cell
+            const amountTd = document.createElement("td");
+            const amountInput = document.createElement("input");
+            amountInput.type = "text"; // Use text for formatting
+            amountInput.value = cf.amount; // Set raw value initially
+            amountInput.style.textAlign = "right";
+            amountTd.appendChild(amountInput);
+            tr.appendChild(amountTd);
+            formatAmountField(amountInput, true); // Apply formatting
+
+            // Type Cell
+            const typeTd = document.createElement("td");
+            const typeSelect = document.createElement("select");
+            const optContrib = document.createElement("option");
+            optContrib.value = CASH_FLOW_CONTRIBUTION;
+            optContrib.textContent = CASH_FLOW_CONTRIBUTION;
+            optContrib.selected = cf.type === CASH_FLOW_CONTRIBUTION;
+            const optDistrib = document.createElement("option");
+            optDistrib.value = CASH_FLOW_DISTRIBUTION;
+            optDistrib.textContent = CASH_FLOW_DISTRIBUTION;
+            optDistrib.selected = cf.type === CASH_FLOW_DISTRIBUTION;
+            typeSelect.appendChild(optContrib);
+            typeSelect.appendChild(optDistrib);
+            typeTd.appendChild(typeSelect);
+            tr.appendChild(typeTd);
+
+            // Affects Commitment Cell
+            const affectsTd = document.createElement("td");
+            const affectsCheckbox = document.createElement("input");
+            affectsCheckbox.type = "checkbox";
+            // Default to checked if undefined or explicitly true
+            affectsCheckbox.checked = cf.affectsCommitment !== false;
+            affectsTd.appendChild(affectsCheckbox);
+            tr.appendChild(affectsTd);
+
+            // Actions Cell (Delete)
+            const actionTd = document.createElement("td");
+            const deleteBtn = document.createElement("button");
+            deleteBtn.textContent = "Delete";
+            deleteBtn.type = "button"; // Important for forms
+            deleteBtn.classList.add(CLASS_DELETE_ROW_BTN);
+            actionTd.appendChild(deleteBtn);
+            tr.appendChild(actionTd);
+
+            cashFlowsTableBody.appendChild(tr);
+        });
+
+        // Populate NAV Table
+        (entry.monthlyNav || []).forEach(nav => {
+             const tr = document.createElement("tr");
+
+             // Date Cell
+             const dateTd = document.createElement("td");
+             const dateInput = document.createElement("input");
+             dateInput.type = "date";
+             dateInput.value = nav.date || '';
+             dateTd.appendChild(dateInput);
+             tr.appendChild(dateTd);
+
+            // Amount Cell
+             const amountTd = document.createElement("td");
+             const amountInput = document.createElement("input");
+             amountInput.type = "text";
+             amountInput.value = nav.amount;
+             amountInput.style.textAlign = "right";
+             amountTd.appendChild(amountInput);
+             tr.appendChild(amountTd);
+             formatAmountField(amountInput, true);
+
+             // Actions Cell (Delete)
+             const actionTd = document.createElement("td");
+             const deleteBtn = document.createElement("button");
+             deleteBtn.textContent = "Delete";
+             deleteBtn.type = "button";
+             deleteBtn.classList.add(CLASS_DELETE_ROW_BTN);
+             actionTd.appendChild(deleteBtn);
+             tr.appendChild(actionTd);
+
+             navTableBody.appendChild(tr);
+        });
+    };
+
+     const showDetailsSection = (id) => {
+        currentFundIdForDetails = id;
+        clearForm('detailsForm'); // Clear previous details
+
+        getFundById(id, entry => {
+            if (entry) {
+                populateDetailsSection(entry);
+                $("detailsSection").style.display = "block";
+                // Scroll into view after it's displayed
+                 requestAnimationFrame(() => { // Ensure element is visible before scrolling
+                     $("detailsSection").scrollIntoView({ behavior: "smooth", block: "start" });
+                 });
+            } else {
+                 showNotification("Could not load details for the selected fund.", "error");
+                 currentFundIdForDetails = null; // Reset if load failed
+            }
+        });
+    };
+
+    const hideDetailsSection = () => {
+        $("detailsSection").style.display = "none";
+        currentFundIdForDetails = null;
+        clearForm('detailsForm'); // Also clear form on hide
+    };
+
+     // Functions to add new rows to details tables (use safe DOM methods)
+    const addCashFlowRow = () => createAndAppendDetailsRow(true);
+    const addNavRow = () => createAndAppendDetailsRow(false);
+
+    /** Creates and appends a new row to the Cash Flow or NAV table */
+    function createAndAppendDetailsRow(isCashFlow) {
+        const tableBody = $(isCashFlow ? "cashFlowsTable" : "navTable").querySelector("tbody");
+        const tr = document.createElement("tr");
+
+        // Date Cell
+        const dateTd = document.createElement("td");
+        const dateInput = document.createElement("input");
+        dateInput.type = "date";
+        dateInput.valueAsDate = new Date(); // Default to today
+        dateTd.appendChild(dateInput);
+        tr.appendChild(dateTd);
+
+        // Amount Cell
+        const amountTd = document.createElement("td");
+        const amountInput = document.createElement("input");
+        amountInput.type = "text"; // Use text for formatting
+        amountInput.placeholder = "0.00";
+        amountInput.style.textAlign = "right";
+        amountTd.appendChild(amountInput);
+        tr.appendChild(amountTd);
+        formatAmountField(amountInput, true); // Apply formatting
+
+        if (isCashFlow) {
+            // Type Cell
+            const typeTd = document.createElement("td");
+            const typeSelect = document.createElement("select");
+            const optContrib = document.createElement("option");
+            optContrib.value = CASH_FLOW_CONTRIBUTION;
+            optContrib.textContent = CASH_FLOW_CONTRIBUTION;
+            optContrib.selected = true; // Default
+            const optDistrib = document.createElement("option");
+            optDistrib.value = CASH_FLOW_DISTRIBUTION;
+            optDistrib.textContent = CASH_FLOW_DISTRIBUTION;
+            typeSelect.appendChild(optContrib);
+            typeSelect.appendChild(optDistrib);
+            typeTd.appendChild(typeSelect);
+            tr.appendChild(typeTd);
+
+            // Affects Commitment Cell
+            const affectsTd = document.createElement("td");
+            const affectsCheckbox = document.createElement("input");
+            affectsCheckbox.type = "checkbox";
+            affectsCheckbox.checked = true; // Default checked
+            affectsTd.appendChild(affectsCheckbox);
+            tr.appendChild(affectsTd);
+        }
+
+        // Actions Cell (Delete)
+        const actionTd = document.createElement("td");
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.type = "button";
+        deleteBtn.classList.add(CLASS_DELETE_ROW_BTN);
+        actionTd.appendChild(deleteBtn);
+        tr.appendChild(actionTd);
+
+        tableBody.appendChild(tr);
+        dateInput.focus(); // Focus the date input of the new row
+    }
+
+    // ===========================
+    // Modal Handling Functions
+    // ===========================
+
+    const showModal = (modalId) => {
+        const modal = $(modalId);
+        if (modal) modal.style.display = "block";
+    };
+
+    const hideModal = (modalId) => {
+        const modal = $(modalId);
+        if (modal) modal.style.display = "none";
+    };
+
+    const showFundForm = (mode = 'new', fundId = null) => {
+         clearForm('fundForm'); // Start with a clean form
+
+         // Populate Fund Name dropdown
+         const fundNameSelect = $("fundName");
+         fundNameSelect.innerHTML = '<option value="">Select Fund</option>'; // Clear and add placeholder
+         // Sort fund names alphabetically for dropdown
+         [...fundNames].sort().forEach(name => {
+            const opt = document.createElement("option");
+            opt.value = name; // Use original case for value
+            opt.textContent = name; // Display original case
+            fundNameSelect.appendChild(opt);
+         });
+
+         if (mode === 'edit' && fundId) {
+             getFundById(fundId, entry => {
+                 if (!entry) return; // Error handled in getFundById
+                 $('fundModalTitle').textContent = "Edit Fund";
+                 $('fundId').value = entry.id;
+
+                 // Add fund name to dropdown if it's somehow missing (e.g., deleted from names list but still used)
+                  if (![...fundNameSelect.options].some(opt => opt.value === entry.fundName)) {
+                     const opt = document.createElement("option");
+                     opt.value = entry.fundName;
+                     opt.textContent = entry.fundName;
+                     fundNameSelect.appendChild(opt);
+                  }
+
+                 // Need to defer setting value slightly if options were just added
+                  requestAnimationFrame(() => {
+                       fundNameSelect.value = entry.fundName;
+                  });
+
+                 $('accountNumber').value = entry.accountNumber;
+                 $('commitment').value = formatCurrencyValue(entry.commitment); // Format for display
+                 $('cashFlows').value = JSON.stringify(entry.cashFlows || [], null, 2); // Pretty print JSON
+                 $('monthlyNav').value = JSON.stringify(entry.monthlyNav || [], null, 2); // Pretty print JSON
+                  $('fundName').disabled = false; // Ensure enabled
+                  $('duplicateMultiplierContainer').style.display = 'none';
+             });
+         } else if (mode === 'duplicate' && fundId) {
+             getFundById(fundId, entry => {
+                  if (!entry) return;
+                 $('fundModalTitle').textContent = "Duplicate Fund";
+                 $('fundId').value = ''; // Clear ID for new entry
+                 $('accountNumber').value = ''; // Clear account number
+                 $('commitment').value = formatCurrencyValue(entry.commitment); // Pre-fill commitment
+                 $('cashFlows').value = JSON.stringify(entry.cashFlows || [], null, 2);
+                 $('monthlyNav').value = JSON.stringify(entry.monthlyNav || [], null, 2);
+                 $('duplicateMultiplierContainer').style.display = 'block'; // Show multiplier
+                 $('duplicateMultiplier').value = DEFAULT_DUPLICATE_MULTIPLIER;
+
+                   if (![...fundNameSelect.options].some(opt => opt.value === entry.fundName)) {
+                     const opt = document.createElement("option");
+                     opt.value = entry.fundName;
+                     opt.textContent = entry.fundName;
+                     fundNameSelect.appendChild(opt);
+                  }
+                  requestAnimationFrame(() => {
+                       fundNameSelect.value = entry.fundName; // Pre-select fund name
+                  });
+                 $('fundName').disabled = true; // Disable changing fund name for duplication
+             });
+         } else { // New mode
+              $('fundModalTitle').textContent = "New Investment";
+               $('fundName').disabled = false;
+               $('duplicateMultiplierContainer').style.display = 'none';
+         }
+
+         showModal(ID_PREFIX.MODAL_FUND);
+         // Format commitment field after populating
+          formatAmountField($('commitment'));
+     };
+
+    const hideFundForm = () => {
+        hideModal(ID_PREFIX.MODAL_FUND);
+        // Optional: Clear form on hide? Or only on show/save? Currently cleared on show.
+        // clearForm('fundForm');
+    };
+
+    const showActionModal = (fundId) => {
+         currentFundIdForActions = fundId;
+         getFundById(fundId, entry => {
+             if (entry) {
+                 // Sanitize output just in case
+                 const safeFundName = sanitize(entry.fundName);
+                 const safeAccount = sanitize(entry.accountNumber);
+                 $('actionFundInfo').textContent = `Fund: ${safeFundName}, Account: ${safeAccount}`;
+                 showModal(ID_PREFIX.MODAL_ACTION);
+             } else {
+                  showNotification("Could not load actions for selected fund.", "error");
+             }
+         });
+    };
+    const hideActionModal = () => hideModal(ID_PREFIX.MODAL_ACTION);
+
+    const showManageFundNamesModal = () => {
+        renderFundNameList(); // Populate the list dynamically
+        showModal(ID_PREFIX.MODAL_MANAGE_NAMES);
+    };
+    const hideManageFundNamesModal = () => hideModal(ID_PREFIX.MODAL_MANAGE_NAMES);
+
+
+    // ===========================
+    // Fund Name Management Logic
+    // ===========================
+
+     /** Renders the list of fund names in the management modal */
+    function renderFundNameList() {
+         const ul = $("fundNameList");
+         ul.innerHTML = ""; // Clear previous list
+
+         // Sort names for display
+         const sortedNames = [...fundNames].sort((a, b) => a.localeCompare(b));
+
+         sortedNames.forEach(name => {
+             const li = document.createElement("li");
+             const isUsed = fundDataCache.some(f => f.fundName === name); // Check if name is in use
+
+             // Input for editing
+             const input = document.createElement("input");
+             input.type = "text";
+             input.className = "edit-name";
+             input.value = name; // Set current name
+
+             // Delete Button
+             const button = document.createElement("button");
+             button.dataset.name = name; // Store original name for deletion/update logic
+             button.textContent = "Delete";
+             button.disabled = isUsed; // Disable delete if name is in use
+             if (isUsed) {
+                // Optionally add tooltip for disabled button
+                 button.title = "Cannot delete: Fund name is used by investments.";
+             }
+
+             // --- Event Listeners for Inline Edit/Delete ---
+             // Update on Blur (when input loses focus)
+             input.addEventListener("blur", (e) => handleFundNameUpdate(e.target, name, button));
+             // Update on Enter key press
+              input.addEventListener("keydown", (e) => {
+                 if (e.key === 'Enter') {
+                     e.preventDefault(); // Prevent potential form submission
+                     handleFundNameUpdate(e.target, name, button);
+                     e.target.blur(); // Remove focus after update attempt
+                 } else if (e.key === 'Escape') {
+                     e.target.value = name; // Revert changes on Escape
+                     e.target.blur();
+                 }
+             });
+
+
+             // Delete on Button Click
+             button.addEventListener("click", (e) => handleFundNameDelete(name, li));
+             // --- End Event Listeners ---
+
+             li.appendChild(input);
+             li.appendChild(button);
+             ul.appendChild(li);
+         });
+    }
+
+    /** Handles the logic for updating a fund name from the management modal input */
+    function handleFundNameUpdate(inputElement, originalName, deleteButton) {
+         const newName = inputElement.value.trim();
+
+         // 1. Basic Validation
+         if (!newName || newName === originalName) {
+             inputElement.value = originalName; // Revert if empty or unchanged
+             return;
+         }
+         if (!validateFundNameFormat(newName)) {
+              showNotification("Invalid characters in fund name.", "error");
+              inputElement.value = originalName; // Revert
+              return;
+         }
+
+         // 2. Check if new name already exists (case-insensitive check might be better?)
+         if ([...fundNames].some(fn => fn.toLowerCase() === newName.toLowerCase() && fn !== originalName)) {
+             showNotification(`Fund name "${newName}" already exists.`, "error");
+             inputElement.value = originalName; // Revert
+             return;
+         }
+
+         // 3. Check if original name is in use (shouldn't be able to edit if used, but double check)
+         if (fundDataCache.some(f => f.fundName === originalName)) {
+             showNotification("Cannot rename: Original fund name is currently in use.", "warning");
+             inputElement.value = originalName; // Revert
+             return;
+         }
+
+         // 4. Proceed with update
+         // Update the Set in memory
+         fundNames.delete(originalName);
+         fundNames.add(newName);
+
+         // Update the DB
+         const tx = db.transaction(FUND_NAME_STORE, "readwrite");
+         const store = tx.objectStore(FUND_NAME_STORE);
+         store.delete(originalName); // Delete old name entry
+         store.put({ name: newName }); // Add new name entry
+
+         tx.oncomplete = () => {
+             showNotification("Fund name updated successfully.", "success");
+             // Update the input and button's data attribute to reflect the change
+             inputElement.value = newName; // Ensure correct casing if needed
+             deleteButton.dataset.name = newName;
+             // No need to re-render the whole list typically, unless sorting changes
+         };
+         tx.onerror = (event) => {
+             showNotification("Error updating fund name in database.", "error");
+             console.error("Fund name update DB error:", event.target.error);
+             // Revert the Set if DB update fails
+             fundNames.delete(newName);
+             fundNames.add(originalName);
+             inputElement.value = originalName; // Revert input
+         };
+    }
+
+     /** Handles deleting a fund name from the management modal */
+     function handleFundNameDelete(nameToDelete, listItemElement) {
+         // Double check if used (button should be disabled, but belt-and-suspenders)
+         if (fundDataCache.some(f => f.fundName === nameToDelete)) {
+             showNotification("Cannot delete: Fund name is in use.", "warning");
+             return;
+         }
+
+         if (!confirm(`Are you sure you want to delete the fund name "${nameToDelete}"? This cannot be undone.`)) {
+             return;
+         }
+
+         // Delete from memory Set
+         fundNames.delete(nameToDelete);
+
+         // Delete from DB
+         deleteFundNameFromDB(nameToDelete, (success) => {
+              if (success) {
+                  listItemElement.remove(); // Remove the <li> element from the UI
+                  showNotification(`Fund name "${nameToDelete}" deleted.`, "success");
+                  // If the deleted name was selected in the main filter, reset filter?
+                  if ($('fundFilter').value === nameToDelete) {
+                       $('fundFilter').value = "";
+                       // Potentially re-render table if filter change affects it
+                       renderTable();
+                  }
+                  // Update fund name dropdown in the add/edit modal if it's open? Less critical.
+              } else {
+                  // Error handled in deleteFundNameFromDB, maybe add back to Set?
+                  fundNames.add(nameToDelete); // Re-add to Set if DB delete failed
+              }
+         });
+     }
+
+     /** Handles adding a new fund name from the management modal */
+     function handleAddNewFundName() {
+         const input = $("newFundNameInput");
+         const newName = input.value.trim();
+
+         // Validation
+         if (!newName) {
+             showNotification("Please enter a fund name to add.", "warning");
+             return;
+         }
+          if (!validateFundNameFormat(newName)) {
+              showNotification("Invalid characters in fund name.", "error");
+              return;
+         }
+         if (fundNames.has(newName) || [...fundNames].some(fn => fn.toLowerCase() === newName.toLowerCase())) {
+             showNotification(`Fund name "${newName}" already exists.`, "warning");
+             return;
+         }
+
+         // Add to Set and DB
+         fundNames.add(newName);
+         saveFundNameToDB(newName, (success) => {
+              if (success) {
+                  input.value = ""; // Clear input field
+                  renderFundNameList(); // Re-render the list to include the new name (sorted)
+                  showNotification(`Fund name "${newName}" added.`, "success");
+              } else {
+                  // Error handled in saveFundNameToDB, revert the Set add
+                  fundNames.delete(newName);
+              }
+         });
+     }
+
+
+    // ===========================
+    // Table Rendering Functions
+    // ===========================
+
+    // Constants for Table Columns (used by rendering functions)
+    const TABLE_COLUMNS_CONFIG = [
+      { key: 'fundName', label: 'Fund Name', align: 'left' },
+      { key: 'accountNumber', label: 'Account', align: 'left' },
+      { key: 'vintage', label: 'Vintage', align: 'center' },
+      { key: 'commitment', label: 'Commitment', align: 'right' },
+      { key: 'totalContributions', label: 'Contributions', align: 'right' },
+      { key: 'totalDistributions', label: 'Distributions', align: 'right' },
+      { key: 'nav', label: 'Value', align: 'right' },
+      { key: 'investmentReturn', label: 'Investment<br>Return', align: 'right' },
+      { key: 'moic', label: 'MOIC', align: 'right' },
+      { key: 'irr', label: 'IRR', align: 'right' },
+      { key: 'outstandingCommitment', label: 'Outstanding<br>Commitment', align: 'right' },
+    ];
+
+    /** Renders the table header */
+    function renderTableHeader(headerRow) {
+        headerRow.innerHTML = ""; // Clear existing header cells
+
+        TABLE_COLUMNS_CONFIG.forEach(col => {
+            const th = document.createElement("th");
+            th.dataset.key = col.key;
+
+            // Handle potential <br> in label - using innerHTML for simplicity here
+            // Assumes labels in TABLE_COLUMNS_CONFIG are safe/static
+            th.innerHTML = col.label; // Use innerHTML to render <br> if present
+            if (col.align) th.style.textAlign = col.align;
+
+            // Apply sort indicator and click handler
+            const activeSort = sortKeys.find(sk => sk.key === col.key);
+            if (activeSort) {
+                const index = sortKeys.findIndex(sk => sk.key === col.key) + 1;
+                const arrow = activeSort.asc ? '▲' : '▼';
+                const sortSpan = document.createElement('span');
+                sortSpan.style.marginLeft = '6px';
+                sortSpan.style.fontSize = '0.9em';
+                sortSpan.textContent = arrow;
+                const indexSup = document.createElement('sup');
+                indexSup.textContent = index;
+                sortSpan.appendChild(indexSup);
+                th.appendChild(sortSpan);
+            }
+            th.onclick = () => sortTable(col.key); // Attach sort handler
+
+            headerRow.appendChild(th);
+        });
+
+        // Add "Actions" Header
+        const actionsTh = document.createElement("th");
+        actionsTh.textContent = "Actions";
+        headerRow.appendChild(actionsTh);
+    }
+
+    /** Renders the main data rows of the table */
+    function renderTableBody(tbody, data) {
+        tbody.innerHTML = ""; // Clear existing body rows
+
+        data.forEach(entry => {
+            const tr = document.createElement("tr");
+            // Ensure cache exists, even if empty, to prevent errors reading properties
+            const cache = entry._cache || { nav: null, irr: null, moic: null, investmentReturn: null, totalContributions: null, totalDistributions: null, outstandingCommitment: null, vintage: null, hasPostNavFlows: false, adjustedNavDelta: 0 };
+            const showTooltip = cache.hasPostNavFlows;
+
+            if (showTooltip && Math.abs(cache.adjustedNavDelta) > 0.001) { // Only highlight if delta is significant
+                tr.style.backgroundColor = "#fff3cd"; // Highlight rows with adjusted NAV
+            }
+
+            // Create cells for data columns
+            TABLE_COLUMNS_CONFIG.forEach(col => {
+                const td = document.createElement("td");
+                let value;
+
+                // Get value from cache or entry, format appropriately
+                switch (col.key) {
+                    case 'nav':
+                        value = formatCurrencyValue(cache.nav); // Handles 0 and NaN internally
+                        break;
+                    case 'investmentReturn':
+                        value = formatCurrencyValue(cache.investmentReturn); // Handles 0 and NaN internally
+                        break;
+                    case 'moic':
+                        // Explicitly check if moic is a valid number before formatting
+                        value = isNumber(cache.moic) ? cache.moic.toFixed(2) : "N/A";
+                        break;
+                    case 'irr':
+                         // Explicitly check if irr is a valid number before formatting
+                        value = isNumber(cache.irr) ? (cache.irr * 100).toFixed(2) + "%" : "N/A";
+                        break;
+                    case 'totalContributions':
+                        value = formatCurrencyValue(cache.totalContributions); // Handles 0 and NaN internally
+                        break;
+                    case 'totalDistributions':
+                        value = formatCurrencyValue(cache.totalDistributions); // Handles 0 and NaN internally
+                        break;
+                    case 'outstandingCommitment':
+                        value = formatCurrencyValue(cache.outstandingCommitment); // Handles 0 and NaN internally
+                        break;
+                    case 'commitment':
+                        // Parse commitment here to check if it's a number before formatting
+                        const commitVal = parseCurrency(entry.commitment);
+                        value = isNumber(commitVal) ? formatCurrencyValue(commitVal) : "N/A";
+                        break;
+                    case 'vintage':
+                        value = cache.vintage ?? "N/A"; // Handles null/undefined vintage year
+                        break;
+                    default:
+                        // Default case for fundName, accountNumber etc.
+                        value = entry[col.key] ?? ""; // Use nullish coalescing for safety
+                }
+
+                td.textContent = value; // Set cell content safely
+                if (col.align) td.style.textAlign = col.align; // Apply alignment
+
+                // Add tooltip for adjusted NAV on fund name cell
+                 if (col.key === 'fundName' && showTooltip) {
+                     const delta = cache.adjustedNavDelta || 0;
+                     if (Math.abs(delta) > 0.001) { // Only show if adjustment is significant
+                        td.title = `NAV adjusted by ${formatCurrencyValue(delta, true)} due to post-NAV flows.`;
+                     }
+                 }
+
+                tr.appendChild(td);
+            });
+
+            // Create Actions Cell (Remains the same)
+            const actionTd = document.createElement("td");
+            const actionBtn = document.createElement("button");
+            actionBtn.textContent = "Actions";
+            actionBtn.classList.add(CLASS_ACTIONS_BTN);
+            actionBtn.dataset.id = entry.id;
+            actionTd.appendChild(actionBtn);
+            tr.appendChild(actionTd);
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    /** Renders the totals footer row */
+    function renderTableFooter(tbody, data, cutoffDate) {
+        if (data.length === 0) return; // Don't render footer if no data
+
+        const totals = calculateTotals(data, cutoffDate);
+        const totalRow = document.createElement("tr");
+        // Styling handled by CSS: .fund-table tbody tr:last-of-type
+
+        TABLE_COLUMNS_CONFIG.forEach(col => {
+            const totalTd = document.createElement("td");
+            let value = "";
+            let useInnerHTML = false; // Keep this flag if needed, though likely not anymore
+
+            switch (col.key) {
+                case 'fundName': value = "Total"; break;
+                case 'commitment': value = formatCurrencyValue(totals.commitment); break;
+                case 'totalContributions': value = formatCurrencyValue(totals.contributions); break;
+                case 'totalDistributions': value = formatCurrencyValue(totals.distributions); break;
+                case 'nav': value = formatCurrencyValue(totals.nav); break;
+                case 'investmentReturn': value = formatCurrencyValue(totals.investmentReturn); break;
+                case 'moic':
+                     // Explicitly check if aggregate moic is a valid number
+                     value = isNumber(totals.moic) ? totals.moic.toFixed(2) : "N/A";
+                     break;
+                case 'irr':
+                     // Explicitly check if aggregate irr is a valid number
+                     value = isNumber(totals.irr) ? (totals.irr * 100).toFixed(2) + "%" : "N/A";
+                     break;
+                case 'outstandingCommitment': value = formatCurrencyValue(totals.outstandingCommitment); break;
+                default: value = ""; // Blank for account, vintage etc.
+            }
+
+             totalTd.textContent = value; // Use textContent for safety
+             if (col.align) totalTd.style.textAlign = col.align; // Apply alignment
+
+            totalRow.appendChild(totalTd);
+        });
+
+        // Add empty Actions cell for totals row
+        const emptyActionTd = document.createElement("td");
+        totalRow.appendChild(emptyActionTd);
+
+        tbody.appendChild(totalRow); // Append the finished total row
+    }
+
+    /** Main table rendering orchestrator */
+    const renderTable = () => {
+        console.log("Rendering table...");
+        // 1. Get Data - Use the already processed cache
+        // We assume processFundData has been called before renderTable
+        // (on initial load or cutoff date change)
+        let displayData = [...processedDataCache];
+
+        // 2. Populate Filters (if needed)
+        if (!skipPopulateSelects) {
+             populateSelects(displayData); // Use processed data for consistency
+        }
+        skipPopulateSelects = false; // Reset flag
+
+        // 3. Apply Filters
+        const selectedFund = $("fundFilter").value;
+        const selectedAccount = $("accountFilter").value;
+        if (selectedFund) displayData = displayData.filter(entry => entry.fundName === selectedFund);
+        if (selectedAccount) displayData = displayData.filter(entry => entry.accountNumber === selectedAccount);
+
+        // 4. Sort Data
+        sortData(displayData); // Use the helper function
+
+        // 5. Get Table Elements & Call Render Helpers
+        const thead = $("dataTable").querySelector("thead");
+        const headerRow = thead.querySelector("tr") || thead.appendChild(document.createElement("tr")); // Ensure header row exists
+        const tbody = $("dataTable").querySelector("tbody");
+
+        renderTableHeader(headerRow);
+        renderTableBody(tbody, displayData); // Pass filtered/sorted data
+
+        // 6. Render Footer - Get cutoff date *here* specifically for totals calculation
+        const cutoffDateInputForTotals = $("cutoffDate").value; // Get value directly here
+        const cutoffDateForTotals = cutoffDateInputForTotals ? new Date(cutoffDateInputForTotals) : null;
+        renderTableFooter(tbody, displayData, cutoffDateForTotals); // Pass filtered/sorted data and current cutoff
+
+        console.log("Table rendering complete.");
+    };
+
+
+    /** Populates filter dropdowns based on available data */
+     const populateSelects = (data) => {
+        const fundSelect = $("fundFilter");
+        const accountSelect = $("accountFilter");
+
+        // Preserve current selections
+        const currentFund = fundSelect.value;
+        const currentAccount = accountSelect.value;
+
+        const fundsSet = new Set(), accountsSet = new Set();
+        data.forEach(entry => {
+            if (entry.fundName) fundsSet.add(entry.fundName);
+            if (entry.accountNumber) accountsSet.add(entry.accountNumber);
+        });
+
+        // Populate funds
+        fundSelect.innerHTML = '<option value="">All Funds</option>'; // Clear existing
+        Array.from(fundsSet).sort().forEach(fund => {
+            const option = document.createElement("option");
+            option.value = fund;
+            option.textContent = fund;
+            fundSelect.appendChild(option);
+        });
+        // Restore previous selection if available and still valid
+        if (currentFund && fundsSet.has(currentFund)) fundSelect.value = currentFund;
+        else if (fundSelect.options.length === 2) { // Auto-select if only one fund left + "All"
+             fundSelect.selectedIndex = 1;
+        }
+
+
+        // Populate accounts based on currently selected fund (or all if no fund selected)
+         const relevantAccountsSet = new Set();
+         const fundFilterValue = fundSelect.value; // Get potentially updated value
+         data.forEach(entry => {
+            if (!fundFilterValue || entry.fundName === fundFilterValue) {
+                 if (entry.accountNumber) relevantAccountsSet.add(entry.accountNumber);
+            }
+         });
+
+        accountSelect.innerHTML = '<option value="">All Accounts</option>'; // Clear existing
+        Array.from(relevantAccountsSet).sort().forEach(account => {
+            const option = document.createElement("option");
+            option.value = account;
+            option.textContent = account;
+            accountSelect.appendChild(option);
+        });
+         // Restore previous selection if available and still valid
+         if (currentAccount && relevantAccountsSet.has(currentAccount)) accountSelect.value = currentAccount;
+         else if (accountSelect.options.length === 2) { // Auto-select if only one account left + "All"
+            accountSelect.selectedIndex = 1;
+         }
+
+    };
+
+    /** Handles sorting configuration */
+    function sortTable(key) {
+        const existingIndex = sortKeys.findIndex(sk => sk.key === key);
+
+        if (existingIndex === -1) {
+            // Not found, add as ascending
+            sortKeys.push({ key, asc: true });
+        } else {
+            // Found, check current direction
+            if (sortKeys[existingIndex].asc) {
+                // Was ascending, change to descending
+                sortKeys[existingIndex].asc = false;
+            } else {
+                // Was descending, remove from sort
+                sortKeys.splice(existingIndex, 1);
+            }
+        }
+        renderTable(); // Re-render with new sort order
+    }
+
+    /** Sorts the data array in place based on the global sortKeys */
+    function sortData(data) {
+        if (sortKeys.length === 0) return; // No sorting needed
+
+        data.sort((a, b) => {
+            for (const { key, asc } of sortKeys) {
+                // Get values to compare (prioritize cache, fallback to entry)
+                const aVal = a._cache?.[key] ?? a[key] ?? null;
+                const bVal = b._cache?.[key] ?? b[key] ?? null;
+
+                // Handle null/undefined consistently (e.g., nulls last)
+                const aIsNull = aVal === null || typeof aVal === 'undefined' || (typeof aVal === 'number' && !isFinite(aVal));
+                const bIsNull = bVal === null || typeof bVal === 'undefined' || (typeof bVal === 'number' && !isFinite(bVal));
+
+                if (aIsNull && bIsNull) continue; // Both null, compare by next key
+                if (aIsNull) return asc ? 1 : -1;  // a is null, comes last if asc, first if desc
+                if (bIsNull) return asc ? -1 : 1;  // b is null, comes last if asc, first if desc
+
+                // Actual comparison
+                let compareResult = 0;
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    compareResult = aVal - bVal;
+                } else {
+                    // String comparison (case-insensitive)
+                    compareResult = String(aVal).toLowerCase().localeCompare(String(bVal).toLowerCase());
+                }
+
+                if (compareResult !== 0) {
+                    return asc ? compareResult : -compareResult; // Apply direction
+                }
+                // If values are equal, continue to next sort key
+            }
+            return 0; // Entries are equal according to all sort keys
+        });
+    }
+
+    // ===========================
+    // Import / Export Functions
+    // ===========================
+    const exportToFile = async () => {
+        if (!db) { showNotification("Database not available.", "error"); return; }
+        const tx = db.transaction([FUND_STORE], "readonly");
+        const store = tx.objectStore(FUND_STORE);
+        const request = store.getAll();
+
+        request.onsuccess = async () => {
+            const data = request.result;
+            // Optional: Clean data before export (e.g., remove internal _cache)
+            const dataToExport = data.map(entry => {
+                 const { _cache, ...rest } = entry; // Exclude _cache
+                 return rest;
+            });
+
+            const jsonData = JSON.stringify(dataToExport, null, 2); // Pretty print
+
+            try {
+                // Use the File System Access API
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: `pe_manager_export_${new Date().toISOString().split('T')[0]}.json`,
+                    types: [{
+                        description: "JSON Files",
+                        accept: { "application/json": [".json"] }
+                    }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(jsonData);
+                await writable.close();
+                showNotification("Data exported successfully!", "success");
+            } catch (err) {
+                // Handle errors (e.g., user cancellation)
+                if (err.name !== 'AbortError') {
+                    console.error("File export failed:", err);
+                    showNotification("File export failed. See console for details.", "error");
+                } else {
+                     console.log("File export cancelled by user.");
+                }
+            }
+        };
+        request.onerror = (event) => {
+             console.error("Error reading data for export:", event.target.error);
+             showNotification("Could not read data for export.", "error");
+        }
+    };
+
+    const importFromFile = () => {
+        const fileInput = $("fileInput");
+        const file = fileInput.files[0];
+
+        if (!file) {
+            showNotification("Please select a file to import.", "warning");
+            return;
+        }
+        if (!file.type || file.type !== "application/json") {
+             showNotification("Invalid file type. Please select a JSON file.", "warning");
+             fileInput.value = ""; // Clear selection
+             return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = event => {
+            let importData;
+            try {
+                importData = JSON.parse(event.target.result);
+                if (!Array.isArray(importData)) {
+                    throw new Error("Imported JSON is not an array.");
+                }
+            } catch (err) {
+                console.error("Import parse error:", err);
+                showNotification(`Invalid JSON file: ${err.message}`, "error");
+                fileInput.value = ""; // Clear selection
+                return;
+            }
+
+             // Optional: Basic validation of imported data structure here?
+
+            if (!db) { showNotification("Database not available for import.", "error"); return; }
+
+            const tx = db.transaction([FUND_STORE], "readwrite");
+            const store = tx.objectStore(FUND_STORE);
+            let importCount = 0;
+            let errorCount = 0;
+
+            // Clear existing data first? Or merge? Current logic overwrites/adds based on ID.
+            // If merging is complex, clearing might be simpler:
+             // const clearRequest = store.clear();
+             // clearRequest.onsuccess = () => { ... proceed with import ... }
+
+            importData.forEach(entry => {
+                 // Basic check for essential fields?
+                 // if (!entry || !entry.fundName || !entry.accountNumber /*...*/) {
+                 //    console.warn("Skipping invalid entry during import:", entry);
+                 //    errorCount++;
+                 //    return;
+                 // }
+
+                 // Add/update entry. Let IndexedDB handle ID conflicts if keyPath is 'id'.
+                 // If imported data has no IDs, 'add' works. If it has IDs, 'put' overwrites or adds.
+                 const putRequest = store.put(entry);
+                 putRequest.onsuccess = () => { importCount++; };
+                 putRequest.onerror = () => { errorCount++; };
+            });
+
+            tx.oncomplete = () => {
+                fileInput.value = ""; // Clear selection after successful transaction
+                showNotification(`Import complete. Added/Updated: ${importCount}, Errors: ${errorCount}`, errorCount > 0 ? "warning" : "success");
+                // Reload everything after import
+                loadFundNames(() => {
+                     loadFundsFromDB(renderTable);
+                });
+            };
+            tx.onerror = event => {
+                console.error("Transaction error during import:", event.target.error);
+                showNotification("An error occurred during the import transaction.", "error");
+                fileInput.value = ""; // Clear selection
+            };
+        };
+
+        reader.onerror = (event) => {
+            console.error("FileReader error:", event.target.error);
+            showNotification("Error reading the selected file.", "error");
+            fileInput.value = ""; // Clear selection
+        };
+
+        reader.readAsText(file);
+    };
+
+    // ===========================
+    // Event Binding Functions
+    // ===========================
+
+    /** Binds listeners related to modals */
+    function bindModalListeners() {
+        // Close buttons inside modals
+        document.querySelectorAll(".modal .close").forEach(btn => {
+            btn.addEventListener("click", (event) => {
+                const modal = event.target.closest(".modal");
+                if (modal) hideModal(modal.id);
+            });
+        });
+
+        // Action Modal Buttons
+        $("actionEditBtn").addEventListener("click", () => showFundForm('edit', currentFundIdForActions));
+        $("actionDuplicateBtn").addEventListener("click", () => showFundForm('duplicate', currentFundIdForActions));
+        $("actionDeleteBtn").addEventListener("click", () => {
+            if (!confirm("Are you sure you want to delete this fund entry?")) return;
+            deleteFundFromDB(currentFundIdForActions, (success) => {
+                if (success) hideActionModal();
+            });
+        });
+        $("actionDetailsBtn").addEventListener("click", () => {
+            hideActionModal();
+            showDetailsSection(currentFundIdForActions);
+        });
+        $("actionCloseBtn").addEventListener("click", hideActionModal);
+
+        // Fund Form Modal Buttons
+         $("fundForm").addEventListener("submit", saveFund); // Use submit event on form
+         $("cancelFundBtn").addEventListener("click", hideFundForm);
+
+         // Manage Fund Names Modal Buttons
+         $("saveNewFundNameBtn").addEventListener("click", handleAddNewFundName);
+         $("closeManageFundNamesModal").addEventListener("click", hideManageFundNamesModal);
+         // Delete/Edit listeners for fund names are added dynamically in renderFundNameList
+    }
+
+    /** Binds listeners related to the main data table and filters */
+    function bindTableAndFilterListeners() {
+        // Table Body Actions (Event Delegation)
+        $("dataTable").querySelector("tbody").addEventListener("click", event => {
+            const actionButton = event.target.closest(`.${CLASS_ACTIONS_BTN}`);
+            if (actionButton) {
+                const id = actionButton.dataset.id;
+                if (id) {
+                    // Hide other sections potentially open
+                     hideFundForm();
+                     hideDetailsSection();
+                    showActionModal(id);
+                }
+            }
+        });
+
+        // Filter Dropdowns
+        $("fundFilter").addEventListener("change", () => {
+            skipPopulateSelects = true; // Prevent account filter from resetting fund filter
+            renderTable(); // Re-render, which will update account filter options
+        });
+        $("accountFilter").addEventListener("change", () => {
+            skipPopulateSelects = true; // Prevent loops
+            renderTable();
+        });
+
+        // Cutoff Date
+        $("cutoffDate").addEventListener("change", () => {
+             // Re-processing and rendering is handled within renderTable now
+             renderTable();
+        });
+
+        // Reset Filters Button
+        $("resetFiltersBtn").addEventListener("click", () => {
+            $("fundFilter").value = "";
+            $("accountFilter").value = "";
+            // Reset cutoff date? Or keep it? Assuming keep it.
+            // $("cutoffDate").value = getLatestQuarterEnd().toISOString().split("T")[0];
+            sortKeys = []; // Also reset sorting
+            renderTable(); // Re-render with default filters/sort
+        });
+    }
+
+    /** Binds listeners related to the Details Section (Cash Flow / NAV tables) */
+    function bindDetailsSectionListeners() {
+         // Add Row Buttons
+        $("addCashFlowBtn").addEventListener("click", addCashFlowRow);
+        $("addNavBtn").addEventListener("click", addNavRow);
+
+        // Save/Cancel Buttons
+        $("detailsForm").addEventListener("submit", saveDetails); // Use submit event
+        $("cancelDetailsBtn").addEventListener("click", (e) => {
+             // Check if form is dirty before confirming? More complex state tracking needed.
+             // Simple confirm for now:
+             if (confirm("Discard any unsaved changes in the details section?")) {
+                hideDetailsSection();
+             }
+        });
+
+        // Delete Row Buttons (Event Delegation on the section)
+        $("detailsSection").addEventListener("click", event => {
+             const deleteButton = event.target.closest(`.${CLASS_DELETE_ROW_BTN}`);
+             if (deleteButton) {
+                // Optional confirm before deleting row?
+                deleteButton.closest("tr").remove();
+             }
+        });
+    }
+
+     /** Binds listeners for general page actions */
+     function bindGeneralActionListeners() {
+        $("addNewAccountBtn").addEventListener("click", () => showFundForm('new'));
+        $("manageFundNamesBtn").addEventListener("click", showManageFundNamesModal);
+        $("exportBtn").addEventListener("click", exportToFile);
+        $("fileInput").addEventListener("change", importFromFile); // Listener for file selection
+
+         // Global listener to remove validation errors on input
+        document.body.addEventListener("input", (event) => {
+            const target = event.target;
+            if (target.classList.contains(CLASS_INVALID)) {
+                target.classList.remove(CLASS_INVALID);
+                const errorMsg = target.parentNode.querySelector(`.${CLASS_INLINE_ERROR}`);
+                if (errorMsg) errorMsg.remove();
+            }
+        });
+
+         // Currency formatting for commitment field (ensure it's bound once)
+         formatAmountField($('commitment'));
+    }
+
+
+    /** Main event binding orchestrator */
+    const bindEvents = () => {
+        bindModalListeners();
+        bindTableAndFilterListeners();
+        bindDetailsSectionListeners();
+        bindGeneralActionListeners();
+         console.log("Event listeners bound.");
+    };
+
+    // ===========================
+    // Initialization
+    // ===========================
+    const init = () => {
+        console.log("Initializing PE Manager...");
+        // Set default cutoff date to last quarter end
+        $("cutoffDate").value = getLatestQuarterEnd().toISOString().split("T")[0];
+        initDB(); // Initializes DB and loads initial data/renders table via callbacks
+        bindEvents(); // Bind listeners after initial elements are present
+        console.log("Initialization complete.");
+    };
+
+    // Start the application when the DOM is ready
+    document.addEventListener("DOMContentLoaded", init);
+
+    })(); // End IIFE
+  </script>
+
+</body>
+</html>
