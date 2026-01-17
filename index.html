@@ -1635,57 +1635,106 @@
             currentDetailsFundId = id;
 
             try {
+                console.log('Loading fund details for ID:', id);
                 const fund = await getFundById(id);
+
                 if (!fund) {
+                    console.error('Fund not found:', id);
                     showStatus('Fund not found', 'error');
                     return;
                 }
+
+                console.log('Fund loaded:', fund);
 
                 document.getElementById('detailsModalTitle').textContent =
                     `Fund Details - ${fund.fundName}`;
 
                 // Populate cash flows table
-                const cashFlowsTable = document.getElementById('cashFlowsTable').querySelector('tbody');
-                cashFlowsTable.innerHTML = '';
+                const cashFlowsTable = document.getElementById('cashFlowsTable');
+                if (!cashFlowsTable) {
+                    console.error('Cash flows table not found');
+                    showStatus('Error: Cash flows table element not found in page', 'error');
+                    return;
+                }
+                const cashFlowsTableBody = cashFlowsTable.querySelector('tbody');
+                if (!cashFlowsTableBody) {
+                    console.error('Cash flows table body not found');
+                    showStatus('Error: Cash flows table body element not found in page', 'error');
+                    return;
+                }
+                cashFlowsTableBody.innerHTML = '';
+
+                console.log('Cash flows:', fund.cashFlows);
                 (fund.cashFlows || []).forEach((cf, index) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td><input type="date" value="${cf.date || ''}" data-field="date" data-index="${index}"></td>
-                        <td><input type="text" value="${parseCurrency(cf.amount) || ''}" data-field="amount" data-index="${index}"></td>
-                        <td>
-                            <select data-field="type" data-index="${index}">
-                                <option value="Contribution" ${cf.type === 'Contribution' ? 'selected' : ''}>Contribution</option>
-                                <option value="Distribution" ${cf.type === 'Distribution' ? 'selected' : ''}>Distribution</option>
-                            </select>
-                        </td>
-                        <td style="text-align: center;">
-                            <input type="checkbox" ${cf.affectsCommitment !== false ? 'checked' : ''} data-field="affectsCommitment" data-index="${index}">
-                        </td>
-                        <td>
-                            <button class="delete-row-btn" onclick="deleteCashFlowRow(${index})">Delete</button>
-                        </td>
-                    `;
-                    cashFlowsTable.appendChild(row);
+                    try {
+                        const row = document.createElement('tr');
+                        const amountValue = parseCurrency(cf.amount);
+                        const displayAmount = isNaN(amountValue) ? '' : amountValue;
+
+                        row.innerHTML = `
+                            <td><input type="date" value="${escapeHtml(cf.date || '')}" data-field="date" data-index="${index}"></td>
+                            <td><input type="text" value="${displayAmount}" data-field="amount" data-index="${index}"></td>
+                            <td>
+                                <select data-field="type" data-index="${index}">
+                                    <option value="Contribution" ${cf.type === 'Contribution' ? 'selected' : ''}>Contribution</option>
+                                    <option value="Distribution" ${cf.type === 'Distribution' ? 'selected' : ''}>Distribution</option>
+                                </select>
+                            </td>
+                            <td style="text-align: center;">
+                                <input type="checkbox" ${cf.affectsCommitment !== false ? 'checked' : ''} data-field="affectsCommitment" data-index="${index}">
+                            </td>
+                            <td>
+                                <button class="delete-row-btn" onclick="deleteCashFlowRow(${index})">Delete</button>
+                            </td>
+                        `;
+                        cashFlowsTableBody.appendChild(row);
+                    } catch (cfErr) {
+                        console.error('Error adding cash flow row:', cfErr, cf);
+                        showStatus('Error loading cash flow at index ' + index + ': ' + cfErr.message, 'error');
+                    }
                 });
 
                 // Populate NAV table
-                const navTable = document.getElementById('navTable').querySelector('tbody');
-                navTable.innerHTML = '';
+                const navTable = document.getElementById('navTable');
+                if (!navTable) {
+                    console.error('NAV table not found');
+                    showStatus('Error: NAV table element not found in page', 'error');
+                    return;
+                }
+                const navTableBody = navTable.querySelector('tbody');
+                if (!navTableBody) {
+                    console.error('NAV table body not found');
+                    showStatus('Error: NAV table body element not found in page', 'error');
+                    return;
+                }
+                navTableBody.innerHTML = '';
+
+                console.log('Monthly NAV:', fund.monthlyNav);
                 (fund.monthlyNav || []).forEach((nav, index) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td><input type="date" value="${nav.date || ''}" data-field="date" data-index="${index}"></td>
-                        <td><input type="text" value="${parseCurrency(nav.amount) || ''}" data-field="amount" data-index="${index}"></td>
-                        <td>
-                            <button class="delete-row-btn" onclick="deleteNavRow(${index})">Delete</button>
-                        </td>
-                    `;
-                    navTable.appendChild(row);
+                    try {
+                        const row = document.createElement('tr');
+                        const amountValue = parseCurrency(nav.amount);
+                        const displayAmount = isNaN(amountValue) ? '' : amountValue;
+
+                        row.innerHTML = `
+                            <td><input type="date" value="${escapeHtml(nav.date || '')}" data-field="date" data-index="${index}"></td>
+                            <td><input type="text" value="${displayAmount}" data-field="amount" data-index="${index}"></td>
+                            <td>
+                                <button class="delete-row-btn" onclick="deleteNavRow(${index})">Delete</button>
+                            </td>
+                        `;
+                        navTableBody.appendChild(row);
+                    } catch (navErr) {
+                        console.error('Error adding NAV row:', navErr, nav);
+                        showStatus('Error loading NAV at index ' + index + ': ' + navErr.message, 'error');
+                    }
                 });
 
                 document.getElementById('detailsModal').classList.add('show');
+                console.log('Details modal opened successfully');
             } catch (err) {
-                showStatus('Error loading fund details: ' + err.message, 'error');
+                console.error('Error in showDetailsModal:', err);
+                showStatus('Error loading fund details: ' + err.message + ' (Check console for details)', 'error');
             }
         }
 
