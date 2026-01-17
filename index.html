@@ -810,8 +810,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>PE Fund Manager</h1>
-            <p>Private Equity Fund Analytics & Management Tool</p>
+            <h1 id="headerTitle">PE Fund Manager</h1>
+            <p id="headerSubtitle">Private Equity Fund Analytics & Management Tool</p>
         </header>
 
         <div class="controls-bar">
@@ -1806,7 +1806,43 @@
                 currentGroupDescendants = null;
             }
 
+            // Update header based on selected group
+            updateHeader();
+
             renderTable();
+        }
+
+        function updateHeader() {
+            const groupFilterValue = document.getElementById('groupFilter').value;
+            const headerTitle = document.getElementById('headerTitle');
+            const headerSubtitle = document.getElementById('headerSubtitle');
+
+            if (groupFilterValue) {
+                const groupId = parseInt(groupFilterValue);
+                const group = groups.find(g => g.id === groupId);
+
+                if (group) {
+                    // Set main title to group name
+                    headerTitle.textContent = group.name;
+
+                    // Set subtitle to parent group name if exists, otherwise show type or default
+                    if (group.parentGroupId) {
+                        const parentGroup = groups.find(g => g.id === group.parentGroupId);
+                        if (parentGroup) {
+                            headerSubtitle.textContent = parentGroup.name;
+                        } else {
+                            headerSubtitle.textContent = group.type || 'Account Group';
+                        }
+                    } else {
+                        // Top level group - show type or generic text
+                        headerSubtitle.textContent = group.type || 'Account Group';
+                    }
+                }
+            } else {
+                // Reset to default
+                headerTitle.textContent = 'PE Fund Manager';
+                headerSubtitle.textContent = 'Private Equity Fund Analytics & Management Tool';
+            }
         }
 
         function resetFilters() {
@@ -1815,6 +1851,7 @@
             document.getElementById('groupFilter').value = '';
             document.getElementById('cutoffDate').value = '';
             currentGroupDescendants = null;
+            updateHeader();
             renderTable();
         }
 
