@@ -687,6 +687,15 @@
             background: #C0392B;
         }
 
+        .validation-error-row {
+            background-color: #ffebee !important;
+            border-left: 3px solid #E74C3C;
+        }
+
+        .validation-error-row input {
+            border-color: #E74C3C !important;
+        }
+
         #manageFundNamesModal .fund-name-item {
             display: flex;
             justify-content: space-between;
@@ -884,6 +893,10 @@
                 <select id="accountFilter" onchange="applyFilters()">
                     <option value="">All Accounts</option>
                 </select>
+            </div>
+            <div class="control-group">
+                <label for="searchInput">Search</label>
+                <input type="text" id="searchInput" placeholder="Search funds..." oninput="applyFilters()" title="Search by fund name or account number" aria-label="Search funds by name or account number">
             </div>
             <div class="control-group">
                 <label for="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date">Cutoff Date</label>
@@ -1812,6 +1825,7 @@
             const fundFilter = document.getElementById('fundFilter').value;
             const accountFilter = document.getElementById('accountFilter').value;
             const groupFilter = document.getElementById('groupFilter').value;
+            const searchInput = document.getElementById('searchInput').value.toLowerCase().trim();
 
             return funds.filter(fund => {
                 if (fundFilter && fund.fundName !== fundFilter) return false;
@@ -1824,6 +1838,14 @@
                         return false; // Will be set by async filter
                     }
                     if (!currentGroupDescendants.ids.includes(fund.groupId)) return false;
+                }
+                // Search filter: check fund name and account number
+                if (searchInput) {
+                    const fundName = (fund.fundName || '').toLowerCase();
+                    const accountNumber = (fund.accountNumber || '').toLowerCase();
+                    if (!fundName.includes(searchInput) && !accountNumber.includes(searchInput)) {
+                        return false;
+                    }
                 }
                 return true;
             });
@@ -1925,6 +1947,7 @@
             document.getElementById('fundFilter').value = '';
             document.getElementById('accountFilter').value = '';
             document.getElementById('groupFilter').value = '';
+            document.getElementById('searchInput').value = '';
             document.getElementById('cutoffDate').value = '';
             currentGroupDescendants = null;
             updateHeader();
@@ -2510,6 +2533,11 @@
                 const cashFlows = [];
                 const invalidCashFlows = [];
 
+                // Clear previous error highlights
+                Array.from(cashFlowsTable.children).forEach(row => {
+                    row.classList.remove('validation-error-row');
+                });
+
                 Array.from(cashFlowsTable.children).forEach((row, index) => {
                     const date = row.querySelector('[data-field="date"]').value;
                     const amount = row.querySelector('[data-field="amount"]').value;
@@ -2520,6 +2548,7 @@
                         // Validate date format (YYYY-MM-DD)
                         if (!isValidDate(date)) {
                             invalidCashFlows.push(index + 1);
+                            row.classList.add('validation-error-row');
                         } else {
                             cashFlows.push({
                                 date,
@@ -2541,6 +2570,11 @@
                 const monthlyNav = [];
                 const invalidNav = [];
 
+                // Clear previous error highlights
+                Array.from(navTable.children).forEach(row => {
+                    row.classList.remove('validation-error-row');
+                });
+
                 Array.from(navTable.children).forEach((row, index) => {
                     const date = row.querySelector('[data-field="date"]').value;
                     const amount = row.querySelector('[data-field="amount"]').value;
@@ -2549,6 +2583,7 @@
                         // Validate date format (YYYY-MM-DD)
                         if (!isValidDate(date)) {
                             invalidNav.push(index + 1);
+                            row.classList.add('validation-error-row');
                         } else {
                             monthlyNav.push({
                                 date,
@@ -3313,6 +3348,41 @@
                 if (detailsModal.contains(event.target)) {
                     hasUnsavedChanges = true;
                 }
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            // Escape key: Close open modals
+            if (event.key === 'Escape') {
+                const detailsModal = document.getElementById('detailsModal');
+                const actionModal = document.getElementById('actionModal');
+                const investmentModal = document.getElementById('investmentModal');
+                const manageFundsModal = document.getElementById('manageFundNamesModal');
+                const manageGroupsModal = document.getElementById('manageGroupsModal');
+
+                if (detailsModal && detailsModal.classList.contains('show')) {
+                    closeDetailsModal();
+                } else if (actionModal && actionModal.classList.contains('show')) {
+                    closeActionModal();
+                } else if (investmentModal && investmentModal.classList.contains('show')) {
+                    closeInvestmentModal();
+                } else if (manageFundsModal && manageFundsModal.classList.contains('show')) {
+                    closeManageFundsModal();
+                } else if (manageGroupsModal && manageGroupsModal.classList.contains('show')) {
+                    closeManageGroupsModal();
+                }
+                return;
+            }
+
+            // Ctrl/Cmd+S: Save details if details modal is open
+            if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                event.preventDefault();
+                const detailsModal = document.getElementById('detailsModal');
+                if (detailsModal && detailsModal.classList.contains('show')) {
+                    saveDetailsChanges();
+                }
+                return;
             }
         });
 
