@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PE Fund Manager</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            height: fit-content;
+        }
+
+        .form-section h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .table-section {
+            overflow-x: auto;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        #searchInput {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+
+        th:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        th::after {
+            content: ' ⇅';
+            opacity: 0.5;
+        }
+
+        th.sorted-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+
+        th.sorted-desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            min-width: auto;
+        }
+
+        .btn-edit {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #138496;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+        }
+
+        .irr-positive {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .irr-negative {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .status-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 6px;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
+        }
+
+        .status-message.success {
+            border-left: 4px solid #28a745;
+        }
+
+        .status-message.error {
+            border-left: 4px solid #dc3545;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #ffc107;
+            color: #000;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .file-input-label:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏦 PE Fund Manager</h1>
+            <p>Private Equity Fund Analytics & Management Tool</p>
+        </header>
+
+        <div class="content">
+            <!-- Form Section -->
+            <div class="form-section">
+                <h2>Fund Details</h2>
+                <form id="fundForm">
+                    <input type="hidden" id="fundId">
+
+                    <div class="form-group">
+                        <label for="fundName">Fund Name *</label>
+                        <input type="text" id="fundName" placeholder="e.g., Vista Equity Partners Fund VII" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="accountNumber">Account Number *</label>
+                        <input type="text" id="accountNumber" placeholder="e.g., ACC-2024-001" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cashFlows">Cash Flows (JSON) *</label>
+                        <textarea id="cashFlows" placeholder='[{"date":"2024-01-15","amount":-1000000},{"date":"2024-06-15","amount":150000},{"date":"2025-01-15","amount":1200000}]' required></textarea>
+                        <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number}, ...]</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="monthlyNav">Monthly NAV (JSON)</label>
+                        <textarea id="monthlyNav" placeholder='[{"date":"2024-01-31","nav":950000},{"date":"2024-02-29","nav":980000}]'></textarea>
+                        <div class="hint">Format: [{"date":"YYYY-MM-DD","nav":number}, ...]</div>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="submit" class="btn-primary">💾 Save Fund</button>
+                        <button type="button" class="btn-secondary" onclick="clearForm()">🔄 Clear</button>
+                    </div>
+                </form>
+
+                <div style="margin-top: 25px; padding-top: 25px; border-top: 2px solid #ddd;">
+                    <div class="button-group">
+                        <button class="btn-success" onclick="exportDatabase()">📤 Export</button>
+                        <label for="importFile" class="file-input-label">📥 Import</label>
+                        <input type="file" id="importFile" accept=".json" onchange="importDatabase(event)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Section -->
+            <div class="table-section">
+                <div class="controls">
+                    <input type="text" id="searchInput" placeholder="🔍 Search funds..." onkeyup="searchFunds()">
+                </div>
+
+                <table id="fundsTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('id')">ID</th>
+                            <th onclick="sortTable('fundName')">Fund Name</th>
+                            <th onclick="sortTable('accountNumber')">Account Number</th>
+                            <th onclick="sortTable('timestamp')">Timestamp</th>
+                            <th onclick="sortTable('irr')">IRR</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fundsTableBody">
+                        <!-- Data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===========================
+        // IndexedDB Operations
+        // ===========================
+
+        let db;
+        const DB_NAME = 'FundsDB';
+        const STORE_NAME = 'funds';
+        const DB_VERSION = 1;
+
+        /**
+         * Initialize IndexedDB connection
+         */
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+
+                    // Create object store if it doesn't exist
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const objectStore = db.createObjectStore(STORE_NAME, {
+                            keyPath: 'id',
+                            autoIncrement: true
+                        });
+
+                        // Create indexes for efficient querying
+                        objectStore.createIndex('fundName', 'fundName', { unique: false });
+                        objectStore.createIndex('accountNumber', 'accountNumber', { unique: false });
+                        objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+                    }
+                };
+            });
+        }
+
+        /**
+         * Add or update a fund record
+         */
+        function saveFund(fundData) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const objectStore = transaction.objectStore(STORE_NAME);
+
+                let request;
+                if (fundData.id) {
+                    // Update existing record
+                    request = objectStore.put(fundData);
+                } else {
+                    // Add new record
+                    delete fundData.id; // Let autoIncrement handle it
+                    request = objectStore.add(fundData);
+                }
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * Get all fund records
+         */
+        function getAllFunds() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const objectStore = transaction.objectStore(STORE_NAME);
+                const request = objectStore.getAll();
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * Get a single fund by ID
+         */
+        function getFundById(id) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const objectStore = transaction.objectStore(STORE_NAME);
+                const request = objectStore.get(id);
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * Delete a fund record
+         */
+        function deleteFund(id) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const objectStore = transaction.objectStore(STORE_NAME);
+                const request = objectStore.delete(id);
+
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // ===========================
+        // IRR Calculation Engine
+        // ===========================
+
+        /**
+         * Calculate IRR using Newton-Raphson method
+         * @param {Array} cashFlows - Array of {date, amount}
+         * @returns {number|null} - IRR as decimal or null if not solvable
+         */
+        function calculateIRR(cashFlows) {
+            if (!cashFlows || cashFlows.length < 2) {
+                return null;
+            }
+
+            // Sort cash flows by date
+            const sortedFlows = [...cashFlows].sort((a, b) =>
+                new Date(a.date) - new Date(b.date)
+            );
+
+            // Use first cash flow as time zero
+            const startDate = new Date(sortedFlows[0].date);
+
+            // Calculate time periods in years from start date
+            const flows = sortedFlows.map(cf => ({
+                time: (new Date(cf.date) - startDate) / (365.25 * 24 * 60 * 60 * 1000),
+                amount: cf.amount
+            }));
+
+            /**
+             * NPV function: Net Present Value at given rate
+             */
+            function npv(rate, flows) {
+                return flows.reduce((sum, flow) => {
+                    return sum + flow.amount / Math.pow(1 + rate, flow.time);
+                }, 0);
+            }
+
+            /**
+             * Derivative of NPV with respect to rate
+             */
+            function npvDerivative(rate, flows) {
+                return flows.reduce((sum, flow) => {
+                    return sum - (flow.time * flow.amount) / Math.pow(1 + rate, flow.time + 1);
+                }, 0);
+            }
+
+            // Newton-Raphson parameters
+            let rate = 0.1; // Initial guess: 10%
+            const maxIterations = 100;
+            const tolerance = 1e-7;
+
+            // Newton-Raphson iteration
+            for (let i = 0; i < maxIterations; i++) {
+                const npvValue = npv(rate, flows);
+                const derivative = npvDerivative(rate, flows);
+
+                // Check if derivative is too small (would cause division issues)
+                if (Math.abs(derivative) < 1e-10) {
+                    return null;
+                }
+
+                const newRate = rate - npvValue / derivative;
+
+                // Check for convergence
+                if (Math.abs(newRate - rate) < tolerance) {
+                    return newRate;
+                }
+
+                rate = newRate;
+
+                // Prevent extreme values
+                if (rate < -0.99 || rate > 10) {
+                    return null;
+                }
+            }
+
+            // Did not converge
+            return null;
+        }
+
+        /**
+         * Format IRR as percentage string
+         */
+        function formatIRR(irr) {
+            if (irr === null || irr === undefined) {
+                return 'N/A';
+            }
+            return (irr * 100).toFixed(2) + '%';
+        }
+
+        // ===========================
+        // UI Rendering
+        // ===========================
+
+        let currentFunds = [];
+        let sortColumn = null;
+        let sortDirection = 'asc';
+
+        /**
+         * Render the funds table
+         */
+        async function renderTable(funds = null) {
+            if (funds === null) {
+                funds = await getAllFunds();
+            }
+
+            currentFunds = funds;
+            const tbody = document.getElementById('fundsTableBody');
+
+            if (funds.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                            </svg>
+                            <h3>No funds yet</h3>
+                            <p>Add your first fund using the form on the left</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = funds.map(fund => {
+                const irr = calculateIRR(fund.cashFlows);
+                const irrFormatted = formatIRR(irr);
+                const irrClass = irr === null ? '' : (irr >= 0 ? 'irr-positive' : 'irr-negative');
+                const timestamp = new Date(fund.timestamp).toLocaleString();
+
+                return `
+                    <tr>
+                        <td>${fund.id}</td>
+                        <td>${escapeHtml(fund.fundName)}</td>
+                        <td>${escapeHtml(fund.accountNumber)}</td>
+                        <td>${timestamp}</td>
+                        <td class="${irrClass}">${irrFormatted}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-edit btn-sm" onclick="editFund(${fund.id})">✏️ Edit</button>
+                                <button class="btn-delete btn-sm" onclick="deleteFundConfirm(${fund.id})">🗑️ Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        /**
+         * Escape HTML to prevent XSS
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        /**
+         * Show status message
+         */
+        function showStatus(message, type = 'success') {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status-message ${type}`;
+            statusDiv.textContent = message;
+            document.body.appendChild(statusDiv);
+
+            setTimeout(() => {
+                statusDiv.remove();
+            }, 3000);
+        }
+
+        // ===========================
+        // Form Handling
+        // ===========================
+
+        /**
+         * Handle form submission
+         */
+        document.getElementById('fundForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            try {
+                const fundId = document.getElementById('fundId').value;
+                const fundName = document.getElementById('fundName').value.trim();
+                const accountNumber = document.getElementById('accountNumber').value.trim();
+                const cashFlowsText = document.getElementById('cashFlows').value.trim();
+                const monthlyNavText = document.getElementById('monthlyNav').value.trim();
+
+                // Validate required fields
+                if (!fundName || !accountNumber || !cashFlowsText) {
+                    showStatus('Please fill in all required fields', 'error');
+                    return;
+                }
+
+                // Parse and validate JSON
+                let cashFlows, monthlyNav;
+
+                try {
+                    cashFlows = JSON.parse(cashFlowsText);
+                    if (!Array.isArray(cashFlows)) {
+                        throw new Error('Cash flows must be an array');
+                    }
+                    // Validate cash flow structure
+                    cashFlows.forEach((cf, i) => {
+                        if (!cf.date || typeof cf.amount !== 'number') {
+                            throw new Error(`Invalid cash flow at index ${i}`);
+                        }
+                    });
+                } catch (err) {
+                    showStatus('Invalid cash flows JSON: ' + err.message, 'error');
+                    return;
+                }
+
+                try {
+                    monthlyNav = monthlyNavText ? JSON.parse(monthlyNavText) : [];
+                    if (!Array.isArray(monthlyNav)) {
+                        throw new Error('Monthly NAV must be an array');
+                    }
+                    // Validate NAV structure
+                    monthlyNav.forEach((nav, i) => {
+                        if (!nav.date || typeof nav.nav !== 'number') {
+                            throw new Error(`Invalid NAV entry at index ${i}`);
+                        }
+                    });
+                } catch (err) {
+                    showStatus('Invalid monthly NAV JSON: ' + err.message, 'error');
+                    return;
+                }
+
+                // Create fund object
+                const fundData = {
+                    fundName,
+                    accountNumber,
+                    cashFlows,
+                    monthlyNav,
+                    timestamp: new Date().toISOString()
+                };
+
+                if (fundId) {
+                    fundData.id = parseInt(fundId);
+                }
+
+                // Save to database
+                await saveFund(fundData);
+
+                // Clear form and refresh table
+                clearForm();
+                await renderTable();
+
+                showStatus(fundId ? 'Fund updated successfully' : 'Fund added successfully');
+            } catch (err) {
+                showStatus('Error saving fund: ' + err.message, 'error');
+                console.error(err);
+            }
+        });
+
+        /**
+         * Clear the form
+         */
+        function clearForm() {
+            document.getElementById('fundForm').reset();
+            document.getElementById('fundId').value = '';
+        }
+
+        /**
+         * Edit a fund
+         */
+        async function editFund(id) {
+            try {
+                const fund = await getFundById(id);
+                if (!fund) {
+                    showStatus('Fund not found', 'error');
+                    return;
+                }
+
+                // Populate form
+                document.getElementById('fundId').value = fund.id;
+                document.getElementById('fundName').value = fund.fundName;
+                document.getElementById('accountNumber').value = fund.accountNumber;
+                document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows, null, 2);
+                document.getElementById('monthlyNav').value = JSON.stringify(fund.monthlyNav, null, 2);
+
+                // Scroll to form
+                document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
+            } catch (err) {
+                showStatus('Error loading fund: ' + err.message, 'error');
+                console.error(err);
+            }
+        }
+
+        /**
+         * Delete a fund with confirmation
+         */
+        async function deleteFundConfirm(id) {
+            const fund = await getFundById(id);
+            if (!fund) {
+                showStatus('Fund not found', 'error');
+                return;
+            }
+
+            if (confirm(`Are you sure you want to delete "${fund.fundName}"?`)) {
+                try {
+                    await deleteFund(id);
+                    await renderTable();
+                    showStatus('Fund deleted successfully');
+
+                    // Clear form if editing this fund
+                    if (document.getElementById('fundId').value == id) {
+                        clearForm();
+                    }
+                } catch (err) {
+                    showStatus('Error deleting fund: ' + err.message, 'error');
+                    console.error(err);
+                }
+            }
+        }
+
+        // ===========================
+        // Search & Sort
+        // ===========================
+
+        /**
+         * Search funds
+         */
+        function searchFunds() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            const filtered = currentFunds.filter(fund => {
+                return fund.fundName.toLowerCase().includes(searchTerm) ||
+                       fund.accountNumber.toLowerCase().includes(searchTerm) ||
+                       fund.id.toString().includes(searchTerm);
+            });
+
+            renderTable(filtered);
+        }
+
+        /**
+         * Sort table by column
+         */
+        async function sortTable(column) {
+            // Update sort direction
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+
+            // Get fresh data
+            const funds = await getAllFunds();
+
+            // Sort data
+            funds.sort((a, b) => {
+                let valA, valB;
+
+                if (column === 'irr') {
+                    valA = calculateIRR(a.cashFlows) || -Infinity;
+                    valB = calculateIRR(b.cashFlows) || -Infinity;
+                } else if (column === 'timestamp') {
+                    valA = new Date(a.timestamp);
+                    valB = new Date(b.timestamp);
+                } else {
+                    valA = a[column];
+                    valB = b[column];
+                }
+
+                if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            // Update header classes
+            document.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+            });
+
+            const headers = document.querySelectorAll('th');
+            const columnIndex = ['id', 'fundName', 'accountNumber', 'timestamp', 'irr'].indexOf(column);
+            if (columnIndex !== -1) {
+                headers[columnIndex].classList.add(`sorted-${sortDirection}`);
+            }
+
+            renderTable(funds);
+        }
+
+        // ===========================
+        // Import / Export
+        // ===========================
+
+        /**
+         * Export database to JSON file
+         */
+        async function exportDatabase() {
+            try {
+                const funds = await getAllFunds();
+                const dataStr = JSON.stringify(funds, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+
+                // Generate filename with timestamp
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const filename = `funds-export-${timestamp}.json`;
+
+                // Try File System Access API first
+                if ('showSaveFilePicker' in window) {
+                    try {
+                        const handle = await window.showSaveFilePicker({
+                            suggestedName: filename,
+                            types: [{
+                                description: 'JSON Files',
+                                accept: { 'application/json': ['.json'] }
+                            }]
+                        });
+
+                        const writable = await handle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+
+                        showStatus('Database exported successfully');
+                        return;
+                    } catch (err) {
+                        if (err.name === 'AbortError') {
+                            return; // User cancelled
+                        }
+                        throw err;
+                    }
+                }
+
+                // Fallback to download link
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showStatus('Database exported successfully');
+            } catch (err) {
+                showStatus('Error exporting database: ' + err.message, 'error');
+                console.error(err);
+            }
+        }
+
+        /**
+         * Import database from JSON file
+         */
+        async function importDatabase(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const funds = JSON.parse(text);
+
+                if (!Array.isArray(funds)) {
+                    throw new Error('Invalid format: expected array of funds');
+                }
+
+                // Validate and import each fund
+                let imported = 0;
+                for (const fund of funds) {
+                    // Remove id to let autoIncrement handle it
+                    const fundData = {
+                        fundName: fund.fundName,
+                        accountNumber: fund.accountNumber,
+                        cashFlows: fund.cashFlows,
+                        monthlyNav: fund.monthlyNav || [],
+                        timestamp: fund.timestamp || new Date().toISOString()
+                    };
+
+                    await saveFund(fundData);
+                    imported++;
+                }
+
+                await renderTable();
+                showStatus(`Successfully imported ${imported} fund(s)`);
+
+                // Reset file input
+                event.target.value = '';
+            } catch (err) {
+                showStatus('Error importing database: ' + err.message, 'error');
+                console.error(err);
+            }
+        }
+
+        // ===========================
+        // Initialization
+        // ===========================
+
+        /**
+         * Initialize the application
+         */
+        async function init() {
+            try {
+                await initDB();
+                await renderTable();
+                console.log('PE Fund Manager initialized successfully');
+            } catch (err) {
+                showStatus('Error initializing application: ' + err.message, 'error');
+                console.error(err);
+            }
+        }
+
+        // Start the application when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>
