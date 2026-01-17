@@ -459,16 +459,14 @@
         }
 
         .details-table {
-            width: 100%;
             border-collapse: collapse;
             font-size: 0.85em;
-            table-layout: fixed;
         }
 
         .details-table th {
             background-color: #34495E;
             color: #fff;
-            padding: 6px 4px;
+            padding: 6px 8px;
             text-align: left;
             border: 1px solid #2C3E50;
             font-weight: 500;
@@ -492,6 +490,7 @@
             border: 1px solid #BDC3C7;
             border-radius: 3px;
             font-size: 0.85em;
+            box-sizing: border-box;
         }
 
         .details-table input[type="number"],
@@ -512,47 +511,55 @@
         }
 
         /* Cash Flows Table Column Widths */
+        #cashFlowsTable {
+            width: auto;
+        }
+
         #cashFlowsTable th:nth-child(1),
         #cashFlowsTable td:nth-child(1) {
-            width: 22%;
+            width: 145px;
         }
 
         #cashFlowsTable th:nth-child(2),
         #cashFlowsTable td:nth-child(2) {
-            width: 24%;
+            width: 120px;
         }
 
         #cashFlowsTable th:nth-child(3),
         #cashFlowsTable td:nth-child(3) {
-            width: 20%;
+            width: 130px;
         }
 
         #cashFlowsTable th:nth-child(4),
         #cashFlowsTable td:nth-child(4) {
-            width: 20%;
+            width: 110px;
             text-align: center;
         }
 
         #cashFlowsTable th:nth-child(5),
         #cashFlowsTable td:nth-child(5) {
-            width: 14%;
+            width: 80px;
             text-align: center;
         }
 
         /* NAV Table Column Widths */
+        #navTable {
+            width: auto;
+        }
+
         #navTable th:nth-child(1),
         #navTable td:nth-child(1) {
-            width: 35%;
+            width: 155px;
         }
 
         #navTable th:nth-child(2),
         #navTable td:nth-child(2) {
-            width: 45%;
+            width: 130px;
         }
 
         #navTable th:nth-child(3),
         #navTable td:nth-child(3) {
-            width: 20%;
+            width: 80px;
             text-align: center;
         }
 
