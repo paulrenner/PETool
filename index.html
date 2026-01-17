@@ -448,25 +448,31 @@
         }
 
         /* Details Table */
+        .details-table-wrapper {
+            overflow-x: auto;
+            margin-top: 15px;
+            border: 1px solid #E0E0E0;
+            border-radius: 3px;
+        }
+
         .details-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
-            font-size: 0.9em;
-            border: 1px solid #E0E0E0;
+            font-size: 0.85em;
         }
 
         .details-table th {
             background-color: #34495E;
             color: #fff;
-            padding: 10px;
+            padding: 8px;
             text-align: left;
             border: 1px solid #2C3E50;
             font-weight: 500;
+            white-space: nowrap;
         }
 
         .details-table td {
-            padding: 8px 10px;
+            padding: 6px 8px;
             border: 1px solid #E0E0E0;
         }
 
@@ -477,10 +483,11 @@
         .details-table input,
         .details-table select {
             width: 100%;
-            padding: 6px;
+            min-width: 100px;
+            padding: 5px;
             border: 1px solid #BDC3C7;
             border-radius: 3px;
-            font-size: 0.9em;
+            font-size: 0.85em;
         }
 
         .details-table input[type="number"],
@@ -488,9 +495,19 @@
             text-align: right;
         }
 
-        .details-table input[type="date"],
+        .details-table input[type="date"] {
+            text-align: left;
+            min-width: 130px;
+        }
+
         .details-table select {
             text-align: left;
+            min-width: 120px;
+        }
+
+        .details-table input[type="checkbox"] {
+            width: auto;
+            min-width: auto;
         }
 
         .delete-row-btn {
@@ -699,31 +716,35 @@
             <h2 id="detailsModalTitle">Fund Details</h2>
 
             <h3 style="margin-top: 20px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Cash Flows</h3>
-            <table class="details-table" id="cashFlowsTable">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Amount (USD)</th>
-                        <th>Type</th>
-                        <th>Affects Commitment?</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div class="details-table-wrapper">
+                <table class="details-table" id="cashFlowsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount (USD)</th>
+                            <th>Type</th>
+                            <th>Affects Commitment?</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
             <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" onclick="addCashFlowRow()">Add Cash Flow</button>
 
             <h3 style="margin-top: 30px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Monthly NAV</h3>
-            <table class="details-table" id="navTable">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Amount (USD)</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div class="details-table-wrapper">
+                <table class="details-table" id="navTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount (USD)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
             <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" onclick="addNavRow()">Add NAV</button>
 
             <div class="form-actions">
