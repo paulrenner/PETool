@@ -969,8 +969,11 @@
             <span class="close" onclick="closeManageGroupsModal()">&times;</span>
             <h2>Manage Account Groups</h2>
 
+            <input type="hidden" id="editGroupId" value="">
+            <h3 id="groupFormTitle" style="margin-bottom: 15px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Add New Group</h3>
+
             <div class="form-group">
-                <label for="newGroupName">Add New Group</label>
+                <label for="newGroupName">Group Name</label>
                 <input type="text" id="newGroupName" placeholder="Enter group name">
             </div>
 
@@ -986,7 +989,10 @@
                 <input type="text" id="newGroupType" placeholder="e.g., Client, Trust, Account">
             </div>
 
-            <button class="btn-primary" onclick="addNewGroup()">Add Group</button>
+            <div style="display: flex; gap: 10px;">
+                <button id="saveGroupBtn" class="btn-primary" onclick="saveGroupChanges()">Add Group</button>
+                <button id="cancelEditBtn" class="btn-secondary" onclick="cancelGroupEdit()" style="display: none;">Cancel</button>
+            </div>
 
             <hr style="margin: 20px 0; border: none; border-top: 1px solid #E0E0E0;">
 
@@ -2546,6 +2552,7 @@
                         ${typeText}
                     </div>
                     <div class="group-item-actions">
+                        <button class="btn-info btn-sm" onclick="editGroup(${group.id})">Edit</button>
                         <button class="btn-danger btn-sm" onclick="removeGroup(${group.id})">Delete</button>
                     </div>
                 `;
@@ -2560,22 +2567,33 @@
 
         async function populateGroupParentDropdown() {
             const select = document.getElementById('newGroupParent');
+            const editId = document.getElementById('editGroupId').value;
 
             try {
                 groups = await getAllGroups();
 
                 select.innerHTML = '<option value="">None (Top Level)</option>';
 
+                // If editing, exclude the group being edited and its descendants
+                let excludeIds = [];
+                if (editId) {
+                    excludeIds = await getAllDescendantGroupIds(parseInt(editId));
+                }
+
                 // Build hierarchical options
                 const tree = buildGroupsTree(groups, null);
-                addGroupOptionsToSelect(select, tree, 0);
+                addGroupOptionsToSelect(select, tree, 0, excludeIds);
             } catch (err) {
                 console.error('Error populating group parent dropdown:', err);
             }
         }
 
-        function addGroupOptionsToSelect(select, tree, level) {
+        function addGroupOptionsToSelect(select, tree, level, excludeIds = []) {
             tree.forEach(group => {
+                // Skip excluded groups (the group being edited and its descendants)
+                if (excludeIds.includes(group.id)) {
+                    return;
+                }
                 const option = document.createElement('option');
                 option.value = group.id;
                 const indent = '  '.repeat(level);
@@ -2584,15 +2602,16 @@
 
                 // Recursively add children
                 if (group.children && group.children.length > 0) {
-                    addGroupOptionsToSelect(select, group.children, level + 1);
+                    addGroupOptionsToSelect(select, group.children, level + 1, excludeIds);
                 }
             });
         }
 
-        async function addNewGroup() {
+        async function saveGroupChanges() {
             const name = document.getElementById('newGroupName').value.trim();
             const parentId = document.getElementById('newGroupParent').value;
             const type = document.getElementById('newGroupType').value.trim();
+            const editId = document.getElementById('editGroupId').value;
 
             if (!name) {
                 showStatus('Please enter a group name', 'error');
@@ -2606,19 +2625,60 @@
                     type: type || null
                 };
 
+                // If editing, include the ID
+                if (editId) {
+                    groupData.id = parseInt(editId);
+                }
+
                 await saveGroup(groupData);
 
-                // Clear inputs
-                document.getElementById('newGroupName').value = '';
-                document.getElementById('newGroupParent').value = '';
-                document.getElementById('newGroupType').value = '';
+                // Reset form
+                cancelGroupEdit();
 
                 await loadGroupsList();
                 await populateGroupParentDropdown();
-                showStatus('Group added successfully');
+
+                showStatus(editId ? 'Group updated successfully' : 'Group added successfully');
             } catch (err) {
-                showStatus('Error adding group: ' + err.message, 'error');
+                showStatus('Error saving group: ' + err.message, 'error');
             }
+        }
+
+        async function editGroup(id) {
+            const group = groups.find(g => g.id === id);
+            if (!group) return;
+
+            // Set edit ID first
+            document.getElementById('editGroupId').value = id;
+
+            // Refresh parent dropdown (will now exclude this group and descendants)
+            await populateGroupParentDropdown();
+
+            // Populate form fields
+            document.getElementById('newGroupName').value = group.name;
+            document.getElementById('newGroupParent').value = group.parentGroupId || '';
+            document.getElementById('newGroupType').value = group.type || '';
+
+            // Update UI
+            document.getElementById('groupFormTitle').textContent = 'Edit Group';
+            document.getElementById('saveGroupBtn').textContent = 'Update Group';
+            document.getElementById('cancelEditBtn').style.display = 'inline-block';
+
+            // Scroll to top of modal
+            document.querySelector('#manageGroupsModal .modal-content').scrollTop = 0;
+        }
+
+        function cancelGroupEdit() {
+            // Clear form
+            document.getElementById('newGroupName').value = '';
+            document.getElementById('newGroupParent').value = '';
+            document.getElementById('newGroupType').value = '';
+            document.getElementById('editGroupId').value = '';
+
+            // Reset UI
+            document.getElementById('groupFormTitle').textContent = 'Add New Group';
+            document.getElementById('saveGroupBtn').textContent = 'Add Group';
+            document.getElementById('cancelEditBtn').style.display = 'none';
         }
 
         async function removeGroup(id) {
