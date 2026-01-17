@@ -795,12 +795,10 @@
 
         <div class="controls-bar">
             <div class="control-group">
-                <button class="btn-primary" onclick="showAddFundModal()">New Investment</button>
-            </div>
-            <div class="control-group">
                 <div class="dropdown">
-                    <button class="btn-info" onclick="toggleManageDropdown()">Manage ▾</button>
+                    <button class="btn-primary" onclick="toggleManageDropdown()">Manage ▾</button>
                     <div id="manageDropdown" class="dropdown-menu">
+                        <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showAddFundModal(); return false;">New Investment</a>
                         <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showManageFundsModal(); return false;">Manage Funds</a>
                         <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showManageGroupsModal(); return false;">Manage Groups</a>
                     </div>
