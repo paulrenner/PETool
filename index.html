@@ -657,11 +657,11 @@
         <div class="modal-content">
             <span class="close" onclick="closeActionModal()">&times;</span>
             <h2>Fund Actions</h2>
-            <p id="actionFundInfo" style="margin-bottom: 20px; color: #666;"></p>
+            <p id="actionFundInfo" style="margin-bottom: 20px; color: #7F8C8D;"></p>
             <div class="form-actions">
                 <button class="btn-info" onclick="editFundFromAction()">Edit</button>
-                <button class="btn-success" onclick="duplicateFundFromAction()">Duplicate</button>
-                <button class="btn-info" onclick="showDetailsFromAction()">Details</button>
+                <button class="btn-secondary" onclick="duplicateFundFromAction()">Duplicate</button>
+                <button class="btn-secondary" onclick="showDetailsFromAction()">Details</button>
                 <button class="btn-danger" onclick="deleteFundFromAction()">Delete</button>
             </div>
         </div>
@@ -1217,7 +1217,7 @@
                         <td class="number ${m.irr !== null && m.irr >= 0 ? 'positive' : 'negative'}">${m.irr !== null ? (m.irr * 100).toFixed(2) + '%' : 'N/A'}</td>
                         <td class="number">${formatCurrency(m.outstandingCommitment)}</td>
                         <td>
-                            <button class="btn-sm btn-info" onclick="showActionModal(${fund.id})">⋮</button>
+                            <button class="btn-sm btn-info" onclick="showActionModal(${fund.id})">Actions</button>
                         </td>
                     `;
 
