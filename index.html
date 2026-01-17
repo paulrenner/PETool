@@ -706,8 +706,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="cashFlows">Cash Flows (JSON) *</label>
-                    <textarea id="cashFlows" required placeholder='[{"date":"2024-01-15","amount":-1000000,"type":"Contribution","affectsCommitment":true}]'></textarea>
+                    <label for="cashFlows">Cash Flows (JSON)</label>
+                    <textarea id="cashFlows" placeholder='[{"date":"2024-01-15","amount":-1000000,"type":"Contribution","affectsCommitment":true}]'></textarea>
                     <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number,"type":"Contribution|Distribution","affectsCommitment":true}]</div>
                 </div>
 
@@ -1571,7 +1571,7 @@
                 const monthlyNavText = document.getElementById('monthlyNav').value.trim();
 
                 // Validate
-                if (!fundName || !accountNumber || !commitmentText || !cashFlowsText) {
+                if (!fundName || !accountNumber || !commitmentText) {
                     showStatus('Please fill in all required fields', 'error');
                     return;
                 }
@@ -1586,22 +1586,27 @@
                 // Parse JSON
                 let cashFlows, monthlyNav;
 
-                try {
-                    cashFlows = JSON.parse(cashFlowsText);
-                    if (!Array.isArray(cashFlows)) throw new Error('Cash flows must be an array');
+                // Parse cash flows (optional)
+                if (cashFlowsText) {
+                    try {
+                        cashFlows = JSON.parse(cashFlowsText);
+                        if (!Array.isArray(cashFlows)) throw new Error('Cash flows must be an array');
 
-                    // Validate cash flow structure
-                    cashFlows.forEach((cf, i) => {
-                        if (!cf.date || typeof cf.amount === 'undefined' || !cf.type) {
-                            throw new Error(`Invalid cash flow at index ${i}`);
-                        }
-                        if (!['Contribution', 'Distribution'].includes(cf.type)) {
-                            throw new Error(`Invalid cash flow type at index ${i}`);
-                        }
-                    });
-                } catch (err) {
-                    showStatus('Invalid cash flows JSON: ' + err.message, 'error');
-                    return;
+                        // Validate cash flow structure
+                        cashFlows.forEach((cf, i) => {
+                            if (!cf.date || typeof cf.amount === 'undefined' || !cf.type) {
+                                throw new Error(`Invalid cash flow at index ${i}`);
+                            }
+                            if (!['Contribution', 'Distribution'].includes(cf.type)) {
+                                throw new Error(`Invalid cash flow type at index ${i}`);
+                            }
+                        });
+                    } catch (err) {
+                        showStatus('Invalid cash flows JSON: ' + err.message, 'error');
+                        return;
+                    }
+                } else {
+                    cashFlows = [];
                 }
 
                 try {
