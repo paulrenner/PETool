@@ -2021,6 +2021,7 @@
 
             try {
                 const names = await getAllFundNames();
+                console.log('Fund names from database:', names);
                 fundNames = new Set(names);
 
                 select.innerHTML = '<option value="">Select a fund</option>';
@@ -2040,6 +2041,8 @@
                 if (currentValue && currentValue !== '__new__') {
                     select.value = currentValue;
                 }
+
+                console.log('Dropdown populated with', names.length, 'fund names');
 
                 // Handle new fund name creation
                 select.onchange = async function() {
@@ -2151,6 +2154,22 @@
                 const fundsToImport = data.funds || data;
                 if (!Array.isArray(fundsToImport)) {
                     throw new Error('Invalid format: expected array of funds');
+                }
+
+                // Collect unique fund names from imported funds
+                const uniqueFundNames = new Set();
+                fundsToImport.forEach(fund => {
+                    if (fund.fundName) {
+                        uniqueFundNames.add(fund.fundName);
+                    }
+                });
+
+                // Save all unique fund names to database
+                for (const name of uniqueFundNames) {
+                    if (!fundNames.has(name)) {
+                        await saveFundName(name);
+                        fundNames.add(name);
+                    }
                 }
 
                 for (const fund of fundsToImport) {
