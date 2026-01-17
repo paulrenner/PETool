@@ -115,6 +115,18 @@
             min-width: 120px;
         }
 
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        input:disabled,
+        textarea:disabled {
+            opacity: 0.6;
+            background: #f5f5f5;
+            cursor: not-allowed;
+        }
+
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -422,6 +434,7 @@
         // ===========================
 
         let db;
+        let dbReady = false;
         const DB_NAME = 'FundsDB';
         const STORE_NAME = 'funds';
         const DB_VERSION = 1;
@@ -436,6 +449,7 @@
                 request.onerror = () => reject(request.error);
                 request.onsuccess = () => {
                     db = request.result;
+                    dbReady = true;
                     resolve(db);
                 };
 
@@ -463,6 +477,11 @@
          */
         function saveFund(fundData) {
             return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
                 const transaction = db.transaction([STORE_NAME], 'readwrite');
                 const objectStore = transaction.objectStore(STORE_NAME);
 
@@ -486,6 +505,11 @@
          */
         function getAllFunds() {
             return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
                 const transaction = db.transaction([STORE_NAME], 'readonly');
                 const objectStore = transaction.objectStore(STORE_NAME);
                 const request = objectStore.getAll();
@@ -500,6 +524,11 @@
          */
         function getFundById(id) {
             return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
                 const transaction = db.transaction([STORE_NAME], 'readonly');
                 const objectStore = transaction.objectStore(STORE_NAME);
                 const request = objectStore.get(id);
@@ -514,6 +543,11 @@
          */
         function deleteFund(id) {
             return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
                 const transaction = db.transaction([STORE_NAME], 'readwrite');
                 const objectStore = transaction.objectStore(STORE_NAME);
                 const request = objectStore.delete(id);
@@ -1014,12 +1048,31 @@
         // ===========================
 
         /**
+         * Enable or disable form controls
+         */
+        function setFormEnabled(enabled) {
+            const form = document.getElementById('fundForm');
+            const buttons = document.querySelectorAll('button');
+            const inputs = form.querySelectorAll('input, textarea');
+
+            inputs.forEach(input => input.disabled = !enabled);
+            buttons.forEach(button => button.disabled = !enabled);
+        }
+
+        /**
          * Initialize the application
          */
         async function init() {
             try {
+                // Disable form until DB is ready
+                setFormEnabled(false);
+
                 await initDB();
                 await renderTable();
+
+                // Enable form now that DB is ready
+                setFormEnabled(true);
+
                 console.log('PE Fund Manager initialized successfully');
             } catch (err) {
                 showStatus('Error initializing application: ' + err.message, 'error');
