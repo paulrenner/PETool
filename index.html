@@ -483,6 +483,52 @@
             }
         }
 
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 5px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498DB;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #2C3E50;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
         input[type="file"] {
             display: none;
         }
@@ -806,6 +852,14 @@
     </style>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loadingText">Loading...</div>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <h1 id="headerTitle">PE Fund Manager</h1>
@@ -832,8 +886,8 @@
                 </select>
             </div>
             <div class="control-group">
-                <label for="cutoffDate">Cutoff Date</label>
-                <input type="date" id="cutoffDate" onchange="applyFilters()">
+                <label for="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date">Cutoff Date</label>
+                <input type="date" id="cutoffDate" onchange="applyFilters()" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date" aria-label="Cutoff date for calculating metrics">
             </div>
             <div class="control-group">
                 <button class="btn-secondary" onclick="resetFilters()">Reset Filters</button>
@@ -1091,6 +1145,7 @@
         let sortDirection = 'asc';
         let currentActionFundId = null;
         let currentDetailsFundId = null;
+        let hasUnsavedChanges = false;
 
         function initDB() {
             return new Promise((resolve, reject) => {
@@ -1605,12 +1660,25 @@
             statusDiv.appendChild(closeBtn);
             document.body.appendChild(statusDiv);
 
-            // Only auto-dismiss success messages
-            if (type === 'success') {
-                setTimeout(() => {
+            // Auto-dismiss messages: success after 3s, errors/warnings after 8s
+            const dismissTime = type === 'success' ? 3000 : 8000;
+            setTimeout(() => {
+                if (statusDiv.parentNode) {
                     statusDiv.remove();
-                }, 3000);
-            }
+                }
+            }, dismissTime);
+        }
+
+        function showLoading(message = 'Loading...') {
+            const overlay = document.getElementById('loadingOverlay');
+            const text = document.getElementById('loadingText');
+            text.textContent = message;
+            overlay.classList.add('show');
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('show');
         }
 
         async function renderTable() {
@@ -1674,7 +1742,7 @@
                         <td class="number ${m.irr !== null && m.irr >= 0 ? 'positive' : 'negative'}">${m.irr !== null ? (m.irr * 100).toFixed(2) + '%' : 'N/A'}</td>
                         <td class="number">${formatCurrency(m.outstandingCommitment)}</td>
                         <td>
-                            <button class="btn-sm btn-info" onclick="showActionModal(${fund.id})">Actions</button>
+                            <button class="btn-sm btn-info fund-actions-btn" data-fund-id="${fund.id}">Actions</button>
                         </td>
                     `;
 
@@ -2331,6 +2399,7 @@
                 });
 
                 document.getElementById('detailsModal').classList.add('show');
+                hasUnsavedChanges = false; // Reset unsaved changes flag when opening modal
                 console.log('Details modal opened successfully');
             } catch (err) {
                 console.error('Error in showDetailsModal:', err);
@@ -2339,8 +2408,14 @@
         }
 
         function closeDetailsModal() {
+            if (hasUnsavedChanges) {
+                if (!confirm('You have unsaved changes. Are you sure you want to close without saving?')) {
+                    return;
+                }
+            }
             document.getElementById('detailsModal').classList.remove('show');
             currentDetailsFundId = null;
+            hasUnsavedChanges = false;
         }
 
         function addCashFlowRow() {
@@ -2364,12 +2439,24 @@
                 </td>
             `;
             table.appendChild(row);
+            hasUnsavedChanges = true;
         }
 
         function deleteCashFlowRow(button) {
             const row = button.closest('tr');
             if (row) {
-                row.remove();
+                const date = row.querySelector('[data-field="date"]').value;
+                const amount = row.querySelector('[data-field="amount"]').value;
+                const type = row.querySelector('[data-field="type"]').value;
+
+                const dateText = date || 'no date';
+                const amountText = amount || '$0';
+                const typeText = type || 'contribution';
+
+                if (confirm(`Delete this cash flow?\n${typeText} on ${dateText}: ${amountText}`)) {
+                    row.remove();
+                    hasUnsavedChanges = true;
+                }
             }
         }
 
@@ -2385,12 +2472,22 @@
                 </td>
             `;
             table.appendChild(row);
+            hasUnsavedChanges = true;
         }
 
         function deleteNavRow(button) {
             const row = button.closest('tr');
             if (row) {
-                row.remove();
+                const date = row.querySelector('[data-field="date"]').value;
+                const amount = row.querySelector('[data-field="amount"]').value;
+
+                const dateText = date || 'no date';
+                const amountText = amount || '$0';
+
+                if (confirm(`Delete this NAV entry?\n${dateText}: ${amountText}`)) {
+                    row.remove();
+                    hasUnsavedChanges = true;
+                }
             }
         }
 
@@ -2485,6 +2582,7 @@
                 fund.timestamp = new Date().toISOString();
 
                 await saveFundToDB(fund);
+                hasUnsavedChanges = false; // Mark as saved before closing
                 closeDetailsModal();
                 await renderTable();
                 showStatus('Details updated successfully');
@@ -2701,8 +2799,8 @@
                         ${typeText}
                     </div>
                     <div class="group-item-actions">
-                        <button class="btn-info btn-sm" onclick="editGroup(${group.id})">Edit</button>
-                        <button class="btn-danger btn-sm" onclick="removeGroup(${group.id})">Delete</button>
+                        <button class="btn-info btn-sm group-edit-btn" data-group-id="${group.id}">Edit</button>
+                        <button class="btn-danger btn-sm group-delete-btn" data-group-id="${group.id}">Delete</button>
                     </div>
                 `;
                 container.appendChild(div);
@@ -2948,6 +3046,20 @@
                         const newName = prompt('Enter new fund name:');
                         if (newName && newName.trim()) {
                             const name = newName.trim();
+
+                            // Validate fund name
+                            if (name.length > 100) {
+                                showStatus('Fund name too long (max 100 characters)', 'error');
+                                this.value = '';
+                                return;
+                            }
+
+                            if (name.length < 2) {
+                                showStatus('Fund name too short (min 2 characters)', 'error');
+                                this.value = '';
+                                return;
+                            }
+
                             if (!fundNames.has(name)) {
                                 try {
                                     await saveFundName(name);
@@ -3050,6 +3162,7 @@
             // Close the dropdown
             document.getElementById('exportDropdown').classList.remove('show');
 
+            showLoading('Exporting to CSV...');
             try {
                 // Get filtered and sorted data (same as what's displayed in the table)
                 const funds = await getAllFunds();
@@ -3145,6 +3258,8 @@
             } catch (err) {
                 showStatus('Error exporting CSV: ' + err.message, 'error');
                 console.error(err);
+            } finally {
+                hideLoading();
             }
         }
 
@@ -3156,10 +3271,31 @@
             window.print();
         }
 
-        // Close dropdown when clicking outside
+        // Event delegation for dynamically created buttons and dropdown handling
         document.addEventListener('click', function(event) {
-            const dropdowns = document.querySelectorAll('.dropdown');
+            // Handle fund actions button
+            if (event.target.classList.contains('fund-actions-btn')) {
+                const fundId = parseInt(event.target.getAttribute('data-fund-id'));
+                showActionModal(fundId);
+                return;
+            }
 
+            // Handle group edit button
+            if (event.target.classList.contains('group-edit-btn')) {
+                const groupId = parseInt(event.target.getAttribute('data-group-id'));
+                editGroup(groupId);
+                return;
+            }
+
+            // Handle group delete button
+            if (event.target.classList.contains('group-delete-btn')) {
+                const groupId = parseInt(event.target.getAttribute('data-group-id'));
+                removeGroup(groupId);
+                return;
+            }
+
+            // Close dropdown when clicking outside
+            const dropdowns = document.querySelectorAll('.dropdown');
             dropdowns.forEach(dropdown => {
                 if (!dropdown.contains(event.target)) {
                     const menu = dropdown.querySelector('.dropdown-menu');
@@ -3170,10 +3306,29 @@
             });
         });
 
+        // Track changes in details modal
+        document.addEventListener('input', function(event) {
+            const detailsModal = document.getElementById('detailsModal');
+            if (detailsModal && detailsModal.classList.contains('show')) {
+                if (detailsModal.contains(event.target)) {
+                    hasUnsavedChanges = true;
+                }
+            }
+        });
+
         async function importDatabase(event) {
             const file = event.target.files[0];
             if (!file) return;
 
+            // Validate file size (max 50MB)
+            const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+            if (file.size > maxSize) {
+                showStatus(`File too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum size is 50MB.`, 'error');
+                event.target.value = '';
+                return;
+            }
+
+            showLoading('Importing data...');
             try {
                 const text = await file.text();
                 const data = JSON.parse(text);
@@ -3341,6 +3496,8 @@
                 showStatus('Error importing data: ' + err.message, 'error');
                 console.error(err);
                 // Don't clear input on error so user can retry
+            } finally {
+                hideLoading();
             }
         }
 
