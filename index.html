@@ -1417,13 +1417,15 @@
                     return;
                 }
 
+                console.log('Editing fund:', fund);
+                console.log('Fund monthlyNav:', fund.monthlyNav);
+
                 document.getElementById('fundModalTitle').textContent = 'Edit Investment';
                 document.getElementById('fundId').value = fund.id;
                 document.getElementById('isDuplicate').value = '';
                 document.getElementById('duplicateMultiplierContainer').style.display = 'none';
 
-                await populateFundNamesDropdown();
-                document.getElementById('fundName').value = fund.fundName;
+                await populateFundNamesDropdown(fund.fundName);
                 document.getElementById('accountNumber').value = fund.accountNumber;
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
                 document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
@@ -1432,6 +1434,7 @@
                 document.getElementById('fundModal').classList.add('show');
             } catch (err) {
                 showStatus('Error loading fund: ' + err.message, 'error');
+                console.error('Error in editFund:', err);
             }
         }
 
@@ -1449,8 +1452,7 @@
                 document.getElementById('duplicateMultiplierContainer').style.display = 'block';
                 document.getElementById('duplicateMultiplier').value = '1';
 
-                await populateFundNamesDropdown();
-                document.getElementById('fundName').value = fund.fundName;
+                await populateFundNamesDropdown(fund.fundName);
                 document.getElementById('accountNumber').value = fund.accountNumber + ' (Copy)';
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
                 document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
@@ -2007,9 +2009,9 @@
             }
         }
 
-        async function populateFundNamesDropdown() {
+        async function populateFundNamesDropdown(valueToSet = null) {
             const select = document.getElementById('fundName');
-            const currentValue = select.value;
+            const currentValue = valueToSet !== null ? valueToSet : select.value;
 
             try {
                 const names = await getAllFundNames();
@@ -2029,7 +2031,7 @@
                 newOption.textContent = '+ Add New Fund Name';
                 select.appendChild(newOption);
 
-                if (currentValue) {
+                if (currentValue && currentValue !== '__new__') {
                     select.value = currentValue;
                 }
 
@@ -2043,8 +2045,7 @@
                                 try {
                                     await saveFundName(name);
                                     fundNames.add(name);
-                                    await populateFundNamesDropdown();
-                                    select.value = name;
+                                    await populateFundNamesDropdown(name);
                                     showStatus('Fund name added successfully');
                                 } catch (err) {
                                     showStatus('Error adding fund name: ' + err.message, 'error');
