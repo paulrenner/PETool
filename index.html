@@ -955,10 +955,12 @@
         const DB_NAME = 'FundsDB';
         const FUNDS_STORE = 'funds';
         const FUNDNAMES_STORE = 'fundNames';
-        const DB_VERSION = 3;
+        const GROUPS_STORE = 'groups';
+        const DB_VERSION = 4;
 
         let currentFunds = [];
         let fundNames = new Set();
+        let groups = [];
         let sortColumn = null;
         let sortDirection = 'asc';
         let currentActionFundId = null;
@@ -991,6 +993,16 @@
                     // Fund names store
                     if (!db.objectStoreNames.contains(FUNDNAMES_STORE)) {
                         db.createObjectStore(FUNDNAMES_STORE, { keyPath: 'name' });
+                    }
+
+                    // Groups store
+                    if (!db.objectStoreNames.contains(GROUPS_STORE)) {
+                        const groupsStore = db.createObjectStore(GROUPS_STORE, {
+                            keyPath: 'id',
+                            autoIncrement: true
+                        });
+                        groupsStore.createIndex('parentGroupId', 'parentGroupId', { unique: false });
+                        groupsStore.createIndex('name', 'name', { unique: false });
                     }
                 };
             });
@@ -1116,6 +1128,104 @@
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject(request.error);
             });
+        }
+
+        // ===========================
+        // Groups Database Operations
+        // ===========================
+
+        function getAllGroups() {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
+                const transaction = db.transaction([GROUPS_STORE], 'readonly');
+                const objectStore = transaction.objectStore(GROUPS_STORE);
+                const request = objectStore.getAll();
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function saveGroup(groupData) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
+                const transaction = db.transaction([GROUPS_STORE], 'readwrite');
+                const objectStore = transaction.objectStore(GROUPS_STORE);
+                const request = objectStore.put(groupData);
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function deleteGroup(id) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
+                const transaction = db.transaction([GROUPS_STORE], 'readwrite');
+                const objectStore = transaction.objectStore(GROUPS_STORE);
+                const request = objectStore.delete(id);
+
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function getGroupsByParent(parentGroupId) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
+                const transaction = db.transaction([GROUPS_STORE], 'readonly');
+                const objectStore = transaction.objectStore(GROUPS_STORE);
+                const index = objectStore.index('parentGroupId');
+                const request = index.getAll(parentGroupId);
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function getGroupById(id) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
+                const transaction = db.transaction([GROUPS_STORE], 'readonly');
+                const objectStore = transaction.objectStore(GROUPS_STORE);
+                const request = objectStore.get(id);
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Helper function to get all descendant group IDs recursively
+        async function getAllDescendantGroupIds(groupId) {
+            const descendants = [groupId];
+            const children = await getGroupsByParent(groupId);
+
+            for (const child of children) {
+                const childDescendants = await getAllDescendantGroupIds(child.id);
+                descendants.push(...childDescendants);
+            }
+
+            return descendants;
         }
 
         // ===========================
