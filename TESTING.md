@@ -5,7 +5,7 @@ This document describes the comprehensive unit testing setup for the PE Fund Man
 ## Overview
 
 The application now includes a full test suite using Jest with:
-- **123 unit tests** across 3 test suites
+- **152 unit tests** across 4 test suites
 - **95.78% statement coverage**
 - **86.45% branch coverage**
 - **97.72% function coverage**
@@ -29,7 +29,8 @@ The application now includes a full test suite using Jest with:
 ├── __tests__/              # Test files
 │   ├── calculations.test.js
 │   ├── validation.test.js
-│   └── formatting.test.js
+│   ├── formatting.test.js
+│   └── tags.test.js
 ├── package.json            # Dependencies and scripts
 ├── jest.config.js          # Jest configuration
 └── babel.config.js         # Babel configuration
@@ -100,6 +101,43 @@ Tests for formatting and parsing:
 - **formatNumber()** - Format with 2 decimal places (for CSV)
 - **escapeHtml()** - Escape HTML special characters
 - **escapeCSV()** - Escape CSV special characters
+
+### tags.test.js (29 tests)
+Tests for tag functionality:
+- **Tag Structure** - Array storage on fund objects
+  - Tags stored as array
+  - Empty arrays for funds without tags
+  - Special character handling
+- **Tag Validation** - Input validation rules
+  - Empty string prevention
+  - Whitespace trimming
+  - Duplicate tag detection
+  - Case-sensitive storage
+- **Tag Search** - Search functionality integration
+  - Exact tag name matching
+  - Partial tag name matching
+  - Multi-tag search support
+  - Handling missing tags
+- **Tag Display** - UI rendering
+  - Table tag formatting
+  - Modal tag chips with remove buttons
+  - Empty state handling
+- **Tag Data Operations** - Data manipulation
+  - Set to Array conversion
+  - Uniqueness in Set
+  - Tag removal from arrays
+- **Tag Export/Import** - Data portability
+  - Tags included in exports
+  - Missing tags in imports
+  - Unique tag collection
+  - Tag preservation in duplication
+- **Tag Autocomplete** - User experience
+  - Datalist population
+  - Selected tag filtering
+- **Tag Edge Cases** - Robustness
+  - Very long tag names
+  - Special characters and Unicode
+  - Null and undefined handling
 
 ## Key Test Cases
 

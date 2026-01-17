@@ -418,6 +418,55 @@
             margin-top: 5px;
         }
 
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+            min-height: 24px;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            background: #3498DB;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            gap: 6px;
+        }
+
+        .tag-remove {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            line-height: 1;
+            opacity: 0.8;
+        }
+
+        .tag-remove:hover {
+            opacity: 1;
+        }
+
+        .table-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .table-tag {
+            display: inline-block;
+            background: #E8F4F8;
+            color: #2C3E50;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
         .form-actions {
             display: flex;
             gap: 10px;
@@ -981,6 +1030,14 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="fundTags">Tags (optional)</label>
+                    <div id="fundTagsContainer" class="tags-container"></div>
+                    <input type="text" id="fundTagsInput" placeholder="Add tag (e.g., Venture Capital, Growth Equity)" list="tagsDatalist">
+                    <datalist id="tagsDatalist"></datalist>
+                    <div class="hint">Press Enter to add tags. Click × on a tag to remove it.</div>
+                </div>
+
+                <div class="form-group">
                     <label for="commitment">Commitment (USD) *</label>
                     <input type="text" id="commitment" required placeholder="e.g., 1,000,000">
                 </div>
@@ -1149,11 +1206,13 @@
         const FUNDS_STORE = 'funds';
         const FUNDNAMES_STORE = 'fundNames';
         const GROUPS_STORE = 'groups';
-        const DB_VERSION = 4;
+        const TAGS_STORE = 'tags';
+        const DB_VERSION = 5;
 
         let currentFunds = [];
         let fundNames = new Set();
         let groups = [];
+        let tags = new Set();
         let currentGroupDescendants = null; // Cache for selected group and its descendants
         let sortColumn = null;
         let sortDirection = 'asc';
@@ -1198,6 +1257,11 @@
                         });
                         groupsStore.createIndex('parentGroupId', 'parentGroupId', { unique: false });
                         groupsStore.createIndex('name', 'name', { unique: false });
+                    }
+
+                    // Tags store
+                    if (!db.objectStoreNames.contains(TAGS_STORE)) {
+                        db.createObjectStore(TAGS_STORE, { keyPath: 'name' });
                     }
                 };
             });
@@ -1318,6 +1382,61 @@
 
                 const transaction = db.transaction([FUNDNAMES_STORE], 'readwrite');
                 const objectStore = transaction.objectStore(FUNDNAMES_STORE);
+                const request = objectStore.delete(name);
+
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // ===========================
+        // Tags Database Operations
+        // ===========================
+
+        function getAllTags() {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
+                const transaction = db.transaction([TAGS_STORE], 'readonly');
+                const objectStore = transaction.objectStore(TAGS_STORE);
+                const request = objectStore.getAll();
+
+                request.onsuccess = () => {
+                    const tagList = request.result.map(item => item.name);
+                    resolve(tagList);
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function saveTag(name) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
+                const transaction = db.transaction([TAGS_STORE], 'readwrite');
+                const objectStore = transaction.objectStore(TAGS_STORE);
+                const request = objectStore.put({ name });
+
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function deleteTag(name) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
+                const transaction = db.transaction([TAGS_STORE], 'readwrite');
+                const objectStore = transaction.objectStore(TAGS_STORE);
                 const request = objectStore.delete(name);
 
                 request.onsuccess = () => resolve();
@@ -1743,8 +1862,16 @@
                     const m = fund.metrics;
                     const row = document.createElement('tr');
 
+                    // Build tags HTML
+                    const tagsHtml = (fund.tags && fund.tags.length > 0)
+                        ? `<div class="table-tags">${fund.tags.map(tag => `<span class="table-tag">${escapeHtml(tag)}</span>`).join('')}</div>`
+                        : '';
+
                     row.innerHTML = `
-                        <td>${escapeHtml(fund.fundName)}</td>
+                        <td>
+                            <div>${escapeHtml(fund.fundName)}</div>
+                            ${tagsHtml}
+                        </td>
                         <td>${escapeHtml(fund.accountNumber)}</td>
                         <td class="center">${m.vintage || 'N/A'}</td>
                         <td class="number">${formatCurrency(m.commitment)}</td>
@@ -1840,11 +1967,14 @@
                     }
                     if (!currentGroupDescendants.ids.includes(fund.groupId)) return false;
                 }
-                // Search filter: check fund name and account number
+                // Search filter: check fund name, account number, and tags
                 if (searchInput) {
                     const fundName = (fund.fundName || '').toLowerCase();
                     const accountNumber = (fund.accountNumber || '').toLowerCase();
-                    if (!fundName.includes(searchInput) && !accountNumber.includes(searchInput)) {
+                    const fundTags = (fund.tags || []).map(tag => tag.toLowerCase()).join(' ');
+                    if (!fundName.includes(searchInput) &&
+                        !accountNumber.includes(searchInput) &&
+                        !fundTags.includes(searchInput)) {
                         return false;
                     }
                 }
@@ -2033,12 +2163,14 @@
 
             await populateFundNamesDropdown();
             await populateFundGroupDropdown();
+            populateTagsDatalist();
 
             // Reset other form fields (not the fund name dropdown which we just populated)
             document.getElementById('accountNumber').value = '';
             document.getElementById('commitment').value = '';
             document.getElementById('cashFlows').value = '';
             document.getElementById('monthlyNav').value = '';
+            setSelectedTags([]);
 
             document.getElementById('fundModal').classList.add('show');
         }
@@ -2061,10 +2193,12 @@
 
                 await populateFundNamesDropdown(fund.fundName);
                 await populateFundGroupDropdown(fund.groupId);
+                populateTagsDatalist();
                 document.getElementById('accountNumber').value = fund.accountNumber;
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
                 document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
                 document.getElementById('monthlyNav').value = JSON.stringify(fund.monthlyNav || [], null, 2);
+                setSelectedTags(fund.tags || []);
 
                 document.getElementById('fundModal').classList.add('show');
             } catch (err) {
@@ -2089,10 +2223,12 @@
 
                 await populateFundNamesDropdown(fund.fundName);
                 await populateFundGroupDropdown(fund.groupId);
+                populateTagsDatalist();
                 document.getElementById('accountNumber').value = fund.accountNumber + ' (Copy)';
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
                 document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
                 document.getElementById('monthlyNav').value = JSON.stringify(fund.monthlyNav || [], null, 2);
+                setSelectedTags(fund.tags || []);
 
                 document.getElementById('fundModal').classList.add('show');
             } catch (err) {
@@ -2103,6 +2239,74 @@
         function closeFundModal() {
             document.getElementById('fundModal').classList.remove('show');
         }
+
+        // Tag management functions
+        function addTagToFund(tagName) {
+            const container = document.getElementById('fundTagsContainer');
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.innerHTML = `${tagName}<span class="tag-remove" onclick="removeTagFromFund(this)">×</span>`;
+            tag.setAttribute('data-tag', tagName);
+            container.appendChild(tag);
+
+            // Add to global tags list if not exists
+            if (!tags.has(tagName)) {
+                tags.add(tagName);
+                saveTag(tagName).catch(err => console.error('Error saving tag:', err));
+            }
+
+            // Update datalist
+            populateTagsDatalist();
+        }
+
+        function removeTagFromFund(button) {
+            const tag = button.closest('.tag');
+            if (tag) {
+                tag.remove();
+            }
+        }
+
+        function getSelectedTags() {
+            const container = document.getElementById('fundTagsContainer');
+            const tagElements = container.querySelectorAll('.tag');
+            return Array.from(tagElements).map(tag => tag.getAttribute('data-tag'));
+        }
+
+        function setSelectedTags(tagArray) {
+            const container = document.getElementById('fundTagsContainer');
+            container.innerHTML = '';
+            if (Array.isArray(tagArray)) {
+                tagArray.forEach(tagName => addTagToFund(tagName));
+            }
+        }
+
+        function populateTagsDatalist() {
+            const datalist = document.getElementById('tagsDatalist');
+            datalist.innerHTML = '';
+            tags.forEach(tag => {
+                const option = document.createElement('option');
+                option.value = tag;
+                datalist.appendChild(option);
+            });
+        }
+
+        // Handle tag input
+        document.addEventListener('keydown', function(event) {
+            if (event.target.id === 'fundTagsInput' && event.key === 'Enter') {
+                event.preventDefault();
+                const input = event.target;
+                const tagName = input.value.trim();
+                if (tagName) {
+                    const currentTags = getSelectedTags();
+                    if (!currentTags.includes(tagName)) {
+                        addTagToFund(tagName);
+                        input.value = '';
+                    } else {
+                        showStatus('Tag already added', 'warning');
+                    }
+                }
+            }
+        });
 
         async function saveFund(event) {
             event.preventDefault();
@@ -2212,6 +2416,7 @@
                     fundName,
                     accountNumber,
                     groupId: groupId ? parseInt(groupId) : null,
+                    tags: getSelectedTags(),
                     commitment: commitment,
                     cashFlows,
                     monthlyNav,
@@ -3160,11 +3365,13 @@
                 const funds = await getAllFunds();
                 const names = await getAllFundNames();
                 const groupsData = await getAllGroups();
+                const tagsData = await getAllTags();
 
                 const exportData = {
                     funds,
                     fundNames: names,
                     groups: groupsData,
+                    tags: tagsData,
                     exportDate: new Date().toISOString()
                 };
 
@@ -3518,6 +3725,14 @@
                     }
                 }
 
+                // Import tags
+                if (data.tags && Array.isArray(data.tags)) {
+                    for (const tagName of data.tags) {
+                        await saveTag(tagName);
+                        tags.add(tagName);
+                    }
+                }
+
                 // Import funds
                 const fundsToImport = data.funds || data;
                 if (!Array.isArray(fundsToImport)) {
@@ -3537,6 +3752,22 @@
                     if (!fundNames.has(name)) {
                         await saveFundName(name);
                         fundNames.add(name);
+                    }
+                }
+
+                // Collect unique tags from imported funds
+                const uniqueTags = new Set();
+                fundsToImport.forEach(fund => {
+                    if (fund.tags && Array.isArray(fund.tags)) {
+                        fund.tags.forEach(tag => uniqueTags.add(tag));
+                    }
+                });
+
+                // Save all unique tags to database
+                for (const tagName of uniqueTags) {
+                    if (!tags.has(tagName)) {
+                        await saveTag(tagName);
+                        tags.add(tagName);
                     }
                 }
 
@@ -3570,6 +3801,7 @@
                             fundName: fund.fundName,
                             accountNumber: fund.accountNumber,
                             groupId: groupId,
+                            tags: fund.tags || [],
                             commitment: parseCurrency(fund.commitment),
                             cashFlows: cashFlows,
                             monthlyNav: monthlyNav,
@@ -3629,6 +3861,10 @@
 
                 // Load groups
                 groups = await getAllGroups();
+
+                // Load tags
+                const tagList = await getAllTags();
+                tags = new Set(tagList);
 
                 // Set default cutoff date to latest quarter end
                 const quarterEnd = getLatestQuarterEnd();
