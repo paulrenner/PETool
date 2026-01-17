@@ -2147,12 +2147,26 @@
                 }
 
                 for (const fund of fundsToImport) {
+                    // Normalize cash flows to ensure proper structure
+                    const cashFlows = (fund.cashFlows || []).map(cf => ({
+                        date: cf.date,
+                        amount: parseCurrency(cf.amount),
+                        type: cf.type || (cf.amount < 0 ? 'Contribution' : 'Distribution'),
+                        affectsCommitment: cf.affectsCommitment !== undefined ? cf.affectsCommitment : true
+                    }));
+
+                    // Normalize monthly NAV
+                    const monthlyNav = (fund.monthlyNav || []).map(nav => ({
+                        date: nav.date,
+                        amount: parseCurrency(nav.amount)
+                    }));
+
                     const fundData = {
                         fundName: fund.fundName,
                         accountNumber: fund.accountNumber,
-                        commitment: fund.commitment,
-                        cashFlows: fund.cashFlows || [],
-                        monthlyNav: fund.monthlyNav || [],
+                        commitment: parseCurrency(fund.commitment),
+                        cashFlows: cashFlows,
+                        monthlyNav: monthlyNav,
                         timestamp: fund.timestamp || new Date().toISOString()
                     };
 
