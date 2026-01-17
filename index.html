@@ -508,14 +508,12 @@
             margin-top: 15px;
             border: 1px solid #E0E0E0;
             border-radius: 3px;
-            width: 100%;
+            max-width: 100%;
         }
 
         .details-table {
             border-collapse: collapse;
             font-size: 0.85em;
-            width: 100%;
-            table-layout: fixed;
         }
 
         .details-table th {
@@ -567,47 +565,71 @@
         }
 
         /* Cash Flows Table Column Widths */
+        #cashFlowsTable {
+            width: auto;
+        }
+
         #cashFlowsTable th:nth-child(1),
         #cashFlowsTable td:nth-child(1) {
-            width: 140px;
+            width: 145px;
+            min-width: 145px;
+            max-width: 145px;
         }
 
         #cashFlowsTable th:nth-child(2),
         #cashFlowsTable td:nth-child(2) {
-            width: 110px;
+            width: 105px;
+            min-width: 105px;
+            max-width: 105px;
         }
 
         #cashFlowsTable th:nth-child(3),
         #cashFlowsTable td:nth-child(3) {
-            width: 130px;
+            width: 135px;
+            min-width: 135px;
+            max-width: 135px;
         }
 
         #cashFlowsTable th:nth-child(4),
         #cashFlowsTable td:nth-child(4) {
-            width: 140px;
+            width: 160px;
+            min-width: 160px;
+            max-width: 160px;
             text-align: center;
         }
 
         #cashFlowsTable th:nth-child(5),
         #cashFlowsTable td:nth-child(5) {
             width: 80px;
+            min-width: 80px;
+            max-width: 80px;
             text-align: center;
         }
 
         /* NAV Table Column Widths */
+        #navTable {
+            width: auto;
+        }
+
         #navTable th:nth-child(1),
         #navTable td:nth-child(1) {
-            width: 140px;
+            width: 145px;
+            min-width: 145px;
+            max-width: 145px;
         }
 
         #navTable th:nth-child(2),
         #navTable td:nth-child(2) {
-            width: 110px;
+            width: 105px;
+            min-width: 105px;
+            max-width: 105px;
         }
 
         #navTable th:nth-child(3),
         #navTable td:nth-child(3) {
             width: 80px;
+            min-width: 80px;
+            max-width: 80px;
             text-align: center;
         }
 
