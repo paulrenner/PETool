@@ -364,7 +364,7 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            padding: 15px 25px;
+            padding: 15px 45px 15px 25px;
             border-radius: 6px;
             background: white;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -383,6 +383,24 @@
 
         .status-message.warning {
             border-left: 4px solid #ffc107;
+        }
+
+        .status-message .close-status {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #999;
+            cursor: pointer;
+            line-height: 1;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        .status-message .close-status:hover {
+            color: #333;
         }
 
         @keyframes slideIn {
@@ -1108,12 +1126,27 @@
         function showStatus(message, type = 'success') {
             const statusDiv = document.createElement('div');
             statusDiv.className = `status-message ${type}`;
-            statusDiv.textContent = message;
+
+            // Create close button
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'close-status';
+            closeBtn.innerHTML = '&times;';
+            closeBtn.onclick = () => statusDiv.remove();
+
+            // Create message text
+            const messageText = document.createElement('span');
+            messageText.textContent = message;
+
+            statusDiv.appendChild(messageText);
+            statusDiv.appendChild(closeBtn);
             document.body.appendChild(statusDiv);
 
-            setTimeout(() => {
-                statusDiv.remove();
-            }, 3000);
+            // Only auto-dismiss success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.remove();
+                }, 3000);
+            }
         }
 
         async function renderTable() {
