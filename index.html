@@ -1097,6 +1097,7 @@
         <div class="modal-content" style="max-width: 900px;">
             <span class="close" onclick="closeDetailsModal()">&times;</span>
             <h2 id="detailsModalTitle">Fund Details</h2>
+            <p id="detailsModalSubtitle" style="margin: 5px 0 0 0; color: #95A5A6; font-size: 0.9em;"></p>
 
             <h3 style="margin-top: 20px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Cash Flows</h3>
             <div class="details-table-wrapper">
@@ -2182,6 +2183,18 @@
                         return;
                     }
 
+                    if (multiplier > 1000) {
+                        if (!confirm(`Warning: Multiplier of ${multiplier} is very large. This will create extremely large amounts. Continue?`)) {
+                            return;
+                        }
+                    }
+
+                    if (multiplier < 0.001) {
+                        if (!confirm(`Warning: Multiplier of ${multiplier} is very small. This may result in rounding to zero. Continue?`)) {
+                            return;
+                        }
+                    }
+
                     commitment = commitment * multiplier;
 
                     cashFlows = cashFlows.map(cf => ({
@@ -2339,6 +2352,26 @@
 
                 document.getElementById('detailsModalTitle').textContent =
                     `Fund Details - ${fund.fundName}`;
+
+                // Display last modified timestamp
+                const subtitle = document.getElementById('detailsModalSubtitle');
+                if (fund.timestamp) {
+                    try {
+                        const date = new Date(fund.timestamp);
+                        const formatted = date.toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        subtitle.textContent = `Last modified: ${formatted}`;
+                    } catch (err) {
+                        subtitle.textContent = '';
+                    }
+                } else {
+                    subtitle.textContent = '';
+                }
 
                 // Populate cash flows table
                 const cashFlowsTable = document.getElementById('cashFlowsTable');
@@ -3584,6 +3617,7 @@
         }
 
         async function init() {
+            showLoading('Initializing application...');
             try {
                 setControlsEnabled(false);
 
@@ -3608,6 +3642,8 @@
             } catch (err) {
                 showStatus('Error initializing application: ' + err.message, 'error');
                 console.error(err);
+            } finally {
+                hideLoading();
             }
         }
 
