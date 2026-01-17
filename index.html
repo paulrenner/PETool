@@ -1573,6 +1573,14 @@
         }
 
         async function showActionModal(id) {
+            console.log('showActionModal called with ID:', id, 'Type:', typeof id);
+
+            if (!id && id !== 0) {
+                console.error('Invalid fund ID provided to showActionModal:', id);
+                showStatus('Error: Invalid fund ID provided', 'error');
+                return;
+            }
+
             currentActionFundId = id;
 
             try {
@@ -1582,10 +1590,12 @@
                     return;
                 }
 
+                console.log('Action modal showing for fund:', fund.fundName, 'ID:', fund.id);
                 document.getElementById('actionFundInfo').textContent =
                     `${fund.fundName} - ${fund.accountNumber}`;
                 document.getElementById('actionModal').classList.add('show');
             } catch (err) {
+                console.error('Error in showActionModal:', err);
                 showStatus('Error loading fund: ' + err.message, 'error');
             }
         }
@@ -1596,13 +1606,23 @@
         }
 
         function editFundFromAction() {
+            const fundId = currentActionFundId;
+            if (!fundId) {
+                showStatus('Error: No fund selected', 'error');
+                return;
+            }
             closeActionModal();
-            editFund(currentActionFundId);
+            editFund(fundId);
         }
 
         function duplicateFundFromAction() {
+            const fundId = currentActionFundId;
+            if (!fundId) {
+                showStatus('Error: No fund selected', 'error');
+                return;
+            }
             closeActionModal();
-            duplicateFund(currentActionFundId);
+            duplicateFund(fundId);
         }
 
         async function deleteFundFromAction() {
@@ -1627,11 +1647,27 @@
         }
 
         function showDetailsFromAction() {
+            // Capture the ID before closing the modal
+            const fundId = currentActionFundId;
+            console.log('Opening details for fund ID:', fundId);
+            if (!fundId) {
+                console.error('No fund ID available');
+                showStatus('Error: No fund selected', 'error');
+                return;
+            }
             closeActionModal();
-            showDetailsModal(currentActionFundId);
+            showDetailsModal(fundId);
         }
 
         async function showDetailsModal(id) {
+            console.log('showDetailsModal called with ID:', id, 'Type:', typeof id);
+
+            if (!id && id !== 0) {
+                console.error('Invalid fund ID provided to showDetailsModal:', id);
+                showStatus('Error: Invalid fund ID provided', 'error');
+                return;
+            }
+
             currentDetailsFundId = id;
 
             try {
