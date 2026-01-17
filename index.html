@@ -845,6 +845,7 @@
                 <div class="dropdown">
                     <button class="btn-success" onclick="toggleExportDropdown()">Export ▾</button>
                     <div id="exportDropdown" class="dropdown-menu">
+                        <a href="#" onclick="exportToCSV(); return false;">Export to CSV</a>
                         <a href="#" onclick="exportDatabase(); return false;">Export to JSON</a>
                         <a href="#" onclick="exportToPDF(); return false;">Export to PDF</a>
                     </div>
@@ -2968,6 +2969,108 @@
             dropdown.classList.toggle('show');
             // Close other dropdowns
             document.getElementById('exportDropdown').classList.remove('show');
+        }
+
+        async function exportToCSV() {
+            // Close the dropdown
+            document.getElementById('exportDropdown').classList.remove('show');
+
+            try {
+                // Get filtered and sorted data (same as what's displayed in the table)
+                const funds = await getAllFunds();
+                let filtered = applyCurrentFilters(funds);
+
+                if (sortColumn) {
+                    filtered = sortData(filtered, sortColumn, sortDirection);
+                }
+
+                // Get cutoff date
+                const cutoffDateValue = document.getElementById('cutoffDate').value;
+                const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue) : null;
+
+                // Calculate metrics for each fund
+                const fundsWithMetrics = filtered.map(fund => ({
+                    ...fund,
+                    metrics: calculateMetrics(fund, cutoffDate)
+                }));
+
+                // Create CSV header
+                const headers = [
+                    'Fund Name',
+                    'Account Number',
+                    'Vintage',
+                    'Commitment',
+                    'Total Contributions',
+                    'Total Distributions',
+                    'NAV',
+                    'Investment Return',
+                    'MOIC',
+                    'IRR',
+                    'Outstanding Commitment'
+                ];
+
+                // Helper function to escape CSV values
+                const escapeCSV = (value) => {
+                    if (value === null || value === undefined) return '';
+                    const str = String(value);
+                    // If contains comma, quote, or newline, wrap in quotes and escape quotes
+                    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                        return '"' + str.replace(/"/g, '""') + '"';
+                    }
+                    return str;
+                };
+
+                // Helper to format number without $ symbol for CSV
+                const formatNumber = (value) => {
+                    const val = parseFloat(value);
+                    if (!isFinite(val) || isNaN(val)) return '';
+                    return val.toFixed(2);
+                };
+
+                // Create CSV rows
+                const rows = fundsWithMetrics.map(fund => {
+                    const m = fund.metrics;
+                    return [
+                        escapeCSV(fund.fundName),
+                        escapeCSV(fund.accountNumber),
+                        escapeCSV(m.vintage || ''),
+                        formatNumber(m.commitment),
+                        formatNumber(m.totalContributions),
+                        formatNumber(m.totalDistributions),
+                        formatNumber(m.nav),
+                        formatNumber(m.investmentReturn),
+                        m.moic !== null && isFinite(m.moic) ? m.moic.toFixed(2) : '',
+                        m.irr !== null ? (m.irr * 100).toFixed(2) : '',
+                        formatNumber(m.outstandingCommitment)
+                    ].join(',');
+                });
+
+                // Combine header and rows
+                const csv = [headers.join(','), ...rows].join('\n');
+
+                // Create blob and download
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+                const filename = `pe-funds-export-${timestamp}.csv`;
+
+                // Create download link
+                const link = document.createElement('a');
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', filename);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }
+
+                showStatus('CSV exported successfully');
+            } catch (err) {
+                showStatus('Error exporting CSV: ' + err.message, 'error');
+                console.error(err);
+            }
         }
 
         function exportToPDF() {
