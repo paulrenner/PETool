@@ -1403,9 +1403,15 @@
             document.getElementById('fundId').value = '';
             document.getElementById('isDuplicate').value = '';
             document.getElementById('duplicateMultiplierContainer').style.display = 'none';
-            document.getElementById('fundForm').reset();
 
             await populateFundNamesDropdown();
+
+            // Reset other form fields (not the fund name dropdown which we just populated)
+            document.getElementById('accountNumber').value = '';
+            document.getElementById('commitment').value = '';
+            document.getElementById('cashFlows').value = '';
+            document.getElementById('monthlyNav').value = '';
+
             document.getElementById('fundModal').classList.add('show');
         }
 
