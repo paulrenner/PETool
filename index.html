@@ -1468,9 +1468,9 @@
                     };
                 });
 
-            // Add NAV as final cash flow
+            // Add NAV as final cash flow (include zero NAV for accurate IRR calculation)
             const nav = getLatestNav(fund, cutoffDate);
-            if (nav > 0) {
+            if (nav >= 0) {
                 const navs = (fund.monthlyNav || [])
                     .filter(n => isValidDate(n.date) && (!cutoffDate || new Date(n.date) <= cutoffDate))
                     .sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -1537,7 +1537,8 @@
                 .filter(f => f.amount > 0)
                 .reduce((sum, f) => sum + f.amount, 0);
 
-            if (contributions === 0) return distributions > 0 ? Infinity : null;
+            // Cannot calculate meaningful MOIC without contributions
+            if (contributions === 0) return null;
             return distributions / contributions;
         }
 
@@ -2029,6 +2030,10 @@
                     showStatus('Invalid commitment amount', 'error');
                     return;
                 }
+                if (commitment < 0) {
+                    showStatus('Commitment amount cannot be negative', 'error');
+                    return;
+                }
 
                 // Parse JSON
                 let cashFlows, monthlyNav;
@@ -2074,6 +2079,11 @@
                 if (isDuplicate) {
                     const multiplier = parseFloat(document.getElementById('duplicateMultiplier').value) || 1;
 
+                    if (multiplier <= 0) {
+                        showStatus('Duplicate multiplier must be positive', 'error');
+                        return;
+                    }
+
                     commitment = commitment * multiplier;
 
                     cashFlows = cashFlows.map(cf => ({
@@ -2091,7 +2101,7 @@
                     fundName,
                     accountNumber,
                     groupId: groupId ? parseInt(groupId) : null,
-                    commitment: commitment.toString(),
+                    commitment: commitment,
                     cashFlows,
                     monthlyNav,
                     timestamp: new Date().toISOString()
@@ -2154,7 +2164,7 @@
 
         function editFundFromAction() {
             const fundId = currentActionFundId;
-            if (!fundId) {
+            if (fundId == null) {
                 showStatus('Error: No fund selected', 'error');
                 return;
             }
@@ -2164,7 +2174,7 @@
 
         function duplicateFundFromAction() {
             const fundId = currentActionFundId;
-            if (!fundId) {
+            if (fundId == null) {
                 showStatus('Error: No fund selected', 'error');
                 return;
             }
@@ -2173,7 +2183,7 @@
         }
 
         async function deleteFundFromAction() {
-            if (!currentActionFundId) return;
+            if (currentActionFundId == null) return;
 
             try {
                 const fund = await getFundById(currentActionFundId);
@@ -2197,7 +2207,7 @@
             // Capture the ID before closing the modal
             const fundId = currentActionFundId;
             console.log('Opening details for fund ID:', fundId);
-            if (!fundId) {
+            if (fundId == null) {
                 console.error('No fund ID available');
                 showStatus('Error: No fund selected', 'error');
                 return;
@@ -2267,7 +2277,7 @@
                                 <input type="checkbox" ${cf.affectsCommitment !== false ? 'checked' : ''} data-field="affectsCommitment" data-index="${index}">
                             </td>
                             <td>
-                                <button class="delete-row-btn" onclick="deleteCashFlowRow(${index})">Delete</button>
+                                <button class="delete-row-btn" onclick="deleteCashFlowRow(this)">Delete</button>
                             </td>
                         `;
                         cashFlowsTableBody.appendChild(row);
@@ -2303,7 +2313,7 @@
                             <td><input type="date" value="${escapeHtml(nav.date || '')}" data-field="date" data-index="${index}"></td>
                             <td><input type="text" value="${displayAmount}" data-field="amount" data-index="${index}"></td>
                             <td>
-                                <button class="delete-row-btn" onclick="deleteNavRow(${index})">Delete</button>
+                                <button class="delete-row-btn" onclick="deleteNavRow(this)">Delete</button>
                             </td>
                         `;
                         navTableBody.appendChild(row);
@@ -2343,15 +2353,17 @@
                     <input type="checkbox" checked data-field="affectsCommitment" data-index="${index}">
                 </td>
                 <td>
-                    <button class="delete-row-btn" onclick="deleteCashFlowRow(${index})">Delete</button>
+                    <button class="delete-row-btn" onclick="deleteCashFlowRow(this)">Delete</button>
                 </td>
             `;
             table.appendChild(row);
         }
 
-        function deleteCashFlowRow(index) {
-            const table = document.getElementById('cashFlowsTable').querySelector('tbody');
-            table.children[index].remove();
+        function deleteCashFlowRow(button) {
+            const row = button.closest('tr');
+            if (row) {
+                row.remove();
+            }
         }
 
         function addNavRow() {
@@ -2362,15 +2374,17 @@
                 <td><input type="date" data-field="date" data-index="${index}"></td>
                 <td><input type="text" placeholder="0" data-field="amount" data-index="${index}"></td>
                 <td>
-                    <button class="delete-row-btn" onclick="deleteNavRow(${index})">Delete</button>
+                    <button class="delete-row-btn" onclick="deleteNavRow(this)">Delete</button>
                 </td>
             `;
             table.appendChild(row);
         }
 
-        function deleteNavRow(index) {
-            const table = document.getElementById('navTable').querySelector('tbody');
-            table.children[index].remove();
+        function deleteNavRow(button) {
+            const row = button.closest('tr');
+            if (row) {
+                row.remove();
+            }
         }
 
         async function saveDetailsChanges() {
@@ -2676,6 +2690,31 @@
                 return;
             }
 
+            // Validate circular reference prevention
+            if (editId && parentId) {
+                const groupId = parseInt(editId);
+                const parentGroupId = parseInt(parentId);
+
+                // Check if trying to set itself as parent
+                if (groupId === parentGroupId) {
+                    showStatus('Error: A group cannot be its own parent', 'error');
+                    return;
+                }
+
+                // Check if parent is a descendant (would create circular reference)
+                try {
+                    const descendants = await getAllDescendantGroupIds(groupId);
+                    if (descendants.includes(parentGroupId)) {
+                        showStatus('Error: Cannot set a descendant group as parent (circular reference)', 'error');
+                        return;
+                    }
+                } catch (err) {
+                    console.error('Error checking descendants:', err);
+                    showStatus('Error validating group hierarchy', 'error');
+                    return;
+                }
+            }
+
             try {
                 const groupData = {
                     name,
@@ -2965,14 +3004,68 @@
 
                 // Import groups first (since funds may reference them)
                 if (data.groups && Array.isArray(data.groups)) {
+                    // Validate group hierarchy before importing
+                    const groupIds = new Set(data.groups.map(g => g.id));
+
+                    // Check for invalid parent references and circular dependencies
                     for (const group of data.groups) {
-                        // Save old ID before removing it
+                        if (group.parentGroupId != null) {
+                            // Check if parent exists in import data
+                            if (!groupIds.has(group.parentGroupId)) {
+                                console.warn(`Warning: Group "${group.name}" (ID ${group.id}) references non-existent parent ${group.parentGroupId}. Setting to top-level.`);
+                                group.parentGroupId = null;
+                            }
+
+                            // Check for circular reference (direct self-reference)
+                            if (group.id === group.parentGroupId) {
+                                console.warn(`Warning: Group "${group.name}" (ID ${group.id}) has circular reference. Setting to top-level.`);
+                                group.parentGroupId = null;
+                            }
+                        }
+                    }
+
+                    // Import groups sorted by hierarchy (parents before children)
+                    const sortedGroups = [];
+                    const addedIds = new Set();
+                    let remainingGroups = [...data.groups];
+
+                    // Keep adding groups whose parents have been added (or are null)
+                    while (remainingGroups.length > 0) {
+                        const initialLength = remainingGroups.length;
+
+                        for (let i = remainingGroups.length - 1; i >= 0; i--) {
+                            const group = remainingGroups[i];
+                            if (group.parentGroupId == null || addedIds.has(group.parentGroupId)) {
+                                sortedGroups.push(group);
+                                addedIds.add(group.id);
+                                remainingGroups.splice(i, 1);
+                            }
+                        }
+
+                        // If no groups were added this iteration, we have circular dependencies
+                        if (remainingGroups.length === initialLength) {
+                            console.warn('Warning: Circular dependencies detected in remaining groups. Setting to top-level.');
+                            remainingGroups.forEach(g => {
+                                g.parentGroupId = null;
+                                sortedGroups.push(g);
+                            });
+                            break;
+                        }
+                    }
+
+                    // Import sorted groups
+                    for (const group of sortedGroups) {
                         const oldId = group.id;
                         const { id, ...groupData } = group;
 
+                        // Map parent ID to new ID if it was already imported
+                        if (groupData.parentGroupId != null && oldGroupIdToNew[groupData.parentGroupId]) {
+                            groupData.parentGroupId = oldGroupIdToNew[groupData.parentGroupId];
+                        }
+
                         // Save group and get new ID
                         const newId = await saveGroup(groupData);
-                        if (oldId && newId) {
+                        if (oldId != null && newId) {
                             oldGroupIdToNew[oldId] = newId;
                         }
                     }
@@ -3010,48 +3103,65 @@
                     }
                 }
 
-                for (const fund of fundsToImport) {
-                    // Normalize cash flows to ensure proper structure
-                    const cashFlows = (fund.cashFlows || []).map(cf => ({
-                        date: cf.date,
-                        amount: parseCurrency(cf.amount),
-                        type: cf.type || (cf.amount < 0 ? 'Contribution' : 'Distribution'),
-                        affectsCommitment: cf.affectsCommitment !== undefined ? cf.affectsCommitment : true
-                    }));
+                const totalFunds = fundsToImport.length;
+                const failedImports = [];
 
-                    // Normalize monthly NAV
-                    const monthlyNav = (fund.monthlyNav || []).map(nav => ({
-                        date: nav.date,
-                        amount: parseCurrency(nav.amount)
-                    }));
+                for (let i = 0; i < fundsToImport.length; i++) {
+                    const fund = fundsToImport[i];
+                    try {
+                        // Normalize cash flows to ensure proper structure
+                        const cashFlows = (fund.cashFlows || []).map(cf => ({
+                            date: cf.date,
+                            amount: parseCurrency(cf.amount),
+                            type: cf.type || (cf.amount < 0 ? 'Contribution' : 'Distribution'),
+                            affectsCommitment: cf.affectsCommitment !== undefined ? cf.affectsCommitment : true
+                        }));
 
-                    // Map old groupId to new groupId if applicable
-                    let groupId = null;
-                    if (fund.groupId && oldGroupIdToNew[fund.groupId]) {
-                        groupId = oldGroupIdToNew[fund.groupId];
+                        // Normalize monthly NAV
+                        const monthlyNav = (fund.monthlyNav || []).map(nav => ({
+                            date: nav.date,
+                            amount: parseCurrency(nav.amount)
+                        }));
+
+                        // Map old groupId to new groupId if applicable
+                        let groupId = null;
+                        if (fund.groupId && oldGroupIdToNew[fund.groupId]) {
+                            groupId = oldGroupIdToNew[fund.groupId];
+                        }
+
+                        const fundData = {
+                            fundName: fund.fundName,
+                            accountNumber: fund.accountNumber,
+                            groupId: groupId,
+                            commitment: parseCurrency(fund.commitment),
+                            cashFlows: cashFlows,
+                            monthlyNav: monthlyNav,
+                            timestamp: fund.timestamp || new Date().toISOString()
+                        };
+
+                        await saveFundToDB(fundData);
+                        imported++;
+                    } catch (fundErr) {
+                        console.error(`Error importing fund at index ${i}:`, fundErr, fund);
+                        failedImports.push({ index: i, name: fund.fundName || fund.accountNumber || 'Unknown', error: fundErr.message });
                     }
-
-                    const fundData = {
-                        fundName: fund.fundName,
-                        accountNumber: fund.accountNumber,
-                        groupId: groupId,
-                        commitment: parseCurrency(fund.commitment),
-                        cashFlows: cashFlows,
-                        monthlyNav: monthlyNav,
-                        timestamp: fund.timestamp || new Date().toISOString()
-                    };
-
-                    await saveFundToDB(fundData);
-                    imported++;
                 }
 
                 await renderTable();
-                showStatus(`Successfully imported ${imported} fund(s)`);
 
-                event.target.value = '';
+                if (failedImports.length > 0) {
+                    const failedCount = failedImports.length;
+                    showStatus(`Partial import: ${imported}/${totalFunds} funds imported. ${failedCount} failed (see console for details)`, 'error');
+                    console.error('Failed imports:', failedImports);
+                    // Don't clear input on partial failure
+                } else {
+                    showStatus(`Successfully imported ${imported} fund(s)`);
+                    event.target.value = '';
+                }
             } catch (err) {
                 showStatus('Error importing data: ' + err.message, 'error');
                 console.error(err);
+                // Don't clear input on error so user can retry
             }
         }
 
