@@ -798,10 +798,13 @@
                 <button class="btn-primary" onclick="showAddFundModal()">New Investment</button>
             </div>
             <div class="control-group">
-                <button class="btn-info" onclick="showManageFundsModal()">Manage Funds</button>
-            </div>
-            <div class="control-group">
-                <button class="btn-info" onclick="showManageGroupsModal()">Manage Groups</button>
+                <div class="dropdown">
+                    <button class="btn-info" onclick="toggleManageDropdown()">Manage ▾</button>
+                    <div id="manageDropdown" class="dropdown-menu">
+                        <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showManageFundsModal(); return false;">Manage Funds</a>
+                        <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showManageGroupsModal(); return false;">Manage Groups</a>
+                    </div>
+                </div>
             </div>
             <div class="control-group">
                 <label for="groupFilter">Filter by Group</label>
@@ -2802,6 +2805,15 @@
         function toggleExportDropdown() {
             const dropdown = document.getElementById('exportDropdown');
             dropdown.classList.toggle('show');
+            // Close other dropdowns
+            document.getElementById('manageDropdown').classList.remove('show');
+        }
+
+        function toggleManageDropdown() {
+            const dropdown = document.getElementById('manageDropdown');
+            dropdown.classList.toggle('show');
+            // Close other dropdowns
+            document.getElementById('exportDropdown').classList.remove('show');
         }
 
         function exportToPDF() {
@@ -2814,12 +2826,16 @@
 
         // Close dropdown when clicking outside
         document.addEventListener('click', function(event) {
-            const dropdown = document.querySelector('.dropdown');
-            const dropdownMenu = document.getElementById('exportDropdown');
+            const dropdowns = document.querySelectorAll('.dropdown');
 
-            if (dropdown && !dropdown.contains(event.target)) {
-                dropdownMenu.classList.remove('show');
-            }
+            dropdowns.forEach(dropdown => {
+                if (!dropdown.contains(event.target)) {
+                    const menu = dropdown.querySelector('.dropdown-menu');
+                    if (menu) {
+                        menu.classList.remove('show');
+                    }
+                }
+            });
         });
 
         async function importDatabase(event) {
