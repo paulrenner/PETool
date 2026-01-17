@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1800px;
             margin: 0 auto;
             background: white;
             border-radius: 12px;
@@ -30,101 +30,65 @@
         header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px;
-            text-align: center;
+            padding: 20px 30px;
         }
 
         header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 2em;
+            margin-bottom: 5px;
         }
 
         header p {
-            font-size: 1.1em;
+            font-size: 1em;
             opacity: 0.9;
         }
 
-        .content {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 30px;
-            padding: 30px;
-        }
-
-        .form-section {
+        .controls-bar {
             background: #f8f9fa;
-            padding: 25px;
-            border-radius: 8px;
-            height: fit-content;
+            padding: 20px 30px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            border-bottom: 2px solid #e0e0e0;
         }
 
-        .form-section h2 {
-            margin-bottom: 20px;
-            color: #333;
-            font-size: 1.5em;
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
+        .control-group label {
             font-weight: 600;
+            font-size: 0.85em;
             color: #555;
         }
 
-        input[type="text"],
-        textarea {
-            width: 100%;
-            padding: 12px;
+        .control-group select,
+        .control-group input[type="date"] {
+            padding: 8px 12px;
             border: 2px solid #ddd;
             border-radius: 6px;
             font-size: 14px;
-            transition: border-color 0.3s;
+            min-width: 150px;
         }
 
-        input[type="text"]:focus,
-        textarea:focus {
+        .control-group select:focus,
+        .control-group input[type="date"]:focus {
             outline: none;
             border-color: #667eea;
         }
 
-        textarea {
-            font-family: 'Courier New', monospace;
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        button {
-            padding: 12px 24px;
+        .controls-bar button {
+            padding: 10px 20px;
             border: none;
             border-radius: 6px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            flex: 1;
-            min-width: 120px;
-        }
-
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        input:disabled,
-        textarea:disabled {
-            opacity: 0.6;
-            background: #f5f5f5;
-            cursor: not-allowed;
+            margin-top: auto;
         }
 
         .btn-primary {
@@ -164,20 +128,36 @@
             background: #e0a800;
         }
 
-        .table-section {
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .table-container {
             overflow-x: auto;
-        }
-
-        .controls {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        #searchInput {
-            flex: 1;
-            min-width: 250px;
+            margin-bottom: 30px;
         }
 
         table {
@@ -187,29 +167,29 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
             overflow: hidden;
+            min-width: 1400px;
         }
 
         thead {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #009879 0%, #00745e 100%);
             color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         th {
-            padding: 15px;
+            padding: 15px 12px;
             text-align: left;
             font-weight: 600;
             cursor: pointer;
             user-select: none;
-            position: relative;
+            white-space: nowrap;
+            font-size: 0.9em;
         }
 
         th:hover {
             background: rgba(255, 255, 255, 0.1);
-        }
-
-        th::after {
-            content: ' ⇅';
-            opacity: 0.5;
         }
 
         th.sorted-asc::after {
@@ -223,55 +203,40 @@
         }
 
         td {
-            padding: 15px;
+            padding: 12px;
             border-bottom: 1px solid #eee;
+            font-size: 0.9em;
         }
 
         tbody tr:hover {
             background: #f8f9fa;
         }
 
+        tbody tr:last-child {
+            border-top: 2px solid #009879;
+            border-bottom: 2px solid #009879;
+            font-weight: bold;
+            background: #f0f8ff;
+        }
+
         tbody tr:last-child td {
             border-bottom: none;
         }
 
-        .action-buttons {
-            display: flex;
-            gap: 8px;
+        td.number {
+            text-align: right;
         }
 
-        .btn-sm {
-            padding: 6px 12px;
-            font-size: 12px;
-            min-width: auto;
+        td.center {
+            text-align: center;
         }
 
-        .btn-edit {
-            background: #17a2b8;
-            color: white;
-        }
-
-        .btn-edit:hover {
-            background: #138496;
-        }
-
-        .btn-delete {
-            background: #dc3545;
-            color: white;
-        }
-
-        .btn-delete:hover {
-            background: #c82333;
-        }
-
-        .irr-positive {
+        .positive {
             color: #28a745;
-            font-weight: 600;
         }
 
-        .irr-negative {
+        .negative {
             color: #dc3545;
-            font-weight: 600;
         }
 
         .empty-state {
@@ -280,17 +245,119 @@
             color: #999;
         }
 
-        .empty-state svg {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 20px;
-            opacity: 0.5;
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            flex-wrap: nowrap;
         }
 
-        .hint {
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+            min-width: auto;
+            white-space: nowrap;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            background-color: rgba(0, 0, 0, 0.6);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 700px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            position: relative;
+            margin: auto;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .modal .close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .modal .close:hover {
+            color: #000;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-group .hint {
             font-size: 12px;
             color: #6c757d;
             margin-top: 5px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .form-actions button {
+            flex: 1;
         }
 
         .status-message {
@@ -301,7 +368,7 @@
             border-radius: 6px;
             background: white;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            z-index: 1000;
+            z-index: 2000;
             animation: slideIn 0.3s ease;
             max-width: 400px;
         }
@@ -312,6 +379,10 @@
 
         .status-message.error {
             border-left: 4px solid #dc3545;
+        }
+
+        .status-message.warning {
+            border-left: 4px solid #ffc107;
         }
 
         @keyframes slideIn {
@@ -325,30 +396,118 @@
             }
         }
 
-        @media (max-width: 1024px) {
-            .content {
-                grid-template-columns: 1fr;
-            }
-        }
-
         input[type="file"] {
             display: none;
         }
 
         .file-input-label {
             display: inline-block;
-            padding: 12px 24px;
+            padding: 10px 20px;
             background: #ffc107;
             color: #000;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s;
+            font-size: 14px;
         }
 
         .file-input-label:hover {
             background: #e0a800;
             transform: translateY(-2px);
+        }
+
+        input:disabled,
+        textarea:disabled,
+        select:disabled {
+            opacity: 0.6;
+            background: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        /* Details Table */
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .details-table th {
+            background-color: #009879;
+            color: #fff;
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ccc;
+        }
+
+        .details-table td {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+        }
+
+        .details-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .details-table input,
+        .details-table select {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .details-table input[type="number"],
+        .details-table input[type="text"] {
+            text-align: right;
+        }
+
+        .details-table input[type="date"],
+        .details-table select {
+            text-align: left;
+        }
+
+        .delete-row-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        .delete-row-btn:hover {
+            background: #c0392b;
+        }
+
+        #manageFundNamesModal .fund-name-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        #manageFundNamesModal .fund-name-item input {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        @media (max-width: 1400px) {
+            .controls-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .control-group {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -359,64 +518,55 @@
             <p>Private Equity Fund Analytics & Management Tool</p>
         </header>
 
-        <div class="content">
-            <!-- Form Section -->
-            <div class="form-section">
-                <h2>Fund Details</h2>
-                <form id="fundForm">
-                    <input type="hidden" id="fundId">
-
-                    <div class="form-group">
-                        <label for="fundName">Fund Name *</label>
-                        <input type="text" id="fundName" placeholder="e.g., Vista Equity Partners Fund VII" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="accountNumber">Account Number *</label>
-                        <input type="text" id="accountNumber" placeholder="e.g., ACC-2024-001" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="cashFlows">Cash Flows (JSON) *</label>
-                        <textarea id="cashFlows" placeholder='[{"date":"2024-01-15","amount":-1000000},{"date":"2024-06-15","amount":150000},{"date":"2025-01-15","amount":1200000}]' required></textarea>
-                        <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number}, ...]</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="monthlyNav">Monthly NAV (JSON)</label>
-                        <textarea id="monthlyNav" placeholder='[{"date":"2024-01-31","nav":950000},{"date":"2024-02-29","nav":980000}]'></textarea>
-                        <div class="hint">Format: [{"date":"YYYY-MM-DD","nav":number}, ...]</div>
-                    </div>
-
-                    <div class="button-group">
-                        <button type="submit" class="btn-primary">💾 Save Fund</button>
-                        <button type="button" class="btn-secondary" onclick="clearForm()">🔄 Clear</button>
-                    </div>
-                </form>
-
-                <div style="margin-top: 25px; padding-top: 25px; border-top: 2px solid #ddd;">
-                    <div class="button-group">
-                        <button class="btn-success" onclick="exportDatabase()">📤 Export</button>
-                        <label for="importFile" class="file-input-label">📥 Import</label>
-                        <input type="file" id="importFile" accept=".json" onchange="importDatabase(event)">
-                    </div>
-                </div>
+        <div class="controls-bar">
+            <div class="control-group">
+                <button class="btn-primary" onclick="showAddFundModal()">➕ New Investment</button>
             </div>
+            <div class="control-group">
+                <button class="btn-info" onclick="showManageFundsModal()">📋 Manage Funds</button>
+            </div>
+            <div class="control-group">
+                <label for="fundFilter">Filter by Fund</label>
+                <select id="fundFilter" onchange="applyFilters()">
+                    <option value="">All Funds</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="accountFilter">Filter by Account</label>
+                <select id="accountFilter" onchange="applyFilters()">
+                    <option value="">All Accounts</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="cutoffDate">Cutoff Date</label>
+                <input type="date" id="cutoffDate" onchange="applyFilters()">
+            </div>
+            <div class="control-group">
+                <button class="btn-secondary" onclick="resetFilters()">🔄 Reset Filters</button>
+            </div>
+            <div style="margin-left: auto; display: flex; gap: 10px;">
+                <button class="btn-success" onclick="exportDatabase()">📤 Export</button>
+                <label for="importFile" class="file-input-label">📥 Import</label>
+                <input type="file" id="importFile" accept=".json" onchange="importDatabase(event)">
+            </div>
+        </div>
 
-            <!-- Table Section -->
-            <div class="table-section">
-                <div class="controls">
-                    <input type="text" id="searchInput" placeholder="🔍 Search funds..." onkeyup="searchFunds()">
-                </div>
-
+        <div class="content">
+            <div class="table-container">
                 <table id="fundsTable">
                     <thead>
                         <tr>
-                            <th onclick="sortTable('id')">ID</th>
                             <th onclick="sortTable('fundName')">Fund Name</th>
-                            <th onclick="sortTable('accountNumber')">Account Number</th>
-                            <th onclick="sortTable('timestamp')">Timestamp</th>
-                            <th onclick="sortTable('irr')">IRR</th>
+                            <th onclick="sortTable('accountNumber')">Account</th>
+                            <th onclick="sortTable('vintage')" class="center">Vintage</th>
+                            <th onclick="sortTable('commitment')" class="number">Commitment</th>
+                            <th onclick="sortTable('totalContributions')" class="number">Contributions</th>
+                            <th onclick="sortTable('totalDistributions')" class="number">Distributions</th>
+                            <th onclick="sortTable('nav')" class="number">Value (NAV)</th>
+                            <th onclick="sortTable('investmentReturn')" class="number">Investment Return</th>
+                            <th onclick="sortTable('moic')" class="number">MOIC</th>
+                            <th onclick="sortTable('irr')" class="number">IRR</th>
+                            <th onclick="sortTable('outstandingCommitment')" class="number">Outstanding Commitment</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -424,6 +574,136 @@
                         <!-- Data will be populated here -->
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fund Add/Edit Modal -->
+    <div id="fundModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeFundModal()">&times;</span>
+            <h2 id="fundModalTitle">Add New Investment</h2>
+            <form id="fundForm" onsubmit="saveFund(event)">
+                <input type="hidden" id="fundId">
+                <input type="hidden" id="isDuplicate">
+
+                <div class="form-group">
+                    <label for="fundName">Fund Name *</label>
+                    <select id="fundName" required></select>
+                </div>
+
+                <div class="form-group">
+                    <label for="accountNumber">Account Number *</label>
+                    <input type="text" id="accountNumber" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="commitment">Commitment (USD) *</label>
+                    <input type="text" id="commitment" required placeholder="e.g., 1,000,000">
+                </div>
+
+                <div id="duplicateMultiplierContainer" class="form-group" style="display: none;">
+                    <label for="duplicateMultiplier">Duplicate Multiplier</label>
+                    <input type="number" id="duplicateMultiplier" step="any" value="1">
+                </div>
+
+                <div class="form-group">
+                    <label for="cashFlows">Cash Flows (JSON) *</label>
+                    <textarea id="cashFlows" required placeholder='[{"date":"2024-01-15","amount":-1000000,"type":"Contribution","affectsCommitment":true}]'></textarea>
+                    <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number,"type":"Contribution|Distribution","affectsCommitment":true}]</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="monthlyNav">Monthly NAV (JSON)</label>
+                    <textarea id="monthlyNav" placeholder='[{"date":"2024-01-31","amount":950000}]'></textarea>
+                    <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number}]</div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">💾 Save</button>
+                    <button type="button" class="btn-secondary" onclick="closeFundModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Action Modal -->
+    <div id="actionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeActionModal()">&times;</span>
+            <h2>Fund Actions</h2>
+            <p id="actionFundInfo" style="margin-bottom: 20px; color: #666;"></p>
+            <div class="form-actions">
+                <button class="btn-info" onclick="editFundFromAction()">✏️ Edit</button>
+                <button class="btn-success" onclick="duplicateFundFromAction()">📋 Duplicate</button>
+                <button class="btn-warning" onclick="showDetailsFromAction()">📊 Details</button>
+                <button class="btn-danger" onclick="deleteFundFromAction()">🗑️ Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Fund Names Modal -->
+    <div id="manageFundNamesModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeManageFundsModal()">&times;</span>
+            <h2>Manage Fund Names</h2>
+
+            <div class="form-group">
+                <label for="newFundNameInput">Add New Fund Name</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="newFundNameInput" style="flex: 1;" placeholder="Enter fund name">
+                    <button class="btn-primary" onclick="addNewFundName()">Add</button>
+                </div>
+            </div>
+
+            <hr style="margin: 20px 0;">
+
+            <h3 style="margin-bottom: 15px;">Existing Fund Names</h3>
+            <div id="fundNamesList"></div>
+
+            <div class="form-actions">
+                <button class="btn-secondary" onclick="closeManageFundsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <span class="close" onclick="closeDetailsModal()">&times;</span>
+            <h2 id="detailsModalTitle">Fund Details</h2>
+
+            <h3 style="margin-top: 20px;">Cash Flows</h3>
+            <table class="details-table" id="cashFlowsTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Amount (USD)</th>
+                        <th>Type</th>
+                        <th>Affects Commitment?</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" onclick="addCashFlowRow()">+ Add Cash Flow</button>
+
+            <h3 style="margin-top: 30px;">Monthly NAV</h3>
+            <table class="details-table" id="navTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Amount (USD)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" onclick="addNavRow()">+ Add NAV</button>
+
+            <div class="form-actions">
+                <button class="btn-primary" onclick="saveDetailsChanges()">💾 Save Changes</button>
+                <button class="btn-secondary" onclick="closeDetailsModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -436,12 +716,17 @@
         let db;
         let dbReady = false;
         const DB_NAME = 'FundsDB';
-        const STORE_NAME = 'funds';
-        const DB_VERSION = 1;
+        const FUNDS_STORE = 'funds';
+        const FUNDNAMES_STORE = 'fundNames';
+        const DB_VERSION = 3;
 
-        /**
-         * Initialize IndexedDB connection
-         */
+        let currentFunds = [];
+        let fundNames = new Set();
+        let sortColumn = null;
+        let sortDirection = 'asc';
+        let currentActionFundId = null;
+        let currentDetailsFundId = null;
+
         function initDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -456,42 +741,39 @@
                 request.onupgradeneeded = (event) => {
                     const db = event.target.result;
 
-                    // Create object store if it doesn't exist
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        const objectStore = db.createObjectStore(STORE_NAME, {
+                    // Funds store
+                    if (!db.objectStoreNames.contains(FUNDS_STORE)) {
+                        const fundsStore = db.createObjectStore(FUNDS_STORE, {
                             keyPath: 'id',
                             autoIncrement: true
                         });
+                        fundsStore.createIndex('fundName', 'fundName', { unique: false });
+                        fundsStore.createIndex('accountNumber', 'accountNumber', { unique: false });
+                    }
 
-                        // Create indexes for efficient querying
-                        objectStore.createIndex('fundName', 'fundName', { unique: false });
-                        objectStore.createIndex('accountNumber', 'accountNumber', { unique: false });
-                        objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+                    // Fund names store
+                    if (!db.objectStoreNames.contains(FUNDNAMES_STORE)) {
+                        db.createObjectStore(FUNDNAMES_STORE, { keyPath: 'name' });
                     }
                 };
             });
         }
 
-        /**
-         * Add or update a fund record
-         */
-        function saveFund(fundData) {
+        function saveFundToDB(fundData) {
             return new Promise((resolve, reject) => {
                 if (!db) {
                     reject(new Error('Database not initialized'));
                     return;
                 }
 
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const objectStore = transaction.objectStore(STORE_NAME);
+                const transaction = db.transaction([FUNDS_STORE], 'readwrite');
+                const objectStore = transaction.objectStore(FUNDS_STORE);
 
                 let request;
                 if (fundData.id) {
-                    // Update existing record
                     request = objectStore.put(fundData);
                 } else {
-                    // Add new record
-                    delete fundData.id; // Let autoIncrement handle it
+                    delete fundData.id;
                     request = objectStore.add(fundData);
                 }
 
@@ -500,9 +782,6 @@
             });
         }
 
-        /**
-         * Get all fund records
-         */
         function getAllFunds() {
             return new Promise((resolve, reject) => {
                 if (!db) {
@@ -510,8 +789,8 @@
                     return;
                 }
 
-                const transaction = db.transaction([STORE_NAME], 'readonly');
-                const objectStore = transaction.objectStore(STORE_NAME);
+                const transaction = db.transaction([FUNDS_STORE], 'readonly');
+                const objectStore = transaction.objectStore(FUNDS_STORE);
                 const request = objectStore.getAll();
 
                 request.onsuccess = () => resolve(request.result);
@@ -519,9 +798,6 @@
             });
         }
 
-        /**
-         * Get a single fund by ID
-         */
         function getFundById(id) {
             return new Promise((resolve, reject) => {
                 if (!db) {
@@ -529,8 +805,8 @@
                     return;
                 }
 
-                const transaction = db.transaction([STORE_NAME], 'readonly');
-                const objectStore = transaction.objectStore(STORE_NAME);
+                const transaction = db.transaction([FUNDS_STORE], 'readonly');
+                const objectStore = transaction.objectStore(FUNDS_STORE);
                 const request = objectStore.get(id);
 
                 request.onsuccess = () => resolve(request.result);
@@ -538,18 +814,15 @@
             });
         }
 
-        /**
-         * Delete a fund record
-         */
-        function deleteFund(id) {
+        function deleteFundFromDB(id) {
             return new Promise((resolve, reject) => {
                 if (!db) {
                     reject(new Error('Database not initialized'));
                     return;
                 }
 
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const objectStore = transaction.objectStore(STORE_NAME);
+                const transaction = db.transaction([FUNDS_STORE], 'readwrite');
+                const objectStore = transaction.objectStore(FUNDS_STORE);
                 const request = objectStore.delete(id);
 
                 request.onsuccess = () => resolve();
@@ -557,166 +830,281 @@
             });
         }
 
-        // ===========================
-        // IRR Calculation Engine
-        // ===========================
-
-        /**
-         * Calculate IRR using Newton-Raphson method
-         * @param {Array} cashFlows - Array of {date, amount}
-         * @returns {number|null} - IRR as decimal or null if not solvable
-         */
-        function calculateIRR(cashFlows) {
-            if (!cashFlows || cashFlows.length < 2) {
-                return null;
-            }
-
-            // Sort cash flows by date
-            const sortedFlows = [...cashFlows].sort((a, b) =>
-                new Date(a.date) - new Date(b.date)
-            );
-
-            // Use first cash flow as time zero
-            const startDate = new Date(sortedFlows[0].date);
-
-            // Calculate time periods in years from start date
-            const flows = sortedFlows.map(cf => ({
-                time: (new Date(cf.date) - startDate) / (365.25 * 24 * 60 * 60 * 1000),
-                amount: cf.amount
-            }));
-
-            /**
-             * NPV function: Net Present Value at given rate
-             */
-            function npv(rate, flows) {
-                return flows.reduce((sum, flow) => {
-                    return sum + flow.amount / Math.pow(1 + rate, flow.time);
-                }, 0);
-            }
-
-            /**
-             * Derivative of NPV with respect to rate
-             */
-            function npvDerivative(rate, flows) {
-                return flows.reduce((sum, flow) => {
-                    return sum - (flow.time * flow.amount) / Math.pow(1 + rate, flow.time + 1);
-                }, 0);
-            }
-
-            // Newton-Raphson parameters
-            let rate = 0.1; // Initial guess: 10%
-            const maxIterations = 100;
-            const tolerance = 1e-7;
-
-            // Newton-Raphson iteration
-            for (let i = 0; i < maxIterations; i++) {
-                const npvValue = npv(rate, flows);
-                const derivative = npvDerivative(rate, flows);
-
-                // Check if derivative is too small (would cause division issues)
-                if (Math.abs(derivative) < 1e-10) {
-                    return null;
+        function getAllFundNames() {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
                 }
 
-                const newRate = rate - npvValue / derivative;
+                const transaction = db.transaction([FUNDNAMES_STORE], 'readonly');
+                const objectStore = transaction.objectStore(FUNDNAMES_STORE);
+                const request = objectStore.getAll();
 
-                // Check for convergence
-                if (Math.abs(newRate - rate) < tolerance) {
+                request.onsuccess = () => {
+                    const names = request.result.map(item => item.name);
+                    resolve(names);
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function saveFundName(name) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
+                const transaction = db.transaction([FUNDNAMES_STORE], 'readwrite');
+                const objectStore = transaction.objectStore(FUNDNAMES_STORE);
+                const request = objectStore.put({ name });
+
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function deleteFundName(name) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not initialized'));
+                    return;
+                }
+
+                const transaction = db.transaction([FUNDNAMES_STORE], 'readwrite');
+                const objectStore = transaction.objectStore(FUNDNAMES_STORE);
+                const request = objectStore.delete(name);
+
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // ===========================
+        // Calculation Functions
+        // ===========================
+
+        function parseCurrency(val) {
+            if (val === null || typeof val === 'undefined') return NaN;
+            if (typeof val === 'number') return isFinite(val) ? val : NaN;
+            if (typeof val === 'string') {
+                const cleaned = val.replace(/[$,]/g, '').replace(/^\((.*)\)$/, '-$1').trim();
+                if (cleaned === '') return NaN;
+                const num = parseFloat(cleaned);
+                return isFinite(num) ? num : NaN;
+            }
+            return NaN;
+        }
+
+        function formatCurrency(value, showCents = false) {
+            const val = parseFloat(value);
+            if (!isFinite(val) || isNaN(val)) return '$0';
+            return val.toLocaleString('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: showCents ? 2 : 0,
+                maximumFractionDigits: showCents ? 2 : 0
+            });
+        }
+
+        function isValidDate(dateStr) {
+            if (typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                return false;
+            }
+            const date = new Date(dateStr);
+            return !isNaN(date.getTime());
+        }
+
+        function getVintageYear(fund) {
+            const contributions = (fund.cashFlows || [])
+                .filter(cf => cf.type === 'Contribution' && isValidDate(cf.date))
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            return contributions.length > 0 ? new Date(contributions[0].date).getFullYear() : null;
+        }
+
+        function getTotalByType(fund, type, cutoffDate) {
+            return (fund.cashFlows || [])
+                .filter(cf =>
+                    cf.type === type &&
+                    isValidDate(cf.date) &&
+                    (!cutoffDate || new Date(cf.date) <= cutoffDate)
+                )
+                .reduce((sum, cf) => sum + Math.abs(parseCurrency(cf.amount) || 0), 0);
+        }
+
+        function getLatestNav(fund, cutoffDate) {
+            const navs = (fund.monthlyNav || [])
+                .filter(n => isValidDate(n.date) && (!cutoffDate || new Date(n.date) <= cutoffDate))
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (navs.length === 0) return 0;
+
+            const latestNav = navs[0];
+            let navAmount = parseCurrency(latestNav.amount) || 0;
+            const navDate = new Date(latestNav.date);
+
+            // Adjust for cash flows after NAV date
+            const subsequentFlows = (fund.cashFlows || []).filter(cf => {
+                if (!isValidDate(cf.date)) return false;
+                const cfDate = new Date(cf.date);
+                return cfDate > navDate && (!cutoffDate || cfDate <= cutoffDate);
+            });
+
+            subsequentFlows.forEach(cf => {
+                const amount = parseCurrency(cf.amount) || 0;
+                if (cf.type === 'Contribution') {
+                    navAmount -= Math.abs(amount);
+                } else if (cf.type === 'Distribution') {
+                    navAmount += Math.abs(amount);
+                }
+            });
+
+            return navAmount;
+        }
+
+        function getOutstandingCommitment(fund, cutoffDate) {
+            let outstanding = parseCurrency(fund.commitment) || 0;
+
+            (fund.cashFlows || [])
+                .filter(cf =>
+                    isValidDate(cf.date) &&
+                    (!cutoffDate || new Date(cf.date) <= cutoffDate) &&
+                    cf.affectsCommitment !== false
+                )
+                .forEach(cf => {
+                    if (cf.type === 'Contribution') {
+                        const amount = parseCurrency(cf.amount) || 0;
+                        outstanding -= Math.abs(amount);
+                    }
+                });
+
+            return Math.max(0, outstanding);
+        }
+
+        function parseCashFlowsForIRR(fund, cutoffDate) {
+            const flows = (fund.cashFlows || [])
+                .filter(cf => isValidDate(cf.date) && (!cutoffDate || new Date(cf.date) <= cutoffDate))
+                .map(cf => {
+                    const amount = parseCurrency(cf.amount) || 0;
+                    return {
+                        date: cf.date,
+                        amount: cf.type === 'Contribution' ? -Math.abs(amount) : Math.abs(amount)
+                    };
+                });
+
+            // Add NAV as final cash flow
+            const nav = getLatestNav(fund, cutoffDate);
+            if (nav > 0) {
+                const navs = (fund.monthlyNav || [])
+                    .filter(n => isValidDate(n.date) && (!cutoffDate || new Date(n.date) <= cutoffDate))
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                if (navs.length > 0) {
+                    flows.push({ date: navs[0].date, amount: nav });
+                }
+            }
+
+            return flows.sort((a, b) => new Date(a.date) - new Date(b.date));
+        }
+
+        function calculateIRR(cashFlows, guess = 0.1) {
+            if (!Array.isArray(cashFlows) || cashFlows.length < 2) return null;
+
+            const flows = [...cashFlows].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const firstDate = new Date(flows[0].date);
+
+            const npv = rate => flows.reduce((acc, cf) => {
+                const yearsDiff = (new Date(cf.date) - firstDate) / (365.25 * 24 * 60 * 60 * 1000);
+                return acc + cf.amount / Math.pow(1 + rate, yearsDiff);
+            }, 0);
+
+            const dNpv = rate => flows.reduce((acc, cf) => {
+                const yearsDiff = (new Date(cf.date) - firstDate) / (365.25 * 24 * 60 * 60 * 1000);
+                if (yearsDiff === 0) return acc;
+                return acc - (yearsDiff * cf.amount) / Math.pow(1 + rate, yearsDiff + 1);
+            }, 0);
+
+            let rate = guess;
+            const maxIterations = 1000;
+            const precision = 1e-6;
+
+            for (let i = 0; i < maxIterations; i++) {
+                const npvValue = npv(rate);
+                const derivativeValue = dNpv(rate);
+
+                if (Math.abs(npvValue) < precision) {
+                    if (rate > 10 || rate < -1) return null;
+                    return rate;
+                }
+                if (Math.abs(derivativeValue) < precision) return null;
+
+                const newRate = rate - npvValue / derivativeValue;
+                if (Math.abs(newRate - rate) < precision) {
+                    if (newRate > 10 || newRate < -1) return null;
                     return newRate;
                 }
 
                 rate = newRate;
-
-                // Prevent extreme values
-                if (rate < -0.99 || rate > 10) {
-                    return null;
-                }
             }
 
-            // Did not converge
             return null;
         }
 
-        /**
-         * Format IRR as percentage string
-         */
-        function formatIRR(irr) {
-            if (irr === null || irr === undefined) {
-                return 'N/A';
-            }
-            return (irr * 100).toFixed(2) + '%';
+        function calculateMOIC(cashFlows) {
+            if (!Array.isArray(cashFlows) || cashFlows.length === 0) return null;
+
+            const contributions = cashFlows
+                .filter(f => f.amount < 0)
+                .reduce((sum, f) => sum + Math.abs(f.amount), 0);
+
+            const distributions = cashFlows
+                .filter(f => f.amount > 0)
+                .reduce((sum, f) => sum + f.amount, 0);
+
+            if (contributions === 0) return distributions > 0 ? Infinity : null;
+            return distributions / contributions;
+        }
+
+        function calculateMetrics(fund, cutoffDate) {
+            const commitment = parseCurrency(fund.commitment) || 0;
+            const totalContributions = getTotalByType(fund, 'Contribution', cutoffDate);
+            const totalDistributions = getTotalByType(fund, 'Distribution', cutoffDate);
+            const nav = getLatestNav(fund, cutoffDate);
+            const outstandingCommitment = getOutstandingCommitment(fund, cutoffDate);
+            const investmentReturn = totalDistributions + nav - totalContributions;
+            const vintage = getVintageYear(fund);
+
+            const cashFlowsForIRR = parseCashFlowsForIRR(fund, cutoffDate);
+            const irr = calculateIRR(cashFlowsForIRR);
+            const moic = calculateMOIC(cashFlowsForIRR);
+
+            return {
+                commitment,
+                totalContributions,
+                totalDistributions,
+                nav,
+                outstandingCommitment,
+                investmentReturn,
+                vintage,
+                irr,
+                moic
+            };
+        }
+
+        function getLatestQuarterEnd() {
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentQuarter = Math.floor(currentMonth / 3);
+            const quarterStartMonth = currentQuarter * 3;
+            return new Date(now.getFullYear(), quarterStartMonth, 0);
         }
 
         // ===========================
-        // UI Rendering
+        // UI Functions
         // ===========================
 
-        let currentFunds = [];
-        let sortColumn = null;
-        let sortDirection = 'asc';
-
-        /**
-         * Render the funds table
-         */
-        async function renderTable(funds = null) {
-            if (funds === null) {
-                funds = await getAllFunds();
-            }
-
-            currentFunds = funds;
-            const tbody = document.getElementById('fundsTableBody');
-
-            if (funds.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="empty-state">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-                            </svg>
-                            <h3>No funds yet</h3>
-                            <p>Add your first fund using the form on the left</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            tbody.innerHTML = funds.map(fund => {
-                const irr = calculateIRR(fund.cashFlows);
-                const irrFormatted = formatIRR(irr);
-                const irrClass = irr === null ? '' : (irr >= 0 ? 'irr-positive' : 'irr-negative');
-                const timestamp = new Date(fund.timestamp).toLocaleString();
-
-                return `
-                    <tr>
-                        <td>${fund.id}</td>
-                        <td>${escapeHtml(fund.fundName)}</td>
-                        <td>${escapeHtml(fund.accountNumber)}</td>
-                        <td>${timestamp}</td>
-                        <td class="${irrClass}">${irrFormatted}</td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="btn-edit btn-sm" onclick="editFund(${fund.id})">✏️ Edit</button>
-                                <button class="btn-delete btn-sm" onclick="deleteFundConfirm(${fund.id})">🗑️ Delete</button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        /**
-         * Escape HTML to prevent XSS
-         */
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        /**
-         * Show status message
-         */
         function showStatus(message, type = 'success') {
             const statusDiv = document.createElement('div');
             statusDiv.className = `status-message ${type}`;
@@ -728,41 +1116,362 @@
             }, 3000);
         }
 
+        async function renderTable() {
+            try {
+                const funds = await getAllFunds();
+                currentFunds = funds;
+
+                // Apply filters
+                let filtered = applyCurrentFilters(funds);
+
+                // Apply sorting
+                if (sortColumn) {
+                    filtered = sortData(filtered, sortColumn, sortDirection);
+                }
+
+                // Update filter dropdowns
+                updateFilterDropdowns(funds);
+
+                // Get cutoff date
+                const cutoffDateValue = document.getElementById('cutoffDate').value;
+                const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue) : null;
+
+                // Calculate metrics for each fund
+                const fundsWithMetrics = filtered.map(fund => ({
+                    ...fund,
+                    metrics: calculateMetrics(fund, cutoffDate)
+                }));
+
+                // Render table body
+                const tbody = document.getElementById('fundsTableBody');
+                tbody.innerHTML = '';
+
+                if (fundsWithMetrics.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="12" class="empty-state">
+                                <div style="padding: 40px;">
+                                    <h3 style="margin-bottom: 10px;">No investments found</h3>
+                                    <p>Click "New Investment" to add your first fund</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                fundsWithMetrics.forEach(fund => {
+                    const m = fund.metrics;
+                    const row = document.createElement('tr');
+
+                    row.innerHTML = `
+                        <td>${escapeHtml(fund.fundName)}</td>
+                        <td>${escapeHtml(fund.accountNumber)}</td>
+                        <td class="center">${m.vintage || 'N/A'}</td>
+                        <td class="number">${formatCurrency(m.commitment)}</td>
+                        <td class="number">${formatCurrency(m.totalContributions)}</td>
+                        <td class="number">${formatCurrency(m.totalDistributions)}</td>
+                        <td class="number">${formatCurrency(m.nav)}</td>
+                        <td class="number ${m.investmentReturn >= 0 ? 'positive' : 'negative'}">${formatCurrency(m.investmentReturn)}</td>
+                        <td class="number">${m.moic !== null && isFinite(m.moic) ? m.moic.toFixed(2) + 'x' : 'N/A'}</td>
+                        <td class="number ${m.irr !== null && m.irr >= 0 ? 'positive' : 'negative'}">${m.irr !== null ? (m.irr * 100).toFixed(2) + '%' : 'N/A'}</td>
+                        <td class="number">${formatCurrency(m.outstandingCommitment)}</td>
+                        <td>
+                            <button class="btn-sm btn-info" onclick="showActionModal(${fund.id})">⋮</button>
+                        </td>
+                    `;
+
+                    tbody.appendChild(row);
+                });
+
+                // Add totals row
+                addTotalsRow(fundsWithMetrics, cutoffDate);
+
+            } catch (err) {
+                console.error('Error rendering table:', err);
+                showStatus('Error loading data: ' + err.message, 'error');
+            }
+        }
+
+        function addTotalsRow(fundsWithMetrics, cutoffDate) {
+            const tbody = document.getElementById('fundsTableBody');
+
+            // Calculate totals
+            const totals = {
+                commitment: 0,
+                totalContributions: 0,
+                totalDistributions: 0,
+                nav: 0,
+                investmentReturn: 0,
+                outstandingCommitment: 0,
+                aggregateFlows: []
+            };
+
+            fundsWithMetrics.forEach(fund => {
+                const m = fund.metrics;
+                totals.commitment += m.commitment;
+                totals.totalContributions += m.totalContributions;
+                totals.totalDistributions += m.totalDistributions;
+                totals.nav += m.nav;
+                totals.investmentReturn += m.investmentReturn;
+                totals.outstandingCommitment += m.outstandingCommitment;
+
+                const flows = parseCashFlowsForIRR(fund, cutoffDate);
+                totals.aggregateFlows.push(...flows);
+            });
+
+            // Calculate aggregate IRR and MOIC
+            const aggregateIRR = calculateIRR(totals.aggregateFlows);
+            const aggregateMOIC = calculateMOIC(totals.aggregateFlows);
+
+            const totalRow = document.createElement('tr');
+            totalRow.innerHTML = `
+                <td><strong>Total</strong></td>
+                <td></td>
+                <td></td>
+                <td class="number"><strong>${formatCurrency(totals.commitment)}</strong></td>
+                <td class="number"><strong>${formatCurrency(totals.totalContributions)}</strong></td>
+                <td class="number"><strong>${formatCurrency(totals.totalDistributions)}</strong></td>
+                <td class="number"><strong>${formatCurrency(totals.nav)}</strong></td>
+                <td class="number ${totals.investmentReturn >= 0 ? 'positive' : 'negative'}"><strong>${formatCurrency(totals.investmentReturn)}</strong></td>
+                <td class="number"><strong>${aggregateMOIC !== null && isFinite(aggregateMOIC) ? aggregateMOIC.toFixed(2) + 'x' : 'N/A'}</strong></td>
+                <td class="number ${aggregateIRR !== null && aggregateIRR >= 0 ? 'positive' : 'negative'}"><strong>${aggregateIRR !== null ? (aggregateIRR * 100).toFixed(2) + '%' : 'N/A'}</strong></td>
+                <td class="number"><strong>${formatCurrency(totals.outstandingCommitment)}</strong></td>
+                <td></td>
+            `;
+
+            tbody.appendChild(totalRow);
+        }
+
+        function applyCurrentFilters(funds) {
+            const fundFilter = document.getElementById('fundFilter').value;
+            const accountFilter = document.getElementById('accountFilter').value;
+
+            return funds.filter(fund => {
+                if (fundFilter && fund.fundName !== fundFilter) return false;
+                if (accountFilter && fund.accountNumber !== accountFilter) return false;
+                return true;
+            });
+        }
+
+        function updateFilterDropdowns(funds) {
+            // Update fund filter
+            const fundFilter = document.getElementById('fundFilter');
+            const currentFundValue = fundFilter.value;
+            const uniqueFunds = [...new Set(funds.map(f => f.fundName))].sort();
+
+            fundFilter.innerHTML = '<option value="">All Funds</option>';
+            uniqueFunds.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                fundFilter.appendChild(option);
+            });
+            fundFilter.value = currentFundValue;
+
+            // Update account filter
+            const accountFilter = document.getElementById('accountFilter');
+            const currentAccountValue = accountFilter.value;
+            const uniqueAccounts = [...new Set(funds.map(f => f.accountNumber))].sort();
+
+            accountFilter.innerHTML = '<option value="">All Accounts</option>';
+            uniqueAccounts.forEach(account => {
+                const option = document.createElement('option');
+                option.value = account;
+                option.textContent = account;
+                accountFilter.appendChild(option);
+            });
+            accountFilter.value = currentAccountValue;
+        }
+
+        function applyFilters() {
+            renderTable();
+        }
+
+        function resetFilters() {
+            document.getElementById('fundFilter').value = '';
+            document.getElementById('accountFilter').value = '';
+            document.getElementById('cutoffDate').value = '';
+            renderTable();
+        }
+
+        function sortData(data, column, direction) {
+            return [...data].sort((a, b) => {
+                const cutoffDateValue = document.getElementById('cutoffDate').value;
+                const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue) : null;
+
+                const metricsA = calculateMetrics(a, cutoffDate);
+                const metricsB = calculateMetrics(b, cutoffDate);
+
+                let valA, valB;
+
+                switch(column) {
+                    case 'fundName':
+                    case 'accountNumber':
+                        valA = a[column];
+                        valB = b[column];
+                        break;
+                    case 'vintage':
+                    case 'commitment':
+                    case 'totalContributions':
+                    case 'totalDistributions':
+                    case 'nav':
+                    case 'investmentReturn':
+                    case 'outstandingCommitment':
+                    case 'irr':
+                    case 'moic':
+                        valA = metricsA[column] ?? -Infinity;
+                        valB = metricsB[column] ?? -Infinity;
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (valA < valB) return direction === 'asc' ? -1 : 1;
+                if (valA > valB) return direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        function sortTable(column) {
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+
+            // Update header classes
+            document.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+            });
+
+            const headers = document.querySelectorAll('th');
+            const columnIndex = ['fundName', 'accountNumber', 'vintage', 'commitment', 'totalContributions', 'totalDistributions', 'nav', 'investmentReturn', 'moic', 'irr', 'outstandingCommitment'].indexOf(column);
+            if (columnIndex !== -1) {
+                headers[columnIndex].classList.add(`sorted-${sortDirection}`);
+            }
+
+            renderTable();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // ===========================
-        // Form Handling
+        // Modal Functions
         // ===========================
 
-        /**
-         * Handle form submission
-         */
-        document.getElementById('fundForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        async function showAddFundModal() {
+            document.getElementById('fundModalTitle').textContent = 'Add New Investment';
+            document.getElementById('fundId').value = '';
+            document.getElementById('isDuplicate').value = '';
+            document.getElementById('duplicateMultiplierContainer').style.display = 'none';
+            document.getElementById('fundForm').reset();
+
+            await populateFundNamesDropdown();
+            document.getElementById('fundModal').classList.add('show');
+        }
+
+        async function editFund(id) {
+            try {
+                const fund = await getFundById(id);
+                if (!fund) {
+                    showStatus('Fund not found', 'error');
+                    return;
+                }
+
+                document.getElementById('fundModalTitle').textContent = 'Edit Investment';
+                document.getElementById('fundId').value = fund.id;
+                document.getElementById('isDuplicate').value = '';
+                document.getElementById('duplicateMultiplierContainer').style.display = 'none';
+
+                await populateFundNamesDropdown();
+                document.getElementById('fundName').value = fund.fundName;
+                document.getElementById('accountNumber').value = fund.accountNumber;
+                document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
+                document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
+                document.getElementById('monthlyNav').value = JSON.stringify(fund.monthlyNav || [], null, 2);
+
+                document.getElementById('fundModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error loading fund: ' + err.message, 'error');
+            }
+        }
+
+        async function duplicateFund(id) {
+            try {
+                const fund = await getFundById(id);
+                if (!fund) {
+                    showStatus('Fund not found', 'error');
+                    return;
+                }
+
+                document.getElementById('fundModalTitle').textContent = 'Duplicate Investment';
+                document.getElementById('fundId').value = '';
+                document.getElementById('isDuplicate').value = id;
+                document.getElementById('duplicateMultiplierContainer').style.display = 'block';
+                document.getElementById('duplicateMultiplier').value = '1';
+
+                await populateFundNamesDropdown();
+                document.getElementById('fundName').value = fund.fundName;
+                document.getElementById('accountNumber').value = fund.accountNumber + ' (Copy)';
+                document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
+                document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
+                document.getElementById('monthlyNav').value = JSON.stringify(fund.monthlyNav || [], null, 2);
+
+                document.getElementById('fundModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error loading fund: ' + err.message, 'error');
+            }
+        }
+
+        function closeFundModal() {
+            document.getElementById('fundModal').classList.remove('show');
+        }
+
+        async function saveFund(event) {
+            event.preventDefault();
 
             try {
                 const fundId = document.getElementById('fundId').value;
+                const isDuplicate = document.getElementById('isDuplicate').value;
                 const fundName = document.getElementById('fundName').value.trim();
                 const accountNumber = document.getElementById('accountNumber').value.trim();
+                const commitmentText = document.getElementById('commitment').value.trim();
                 const cashFlowsText = document.getElementById('cashFlows').value.trim();
                 const monthlyNavText = document.getElementById('monthlyNav').value.trim();
 
-                // Validate required fields
-                if (!fundName || !accountNumber || !cashFlowsText) {
+                // Validate
+                if (!fundName || !accountNumber || !commitmentText || !cashFlowsText) {
                     showStatus('Please fill in all required fields', 'error');
                     return;
                 }
 
-                // Parse and validate JSON
+                // Parse commitment
+                const commitment = parseCurrency(commitmentText);
+                if (isNaN(commitment)) {
+                    showStatus('Invalid commitment amount', 'error');
+                    return;
+                }
+
+                // Parse JSON
                 let cashFlows, monthlyNav;
 
                 try {
                     cashFlows = JSON.parse(cashFlowsText);
-                    if (!Array.isArray(cashFlows)) {
-                        throw new Error('Cash flows must be an array');
-                    }
+                    if (!Array.isArray(cashFlows)) throw new Error('Cash flows must be an array');
+
                     // Validate cash flow structure
                     cashFlows.forEach((cf, i) => {
-                        if (!cf.date || typeof cf.amount !== 'number') {
+                        if (!cf.date || typeof cf.amount === 'undefined' || !cf.type) {
                             throw new Error(`Invalid cash flow at index ${i}`);
+                        }
+                        if (!['Contribution', 'Distribution'].includes(cf.type)) {
+                            throw new Error(`Invalid cash flow type at index ${i}`);
                         }
                     });
                 } catch (err) {
@@ -772,12 +1481,10 @@
 
                 try {
                     monthlyNav = monthlyNavText ? JSON.parse(monthlyNavText) : [];
-                    if (!Array.isArray(monthlyNav)) {
-                        throw new Error('Monthly NAV must be an array');
-                    }
-                    // Validate NAV structure
+                    if (!Array.isArray(monthlyNav)) throw new Error('Monthly NAV must be an array');
+
                     monthlyNav.forEach((nav, i) => {
-                        if (!nav.date || typeof nav.nav !== 'number') {
+                        if (!nav.date || typeof nav.amount === 'undefined') {
                             throw new Error(`Invalid NAV entry at index ${i}`);
                         }
                     });
@@ -786,10 +1493,25 @@
                     return;
                 }
 
-                // Create fund object
+                // Handle duplicate multiplier
+                if (isDuplicate) {
+                    const multiplier = parseFloat(document.getElementById('duplicateMultiplier').value) || 1;
+
+                    cashFlows = cashFlows.map(cf => ({
+                        ...cf,
+                        amount: parseCurrency(cf.amount) * multiplier
+                    }));
+
+                    monthlyNav = monthlyNav.map(nav => ({
+                        ...nav,
+                        amount: parseCurrency(nav.amount) * multiplier
+                    }));
+                }
+
                 const fundData = {
                     fundName,
                     accountNumber,
+                    commitment: commitment.toString(),
                     cashFlows,
                     monthlyNav,
                     timestamp: new Date().toISOString()
@@ -799,32 +1521,27 @@
                     fundData.id = parseInt(fundId);
                 }
 
-                // Save to database
-                await saveFund(fundData);
+                await saveFundToDB(fundData);
 
-                // Clear form and refresh table
-                clearForm();
+                // Save fund name if new
+                if (!fundNames.has(fundName)) {
+                    await saveFundName(fundName);
+                    fundNames.add(fundName);
+                }
+
+                closeFundModal();
                 await renderTable();
-
                 showStatus(fundId ? 'Fund updated successfully' : 'Fund added successfully');
+
             } catch (err) {
                 showStatus('Error saving fund: ' + err.message, 'error');
                 console.error(err);
             }
-        });
-
-        /**
-         * Clear the form
-         */
-        function clearForm() {
-            document.getElementById('fundForm').reset();
-            document.getElementById('fundId').value = '';
         }
 
-        /**
-         * Edit a fund
-         */
-        async function editFund(id) {
+        async function showActionModal(id) {
+            currentActionFundId = id;
+
             try {
                 const fund = await getFundById(id);
                 if (!fund) {
@@ -832,134 +1549,422 @@
                     return;
                 }
 
-                // Populate form
-                document.getElementById('fundId').value = fund.id;
-                document.getElementById('fundName').value = fund.fundName;
-                document.getElementById('accountNumber').value = fund.accountNumber;
-                document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows, null, 2);
-                document.getElementById('monthlyNav').value = JSON.stringify(fund.monthlyNav, null, 2);
-
-                // Scroll to form
-                document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
+                document.getElementById('actionFundInfo').textContent =
+                    `${fund.fundName} - ${fund.accountNumber}`;
+                document.getElementById('actionModal').classList.add('show');
             } catch (err) {
                 showStatus('Error loading fund: ' + err.message, 'error');
+            }
+        }
+
+        function closeActionModal() {
+            document.getElementById('actionModal').classList.remove('show');
+            currentActionFundId = null;
+        }
+
+        function editFundFromAction() {
+            closeActionModal();
+            editFund(currentActionFundId);
+        }
+
+        function duplicateFundFromAction() {
+            closeActionModal();
+            duplicateFund(currentActionFundId);
+        }
+
+        async function deleteFundFromAction() {
+            if (!currentActionFundId) return;
+
+            try {
+                const fund = await getFundById(currentActionFundId);
+                if (!fund) {
+                    showStatus('Fund not found', 'error');
+                    return;
+                }
+
+                if (confirm(`Are you sure you want to delete "${fund.fundName} - ${fund.accountNumber}"?`)) {
+                    await deleteFundFromDB(currentActionFundId);
+                    closeActionModal();
+                    await renderTable();
+                    showStatus('Fund deleted successfully');
+                }
+            } catch (err) {
+                showStatus('Error deleting fund: ' + err.message, 'error');
+            }
+        }
+
+        function showDetailsFromAction() {
+            closeActionModal();
+            showDetailsModal(currentActionFundId);
+        }
+
+        async function showDetailsModal(id) {
+            currentDetailsFundId = id;
+
+            try {
+                const fund = await getFundById(id);
+                if (!fund) {
+                    showStatus('Fund not found', 'error');
+                    return;
+                }
+
+                document.getElementById('detailsModalTitle').textContent =
+                    `Fund Details - ${fund.fundName}`;
+
+                // Populate cash flows table
+                const cashFlowsTable = document.getElementById('cashFlowsTable').querySelector('tbody');
+                cashFlowsTable.innerHTML = '';
+                (fund.cashFlows || []).forEach((cf, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><input type="date" value="${cf.date || ''}" data-field="date" data-index="${index}"></td>
+                        <td><input type="text" value="${parseCurrency(cf.amount) || ''}" data-field="amount" data-index="${index}"></td>
+                        <td>
+                            <select data-field="type" data-index="${index}">
+                                <option value="Contribution" ${cf.type === 'Contribution' ? 'selected' : ''}>Contribution</option>
+                                <option value="Distribution" ${cf.type === 'Distribution' ? 'selected' : ''}>Distribution</option>
+                            </select>
+                        </td>
+                        <td style="text-align: center;">
+                            <input type="checkbox" ${cf.affectsCommitment !== false ? 'checked' : ''} data-field="affectsCommitment" data-index="${index}">
+                        </td>
+                        <td>
+                            <button class="delete-row-btn" onclick="deleteCashFlowRow(${index})">Delete</button>
+                        </td>
+                    `;
+                    cashFlowsTable.appendChild(row);
+                });
+
+                // Populate NAV table
+                const navTable = document.getElementById('navTable').querySelector('tbody');
+                navTable.innerHTML = '';
+                (fund.monthlyNav || []).forEach((nav, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><input type="date" value="${nav.date || ''}" data-field="date" data-index="${index}"></td>
+                        <td><input type="text" value="${parseCurrency(nav.amount) || ''}" data-field="amount" data-index="${index}"></td>
+                        <td>
+                            <button class="delete-row-btn" onclick="deleteNavRow(${index})">Delete</button>
+                        </td>
+                    `;
+                    navTable.appendChild(row);
+                });
+
+                document.getElementById('detailsModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error loading fund details: ' + err.message, 'error');
+            }
+        }
+
+        function closeDetailsModal() {
+            document.getElementById('detailsModal').classList.remove('show');
+            currentDetailsFundId = null;
+        }
+
+        function addCashFlowRow() {
+            const table = document.getElementById('cashFlowsTable').querySelector('tbody');
+            const index = table.children.length;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input type="date" data-field="date" data-index="${index}"></td>
+                <td><input type="text" placeholder="0" data-field="amount" data-index="${index}"></td>
+                <td>
+                    <select data-field="type" data-index="${index}">
+                        <option value="Contribution">Contribution</option>
+                        <option value="Distribution">Distribution</option>
+                    </select>
+                </td>
+                <td style="text-align: center;">
+                    <input type="checkbox" checked data-field="affectsCommitment" data-index="${index}">
+                </td>
+                <td>
+                    <button class="delete-row-btn" onclick="deleteCashFlowRow(${index})">Delete</button>
+                </td>
+            `;
+            table.appendChild(row);
+        }
+
+        function deleteCashFlowRow(index) {
+            const table = document.getElementById('cashFlowsTable').querySelector('tbody');
+            table.children[index].remove();
+        }
+
+        function addNavRow() {
+            const table = document.getElementById('navTable').querySelector('tbody');
+            const index = table.children.length;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input type="date" data-field="date" data-index="${index}"></td>
+                <td><input type="text" placeholder="0" data-field="amount" data-index="${index}"></td>
+                <td>
+                    <button class="delete-row-btn" onclick="deleteNavRow(${index})">Delete</button>
+                </td>
+            `;
+            table.appendChild(row);
+        }
+
+        function deleteNavRow(index) {
+            const table = document.getElementById('navTable').querySelector('tbody');
+            table.children[index].remove();
+        }
+
+        async function saveDetailsChanges() {
+            if (!currentDetailsFundId) return;
+
+            try {
+                const fund = await getFundById(currentDetailsFundId);
+                if (!fund) {
+                    showStatus('Fund not found', 'error');
+                    return;
+                }
+
+                // Read cash flows from table
+                const cashFlowsTable = document.getElementById('cashFlowsTable').querySelector('tbody');
+                const cashFlows = [];
+                Array.from(cashFlowsTable.children).forEach(row => {
+                    const date = row.querySelector('[data-field="date"]').value;
+                    const amount = row.querySelector('[data-field="amount"]').value;
+                    const type = row.querySelector('[data-field="type"]').value;
+                    const affectsCommitment = row.querySelector('[data-field="affectsCommitment"]').checked;
+
+                    if (date && amount) {
+                        cashFlows.push({
+                            date,
+                            amount: parseCurrency(amount),
+                            type,
+                            affectsCommitment
+                        });
+                    }
+                });
+
+                // Read NAV from table
+                const navTable = document.getElementById('navTable').querySelector('tbody');
+                const monthlyNav = [];
+                Array.from(navTable.children).forEach(row => {
+                    const date = row.querySelector('[data-field="date"]').value;
+                    const amount = row.querySelector('[data-field="amount"]').value;
+
+                    if (date && amount) {
+                        monthlyNav.push({
+                            date,
+                            amount: parseCurrency(amount)
+                        });
+                    }
+                });
+
+                // Update fund
+                fund.cashFlows = cashFlows;
+                fund.monthlyNav = monthlyNav;
+                fund.timestamp = new Date().toISOString();
+
+                await saveFundToDB(fund);
+                closeDetailsModal();
+                await renderTable();
+                showStatus('Details updated successfully');
+
+            } catch (err) {
+                showStatus('Error saving details: ' + err.message, 'error');
                 console.error(err);
             }
         }
 
-        /**
-         * Delete a fund with confirmation
-         */
-        async function deleteFundConfirm(id) {
-            const fund = await getFundById(id);
-            if (!fund) {
-                showStatus('Fund not found', 'error');
+        async function showManageFundsModal() {
+            await loadFundNamesList();
+            await populateFundNamesDropdown();
+            document.getElementById('manageFundNamesModal').classList.add('show');
+        }
+
+        function closeManageFundsModal() {
+            document.getElementById('manageFundNamesModal').classList.remove('show');
+        }
+
+        async function loadFundNamesList() {
+            try {
+                const names = await getAllFundNames();
+                fundNames = new Set(names);
+
+                const container = document.getElementById('fundNamesList');
+                container.innerHTML = '';
+
+                if (names.length === 0) {
+                    container.innerHTML = '<p style="color: #999;">No fund names yet</p>';
+                    return;
+                }
+
+                names.forEach(name => {
+                    const div = document.createElement('div');
+                    div.className = 'fund-name-item';
+                    div.innerHTML = `
+                        <input type="text" value="${escapeHtml(name)}" data-original-name="${escapeHtml(name)}" onchange="updateFundName(this)">
+                        <button class="btn-danger btn-sm" onclick="removeFundName('${escapeHtml(name)}')">Delete</button>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch (err) {
+                showStatus('Error loading fund names: ' + err.message, 'error');
+            }
+        }
+
+        async function addNewFundName() {
+            const input = document.getElementById('newFundNameInput');
+            const name = input.value.trim();
+
+            if (!name) {
+                showStatus('Please enter a fund name', 'error');
                 return;
             }
 
-            if (confirm(`Are you sure you want to delete "${fund.fundName}"?`)) {
-                try {
-                    await deleteFund(id);
-                    await renderTable();
-                    showStatus('Fund deleted successfully');
+            if (fundNames.has(name)) {
+                showStatus('Fund name already exists', 'error');
+                return;
+            }
 
-                    // Clear form if editing this fund
-                    if (document.getElementById('fundId').value == id) {
-                        clearForm();
+            try {
+                await saveFundName(name);
+                fundNames.add(name);
+                input.value = '';
+                await loadFundNamesList();
+                showStatus('Fund name added successfully');
+            } catch (err) {
+                showStatus('Error adding fund name: ' + err.message, 'error');
+            }
+        }
+
+        async function updateFundName(input) {
+            const oldName = input.dataset.originalName;
+            const newName = input.value.trim();
+
+            if (!newName) {
+                showStatus('Fund name cannot be empty', 'error');
+                input.value = oldName;
+                return;
+            }
+
+            if (newName === oldName) return;
+
+            if (fundNames.has(newName) && newName !== oldName) {
+                showStatus('Fund name already exists', 'error');
+                input.value = oldName;
+                return;
+            }
+
+            try {
+                // Delete old name, save new name
+                await deleteFundName(oldName);
+                await saveFundName(newName);
+
+                // Update all funds with this name
+                const funds = await getAllFunds();
+                for (const fund of funds) {
+                    if (fund.fundName === oldName) {
+                        fund.fundName = newName;
+                        await saveFundToDB(fund);
                     }
-                } catch (err) {
-                    showStatus('Error deleting fund: ' + err.message, 'error');
-                    console.error(err);
                 }
+
+                fundNames.delete(oldName);
+                fundNames.add(newName);
+                input.dataset.originalName = newName;
+
+                await renderTable();
+                showStatus('Fund name updated successfully');
+            } catch (err) {
+                showStatus('Error updating fund name: ' + err.message, 'error');
+                input.value = oldName;
             }
         }
 
-        // ===========================
-        // Search & Sort
-        // ===========================
+        async function removeFundName(name) {
+            if (!confirm(`Are you sure you want to delete "${name}"? This will not delete funds using this name.`)) {
+                return;
+            }
 
-        /**
-         * Search funds
-         */
-        function searchFunds() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-
-            const filtered = currentFunds.filter(fund => {
-                return fund.fundName.toLowerCase().includes(searchTerm) ||
-                       fund.accountNumber.toLowerCase().includes(searchTerm) ||
-                       fund.id.toString().includes(searchTerm);
-            });
-
-            renderTable(filtered);
+            try {
+                await deleteFundName(name);
+                fundNames.delete(name);
+                await loadFundNamesList();
+                showStatus('Fund name deleted successfully');
+            } catch (err) {
+                showStatus('Error deleting fund name: ' + err.message, 'error');
+            }
         }
 
-        /**
-         * Sort table by column
-         */
-        async function sortTable(column) {
-            // Update sort direction
-            if (sortColumn === column) {
-                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortColumn = column;
-                sortDirection = 'asc';
-            }
+        async function populateFundNamesDropdown() {
+            const select = document.getElementById('fundName');
+            const currentValue = select.value;
 
-            // Get fresh data
-            const funds = await getAllFunds();
+            try {
+                const names = await getAllFundNames();
+                fundNames = new Set(names);
 
-            // Sort data
-            funds.sort((a, b) => {
-                let valA, valB;
+                select.innerHTML = '<option value="">Select a fund</option>';
+                names.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    select.appendChild(option);
+                });
 
-                if (column === 'irr') {
-                    valA = calculateIRR(a.cashFlows) || -Infinity;
-                    valB = calculateIRR(b.cashFlows) || -Infinity;
-                } else if (column === 'timestamp') {
-                    valA = new Date(a.timestamp);
-                    valB = new Date(b.timestamp);
-                } else {
-                    valA = a[column];
-                    valB = b[column];
+                // Add option to create new fund
+                const newOption = document.createElement('option');
+                newOption.value = '__new__';
+                newOption.textContent = '+ Add New Fund Name';
+                select.appendChild(newOption);
+
+                if (currentValue) {
+                    select.value = currentValue;
                 }
 
-                if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-                if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-                return 0;
-            });
-
-            // Update header classes
-            document.querySelectorAll('th').forEach(th => {
-                th.classList.remove('sorted-asc', 'sorted-desc');
-            });
-
-            const headers = document.querySelectorAll('th');
-            const columnIndex = ['id', 'fundName', 'accountNumber', 'timestamp', 'irr'].indexOf(column);
-            if (columnIndex !== -1) {
-                headers[columnIndex].classList.add(`sorted-${sortDirection}`);
+                // Handle new fund name creation
+                select.onchange = async function() {
+                    if (this.value === '__new__') {
+                        const newName = prompt('Enter new fund name:');
+                        if (newName && newName.trim()) {
+                            const name = newName.trim();
+                            if (!fundNames.has(name)) {
+                                try {
+                                    await saveFundName(name);
+                                    fundNames.add(name);
+                                    await populateFundNamesDropdown();
+                                    select.value = name;
+                                    showStatus('Fund name added successfully');
+                                } catch (err) {
+                                    showStatus('Error adding fund name: ' + err.message, 'error');
+                                    this.value = '';
+                                }
+                            } else {
+                                select.value = name;
+                            }
+                        } else {
+                            this.value = '';
+                        }
+                    }
+                };
+            } catch (err) {
+                console.error('Error populating fund names:', err);
             }
-
-            renderTable(funds);
         }
 
         // ===========================
         // Import / Export
         // ===========================
 
-        /**
-         * Export database to JSON file
-         */
         async function exportDatabase() {
             try {
                 const funds = await getAllFunds();
-                const dataStr = JSON.stringify(funds, null, 2);
+                const names = await getAllFundNames();
+
+                const exportData = {
+                    funds,
+                    fundNames: names,
+                    exportDate: new Date().toISOString()
+                };
+
+                const dataStr = JSON.stringify(exportData, null, 2);
                 const blob = new Blob([dataStr], { type: 'application/json' });
-
-                // Generate filename with timestamp
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-                const filename = `funds-export-${timestamp}.json`;
+                const filename = `pe-funds-export-${timestamp}.json`;
 
-                // Try File System Access API first
                 if ('showSaveFilePicker' in window) {
                     try {
                         const handle = await window.showSaveFilePicker({
@@ -974,17 +1979,15 @@
                         await writable.write(blob);
                         await writable.close();
 
-                        showStatus('Database exported successfully');
+                        showStatus('Data exported successfully');
                         return;
                     } catch (err) {
-                        if (err.name === 'AbortError') {
-                            return; // User cancelled
-                        }
+                        if (err.name === 'AbortError') return;
                         throw err;
                     }
                 }
 
-                // Fallback to download link
+                // Fallback
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -994,51 +1997,57 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                showStatus('Database exported successfully');
+                showStatus('Data exported successfully');
             } catch (err) {
-                showStatus('Error exporting database: ' + err.message, 'error');
+                showStatus('Error exporting data: ' + err.message, 'error');
                 console.error(err);
             }
         }
 
-        /**
-         * Import database from JSON file
-         */
         async function importDatabase(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             try {
                 const text = await file.text();
-                const funds = JSON.parse(text);
+                const data = JSON.parse(text);
 
-                if (!Array.isArray(funds)) {
+                let imported = 0;
+
+                // Import fund names
+                if (data.fundNames && Array.isArray(data.fundNames)) {
+                    for (const name of data.fundNames) {
+                        await saveFundName(name);
+                        fundNames.add(name);
+                    }
+                }
+
+                // Import funds
+                const fundsToImport = data.funds || data;
+                if (!Array.isArray(fundsToImport)) {
                     throw new Error('Invalid format: expected array of funds');
                 }
 
-                // Validate and import each fund
-                let imported = 0;
-                for (const fund of funds) {
-                    // Remove id to let autoIncrement handle it
+                for (const fund of fundsToImport) {
                     const fundData = {
                         fundName: fund.fundName,
                         accountNumber: fund.accountNumber,
-                        cashFlows: fund.cashFlows,
+                        commitment: fund.commitment,
+                        cashFlows: fund.cashFlows || [],
                         monthlyNav: fund.monthlyNav || [],
                         timestamp: fund.timestamp || new Date().toISOString()
                     };
 
-                    await saveFund(fundData);
+                    await saveFundToDB(fundData);
                     imported++;
                 }
 
                 await renderTable();
                 showStatus(`Successfully imported ${imported} fund(s)`);
 
-                // Reset file input
                 event.target.value = '';
             } catch (err) {
-                showStatus('Error importing database: ' + err.message, 'error');
+                showStatus('Error importing data: ' + err.message, 'error');
                 console.error(err);
             }
         }
@@ -1047,31 +2056,31 @@
         // Initialization
         // ===========================
 
-        /**
-         * Enable or disable form controls
-         */
-        function setFormEnabled(enabled) {
-            const form = document.getElementById('fundForm');
+        function setControlsEnabled(enabled) {
             const buttons = document.querySelectorAll('button');
-            const inputs = form.querySelectorAll('input, textarea');
+            const inputs = document.querySelectorAll('input, select, textarea');
 
             inputs.forEach(input => input.disabled = !enabled);
             buttons.forEach(button => button.disabled = !enabled);
         }
 
-        /**
-         * Initialize the application
-         */
         async function init() {
             try {
-                // Disable form until DB is ready
-                setFormEnabled(false);
+                setControlsEnabled(false);
 
                 await initDB();
+
+                // Load fund names
+                const names = await getAllFundNames();
+                fundNames = new Set(names);
+
+                // Set default cutoff date to latest quarter end
+                const quarterEnd = getLatestQuarterEnd();
+                document.getElementById('cutoffDate').value = quarterEnd.toISOString().split('T')[0];
+
                 await renderTable();
 
-                // Enable form now that DB is ready
-                setFormEnabled(true);
+                setControlsEnabled(true);
 
                 console.log('PE Fund Manager initialized successfully');
             } catch (err) {
@@ -1080,7 +2089,6 @@
             }
         }
 
-        // Start the application when DOM is ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', init);
         } else {
