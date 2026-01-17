@@ -754,11 +754,11 @@
             background: #FAFAFA;
             border: 1px solid #E0E0E0;
             border-radius: 3px;
+            gap: 10px;
         }
 
-        #manageFundNamesModal .fund-name-item input {
-            flex: 1;
-            margin-right: 10px;
+        #manageFundNamesModal .fund-name-item .btn-sm {
+            margin-left: 5px;
         }
 
         /* Manage Groups Modal */
@@ -1030,14 +1030,6 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="fundTags">Tags (optional)</label>
-                    <div id="fundTagsContainer" class="tags-container"></div>
-                    <input type="text" id="fundTagsInput" placeholder="Add tag (e.g., Venture Capital, Growth Equity)" list="tagsDatalist">
-                    <datalist id="tagsDatalist"></datalist>
-                    <div class="hint">Press Enter to add tags. Click × on a tag to remove it.</div>
-                </div>
-
-                <div class="form-group">
                     <label for="commitment">Commitment (USD) *</label>
                     <input type="text" id="commitment" required placeholder="e.g., 1,000,000">
                 </div>
@@ -1103,6 +1095,34 @@
 
             <div class="form-actions">
                 <button class="btn-secondary" onclick="closeManageFundsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Fund Name Modal -->
+    <div id="editFundNameModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditFundNameModal()">&times;</span>
+            <h2>Edit Fund</h2>
+
+            <input type="hidden" id="editFundNameOriginal" value="">
+
+            <div class="form-group">
+                <label for="editFundNameInput">Fund Name</label>
+                <input type="text" id="editFundNameInput" placeholder="Enter fund name">
+            </div>
+
+            <div class="form-group">
+                <label for="editFundTags">Tags (optional)</label>
+                <div id="editFundTagsContainer" class="tags-container"></div>
+                <input type="text" id="editFundTagsInput" placeholder="Add tag (e.g., Venture Capital, Growth Equity)" list="editFundTagsDatalist">
+                <datalist id="editFundTagsDatalist"></datalist>
+                <div class="hint">Press Enter to add tags. Click × on a tag to remove it.</div>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn-primary" onclick="saveEditedFundName()">Save Changes</button>
+                <button class="btn-secondary" onclick="closeEditFundNameModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -1206,13 +1226,12 @@
         const FUNDS_STORE = 'funds';
         const FUNDNAMES_STORE = 'fundNames';
         const GROUPS_STORE = 'groups';
-        const TAGS_STORE = 'tags';
-        const DB_VERSION = 5;
+        const DB_VERSION = 6;
 
         let currentFunds = [];
-        let fundNames = new Set();
+        let fundNames = new Set(); // Just the names for quick lookup
+        let fundNameData = new Map(); // Full data: name -> { name, tags }
         let groups = [];
-        let tags = new Set();
         let currentGroupDescendants = null; // Cache for selected group and its descendants
         let sortColumn = null;
         let sortDirection = 'asc';
@@ -1233,6 +1252,8 @@
 
                 request.onupgradeneeded = (event) => {
                     const db = event.target.result;
+                    const oldVersion = event.oldVersion;
+                    const transaction = event.target.transaction;
 
                     // Funds store
                     if (!db.objectStoreNames.contains(FUNDS_STORE)) {
@@ -1259,9 +1280,49 @@
                         groupsStore.createIndex('name', 'name', { unique: false });
                     }
 
-                    // Tags store
-                    if (!db.objectStoreNames.contains(TAGS_STORE)) {
-                        db.createObjectStore(TAGS_STORE, { keyPath: 'name' });
+                    // Migrate from v5 to v6: Move tags from investments to fund names
+                    if (oldVersion < 6 && oldVersion >= 5) {
+                        // Delete old tags store
+                        if (db.objectStoreNames.contains('tags')) {
+                            db.deleteObjectStore('tags');
+                        }
+
+                        // Get all funds and extract unique fund names with their tags
+                        const fundsStore = transaction.objectStore(FUNDS_STORE);
+                        const fundNamesStore = transaction.objectStore(FUNDNAMES_STORE);
+
+                        const fundNameTagsMap = new Map(); // fundName -> Set of tags
+
+                        fundsStore.openCursor().onsuccess = function(event) {
+                            const cursor = event.target.result;
+                            if (cursor) {
+                                const fund = cursor.value;
+                                if (fund.tags && Array.isArray(fund.tags) && fund.tags.length > 0) {
+                                    if (!fundNameTagsMap.has(fund.fundName)) {
+                                        fundNameTagsMap.set(fund.fundName, new Set());
+                                    }
+                                    fund.tags.forEach(tag => fundNameTagsMap.get(fund.fundName).add(tag));
+                                }
+
+                                // Remove tags from fund
+                                delete fund.tags;
+                                cursor.update(fund);
+
+                                cursor.continue();
+                            } else {
+                                // Cursor finished - now update all fund names with their tags
+                                fundNamesStore.getAll().onsuccess = function(event) {
+                                    const fundNames = event.target.result;
+                                    fundNames.forEach(fundNameObj => {
+                                        const name = fundNameObj.name;
+                                        const tags = fundNameTagsMap.has(name)
+                                            ? Array.from(fundNameTagsMap.get(name))
+                                            : [];
+                                        fundNamesStore.put({ name, tags });
+                                    });
+                                };
+                            }
+                        };
                     }
                 };
             });
@@ -1338,7 +1399,8 @@
             });
         }
 
-        function getAllFundNames() {
+        // Get all fund name objects (with name and tags)
+        function getAllFundNameObjects() {
             return new Promise((resolve, reject) => {
                 if (!db) {
                     reject(new Error('Database not initialized'));
@@ -1350,23 +1412,41 @@
                 const request = objectStore.getAll();
 
                 request.onsuccess = () => {
-                    const names = request.result.map(item => item.name);
-                    resolve(names);
+                    // Ensure all objects have tags array
+                    const objects = request.result.map(item => ({
+                        name: item.name,
+                        tags: item.tags || []
+                    }));
+                    resolve(objects);
                 };
                 request.onerror = () => reject(request.error);
             });
         }
 
-        function saveFundName(name) {
+        // Get just the fund names (for backward compatibility)
+        function getAllFundNames() {
+            return new Promise((resolve, reject) => {
+                getAllFundNameObjects()
+                    .then(objects => resolve(objects.map(obj => obj.name)))
+                    .catch(reject);
+            });
+        }
+
+        // Save or update a fund name (pass string for just name, or object with {name, tags})
+        function saveFundName(nameOrObject) {
             return new Promise((resolve, reject) => {
                 if (!db) {
                     reject(new Error('Database not initialized'));
                     return;
                 }
 
+                const fundNameObj = typeof nameOrObject === 'string'
+                    ? { name: nameOrObject, tags: [] }
+                    : { name: nameOrObject.name, tags: nameOrObject.tags || [] };
+
                 const transaction = db.transaction([FUNDNAMES_STORE], 'readwrite');
                 const objectStore = transaction.objectStore(FUNDNAMES_STORE);
-                const request = objectStore.put({ name });
+                const request = objectStore.put(fundNameObj);
 
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject(request.error);
@@ -1382,61 +1462,6 @@
 
                 const transaction = db.transaction([FUNDNAMES_STORE], 'readwrite');
                 const objectStore = transaction.objectStore(FUNDNAMES_STORE);
-                const request = objectStore.delete(name);
-
-                request.onsuccess = () => resolve();
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        // ===========================
-        // Tags Database Operations
-        // ===========================
-
-        function getAllTags() {
-            return new Promise((resolve, reject) => {
-                if (!db) {
-                    reject(new Error('Database not initialized'));
-                    return;
-                }
-
-                const transaction = db.transaction([TAGS_STORE], 'readonly');
-                const objectStore = transaction.objectStore(TAGS_STORE);
-                const request = objectStore.getAll();
-
-                request.onsuccess = () => {
-                    const tagList = request.result.map(item => item.name);
-                    resolve(tagList);
-                };
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        function saveTag(name) {
-            return new Promise((resolve, reject) => {
-                if (!db) {
-                    reject(new Error('Database not initialized'));
-                    return;
-                }
-
-                const transaction = db.transaction([TAGS_STORE], 'readwrite');
-                const objectStore = transaction.objectStore(TAGS_STORE);
-                const request = objectStore.put({ name });
-
-                request.onsuccess = () => resolve();
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        function deleteTag(name) {
-            return new Promise((resolve, reject) => {
-                if (!db) {
-                    reject(new Error('Database not initialized'));
-                    return;
-                }
-
-                const transaction = db.transaction([TAGS_STORE], 'readwrite');
-                const objectStore = transaction.objectStore(TAGS_STORE);
                 const request = objectStore.delete(name);
 
                 request.onsuccess = () => resolve();
@@ -1862,9 +1887,11 @@
                     const m = fund.metrics;
                     const row = document.createElement('tr');
 
-                    // Build tags HTML
-                    const tagsHtml = (fund.tags && fund.tags.length > 0)
-                        ? `<div class="table-tags">${fund.tags.map(tag => `<span class="table-tag">${escapeHtml(tag)}</span>`).join('')}</div>`
+                    // Build tags HTML - look up tags from fund name
+                    const fundNameObj = fundNameData.get(fund.fundName);
+                    const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+                    const tagsHtml = tags.length > 0
+                        ? `<div class="table-tags">${tags.map(tag => `<span class="table-tag">${escapeHtml(tag)}</span>`).join('')}</div>`
                         : '';
 
                     row.innerHTML = `
@@ -1971,7 +1998,10 @@
                 if (searchInput) {
                     const fundName = (fund.fundName || '').toLowerCase();
                     const accountNumber = (fund.accountNumber || '').toLowerCase();
-                    const fundTags = (fund.tags || []).map(tag => tag.toLowerCase()).join(' ');
+                    // Look up tags from fund name data
+                    const fundNameObj = fundNameData.get(fund.fundName);
+                    const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+                    const fundTags = tags.map(tag => tag.toLowerCase()).join(' ');
                     if (!fundName.includes(searchInput) &&
                         !accountNumber.includes(searchInput) &&
                         !fundTags.includes(searchInput)) {
@@ -2163,14 +2193,12 @@
 
             await populateFundNamesDropdown();
             await populateFundGroupDropdown();
-            populateTagsDatalist();
 
             // Reset other form fields (not the fund name dropdown which we just populated)
             document.getElementById('accountNumber').value = '';
             document.getElementById('commitment').value = '';
             document.getElementById('cashFlows').value = '';
             document.getElementById('monthlyNav').value = '';
-            setSelectedTags([]);
 
             document.getElementById('fundModal').classList.add('show');
         }
@@ -2193,12 +2221,10 @@
 
                 await populateFundNamesDropdown(fund.fundName);
                 await populateFundGroupDropdown(fund.groupId);
-                populateTagsDatalist();
                 document.getElementById('accountNumber').value = fund.accountNumber;
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
                 document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
                 document.getElementById('monthlyNav').value = JSON.stringify(fund.monthlyNav || [], null, 2);
-                setSelectedTags(fund.tags || []);
 
                 document.getElementById('fundModal').classList.add('show');
             } catch (err) {
@@ -2223,12 +2249,10 @@
 
                 await populateFundNamesDropdown(fund.fundName);
                 await populateFundGroupDropdown(fund.groupId);
-                populateTagsDatalist();
                 document.getElementById('accountNumber').value = fund.accountNumber + ' (Copy)';
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
                 document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
                 document.getElementById('monthlyNav').value = JSON.stringify(fund.monthlyNav || [], null, 2);
-                setSelectedTags(fund.tags || []);
 
                 document.getElementById('fundModal').classList.add('show');
             } catch (err) {
@@ -2241,65 +2265,16 @@
         }
 
         // Tag management functions
-        function addTagToFund(tagName) {
-            const container = document.getElementById('fundTagsContainer');
-            const tag = document.createElement('span');
-            tag.className = 'tag';
-            tag.innerHTML = `${tagName}<span class="tag-remove" onclick="removeTagFromFund(this)">×</span>`;
-            tag.setAttribute('data-tag', tagName);
-            container.appendChild(tag);
-
-            // Add to global tags list if not exists
-            if (!tags.has(tagName)) {
-                tags.add(tagName);
-                saveTag(tagName).catch(err => console.error('Error saving tag:', err));
-            }
-
-            // Update datalist
-            populateTagsDatalist();
-        }
-
-        function removeTagFromFund(button) {
-            const tag = button.closest('.tag');
-            if (tag) {
-                tag.remove();
-            }
-        }
-
-        function getSelectedTags() {
-            const container = document.getElementById('fundTagsContainer');
-            const tagElements = container.querySelectorAll('.tag');
-            return Array.from(tagElements).map(tag => tag.getAttribute('data-tag'));
-        }
-
-        function setSelectedTags(tagArray) {
-            const container = document.getElementById('fundTagsContainer');
-            container.innerHTML = '';
-            if (Array.isArray(tagArray)) {
-                tagArray.forEach(tagName => addTagToFund(tagName));
-            }
-        }
-
-        function populateTagsDatalist() {
-            const datalist = document.getElementById('tagsDatalist');
-            datalist.innerHTML = '';
-            tags.forEach(tag => {
-                const option = document.createElement('option');
-                option.value = tag;
-                datalist.appendChild(option);
-            });
-        }
-
-        // Handle tag input
+        // Handle tag input for Edit Fund Name modal
         document.addEventListener('keydown', function(event) {
-            if (event.target.id === 'fundTagsInput' && event.key === 'Enter') {
+            if (event.target.id === 'editFundTagsInput' && event.key === 'Enter') {
                 event.preventDefault();
                 const input = event.target;
                 const tagName = input.value.trim();
                 if (tagName) {
-                    const currentTags = getSelectedTags();
+                    const currentTags = getEditFundTags();
                     if (!currentTags.includes(tagName)) {
-                        addTagToFund(tagName);
+                        addEditFundTag(tagName);
                         input.value = '';
                     } else {
                         showStatus('Tag already added', 'warning');
@@ -2416,7 +2391,6 @@
                     fundName,
                     accountNumber,
                     groupId: groupId ? parseInt(groupId) : null,
-                    tags: getSelectedTags(),
                     commitment: commitment,
                     cashFlows,
                     monthlyNav,
@@ -2878,34 +2852,60 @@
 
         async function loadFundNamesList() {
             try {
-                const names = await getAllFundNames();
-                fundNames = new Set(names);
+                const fundNameObjects = await getAllFundNameObjects();
+                fundNames = new Set(fundNameObjects.map(obj => obj.name));
+                fundNameData = new Map(fundNameObjects.map(obj => [obj.name, obj]));
 
                 const container = document.getElementById('fundNamesList');
                 container.innerHTML = '';
 
-                if (names.length === 0) {
+                if (fundNameObjects.length === 0) {
                     container.innerHTML = '<p style="color: #95A5A6;">No fund names yet</p>';
                     return;
                 }
 
-                names.forEach(name => {
+                fundNameObjects.forEach(fundNameObj => {
                     const div = document.createElement('div');
                     div.className = 'fund-name-item';
 
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.value = name;
-                    input.setAttribute('data-original-name', name);
-                    input.onchange = function() { updateFundName(this); };
+                    const nameDiv = document.createElement('div');
+                    nameDiv.style.flex = '1';
+                    nameDiv.style.minWidth = '0';
+
+                    const nameSpan = document.createElement('div');
+                    nameSpan.textContent = fundNameObj.name;
+                    nameSpan.style.fontWeight = '500';
+                    nameSpan.style.marginBottom = '4px';
+                    nameDiv.appendChild(nameSpan);
+
+                    // Show tags if any
+                    if (fundNameObj.tags && fundNameObj.tags.length > 0) {
+                        const tagsDiv = document.createElement('div');
+                        tagsDiv.className = 'table-tags';
+                        tagsDiv.style.marginTop = '4px';
+                        fundNameObj.tags.forEach(tag => {
+                            const tagSpan = document.createElement('span');
+                            tagSpan.className = 'table-tag';
+                            tagSpan.textContent = tag;
+                            tagsDiv.appendChild(tagSpan);
+                        });
+                        nameDiv.appendChild(tagsDiv);
+                    }
+
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'btn-secondary btn-sm';
+                    editBtn.textContent = 'Edit';
+                    editBtn.setAttribute('data-fund-name', fundNameObj.name);
+                    editBtn.onclick = function() { openEditFundNameModal(this.getAttribute('data-fund-name')); };
 
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'btn-danger btn-sm';
                     deleteBtn.textContent = 'Delete';
-                    deleteBtn.setAttribute('data-fund-name', name);
+                    deleteBtn.setAttribute('data-fund-name', fundNameObj.name);
                     deleteBtn.onclick = function() { removeFundName(this.getAttribute('data-fund-name')); };
 
-                    div.appendChild(input);
+                    div.appendChild(nameDiv);
+                    div.appendChild(editBtn);
                     div.appendChild(deleteBtn);
                     container.appendChild(div);
                 });
@@ -2939,65 +2939,145 @@
             }
         }
 
-        async function updateFundName(input) {
-            const oldName = input.dataset.originalName;
-            const newName = input.value.trim();
-
-            if (!newName) {
-                showStatus('Fund name cannot be empty', 'error');
-                input.value = oldName;
+        // Open Edit Fund Name Modal
+        function openEditFundNameModal(fundName) {
+            const fundNameObj = fundNameData.get(fundName);
+            if (!fundNameObj) {
+                showStatus('Fund name not found', 'error');
                 return;
             }
 
-            if (newName === oldName) return;
+            document.getElementById('editFundNameOriginal').value = fundName;
+            document.getElementById('editFundNameInput').value = fundName;
+
+            // Populate tags
+            populateEditFundTagsDatalist();
+            setEditFundTags(fundNameObj.tags || []);
+
+            document.getElementById('editFundNameModal').classList.add('show');
+        }
+
+        function closeEditFundNameModal() {
+            document.getElementById('editFundNameModal').classList.remove('show');
+        }
+
+        // Tag management for Edit Fund Name modal
+        function addEditFundTag(tagName) {
+            const container = document.getElementById('editFundTagsContainer');
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.innerHTML = `${escapeHtml(tagName)}<span class="tag-remove" onclick="removeEditFundTag(this)">×</span>`;
+            tag.setAttribute('data-tag', tagName);
+            container.appendChild(tag);
+
+            populateEditFundTagsDatalist();
+        }
+
+        function removeEditFundTag(button) {
+            const tag = button.closest('.tag');
+            if (tag) {
+                tag.remove();
+            }
+        }
+
+        function getEditFundTags() {
+            const container = document.getElementById('editFundTagsContainer');
+            const tagElements = container.querySelectorAll('.tag');
+            return Array.from(tagElements).map(tag => tag.getAttribute('data-tag'));
+        }
+
+        function setEditFundTags(tagArray) {
+            const container = document.getElementById('editFundTagsContainer');
+            container.innerHTML = '';
+            if (Array.isArray(tagArray)) {
+                tagArray.forEach(tagName => addEditFundTag(tagName));
+            }
+        }
+
+        function populateEditFundTagsDatalist() {
+            const datalist = document.getElementById('editFundTagsDatalist');
+            datalist.innerHTML = '';
+
+            // Collect all unique tags from all fund names
+            const allTags = new Set();
+            fundNameData.forEach(fundNameObj => {
+                if (fundNameObj.tags) {
+                    fundNameObj.tags.forEach(tag => allTags.add(tag));
+                }
+            });
+
+            allTags.forEach(tag => {
+                const option = document.createElement('option');
+                option.value = tag;
+                datalist.appendChild(option);
+            });
+        }
+
+        // Save edited fund name
+        async function saveEditedFundName() {
+            const oldName = document.getElementById('editFundNameOriginal').value;
+            const newName = document.getElementById('editFundNameInput').value.trim();
+            const tags = getEditFundTags();
+
+            if (!newName) {
+                showStatus('Fund name cannot be empty', 'error');
+                return;
+            }
 
             if (fundNames.has(newName) && newName !== oldName) {
                 showStatus('Fund name already exists', 'error');
-                input.value = oldName;
                 return;
             }
 
             try {
-                // Get all funds that use this name first
-                const funds = await getAllFunds();
-                const fundsToUpdate = funds.filter(f => f.fundName === oldName);
+                showLoading('Updating fund name...');
 
-                // Update funds first (most critical operation)
-                const updateErrors = [];
-                for (const fund of fundsToUpdate) {
-                    try {
-                        fund.fundName = newName;
-                        await saveFundToDB(fund);
-                    } catch (err) {
-                        updateErrors.push(fund.accountNumber);
-                        console.error(`Failed to update fund ${fund.accountNumber}:`, err);
+                // If name changed, update all funds that use this name
+                if (newName !== oldName) {
+                    const funds = await getAllFunds();
+                    const fundsToUpdate = funds.filter(f => f.fundName === oldName);
+
+                    const updateErrors = [];
+                    for (const fund of fundsToUpdate) {
+                        try {
+                            fund.fundName = newName;
+                            await saveFundToDB(fund);
+                        } catch (err) {
+                            updateErrors.push(fund.accountNumber);
+                            console.error(`Failed to update fund ${fund.accountNumber}:`, err);
+                        }
                     }
-                }
 
-                if (updateErrors.length > 0) {
-                    throw new Error(`Failed to update ${updateErrors.length} fund(s): ${updateErrors.join(', ')}`);
-                }
+                    if (updateErrors.length > 0) {
+                        throw new Error(`Failed to update ${updateErrors.length} fund(s): ${updateErrors.join(', ')}`);
+                    }
 
-                // Now update the fund names list (less critical)
-                try {
+                    // Delete old name and save new name with tags
                     await deleteFundName(oldName);
-                    await saveFundName(newName);
-                } catch (err) {
-                    console.error('Error updating fund names list:', err);
-                    // Funds are already updated, so just log this error
+                    await saveFundName({ name: newName, tags });
+
+                    fundNames.delete(oldName);
+                    fundNames.add(newName);
+                    fundNameData.delete(oldName);
+                    fundNameData.set(newName, { name: newName, tags });
+
+                    await renderTable();
+                    showStatus(`Fund name updated successfully (${fundsToUpdate.length} fund(s) updated)`);
+                } else {
+                    // Just update tags
+                    await saveFundName({ name: newName, tags });
+                    fundNameData.set(newName, { name: newName, tags });
+                    await renderTable();
+                    showStatus('Tags updated successfully');
                 }
 
-                fundNames.delete(oldName);
-                fundNames.add(newName);
-                input.dataset.originalName = newName;
-
-                await renderTable();
-                showStatus(`Fund name updated successfully (${fundsToUpdate.length} fund(s) updated)`);
+                closeEditFundNameModal();
+                await loadFundNamesList();
             } catch (err) {
                 showStatus('Error updating fund name: ' + err.message, 'error');
-                input.value = oldName;
-                // Reload to show current state
-                await loadFundNamesList();
+                console.error(err);
+            } finally {
+                hideLoading();
             }
         }
 
@@ -3009,6 +3089,7 @@
             try {
                 await deleteFundName(name);
                 fundNames.delete(name);
+                fundNameData.delete(name);
                 await loadFundNamesList();
                 showStatus('Fund name deleted successfully');
             } catch (err) {
@@ -3363,15 +3444,13 @@
         async function exportDatabase() {
             try {
                 const funds = await getAllFunds();
-                const names = await getAllFundNames();
+                const fundNamesData = await getAllFundNameObjects(); // Get full objects with tags
                 const groupsData = await getAllGroups();
-                const tagsData = await getAllTags();
 
                 const exportData = {
                     funds,
-                    fundNames: names,
+                    fundNames: fundNamesData, // Export full objects instead of just names
                     groups: groupsData,
-                    tags: tagsData,
                     exportDate: new Date().toISOString()
                 };
 
@@ -3599,6 +3678,7 @@
                 const actionModal = document.getElementById('actionModal');
                 const investmentModal = document.getElementById('investmentModal');
                 const manageFundsModal = document.getElementById('manageFundNamesModal');
+                const editFundNameModal = document.getElementById('editFundNameModal');
                 const manageGroupsModal = document.getElementById('manageGroupsModal');
 
                 if (detailsModal && detailsModal.classList.contains('show')) {
@@ -3607,6 +3687,8 @@
                     closeActionModal();
                 } else if (investmentModal && investmentModal.classList.contains('show')) {
                     closeInvestmentModal();
+                } else if (editFundNameModal && editFundNameModal.classList.contains('show')) {
+                    closeEditFundNameModal();
                 } else if (manageFundsModal && manageFundsModal.classList.contains('show')) {
                     closeManageFundsModal();
                 } else if (manageGroupsModal && manageGroupsModal.classList.contains('show')) {
@@ -3717,19 +3799,17 @@
                     groups = await getAllGroups();
                 }
 
-                // Import fund names
+                // Import fund names (now with tags)
                 if (data.fundNames && Array.isArray(data.fundNames)) {
-                    for (const name of data.fundNames) {
-                        await saveFundName(name);
-                        fundNames.add(name);
-                    }
-                }
+                    for (const fundNameItem of data.fundNames) {
+                        // Support both old format (string) and new format (object with tags)
+                        const fundNameObj = typeof fundNameItem === 'string'
+                            ? { name: fundNameItem, tags: [] }
+                            : { name: fundNameItem.name, tags: fundNameItem.tags || [] };
 
-                // Import tags
-                if (data.tags && Array.isArray(data.tags)) {
-                    for (const tagName of data.tags) {
-                        await saveTag(tagName);
-                        tags.add(tagName);
+                        await saveFundName(fundNameObj);
+                        fundNames.add(fundNameObj.name);
+                        fundNameData.set(fundNameObj.name, fundNameObj);
                     }
                 }
 
@@ -3739,36 +3819,20 @@
                     throw new Error('Invalid format: expected array of funds');
                 }
 
-                // Collect unique fund names from imported funds
+                // Collect unique fund names from imported funds (in case fundNames array is missing)
                 const uniqueFundNames = new Set();
                 fundsToImport.forEach(fund => {
-                    if (fund.fundName) {
+                    if (fund.fundName && !fundNames.has(fund.fundName)) {
                         uniqueFundNames.add(fund.fundName);
                     }
                 });
 
-                // Save all unique fund names to database
+                // Save any missing fund names to database
                 for (const name of uniqueFundNames) {
-                    if (!fundNames.has(name)) {
-                        await saveFundName(name);
-                        fundNames.add(name);
-                    }
-                }
-
-                // Collect unique tags from imported funds
-                const uniqueTags = new Set();
-                fundsToImport.forEach(fund => {
-                    if (fund.tags && Array.isArray(fund.tags)) {
-                        fund.tags.forEach(tag => uniqueTags.add(tag));
-                    }
-                });
-
-                // Save all unique tags to database
-                for (const tagName of uniqueTags) {
-                    if (!tags.has(tagName)) {
-                        await saveTag(tagName);
-                        tags.add(tagName);
-                    }
+                    const fundNameObj = { name, tags: [] };
+                    await saveFundName(fundNameObj);
+                    fundNames.add(name);
+                    fundNameData.set(name, fundNameObj);
                 }
 
                 const totalFunds = fundsToImport.length;
@@ -3801,7 +3865,6 @@
                             fundName: fund.fundName,
                             accountNumber: fund.accountNumber,
                             groupId: groupId,
-                            tags: fund.tags || [],
                             commitment: parseCurrency(fund.commitment),
                             cashFlows: cashFlows,
                             monthlyNav: monthlyNav,
@@ -3855,16 +3918,13 @@
 
                 await initDB();
 
-                // Load fund names
-                const names = await getAllFundNames();
-                fundNames = new Set(names);
+                // Load fund name objects (with tags)
+                const fundNameObjects = await getAllFundNameObjects();
+                fundNames = new Set(fundNameObjects.map(obj => obj.name));
+                fundNameData = new Map(fundNameObjects.map(obj => [obj.name, obj]));
 
                 // Load groups
                 groups = await getAllGroups();
-
-                // Load tags
-                const tagList = await getAllTags();
-                tags = new Set(tagList);
 
                 // Set default cutoff date to latest quarter end
                 const quarterEnd = getLatestQuarterEnd();
