@@ -316,6 +316,44 @@
             padding: 10px 8px;
         }
 
+        /* Resizable columns */
+        th {
+            position: relative;
+        }
+
+        th.resizable {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        th .resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 5px;
+            height: 100%;
+            cursor: col-resize;
+            user-select: none;
+            z-index: 1;
+        }
+
+        th .resizer:hover {
+            background-color: #3498DB;
+        }
+
+        th.resizing {
+            user-select: none;
+        }
+
+        /* Parent/Account column with max-width */
+        #fundsTable th:nth-child(2),
+        #fundsTable td:nth-child(2) {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         td {
             padding: 12px;
             border-bottom: 1px solid #F0F0F0;
@@ -2152,7 +2190,7 @@
                             <div>${escapeHtml(fund.fundName)}</div>
                             ${tagsHtml}
                         </td>
-                        <td>${escapeHtml(fund.accountNumber)}</td>
+                        <td title="${escapeHtml(getParentAccountDisplay(fund))}">${escapeHtml(getParentAccountDisplay(fund))}</td>
                         <td class="center">${m.vintage || 'N/A'}</td>
                         <td class="number">${formatCurrency(m.commitment)}</td>
                         <td class="number">${formatCurrency(m.totalContributions)}</td>
@@ -2389,6 +2427,19 @@
             return ancestors;
         }
 
+        // Helper function to get immediate parent group name for a fund
+        function getImmediateParentName(fund) {
+            if (!fund.groupId) return '';
+            const group = groups.find(g => g.id === fund.groupId);
+            return group ? group.name : '';
+        }
+
+        // Helper function to get parent name + account display text
+        function getParentAccountDisplay(fund) {
+            const parentName = getImmediateParentName(fund);
+            return parentName ? `${parentName} / ${fund.accountNumber}` : fund.accountNumber;
+        }
+
         // Helper function to add group options but only include groups with valid funds
         function addGroupOptionsToSelectFiltered(selectElement, groupNodes, level, validGroupIds) {
             groupNodes.forEach(node => {
@@ -2522,9 +2573,13 @@
 
                 switch(column) {
                     case 'fundName':
-                    case 'accountNumber':
                         valA = a[column];
                         valB = b[column];
+                        break;
+                    case 'accountNumber':
+                        // Sort by displayed text (parent name + account number)
+                        valA = getParentAccountDisplay(a);
+                        valB = getParentAccountDisplay(b);
                         break;
                     case 'vintage':
                     case 'commitment':
@@ -4303,6 +4358,105 @@
         }
 
         // ===========================
+        // Column Resizing
+        // ===========================
+
+        function initializeColumnResizing() {
+            const table = document.getElementById('fundsTable');
+            const thead = table.querySelector('thead');
+            const ths = thead.querySelectorAll('th');
+
+            // Add resizer to each column header except the last one (Actions column)
+            ths.forEach((th, index) => {
+                if (index < ths.length - 1) { // Skip the last column
+                    th.classList.add('resizable');
+
+                    // Create resizer element
+                    const resizer = document.createElement('div');
+                    resizer.className = 'resizer';
+                    th.appendChild(resizer);
+
+                    // Variables for resizing
+                    let startX, startWidth;
+
+                    resizer.addEventListener('mousedown', (e) => {
+                        e.stopPropagation(); // Prevent sort trigger
+                        startX = e.pageX;
+                        startWidth = th.offsetWidth;
+
+                        th.classList.add('resizing');
+                        document.body.style.cursor = 'col-resize';
+                        document.body.style.userSelect = 'none';
+
+                        const onMouseMove = (e) => {
+                            const diff = e.pageX - startX;
+                            const newWidth = Math.max(50, startWidth + diff); // Minimum 50px
+                            th.style.width = newWidth + 'px';
+                            th.style.minWidth = newWidth + 'px';
+                            th.style.maxWidth = newWidth + 'px';
+
+                            // Also set width on corresponding td elements
+                            const columnIndex = Array.from(ths).indexOf(th);
+                            const tds = table.querySelectorAll(`tbody tr td:nth-child(${columnIndex + 1})`);
+                            tds.forEach(td => {
+                                td.style.width = newWidth + 'px';
+                                td.style.minWidth = newWidth + 'px';
+                                td.style.maxWidth = newWidth + 'px';
+                            });
+
+                            // Save to localStorage
+                            saveColumnWidth(columnIndex, newWidth);
+                        };
+
+                        const onMouseUp = () => {
+                            th.classList.remove('resizing');
+                            document.body.style.cursor = '';
+                            document.body.style.userSelect = '';
+                            document.removeEventListener('mousemove', onMouseMove);
+                            document.removeEventListener('mouseup', onMouseUp);
+                        };
+
+                        document.addEventListener('mousemove', onMouseMove);
+                        document.addEventListener('mouseup', onMouseUp);
+                    });
+                }
+            });
+
+            // Restore saved column widths
+            restoreColumnWidths();
+        }
+
+        function saveColumnWidth(columnIndex, width) {
+            const savedWidths = JSON.parse(localStorage.getItem('columnWidths') || '{}');
+            savedWidths[columnIndex] = width;
+            localStorage.setItem('columnWidths', JSON.stringify(savedWidths));
+        }
+
+        function restoreColumnWidths() {
+            const savedWidths = JSON.parse(localStorage.getItem('columnWidths') || '{}');
+            const table = document.getElementById('fundsTable');
+            const ths = table.querySelectorAll('thead th');
+
+            Object.keys(savedWidths).forEach(columnIndex => {
+                const width = savedWidths[columnIndex];
+                const th = ths[columnIndex];
+                if (th) {
+                    th.style.width = width + 'px';
+                    th.style.minWidth = width + 'px';
+                    th.style.maxWidth = width + 'px';
+
+                    // Also set width on corresponding td elements
+                    const tds = table.querySelectorAll(`tbody tr td:nth-child(${parseInt(columnIndex) + 1})`);
+                    tds.forEach(td => {
+                        td.style.width = width + 'px';
+                        td.style.minWidth = width + 'px';
+                        td.style.maxWidth = width + 'px';
+                    });
+                }
+            });
+        }
+
+        // ===========================
         // Initialization
         // ===========================
 
@@ -4338,6 +4492,9 @@
                 document.getElementById('sidebarShowTagsCheckbox').checked = showTags === null ? true : showTags === 'true';
 
                 await renderTable();
+
+                // Initialize column resizing
+                initializeColumnResizing();
 
                 setControlsEnabled(true);
 
