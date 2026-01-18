@@ -2053,33 +2053,9 @@
                     filtered = sortData(filtered, sortColumn, sortDirection);
                 }
 
-                // Update filter dropdowns based on group and fund selection
-                // Build cascading filter: group → fund → account
-                const groupFilter = document.getElementById('groupFilter').value;
-                const fundFilter = document.getElementById('fundFilter').value;
-                let fundsForDropdowns = funds;
-
-                // First filter by group if selected
-                if (groupFilter) {
-                    const groupId = parseInt(groupFilter);
-                    fundsForDropdowns = fundsForDropdowns.filter(fund => {
-                        if (!fund.groupId) return false;
-                        if (fund.groupId === groupId) return true;
-                        // Check if fund's group is descendant of selected group
-                        if (currentGroupDescendants && currentGroupDescendants.groupId === groupId) {
-                            return currentGroupDescendants.ids.includes(fund.groupId);
-                        }
-                        return false;
-                    });
-                }
-
-                // Then filter by fund name if selected (for account dropdown)
-                let fundsForAccountDropdown = fundsForDropdowns;
-                if (fundFilter) {
-                    fundsForAccountDropdown = fundsForDropdowns.filter(fund => fund.fundName === fundFilter);
-                }
-
-                updateFilterDropdowns(fundsForDropdowns, fundsForAccountDropdown);
+                // Update filter dropdowns bidirectionally
+                // Each dropdown shows only options compatible with other selected filters
+                updateFilterDropdowns(funds);
 
                 // Get cutoff date
                 const cutoffDateValue = document.getElementById('cutoffDate').value;
@@ -2239,12 +2215,40 @@
             });
         }
 
-        function updateFilterDropdowns(fundsForFundDropdown, fundsForAccountDropdown) {
-            // Update fund filter
+        function updateFilterDropdowns(allFunds) {
+            // Get current filter values
+            const groupFilter = document.getElementById('groupFilter');
             const fundFilter = document.getElementById('fundFilter');
-            const currentFundValue = fundFilter.value;
-            const uniqueFunds = [...new Set(fundsForFundDropdown.map(f => f.fundName))].sort();
+            const accountFilter = document.getElementById('accountFilter');
 
+            const currentGroupValue = groupFilter.value;
+            const currentFundValue = fundFilter.value;
+            const currentAccountValue = accountFilter.value;
+
+            // Helper function to filter funds by group
+            const filterByGroup = (funds, groupId) => {
+                if (!groupId) return funds;
+                const gId = parseInt(groupId);
+                return funds.filter(fund => {
+                    if (!fund.groupId) return false;
+                    if (fund.groupId === gId) return true;
+                    // Check if fund's group is descendant of selected group
+                    if (currentGroupDescendants && currentGroupDescendants.groupId === gId) {
+                        return currentGroupDescendants.ids.includes(fund.groupId);
+                    }
+                    return false;
+                });
+            };
+
+            // 1. Update FUND dropdown (filter by group and account, excluding fund itself)
+            let fundsForFundDropdown = allFunds;
+            if (currentGroupValue) {
+                fundsForFundDropdown = filterByGroup(fundsForFundDropdown, currentGroupValue);
+            }
+            if (currentAccountValue) {
+                fundsForFundDropdown = fundsForFundDropdown.filter(f => f.accountNumber === currentAccountValue);
+            }
+            const uniqueFunds = [...new Set(fundsForFundDropdown.map(f => f.fundName))].sort();
             fundFilter.innerHTML = '<option value="">All Funds</option>';
             uniqueFunds.forEach(name => {
                 const option = document.createElement('option');
@@ -2252,18 +2256,21 @@
                 option.textContent = name;
                 fundFilter.appendChild(option);
             });
-            // Only restore previous value if it's still in the list
             if (currentFundValue && uniqueFunds.includes(currentFundValue)) {
                 fundFilter.value = currentFundValue;
             } else {
                 fundFilter.value = '';
             }
 
-            // Update account filter
-            const accountFilter = document.getElementById('accountFilter');
-            const currentAccountValue = accountFilter.value;
+            // 2. Update ACCOUNT dropdown (filter by group and fund, excluding account itself)
+            let fundsForAccountDropdown = allFunds;
+            if (currentGroupValue) {
+                fundsForAccountDropdown = filterByGroup(fundsForAccountDropdown, currentGroupValue);
+            }
+            if (currentFundValue) {
+                fundsForAccountDropdown = fundsForAccountDropdown.filter(f => f.fundName === currentFundValue);
+            }
             const uniqueAccounts = [...new Set(fundsForAccountDropdown.map(f => f.accountNumber))].sort();
-
             accountFilter.innerHTML = '<option value="">All Accounts</option>';
             uniqueAccounts.forEach(account => {
                 const option = document.createElement('option');
@@ -2271,23 +2278,63 @@
                 option.textContent = account;
                 accountFilter.appendChild(option);
             });
-            // Only restore previous value if it's still in the list
             if (currentAccountValue && uniqueAccounts.includes(currentAccountValue)) {
                 accountFilter.value = currentAccountValue;
             } else {
                 accountFilter.value = '';
             }
 
-            // Update group filter
-            const groupFilter = document.getElementById('groupFilter');
-            const currentGroupValue = groupFilter.value;
+            // 3. Update GROUP dropdown (filter by fund and account, excluding group itself)
+            let fundsForGroupDropdown = allFunds;
+            if (currentFundValue) {
+                fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.fundName === currentFundValue);
+            }
+            if (currentAccountValue) {
+                fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.accountNumber === currentAccountValue);
+            }
+            const validGroupIds = new Set(fundsForGroupDropdown.map(f => f.groupId).filter(id => id != null));
 
             groupFilter.innerHTML = '<option value="">All Groups</option>';
             if (groups.length > 0) {
+                // Build full tree but only show groups that have matching funds
                 const tree = buildGroupsTree(groups, null);
-                addGroupOptionsToSelect(groupFilter, tree, 0);
+                addGroupOptionsToSelectFiltered(groupFilter, tree, 0, validGroupIds);
             }
-            groupFilter.value = currentGroupValue;
+            if (currentGroupValue && validGroupIds.has(parseInt(currentGroupValue))) {
+                groupFilter.value = currentGroupValue;
+            } else {
+                groupFilter.value = '';
+            }
+        }
+
+        // Helper function to add group options but only include groups with valid funds
+        function addGroupOptionsToSelectFiltered(selectElement, groupNodes, level, validGroupIds) {
+            groupNodes.forEach(node => {
+                // Only add this group if it or any of its descendants are in validGroupIds
+                const hasValidFunds = validGroupIds.has(node.id) ||
+                    hasDescendantWithValidFunds(node, validGroupIds);
+
+                if (hasValidFunds) {
+                    const option = document.createElement('option');
+                    option.value = node.id;
+                    const indent = '  '.repeat(level);
+                    option.textContent = `${indent}${node.name}`;
+                    selectElement.appendChild(option);
+
+                    if (node.children.length > 0) {
+                        addGroupOptionsToSelectFiltered(selectElement, node.children, level + 1, validGroupIds);
+                    }
+                }
+            });
+        }
+
+        // Check if a group node or any of its descendants have valid funds
+        function hasDescendantWithValidFunds(node, validGroupIds) {
+            if (validGroupIds.has(node.id)) return true;
+            for (const child of node.children) {
+                if (hasDescendantWithValidFunds(child, validGroupIds)) return true;
+            }
+            return false;
         }
 
         async function applyFilters() {
