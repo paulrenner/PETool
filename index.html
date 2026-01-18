@@ -2437,7 +2437,7 @@
         // Helper function to get parent name + account display text
         function getParentAccountDisplay(fund) {
             const parentName = getImmediateParentName(fund);
-            return parentName ? `${parentName} / ${fund.accountNumber}` : fund.accountNumber;
+            return parentName ? `${parentName} (${fund.accountNumber})` : fund.accountNumber;
         }
 
         // Helper function to add group options but only include groups with valid funds
