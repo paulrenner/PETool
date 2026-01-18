@@ -2284,26 +2284,36 @@
                 accountFilter.value = '';
             }
 
-            // 3. Update GROUP dropdown (filter by fund and account, excluding group itself)
-            let fundsForGroupDropdown = allFunds;
-            if (currentFundValue) {
-                fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.fundName === currentFundValue);
-            }
-            if (currentAccountValue) {
-                fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.accountNumber === currentAccountValue);
-            }
-            const validGroupIds = new Set(fundsForGroupDropdown.map(f => f.groupId).filter(id => id != null));
-
+            // 3. Update GROUP dropdown
+            // Only filter groups if fund or account is selected
+            // Otherwise show all groups (including empty ones)
             groupFilter.innerHTML = '<option value="">All Groups</option>';
             if (groups.length > 0) {
-                // Build full tree but only show groups that have matching funds
                 const tree = buildGroupsTree(groups, null);
-                addGroupOptionsToSelectFiltered(groupFilter, tree, 0, validGroupIds);
-            }
-            if (currentGroupValue && validGroupIds.has(parseInt(currentGroupValue))) {
-                groupFilter.value = currentGroupValue;
-            } else {
-                groupFilter.value = '';
+
+                // If fund or account filter is active, filter the groups
+                if (currentFundValue || currentAccountValue) {
+                    let fundsForGroupDropdown = allFunds;
+                    if (currentFundValue) {
+                        fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.fundName === currentFundValue);
+                    }
+                    if (currentAccountValue) {
+                        fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.accountNumber === currentAccountValue);
+                    }
+                    const validGroupIds = new Set(fundsForGroupDropdown.map(f => f.groupId).filter(id => id != null));
+                    addGroupOptionsToSelectFiltered(groupFilter, tree, 0, validGroupIds);
+
+                    // Only restore value if it's valid
+                    if (currentGroupValue && validGroupIds.has(parseInt(currentGroupValue))) {
+                        groupFilter.value = currentGroupValue;
+                    } else {
+                        groupFilter.value = '';
+                    }
+                } else {
+                    // No fund/account filter - show all groups
+                    addGroupOptionsToSelect(groupFilter, tree, 0);
+                    groupFilter.value = currentGroupValue;
+                }
             }
         }
 
@@ -3577,6 +3587,9 @@
 
                 await loadGroupsList();
                 await populateGroupParentDropdown();
+
+                // Update the main filter dropdowns
+                await renderTable();
 
                 showStatus(editId ? 'Group updated successfully' : 'Group added successfully');
             } catch (err) {
