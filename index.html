@@ -2113,7 +2113,7 @@
                         <td class="number ${m.irr !== null && m.irr >= 0 ? 'positive' : 'negative'}">${m.irr !== null ? (m.irr * 100).toFixed(2) + '%' : 'N/A'}</td>
                         <td class="number">${formatCurrency(m.outstandingCommitment)}</td>
                         <td>
-                            <button class="btn-sm btn-info fund-actions-btn" data-fund-id="${fund.id}">Actions</button>
+                            <button class="btn-sm btn-info fund-actions-btn" data-fund-id="${fund.id}" title="Actions">⚙</button>
                         </td>
                     `;
 
