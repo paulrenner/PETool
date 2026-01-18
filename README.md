@@ -155,9 +155,17 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
 
 ## Usage Tips
 
+### Sidebar Menu
+The application features a clean sidebar panel for accessing settings and actions:
+- **Open Sidebar**: Click the "⚙ Menu" button in the top-right corner
+- **View Options**: Toggle tag visibility on/off (persists across sessions)
+- **Manage**: Quick access to create investments, manage funds, and organize groups
+- **Data**: Export to CSV/JSON/PDF or import database backups
+- **Close Sidebar**: Click outside the sidebar, press Escape, or click the × button
+
 ### Keyboard Shortcuts
 - **Ctrl/Cmd + F**: Jump to search box
-- **Escape**: Close modals
+- **Escape**: Close sidebar and modals
 - **Enter**: Add tags in tag input field
 
 ### Best Practices
@@ -215,6 +223,8 @@ This application is provided as-is for personal and commercial use.
 - **BREAKING CHANGE**: Tags moved from investment level to fund name level
 - Added "Edit Fund" modal for managing fund names and tags together
 - Updated "Manage Funds" with Edit/Delete buttons
+- Added sidebar panel for organized settings and actions
+- Added "Show Tags" toggle with localStorage persistence
 - Database migration from v5 to v6 (automatic)
 - 41 comprehensive tag tests (164 total tests)
 - Improved tag workflow and user experience
