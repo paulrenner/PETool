@@ -2318,7 +2318,7 @@
                     const option = document.createElement('option');
                     option.value = node.id;
                     const indent = '  '.repeat(level);
-                    option.textContent = `${indent}${node.name}`;
+                    option.textContent = indent + (level > 0 ? '└─ ' : '') + node.name;
                     selectElement.appendChild(option);
 
                     if (node.children.length > 0) {
