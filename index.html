@@ -2350,7 +2350,17 @@
                     if (currentAccountValue) {
                         fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.accountNumber === currentAccountValue);
                     }
-                    const validGroupIds = new Set(fundsForGroupDropdown.map(f => f.groupId).filter(id => id != null));
+
+                    // Collect all group IDs including ancestors
+                    const validGroupIds = new Set();
+                    fundsForGroupDropdown.forEach(fund => {
+                        if (fund.groupId != null) {
+                            // Add the fund's group and all its ancestors
+                            const ancestors = getAncestorGroupIds(fund.groupId);
+                            ancestors.forEach(id => validGroupIds.add(id));
+                        }
+                    });
+
                     addGroupOptionsToSelectFiltered(groupFilter, tree, 0, validGroupIds);
 
                     // Only restore value if it's valid
@@ -2365,6 +2375,21 @@
                     groupFilter.value = currentGroupValue;
                 }
             }
+        }
+
+        // Helper function to get all ancestor group IDs for a given group ID
+        function getAncestorGroupIds(groupId) {
+            const ancestors = [];
+            let currentId = groupId;
+
+            while (currentId != null) {
+                const group = groups.find(g => g.id === currentId);
+                if (!group) break;
+                ancestors.push(group.id);
+                currentId = group.parentId;
+            }
+
+            return ancestors;
         }
 
         // Helper function to add group options but only include groups with valid funds
