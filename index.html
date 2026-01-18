@@ -2053,13 +2053,16 @@
                     filtered = sortData(filtered, sortColumn, sortDirection);
                 }
 
-                // Update filter dropdowns based on group selection
-                // Filter funds by group only (not by fund/account) to populate dropdowns
+                // Update filter dropdowns based on group and fund selection
+                // Build cascading filter: group → fund → account
                 const groupFilter = document.getElementById('groupFilter').value;
+                const fundFilter = document.getElementById('fundFilter').value;
                 let fundsForDropdowns = funds;
+
+                // First filter by group if selected
                 if (groupFilter) {
                     const groupId = parseInt(groupFilter);
-                    fundsForDropdowns = funds.filter(fund => {
+                    fundsForDropdowns = fundsForDropdowns.filter(fund => {
                         if (!fund.groupId) return false;
                         if (fund.groupId === groupId) return true;
                         // Check if fund's group is descendant of selected group
@@ -2069,7 +2072,14 @@
                         return false;
                     });
                 }
-                updateFilterDropdowns(fundsForDropdowns);
+
+                // Then filter by fund name if selected (for account dropdown)
+                let fundsForAccountDropdown = fundsForDropdowns;
+                if (fundFilter) {
+                    fundsForAccountDropdown = fundsForDropdowns.filter(fund => fund.fundName === fundFilter);
+                }
+
+                updateFilterDropdowns(fundsForDropdowns, fundsForAccountDropdown);
 
                 // Get cutoff date
                 const cutoffDateValue = document.getElementById('cutoffDate').value;
@@ -2229,11 +2239,11 @@
             });
         }
 
-        function updateFilterDropdowns(funds) {
+        function updateFilterDropdowns(fundsForFundDropdown, fundsForAccountDropdown) {
             // Update fund filter
             const fundFilter = document.getElementById('fundFilter');
             const currentFundValue = fundFilter.value;
-            const uniqueFunds = [...new Set(funds.map(f => f.fundName))].sort();
+            const uniqueFunds = [...new Set(fundsForFundDropdown.map(f => f.fundName))].sort();
 
             fundFilter.innerHTML = '<option value="">All Funds</option>';
             uniqueFunds.forEach(name => {
@@ -2252,7 +2262,7 @@
             // Update account filter
             const accountFilter = document.getElementById('accountFilter');
             const currentAccountValue = accountFilter.value;
-            const uniqueAccounts = [...new Set(funds.map(f => f.accountNumber))].sort();
+            const uniqueAccounts = [...new Set(fundsForAccountDropdown.map(f => f.accountNumber))].sort();
 
             accountFilter.innerHTML = '<option value="">All Accounts</option>';
             uniqueAccounts.forEach(account => {
