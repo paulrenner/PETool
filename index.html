@@ -2336,19 +2336,19 @@
             }
 
             // 3. Update GROUP dropdown
-            // Only filter groups if fund or account is selected
-            // Otherwise show all groups (including empty ones)
             groupFilter.innerHTML = '<option value="">All Groups</option>';
             if (groups.length > 0) {
                 const tree = buildGroupsTree(groups, null);
 
-                // If fund or account filter is active, filter the groups
-                if (currentFundValue || currentAccountValue) {
+                // If a group is already selected, keep it selected and show all groups
+                // Group filter takes priority and should not be auto-cleared
+                if (currentGroupValue) {
+                    addGroupOptionsToSelect(groupFilter, tree, 0);
+                    groupFilter.value = currentGroupValue;
+                } else if (currentFundValue || currentAccountValue) {
+                    // Only filter groups when NO group is selected but fund/account IS selected
+                    // This helps users see which groups contain the selected fund/account
                     let fundsForGroupDropdown = allFunds;
-                    // IMPORTANT: Also filter by current group to maintain group hierarchy
-                    if (currentGroupValue) {
-                        fundsForGroupDropdown = filterByGroup(fundsForGroupDropdown, currentGroupValue);
-                    }
                     if (currentFundValue) {
                         fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.fundName === currentFundValue);
                     }
@@ -2367,17 +2367,9 @@
                     });
 
                     addGroupOptionsToSelectFiltered(groupFilter, tree, 0, validGroupIds);
-
-                    // Only restore value if it's valid (use currentGroupValue which may have been cleared)
-                    if (currentGroupValue && validGroupIds.has(parseInt(currentGroupValue))) {
-                        groupFilter.value = currentGroupValue;
-                    } else {
-                        groupFilter.value = '';
-                    }
                 } else {
-                    // No fund/account filter - show all groups
+                    // No filters active - show all groups
                     addGroupOptionsToSelect(groupFilter, tree, 0);
-                    groupFilter.value = currentGroupValue;
                 }
             }
         }
