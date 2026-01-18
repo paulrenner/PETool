@@ -1218,35 +1218,35 @@
         <div class="controls-bar">
             <div class="control-group">
                 <label for="groupFilter">Filter by Group</label>
-                <select id="groupFilter" onchange="applyFilters()">
+                <select id="groupFilter">
                     <option value="">All Groups</option>
                 </select>
             </div>
             <div class="control-group">
                 <label for="fundFilter">Filter by Fund</label>
-                <select id="fundFilter" onchange="applyFilters()">
+                <select id="fundFilter">
                     <option value="">All Funds</option>
                 </select>
             </div>
             <div class="control-group">
                 <label for="accountFilter">Filter by Account</label>
-                <select id="accountFilter" onchange="applyFilters()">
+                <select id="accountFilter">
                     <option value="">All Accounts</option>
                 </select>
             </div>
             <div class="control-group">
                 <label for="searchInput">Search</label>
-                <input type="text" id="searchInput" placeholder="Search funds..." oninput="applyFilters()" title="Search by fund name or account number" aria-label="Search funds by name or account number">
+                <input type="text" id="searchInput" placeholder="Search funds..." title="Search by fund name or account number" aria-label="Search funds by name or account number">
             </div>
             <div class="control-group">
                 <label for="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date">Cutoff Date</label>
-                <input type="date" id="cutoffDate" onchange="applyFilters()" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date" aria-label="Cutoff date for calculating metrics">
+                <input type="date" id="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date" aria-label="Cutoff date for calculating metrics">
             </div>
             <div class="control-group">
-                <button class="btn-icon" onclick="resetFilters()" title="Reset Filters" style="font-size: 20px; margin-top: auto;">↻</button>
+                <button class="btn-icon" id="resetFiltersBtn" title="Reset Filters" style="font-size: 20px; margin-top: auto;">↻</button>
             </div>
             <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
-                <button class="btn-icon" onclick="toggleSidebar()" title="Settings and Actions" style="font-size: 20px;">☰</button>
+                <button class="btn-icon" id="toggleSidebarBtn" title="Settings and Actions" style="font-size: 20px;">☰</button>
             </div>
         </div>
 
@@ -1255,17 +1255,17 @@
                 <table id="fundsTable">
                     <thead>
                         <tr>
-                            <th onclick="sortTable('fundName')">Fund Name</th>
-                            <th onclick="sortTable('accountNumber')" class="center">Account</th>
-                            <th onclick="sortTable('vintage')" class="center">Vintage</th>
-                            <th onclick="sortTable('commitment')" class="center number">Commitment</th>
-                            <th onclick="sortTable('totalContributions')" class="center number">Contributions</th>
-                            <th onclick="sortTable('totalDistributions')" class="center number">Distributions</th>
-                            <th onclick="sortTable('nav')" class="center number">Value (NAV)</th>
-                            <th onclick="sortTable('investmentReturn')" class="center number wrap-header">Investment<br>Return</th>
-                            <th onclick="sortTable('moic')" class="center number">MOIC</th>
-                            <th onclick="sortTable('irr')" class="center number">IRR</th>
-                            <th onclick="sortTable('outstandingCommitment')" class="center number wrap-header">Outstanding<br>Commitment</th>
+                            <th data-sort="fundName">Fund Name</th>
+                            <th data-sort="accountNumber" class="center">Account</th>
+                            <th data-sort="vintage" class="center">Vintage</th>
+                            <th data-sort="commitment" class="center number">Commitment</th>
+                            <th data-sort="totalContributions" class="center number">Contributions</th>
+                            <th data-sort="totalDistributions" class="center number">Distributions</th>
+                            <th data-sort="nav" class="center number">Value (NAV)</th>
+                            <th data-sort="investmentReturn" class="center number wrap-header">Investment<br>Return</th>
+                            <th data-sort="moic" class="center number">MOIC</th>
+                            <th data-sort="irr" class="center number">IRR</th>
+                            <th data-sort="outstandingCommitment" class="center number wrap-header">Outstanding<br>Commitment</th>
                             <th class="center"></th>
                         </tr>
                     </thead>
@@ -1280,9 +1280,9 @@
     <!-- Fund Add/Edit Modal -->
     <div id="fundModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeFundModal()">&times;</span>
+            <span class="close" id="closeFundModalBtn">&times;</span>
             <h2 id="fundModalTitle">Add New Investment</h2>
-            <form id="fundForm" onsubmit="saveFund(event)">
+            <form id="fundForm">
                 <input type="hidden" id="fundId">
                 <input type="hidden" id="isDuplicate">
 
@@ -1327,7 +1327,7 @@
 
                 <div class="form-actions">
                     <button type="submit" class="btn-primary">Save</button>
-                    <button type="button" class="btn-secondary" onclick="closeFundModal()">Cancel</button>
+                    <button type="button" class="btn-secondary" id="cancelFundModalBtn">Cancel</button>
                 </div>
             </form>
         </div>
@@ -1335,23 +1335,23 @@
 
     <!-- Action Dropdown -->
     <div id="actionDropdown" class="action-dropdown">
-        <a href="#" onclick="editFundFromAction(); return false;">Edit</a>
-        <a href="#" onclick="duplicateFundFromAction(); return false;">Duplicate</a>
-        <a href="#" onclick="showDetailsFromAction(); return false;">View Details</a>
-        <a href="#" onclick="deleteFundFromAction(); return false;" class="danger-action">Delete</a>
+        <a href="#" id="actionEdit">Edit</a>
+        <a href="#" id="actionDuplicate">Duplicate</a>
+        <a href="#" id="actionViewDetails">View Details</a>
+        <a href="#" id="actionDelete" class="danger-action">Delete</a>
     </div>
 
     <!-- Manage Fund Names Modal -->
     <div id="manageFundNamesModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeManageFundsModal()">&times;</span>
+            <span class="close" id="closeManageFundsModalBtn">&times;</span>
             <h2>Manage Fund Names</h2>
 
             <div class="form-group">
                 <label for="newFundNameInput">Add New Fund Name</label>
                 <div style="display: flex; gap: 10px;">
                     <input type="text" id="newFundNameInput" style="flex: 1;" placeholder="Enter fund name">
-                    <button class="btn-primary" onclick="addNewFundName()">Add</button>
+                    <button class="btn-primary" id="addNewFundNameBtn">Add</button>
                 </div>
             </div>
 
@@ -1361,7 +1361,7 @@
             <div id="fundNamesList"></div>
 
             <div class="form-actions">
-                <button class="btn-secondary" onclick="closeManageFundsModal()">Close</button>
+                <button class="btn-secondary" id="closeManageFundsModal2Btn">Close</button>
             </div>
         </div>
     </div>
@@ -1369,7 +1369,7 @@
     <!-- Edit Fund Name Modal -->
     <div id="editFundNameModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeEditFundNameModal()">&times;</span>
+            <span class="close" id="closeEditFundNameModalBtn">&times;</span>
             <h2>Edit Fund</h2>
 
             <input type="hidden" id="editFundNameOriginal" value="">
@@ -1388,8 +1388,8 @@
             </div>
 
             <div class="form-actions">
-                <button class="btn-primary" onclick="saveEditedFundName()">Save Changes</button>
-                <button class="btn-secondary" onclick="closeEditFundNameModal()">Cancel</button>
+                <button class="btn-primary" id="saveEditedFundNameBtn">Save Changes</button>
+                <button class="btn-secondary" id="cancelEditFundNameBtn">Cancel</button>
             </div>
         </div>
     </div>
@@ -1397,7 +1397,7 @@
     <!-- Manage Groups Modal -->
     <div id="manageGroupsModal" class="modal">
         <div class="modal-content" style="max-width: 600px;">
-            <span class="close" onclick="closeManageGroupsModal()">&times;</span>
+            <span class="close" id="closeManageGroupsModal2Btn">&times;</span>
             <h2>Manage Account Groups</h2>
 
             <input type="hidden" id="editGroupId" value="">
@@ -1421,8 +1421,8 @@
             </div>
 
             <div style="display: flex; gap: 10px;">
-                <button id="saveGroupBtn" class="btn-primary" onclick="saveGroupChanges()">Add Group</button>
-                <button id="cancelEditBtn" class="btn-secondary" onclick="cancelGroupEdit()" style="display: none;">Cancel</button>
+                <button id="saveGroupBtn" class="btn-primary">Add Group</button>
+                <button id="cancelEditBtn" class="btn-secondary" style="display: none;">Cancel</button>
             </div>
 
             <hr style="margin: 20px 0; border: none; border-top: 1px solid #E0E0E0;">
@@ -1431,7 +1431,7 @@
             <div id="groupsList" style="max-height: 400px; overflow-y: auto;"></div>
 
             <div class="form-actions">
-                <button class="btn-secondary" onclick="closeManageGroupsModal()">Close</button>
+                <button class="btn-secondary" id="closeManageGroupsModalBtn">Close</button>
             </div>
         </div>
     </div>
@@ -1439,7 +1439,7 @@
     <!-- Details Modal -->
     <div id="detailsModal" class="modal">
         <div class="modal-content" style="max-width: 900px;">
-            <span class="close" onclick="closeDetailsModal()">&times;</span>
+            <span class="close" id="closeDetailsModalBtn">&times;</span>
             <h2 id="detailsModalTitle">Fund Details</h2>
             <p id="detailsModalSubtitle" style="margin: 5px 0 0 0; color: #95A5A6; font-size: 0.9em;"></p>
 
@@ -1458,7 +1458,7 @@
                     <tbody></tbody>
                 </table>
             </div>
-            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" onclick="addCashFlowRow()">Add Cash Flow</button>
+            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" id="addCashFlowRowBtn">Add Cash Flow</button>
 
             <h3 style="margin-top: 30px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Monthly NAV</h3>
             <div class="details-table-wrapper">
@@ -1473,21 +1473,21 @@
                     <tbody></tbody>
                 </table>
             </div>
-            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" onclick="addNavRow()">Add NAV</button>
+            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" id="addNavRowBtn">Add NAV</button>
 
             <div class="form-actions">
-                <button class="btn-primary" onclick="saveDetailsChanges()">Save Changes</button>
-                <button class="btn-secondary" onclick="closeDetailsModal()">Cancel</button>
+                <button class="btn-primary" id="saveDetailsChangesBtn">Save Changes</button>
+                <button class="btn-secondary" id="cancelDetailsModalBtn">Cancel</button>
             </div>
         </div>
     </div>
 
     <!-- Sidebar Panel -->
-    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div id="sidebar" class="sidebar">
         <div class="sidebar-header">
             <h3>Settings & Actions</h3>
-            <button class="sidebar-close" onclick="closeSidebar()" title="Close">&times;</button>
+            <button class="sidebar-close" id="closeSidebarBtn" title="Close">&times;</button>
         </div>
         <div class="sidebar-content">
             <!-- View Options Section -->
@@ -1495,7 +1495,7 @@
                 <h4 class="sidebar-section-title">View Options</h4>
                 <div class="sidebar-item">
                     <label class="sidebar-checkbox-label">
-                        <input type="checkbox" id="sidebarShowTagsCheckbox" onchange="toggleTagsDisplay()" checked>
+                        <input type="checkbox" id="sidebarShowTagsCheckbox" checked>
                         <span>Show Tags</span>
                     </label>
                 </div>
@@ -1505,17 +1505,17 @@
             <div class="sidebar-section">
                 <h4 class="sidebar-section-title">Manage</h4>
                 <div class="sidebar-item">
-                    <a href="#" onclick="closeSidebar(); showAddFundModal(); return false;">
+                    <a href="#" id="sidebarNewInvestment">
                         New Investment
                     </a>
                 </div>
                 <div class="sidebar-item">
-                    <a href="#" onclick="closeSidebar(); showManageFundsModal(); return false;">
+                    <a href="#" id="sidebarManageFunds">
                         Manage Funds
                     </a>
                 </div>
                 <div class="sidebar-item">
-                    <a href="#" onclick="closeSidebar(); showManageGroupsModal(); return false;">
+                    <a href="#" id="sidebarManageGroups">
                         Manage Groups
                     </a>
                 </div>
@@ -1525,17 +1525,17 @@
             <div class="sidebar-section">
                 <h4 class="sidebar-section-title">Data</h4>
                 <div class="sidebar-item">
-                    <a href="#" onclick="closeSidebar(); exportToCSV(); return false;">
+                    <a href="#" id="sidebarExportCSV">
                         Export to CSV
                     </a>
                 </div>
                 <div class="sidebar-item">
-                    <a href="#" onclick="closeSidebar(); exportDatabase(); return false;">
+                    <a href="#" id="sidebarExportJSON">
                         Export to JSON
                     </a>
                 </div>
                 <div class="sidebar-item">
-                    <a href="#" onclick="closeSidebar(); exportToPDF(); return false;">
+                    <a href="#" id="sidebarExportPDF">
                         Export to PDF
                     </a>
                 </div>
@@ -1543,16 +1543,19 @@
                     <label for="sidebarImportFile" class="sidebar-import-label">
                         Import JSON
                     </label>
-                    <input type="file" id="sidebarImportFile" accept=".json" onchange="importDatabase(event); closeSidebar();" style="display: none;">
+                    <input type="file" id="sidebarImportFile" accept=".json" style="display: none;">
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // ===========================
-        // Configuration & Constants
-        // ===========================
+        (function() {
+            'use strict';
+
+            // ===========================
+            // Configuration & Constants
+            // ===========================
 
         /**
          * Application configuration constants
@@ -3250,7 +3253,7 @@
                                 <input type="checkbox" ${cf.affectsCommitment !== false ? 'checked' : ''} data-field="affectsCommitment" data-index="${index}">
                             </td>
                             <td>
-                                <button class="delete-row-btn" onclick="deleteCashFlowRow(this)" title="Delete">×</button>
+                                <button class="delete-row-btn" data-action="deleteCashFlow" title="Delete">×</button>
                             </td>
                         `;
                         cashFlowsTableBody.appendChild(row);
@@ -3286,7 +3289,7 @@
                             <td><input type="date" value="${escapeHtml(nav.date || '')}" data-field="date" data-index="${index}"></td>
                             <td><input type="text" value="${displayAmount}" data-field="amount" data-index="${index}"></td>
                             <td>
-                                <button class="delete-row-btn" onclick="deleteNavRow(this)" title="Delete">×</button>
+                                <button class="delete-row-btn" data-action="deleteNav" title="Delete">×</button>
                             </td>
                         `;
                         navTableBody.appendChild(row);
@@ -3333,7 +3336,7 @@
                     <input type="checkbox" checked data-field="affectsCommitment" data-index="${index}">
                 </td>
                 <td>
-                    <button class="delete-row-btn" onclick="deleteCashFlowRow(this)">Delete</button>
+                    <button class="delete-row-btn" data-action="deleteCashFlow">Delete</button>
                 </td>
             `;
             table.appendChild(row);
@@ -3366,7 +3369,7 @@
                 <td><input type="date" data-field="date" data-index="${index}"></td>
                 <td><input type="text" placeholder="0" data-field="amount" data-index="${index}"></td>
                 <td>
-                    <button class="delete-row-btn" onclick="deleteNavRow(this)" title="Delete">×</button>
+                    <button class="delete-row-btn" data-action="deleteNav" title="Delete">×</button>
                 </td>
             `;
             table.appendChild(row);
@@ -3633,7 +3636,7 @@
             const container = document.getElementById('editFundTagsContainer');
             const tag = document.createElement('span');
             tag.className = 'tag';
-            tag.innerHTML = `${escapeHtml(tagName)}<span class="tag-remove" onclick="removeEditFundTag(this)">×</span>`;
+            tag.innerHTML = `${escapeHtml(tagName)}<span class="tag-remove" data-action="removeTag">×</span>`;
             tag.setAttribute('data-tag', tagName);
             container.appendChild(tag);
 
@@ -4672,6 +4675,141 @@
         // Initialization
         // ===========================
 
+        /**
+         * Initialize all event listeners
+         * Centralized event listener setup using event delegation where appropriate
+         */
+        function initializeEventListeners() {
+            // Filter controls
+            document.getElementById('groupFilter').addEventListener('change', applyFilters);
+            document.getElementById('fundFilter').addEventListener('change', applyFilters);
+            document.getElementById('accountFilter').addEventListener('change', applyFilters);
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+            document.getElementById('cutoffDate').addEventListener('change', applyFilters);
+            document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+            document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
+
+            // Table header sorting - use event delegation
+            const thead = document.querySelector('#fundsTable thead');
+            thead.addEventListener('click', (e) => {
+                const th = e.target.closest('th[data-sort]');
+                if (th) {
+                    const sortColumn = th.getAttribute('data-sort');
+                    sortTable(sortColumn);
+                }
+            });
+
+            // Fund modal
+            document.getElementById('closeFundModalBtn').addEventListener('click', closeFundModal);
+            document.getElementById('cancelFundModalBtn').addEventListener('click', closeFundModal);
+            document.getElementById('fundForm').addEventListener('submit', saveFund);
+
+            // Action dropdown
+            document.getElementById('actionEdit').addEventListener('click', (e) => {
+                e.preventDefault();
+                editFundFromAction();
+            });
+            document.getElementById('actionDuplicate').addEventListener('click', (e) => {
+                e.preventDefault();
+                duplicateFundFromAction();
+            });
+            document.getElementById('actionViewDetails').addEventListener('click', (e) => {
+                e.preventDefault();
+                showDetailsFromAction();
+            });
+            document.getElementById('actionDelete').addEventListener('click', (e) => {
+                e.preventDefault();
+                deleteFundFromAction();
+            });
+
+            // Manage funds modal
+            document.getElementById('closeManageFundsModalBtn').addEventListener('click', closeManageFundsModal);
+            document.getElementById('closeManageFundsModal2Btn').addEventListener('click', closeManageFundsModal);
+            document.getElementById('addNewFundNameBtn').addEventListener('click', addNewFundName);
+
+            // Edit fund name modal
+            document.getElementById('closeEditFundNameModalBtn').addEventListener('click', closeEditFundNameModal);
+            document.getElementById('saveEditedFundNameBtn').addEventListener('click', saveEditedFundName);
+            document.getElementById('cancelEditFundNameBtn').addEventListener('click', closeEditFundNameModal);
+
+            // Manage groups modal
+            document.getElementById('closeManageGroupsModal2Btn').addEventListener('click', closeManageGroupsModal);
+            document.getElementById('closeManageGroupsModalBtn').addEventListener('click', closeManageGroupsModal);
+            document.getElementById('saveGroupBtn').addEventListener('click', saveGroupChanges);
+            document.getElementById('cancelEditBtn').addEventListener('click', cancelGroupEdit);
+
+            // Details modal
+            document.getElementById('closeDetailsModalBtn').addEventListener('click', closeDetailsModal);
+            document.getElementById('cancelDetailsModalBtn').addEventListener('click', closeDetailsModal);
+            document.getElementById('addCashFlowRowBtn').addEventListener('click', addCashFlowRow);
+            document.getElementById('addNavRowBtn').addEventListener('click', addNavRow);
+            document.getElementById('saveDetailsChangesBtn').addEventListener('click', saveDetailsChanges);
+
+            // Event delegation for dynamically created delete buttons
+            document.getElementById('cashFlowsTable').addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action="deleteCashFlow"]');
+                if (btn) {
+                    deleteCashFlowRow(btn);
+                }
+            });
+
+            document.getElementById('navTable').addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action="deleteNav"]');
+                if (btn) {
+                    deleteNavRow(btn);
+                }
+            });
+
+            // Event delegation for tag removal
+            document.getElementById('editFundTagsContainer').addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action="removeTag"]');
+                if (btn) {
+                    removeEditFundTag(btn);
+                }
+            });
+
+            // Sidebar
+            document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+            document.getElementById('closeSidebarBtn').addEventListener('click', closeSidebar);
+            document.getElementById('sidebarShowTagsCheckbox').addEventListener('change', toggleTagsDisplay);
+
+            // Sidebar menu items
+            document.getElementById('sidebarNewInvestment').addEventListener('click', (e) => {
+                e.preventDefault();
+                closeSidebar();
+                showAddFundModal();
+            });
+            document.getElementById('sidebarManageFunds').addEventListener('click', (e) => {
+                e.preventDefault();
+                closeSidebar();
+                showManageFundsModal();
+            });
+            document.getElementById('sidebarManageGroups').addEventListener('click', (e) => {
+                e.preventDefault();
+                closeSidebar();
+                showManageGroupsModal();
+            });
+            document.getElementById('sidebarExportCSV').addEventListener('click', (e) => {
+                e.preventDefault();
+                closeSidebar();
+                exportToCSV();
+            });
+            document.getElementById('sidebarExportJSON').addEventListener('click', (e) => {
+                e.preventDefault();
+                closeSidebar();
+                exportDatabase();
+            });
+            document.getElementById('sidebarExportPDF').addEventListener('click', (e) => {
+                e.preventDefault();
+                closeSidebar();
+                exportToPDF();
+            });
+            document.getElementById('sidebarImportFile').addEventListener('change', (e) => {
+                importDatabase(e);
+                closeSidebar();
+            });
+        }
+
         function setControlsEnabled(enabled) {
             const buttons = document.querySelectorAll('button');
             const inputs = document.querySelectorAll('input, select, textarea');
@@ -4708,6 +4846,9 @@
                 // Initialize column resizing
                 initializeColumnResizing();
 
+                // Initialize event listeners
+                initializeEventListeners();
+
                 setControlsEnabled(true);
 
                 console.log('PE Fund Manager initialized successfully');
@@ -4719,11 +4860,12 @@
             }
         }
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
     </script>
 </body>
 </html>
