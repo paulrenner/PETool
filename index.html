@@ -2817,8 +2817,9 @@
                 const rect = buttonElement.getBoundingClientRect();
 
                 // Position dropdown below and to the left of the button
-                dropdown.style.top = `${rect.bottom + window.scrollY + 2}px`;
-                dropdown.style.left = `${rect.left + window.scrollX - 100}px`;
+                // Since dropdown uses position: fixed, we don't add window.scrollY/X
+                dropdown.style.top = `${rect.bottom + 2}px`;
+                dropdown.style.left = `${rect.left - 100}px`;
 
                 dropdown.classList.add('show');
             } catch (err) {
