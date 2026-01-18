@@ -1086,18 +1086,21 @@
             }
 
             .content {
-                padding: 15px;
+                padding: 10px;
             }
 
             table {
-                min-width: 100%;
+                width: 100%;
+                max-width: 100%;
                 page-break-inside: auto;
                 border: 1px solid var(--color-primary);
+                table-layout: fixed;
             }
 
             /* Override min-width for main table in print view */
             .table-container table {
                 min-width: 100% !important;
+                max-width: 100% !important;
             }
 
             thead {
@@ -1126,14 +1129,14 @@
             /* Fund Name - allow it to be wider */
             #fundsTable th:nth-child(1),
             #fundsTable td:nth-child(1) {
-                width: 135px !important;
+                width: 130px !important;
             }
 
             /* Account - limit width to fit page */
             #fundsTable th:nth-child(2),
             #fundsTable td:nth-child(2) {
-                width: 95px !important;
-                max-width: 95px !important;
+                width: 90px !important;
+                max-width: 90px !important;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
@@ -1141,7 +1144,7 @@
             /* Vintage */
             #fundsTable th:nth-child(3),
             #fundsTable td:nth-child(3) {
-                width: 48px !important;
+                width: 45px !important;
             }
 
             /* Numeric columns - compact width */
@@ -1157,7 +1160,7 @@
             #fundsTable td:nth-child(8),
             #fundsTable th:nth-child(11),
             #fundsTable td:nth-child(11) {
-                width: 72px !important;
+                width: 70px !important;
             }
 
             /* MOIC and IRR - narrower */
@@ -1165,7 +1168,7 @@
             #fundsTable td:nth-child(9),
             #fundsTable th:nth-child(10),
             #fundsTable td:nth-child(10) {
-                width: 52px !important;
+                width: 50px !important;
             }
 
             /* Hide Actions column in print view */
