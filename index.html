@@ -2053,8 +2053,23 @@
                     filtered = sortData(filtered, sortColumn, sortDirection);
                 }
 
-                // Update filter dropdowns
-                updateFilterDropdowns(funds);
+                // Update filter dropdowns based on group selection
+                // Filter funds by group only (not by fund/account) to populate dropdowns
+                const groupFilter = document.getElementById('groupFilter').value;
+                let fundsForDropdowns = funds;
+                if (groupFilter) {
+                    const groupId = parseInt(groupFilter);
+                    fundsForDropdowns = funds.filter(fund => {
+                        if (!fund.groupId) return false;
+                        if (fund.groupId === groupId) return true;
+                        // Check if fund's group is descendant of selected group
+                        if (currentGroupDescendants && currentGroupDescendants.groupId === groupId) {
+                            return currentGroupDescendants.ids.includes(fund.groupId);
+                        }
+                        return false;
+                    });
+                }
+                updateFilterDropdowns(fundsForDropdowns);
 
                 // Get cutoff date
                 const cutoffDateValue = document.getElementById('cutoffDate').value;
@@ -2227,7 +2242,12 @@
                 option.textContent = name;
                 fundFilter.appendChild(option);
             });
-            fundFilter.value = currentFundValue;
+            // Only restore previous value if it's still in the list
+            if (currentFundValue && uniqueFunds.includes(currentFundValue)) {
+                fundFilter.value = currentFundValue;
+            } else {
+                fundFilter.value = '';
+            }
 
             // Update account filter
             const accountFilter = document.getElementById('accountFilter');
@@ -2241,7 +2261,12 @@
                 option.textContent = account;
                 accountFilter.appendChild(option);
             });
-            accountFilter.value = currentAccountValue;
+            // Only restore previous value if it's still in the list
+            if (currentAccountValue && uniqueAccounts.includes(currentAccountValue)) {
+                accountFilter.value = currentAccountValue;
+            } else {
+                accountFilter.value = '';
+            }
 
             // Update group filter
             const groupFilter = document.getElementById('groupFilter');
