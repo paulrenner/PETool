@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PE Fund Manager - User Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #2C3E50;
+            color: #2C3E50;
+            overflow-x: hidden;
+        }
+
+        .slide-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 40px;
+            scroll-snap-type: y mandatory;
+            overflow-y: scroll;
+        }
+
+        .slide {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: white;
+            border-radius: 8px;
+            padding: 60px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            scroll-snap-align: start;
+        }
+
+        .slide h1 {
+            font-size: 3em;
+            color: #2C3E50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .slide h2 {
+            font-size: 2.5em;
+            color: #2C3E50;
+            margin-bottom: 30px;
+            text-align: center;
+            border-bottom: 3px solid #3498DB;
+            padding-bottom: 15px;
+        }
+
+        .slide h3 {
+            font-size: 1.8em;
+            color: #3498DB;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        .slide p {
+            font-size: 1.2em;
+            line-height: 1.8;
+            color: #555;
+            margin-bottom: 15px;
+            max-width: 900px;
+        }
+
+        .slide ul {
+            font-size: 1.2em;
+            line-height: 2;
+            margin-left: 40px;
+            max-width: 900px;
+        }
+
+        .slide li {
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .slide .subtitle {
+            font-size: 1.5em;
+            color: #7F8C8D;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .slide .highlight {
+            background: #FFF3CD;
+            padding: 20px;
+            border-left: 4px solid #FFC107;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .slide .tip {
+            background: #D1ECF1;
+            padding: 20px;
+            border-left: 4px solid #17A2B8;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .slide .feature-box {
+            background: #F8F9FA;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 2px solid #E0E0E0;
+        }
+
+        .slide .feature-box h4 {
+            color: #2C3E50;
+            font-size: 1.4em;
+            margin-bottom: 10px;
+        }
+
+        .slide .step-number {
+            display: inline-block;
+            background: #3498DB;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 40px;
+            font-weight: bold;
+            margin-right: 15px;
+            font-size: 1.2em;
+        }
+
+        .slide .screenshot-placeholder {
+            background: #ECF0F1;
+            border: 2px dashed #BDC3C7;
+            padding: 40px;
+            text-align: center;
+            color: #7F8C8D;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-style: italic;
+        }
+
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            font-size: 0.9em;
+            color: #7F8C8D;
+        }
+
+        .slide-number {
+            text-align: center;
+            margin-top: 30px;
+            color: #95A5A6;
+            font-size: 0.9em;
+        }
+
+        @media print {
+            .slide {
+                page-break-after: always;
+                margin-bottom: 0;
+            }
+            .navigation {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+
+        <!-- Slide 1: Title -->
+        <div class="slide">
+            <h1>PE Fund Manager</h1>
+            <p class="subtitle">Private Equity Fund Analytics & Management Tool</p>
+            <p class="subtitle" style="margin-top: 40px; font-size: 1.2em;">User Guide & Tutorial</p>
+            <div class="slide-number">Slide 1 of 15</div>
+        </div>
+
+        <!-- Slide 2: What is PE Fund Manager? -->
+        <div class="slide">
+            <h2>What is PE Fund Manager?</h2>
+            <p>A powerful, local-first tool for managing your private equity fund investments with comprehensive analytics and performance tracking.</p>
+
+            <div class="feature-box">
+                <h4>✓ 100% Local & Private</h4>
+                <p>All data stays in your browser - no cloud, no tracking, complete privacy</p>
+            </div>
+
+            <div class="feature-box">
+                <h4>✓ Comprehensive Metrics</h4>
+                <p>IRR, MOIC, cash flows, NAV tracking, and portfolio analytics</p>
+            </div>
+
+            <div class="feature-box">
+                <h4>✓ Organization Tools</h4>
+                <p>Groups, tags, search, and filtering to organize your portfolio</p>
+            </div>
+
+            <div class="slide-number">Slide 2 of 15</div>
+        </div>
+
+        <!-- Slide 3: Getting Started -->
+        <div class="slide">
+            <h2>Getting Started</h2>
+
+            <h3>Opening the Application</h3>
+            <p>Simply open <code>index.html</code> in your web browser (Chrome, Firefox, Safari, or Edge recommended)</p>
+
+            <h3>First Time Setup</h3>
+            <ul>
+                <li>No registration or login required</li>
+                <li>Database automatically created in your browser</li>
+                <li>Start adding investments immediately</li>
+            </ul>
+
+            <div class="tip">
+                <strong>💡 Tip:</strong> Bookmark the page in your browser for quick access
+            </div>
+
+            <div class="slide-number">Slide 3 of 15</div>
+        </div>
+
+        <!-- Slide 4: Understanding the Interface -->
+        <div class="slide">
+            <h2>Understanding the Interface</h2>
+
+            <h3>Main Components</h3>
+            <ul>
+                <li><strong>Header:</strong> Shows your current view (portfolio or group name)</li>
+                <li><strong>Filter Bar:</strong> Filter by group, fund, account, search, and date</li>
+                <li><strong>Main Table:</strong> Displays all investments with metrics</li>
+                <li><strong>Menu (☰):</strong> Access settings, manage data, and export options</li>
+            </ul>
+
+            <div class="highlight">
+                <strong>Key Metrics Displayed:</strong> Commitment, Contributions, Distributions, NAV, Returns, MOIC, IRR, Outstanding Commitment
+            </div>
+
+            <div class="slide-number">Slide 4 of 15</div>
+        </div>
+
+        <!-- Slide 5: Adding Your First Investment -->
+        <div class="slide">
+            <h2>Adding Your First Investment</h2>
+
+            <p><span class="step-number">1</span> Click "New Investment" in the sidebar menu (☰)</p>
+
+            <p><span class="step-number">2</span> Fill in required information:</p>
+            <ul>
+                <li><strong>Fund Name:</strong> Name of the PE fund (e.g., "ABC Venture Fund III")</li>
+                <li><strong>Account Number:</strong> Your account reference (e.g., "LP-001")</li>
+                <li><strong>Commitment:</strong> Total capital committed (e.g., 1,000,000)</li>
+                <li><strong>Vintage Year:</strong> Year of first investment</li>
+            </ul>
+
+            <p><span class="step-number">3</span> Optionally assign to a group for organization</p>
+
+            <p><span class="step-number">4</span> Click "Save" to add the investment</p>
+
+            <div class="slide-number">Slide 5 of 15</div>
+        </div>
+
+        <!-- Slide 6: Managing Cash Flows -->
+        <div class="slide">
+            <h2>Managing Cash Flows</h2>
+
+            <h3>What are Cash Flows?</h3>
+            <p>Cash flows track money moving in and out of your investment:</p>
+            <ul>
+                <li><strong>Contributions:</strong> Capital calls - money you invest</li>
+                <li><strong>Distributions:</strong> Returns - money you receive back</li>
+            </ul>
+
+            <h3>Adding Cash Flows</h3>
+            <p><span class="step-number">1</span> Click the gear icon (⚙) next to an investment</p>
+            <p><span class="step-number">2</span> Select "View Details"</p>
+            <p><span class="step-number">3</span> In the Cash Flows tab, click "Add Cash Flow"</p>
+            <p><span class="step-number">4</span> Enter date, amount, and type (Contribution/Distribution)</p>
+            <p><span class="step-number">5</span> Click "Save Changes"</p>
+
+            <div class="slide-number">Slide 6 of 15</div>
+        </div>
+
+        <!-- Slide 7: Tracking NAV -->
+        <div class="slide">
+            <h2>Tracking NAV (Net Asset Value)</h2>
+
+            <h3>What is NAV?</h3>
+            <p>NAV represents the current value of your investment - typically updated quarterly by the fund manager.</p>
+
+            <h3>Adding NAV Updates</h3>
+            <p><span class="step-number">1</span> Click gear icon (⚙) → "View Details"</p>
+            <p><span class="step-number">2</span> Switch to "NAV History" tab</p>
+            <p><span class="step-number">3</span> Click "Add NAV"</p>
+            <p><span class="step-number">4</span> Enter the date and NAV amount</p>
+            <p><span class="step-number">5</span> Click "Save Changes"</p>
+
+            <div class="tip">
+                <strong>💡 Tip:</strong> Add NAV updates as you receive quarterly fund reports
+            </div>
+
+            <div class="slide-number">Slide 7 of 15</div>
+        </div>
+
+        <!-- Slide 8: Understanding Metrics -->
+        <div class="slide">
+            <h2>Understanding Key Metrics</h2>
+
+            <div class="feature-box">
+                <h4>MOIC (Multiple on Invested Capital)</h4>
+                <p>How many times your money has multiplied<br>
+                Formula: (Distributions + NAV) ÷ Contributions</p>
+            </div>
+
+            <div class="feature-box">
+                <h4>IRR (Internal Rate of Return)</h4>
+                <p>Annualized rate of return on your investment<br>
+                Accounts for timing of cash flows</p>
+            </div>
+
+            <div class="feature-box">
+                <h4>Investment Return</h4>
+                <p>Total profit/loss to date<br>
+                Formula: (Distributions + NAV) - Contributions</p>
+            </div>
+
+            <div class="slide-number">Slide 8 of 15</div>
+        </div>
+
+        <!-- Slide 9: Organizing with Groups -->
+        <div class="slide">
+            <h2>Organizing with Groups</h2>
+
+            <h3>What are Groups?</h3>
+            <p>Groups let you organize investments hierarchically (e.g., by trust, client, or account)</p>
+
+            <h3>Creating Groups</h3>
+            <p><span class="step-number">1</span> Open Menu (☰) → "Manage Groups"</p>
+            <p><span class="step-number">2</span> Enter a group name (e.g., "Family Trust")</p>
+            <p><span class="step-number">3</span> Optionally set a parent group for sub-groups</p>
+            <p><span class="step-number">4</span> Click "Add Group"</p>
+
+            <h3>Assigning Investments to Groups</h3>
+            <ul>
+                <li>When adding new investment, select from "Group" dropdown</li>
+                <li>When editing existing investment, update the group</li>
+            </ul>
+
+            <div class="slide-number">Slide 9 of 15</div>
+        </div>
+
+        <!-- Slide 10: Using Tags -->
+        <div class="slide">
+            <h2>Using Tags for Classification</h2>
+
+            <h3>What are Tags?</h3>
+            <p>Tags are custom labels at the fund name level (e.g., "Venture Capital", "Growth Equity", "Buyout")</p>
+
+            <h3>Adding Tags to Funds</h3>
+            <p><span class="step-number">1</span> Open Menu (☰) → "Manage Funds"</p>
+            <p><span class="step-number">2</span> Click the edit icon (✎) next to a fund name</p>
+            <p><span class="step-number">3</span> Type a tag and press Enter</p>
+            <p><span class="step-number">4</span> Add multiple tags as needed</p>
+            <p><span class="step-number">5</span> Click "Save Changes"</p>
+
+            <div class="tip">
+                <strong>💡 Tip:</strong> Tags are searchable! Type a tag in the search box to filter
+            </div>
+
+            <div class="slide-number">Slide 10 of 15</div>
+        </div>
+
+        <!-- Slide 11: Filtering & Searching -->
+        <div class="slide">
+            <h2>Filtering & Searching</h2>
+
+            <h3>Filter Options</h3>
+            <ul>
+                <li><strong>Filter by Group:</strong> View only investments in a specific group</li>
+                <li><strong>Filter by Fund:</strong> View all accounts for a specific fund</li>
+                <li><strong>Filter by Account:</strong> View a specific account</li>
+                <li><strong>Search:</strong> Search by fund name, account number, or tags</li>
+                <li><strong>Cutoff Date:</strong> Calculate metrics as of a specific date</li>
+            </ul>
+
+            <div class="highlight">
+                <strong>Filters work together:</strong> Select a group, then a fund within that group, then an account - they cascade intelligently
+            </div>
+
+            <p><strong>Reset Filters:</strong> Click the ↻ icon to clear all filters</p>
+
+            <div class="slide-number">Slide 11 of 15</div>
+        </div>
+
+        <!-- Slide 12: Action Menu -->
+        <div class="slide">
+            <h2>Investment Actions</h2>
+
+            <h3>Quick Actions (⚙ Gear Icon)</h3>
+            <p>Click the gear icon next to any investment to access:</p>
+
+            <ul>
+                <li><strong>Edit:</strong> Modify investment details</li>
+                <li><strong>Duplicate:</strong> Create a copy with multiplier (useful for multiple accounts)</li>
+                <li><strong>View Details:</strong> Access cash flows and NAV history</li>
+                <li><strong>Delete:</strong> Remove the investment (with confirmation)</li>
+            </ul>
+
+            <div class="tip">
+                <strong>💡 Duplicate Feature:</strong> If you have 5 similar investments, create one and duplicate it 5 times with a 1.0x multiplier
+            </div>
+
+            <div class="slide-number">Slide 12 of 15</div>
+        </div>
+
+        <!-- Slide 13: Exporting Data -->
+        <div class="slide">
+            <h2>Exporting Your Data</h2>
+
+            <h3>Export Options (Menu ☰ → Data)</h3>
+
+            <div class="feature-box">
+                <h4>Export to CSV</h4>
+                <p>Spreadsheet format for Excel analysis<br>
+                Includes all investments and metrics</p>
+            </div>
+
+            <div class="feature-box">
+                <h4>Export to JSON</h4>
+                <p>Complete database backup<br>
+                Includes cash flows, NAV, groups, and tags</p>
+            </div>
+
+            <div class="feature-box">
+                <h4>Export to PDF</h4>
+                <p>Uses browser's print dialog<br>
+                Creates professional report</p>
+            </div>
+
+            <div class="slide-number">Slide 13 of 15</div>
+        </div>
+
+        <!-- Slide 14: Importing & Backup -->
+        <div class="slide">
+            <h2>Importing Data & Backup</h2>
+
+            <h3>Importing Data</h3>
+            <p><span class="step-number">1</span> Open Menu (☰) → "Import JSON"</p>
+            <p><span class="step-number">2</span> Select your exported JSON file</p>
+            <p><span class="step-number">3</span> Confirm the import</p>
+            <p>Data will be merged with existing investments</p>
+
+            <h3>Backup Best Practices</h3>
+            <ul>
+                <li>Export to JSON regularly (weekly/monthly)</li>
+                <li>Store backups in a safe location</li>
+                <li>Keep multiple backup versions</li>
+                <li>Test restore process occasionally</li>
+            </ul>
+
+            <div class="highlight">
+                <strong>⚠️ Important:</strong> Data is stored locally in your browser. Regular backups protect against data loss
+            </div>
+
+            <div class="slide-number">Slide 14 of 15</div>
+        </div>
+
+        <!-- Slide 15: Tips & Best Practices -->
+        <div class="slide">
+            <h2>Tips & Best Practices</h2>
+
+            <ul>
+                <li>✓ Update NAV quarterly as you receive fund reports</li>
+                <li>✓ Enter cash flows promptly when capital calls or distributions occur</li>
+                <li>✓ Use consistent naming for fund names across accounts</li>
+                <li>✓ Develop a tagging taxonomy early (Venture, Growth, Buyout, etc.)</li>
+                <li>✓ Create a logical group structure before adding many funds</li>
+                <li>✓ Export your data monthly for backup</li>
+                <li>✓ Use the Cutoff Date feature for historical analysis</li>
+                <li>✓ Use Search to quickly find specific investments</li>
+                <li>✓ Toggle "Show Tags" on/off as needed for cleaner view</li>
+            </ul>
+
+            <div class="tip">
+                <strong>Keyboard Shortcuts:</strong><br>
+                Escape - Close modals/sidebar<br>
+                Ctrl/Cmd+F - Jump to search
+            </div>
+
+            <div class="slide-number">Slide 15 of 15</div>
+        </div>
+
+        <!-- Slide 16: Q&A -->
+        <div class="slide">
+            <h2>Questions?</h2>
+
+            <div class="feature-box">
+                <h4>Is my data secure?</h4>
+                <p>Yes! All data stays in your browser. Nothing is sent to external servers.</p>
+            </div>
+
+            <div class="feature-box">
+                <h4>Can I access this from multiple devices?</h4>
+                <p>Data is device-specific. Use Export/Import to transfer between devices.</p>
+            </div>
+
+            <div class="feature-box">
+                <h4>What browsers are supported?</h4>
+                <p>Chrome, Firefox, Safari, and Edge (latest versions recommended).</p>
+            </div>
+
+            <div class="feature-box">
+                <h4>Can I undo changes?</h4>
+                <p>There's no built-in undo. Export before major changes as a safety measure.</p>
+            </div>
+
+            <p style="text-align: center; margin-top: 40px; font-size: 1.5em; color: #3498DB;">
+                <strong>Happy Tracking! 📊</strong>
+            </p>
+
+            <div class="slide-number">Slide 16 of 15</div>
+        </div>
+
+    </div>
+
+    <div class="navigation">
+        Scroll to navigate slides
+    </div>
+</body>
+</html>
