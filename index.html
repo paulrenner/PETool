@@ -31,7 +31,7 @@
             background: #2C3E50;
             color: white;
             padding: 24px 30px;
-            border-bottom: 3px solid #34495E;
+            border-bottom: 1px solid #34495E;
         }
 
         header h1 {
@@ -385,7 +385,7 @@
             width: 100%;
             height: 100%;
             overflow-y: auto;
-            background-color: rgba(44, 62, 80, 0.5);
+            background-color: rgba(0, 0, 0, 0.5);
         }
 
         .modal.show {
@@ -422,9 +422,17 @@
             color: #95A5A6;
             cursor: pointer;
             line-height: 1;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            transition: background 0.2s ease, color 0.2s ease;
         }
 
         .modal .close:hover {
+            background: #E0E0E0;
             color: #2C3E50;
         }
 
@@ -776,18 +784,17 @@
         }
 
         .delete-row-btn {
-            background: #E74C3C;
-            color: white;
+            background: none;
             border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
+            color: #E74C3C;
+            font-size: 18px;
+            padding: 4px 8px;
             cursor: pointer;
-            font-size: 0.85em;
-            font-weight: 500;
+            transition: color 0.15s ease;
         }
 
         .delete-row-btn:hover {
-            background: #C0392B;
+            color: #C0392B;
         }
 
         .validation-error-row {
@@ -1153,7 +1160,7 @@
                 <input type="date" id="cutoffDate" onchange="applyFilters()" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date" aria-label="Cutoff date for calculating metrics">
             </div>
             <div class="control-group">
-                <button class="btn-secondary" onclick="resetFilters()">Reset Filters</button>
+                <button class="btn-icon" onclick="resetFilters()" title="Reset Filters" style="font-size: 20px; margin-top: auto;">↻</button>
             </div>
             <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
                 <button class="btn-icon" onclick="toggleSidebar()" title="Settings and Actions" style="font-size: 20px;">☰</button>
@@ -2961,7 +2968,7 @@
                                 <input type="checkbox" ${cf.affectsCommitment !== false ? 'checked' : ''} data-field="affectsCommitment" data-index="${index}">
                             </td>
                             <td>
-                                <button class="delete-row-btn" onclick="deleteCashFlowRow(this)">Delete</button>
+                                <button class="delete-row-btn" onclick="deleteCashFlowRow(this)" title="Delete">×</button>
                             </td>
                         `;
                         cashFlowsTableBody.appendChild(row);
@@ -2997,7 +3004,7 @@
                             <td><input type="date" value="${escapeHtml(nav.date || '')}" data-field="date" data-index="${index}"></td>
                             <td><input type="text" value="${displayAmount}" data-field="amount" data-index="${index}"></td>
                             <td>
-                                <button class="delete-row-btn" onclick="deleteNavRow(this)">Delete</button>
+                                <button class="delete-row-btn" onclick="deleteNavRow(this)" title="Delete">×</button>
                             </td>
                         `;
                         navTableBody.appendChild(row);
@@ -3268,14 +3275,17 @@
                     }
 
                     const editBtn = document.createElement('button');
-                    editBtn.className = 'btn-secondary btn-sm';
-                    editBtn.textContent = 'Edit';
+                    editBtn.className = 'btn-icon';
+                    editBtn.textContent = '✎';
+                    editBtn.title = 'Edit';
                     editBtn.setAttribute('data-fund-name', fundNameObj.name);
                     editBtn.onclick = function() { openEditFundNameModal(this.getAttribute('data-fund-name')); };
 
                     const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'btn-danger btn-sm';
-                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.className = 'btn-icon';
+                    deleteBtn.textContent = '×';
+                    deleteBtn.title = 'Delete';
+                    deleteBtn.style.color = '#E74C3C';
                     deleteBtn.setAttribute('data-fund-name', fundNameObj.name);
                     deleteBtn.onclick = function() { removeFundName(this.getAttribute('data-fund-name')); };
 
@@ -3528,8 +3538,8 @@
                         ${typeText}
                     </div>
                     <div class="group-item-actions">
-                        <button class="btn-info btn-sm group-edit-btn" data-group-id="${group.id}">Edit</button>
-                        <button class="btn-danger btn-sm group-delete-btn" data-group-id="${group.id}">Delete</button>
+                        <button class="btn-icon group-edit-btn" data-group-id="${group.id}" title="Edit">✎</button>
+                        <button class="btn-icon group-delete-btn" data-group-id="${group.id}" title="Delete" style="color: #E74C3C;">×</button>
                     </div>
                 `;
                 container.appendChild(div);
