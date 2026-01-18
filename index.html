@@ -2526,7 +2526,11 @@
             document.getElementById('accountFilter').value = '';
             document.getElementById('groupFilter').value = '';
             document.getElementById('searchInput').value = '';
-            document.getElementById('cutoffDate').value = '';
+
+            // Reset cutoff date to latest quarter end (same as page load)
+            const quarterEnd = getLatestQuarterEnd();
+            document.getElementById('cutoffDate').value = quarterEnd.toISOString().split('T')[0];
+
             currentGroupDescendants = null;
             updateHeader();
             renderTable();
