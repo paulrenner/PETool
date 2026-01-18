@@ -167,6 +167,44 @@
             color: #34495E;
         }
 
+        /* Action Dropdown */
+        .action-dropdown {
+            display: none;
+            position: fixed;
+            background: white;
+            border: 1px solid #E0E0E0;
+            border-radius: 4px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+            min-width: 160px;
+            z-index: 10000;
+            padding: 4px 0;
+        }
+
+        .action-dropdown.show {
+            display: block;
+        }
+
+        .action-dropdown a {
+            display: block;
+            padding: 10px 16px;
+            color: #2C3E50;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background 0.15s ease;
+        }
+
+        .action-dropdown a:hover {
+            background: #F8F9FA;
+        }
+
+        .action-dropdown a.danger-action {
+            color: #E74C3C;
+        }
+
+        .action-dropdown a.danger-action:hover {
+            background: #FFEBEE;
+        }
+
         /* Dropdown Menu */
         .dropdown {
             position: relative;
@@ -1207,19 +1245,12 @@
         </div>
     </div>
 
-    <!-- Action Modal -->
-    <div id="actionModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeActionModal()">&times;</span>
-            <h2>Fund Actions</h2>
-            <p id="actionFundInfo" style="margin-bottom: 20px; color: #7F8C8D;"></p>
-            <div class="form-actions">
-                <button class="btn-info" onclick="editFundFromAction()">Edit</button>
-                <button class="btn-secondary" onclick="duplicateFundFromAction()">Duplicate</button>
-                <button class="btn-secondary" onclick="showDetailsFromAction()">Details</button>
-                <button class="btn-danger" onclick="deleteFundFromAction()">Delete</button>
-            </div>
-        </div>
+    <!-- Action Dropdown -->
+    <div id="actionDropdown" class="action-dropdown">
+        <a href="#" onclick="editFundFromAction(); return false;">Edit</a>
+        <a href="#" onclick="duplicateFundFromAction(); return false;">Duplicate</a>
+        <a href="#" onclick="showDetailsFromAction(); return false;">View Details</a>
+        <a href="#" onclick="deleteFundFromAction(); return false;" class="danger-action">Delete</a>
     </div>
 
     <!-- Manage Fund Names Modal -->
@@ -2756,7 +2787,7 @@
             }
         }
 
-        async function showActionModal(id) {
+        async function showActionModal(id, buttonElement) {
             console.log('showActionModal called with ID:', id, 'Type:', typeof id);
 
             if (!id && id !== 0) {
@@ -2774,10 +2805,17 @@
                     return;
                 }
 
-                console.log('Action modal showing for fund:', fund.fundName, 'ID:', fund.id);
-                document.getElementById('actionFundInfo').textContent =
-                    `${fund.fundName} - ${fund.accountNumber}`;
-                document.getElementById('actionModal').classList.add('show');
+                console.log('Action dropdown showing for fund:', fund.fundName, 'ID:', fund.id);
+
+                // Position and show the dropdown
+                const dropdown = document.getElementById('actionDropdown');
+                const rect = buttonElement.getBoundingClientRect();
+
+                // Position dropdown below and to the left of the button
+                dropdown.style.top = `${rect.bottom + window.scrollY + 2}px`;
+                dropdown.style.left = `${rect.left + window.scrollX - 100}px`;
+
+                dropdown.classList.add('show');
             } catch (err) {
                 console.error('Error in showActionModal:', err);
                 showStatus('Error loading fund: ' + err.message, 'error');
@@ -2785,7 +2823,8 @@
         }
 
         function closeActionModal() {
-            document.getElementById('actionModal').classList.remove('show');
+            const dropdown = document.getElementById('actionDropdown');
+            dropdown.classList.remove('show');
             currentActionFundId = null;
         }
 
@@ -3950,9 +3989,18 @@
         document.addEventListener('click', function(event) {
             // Handle fund actions button
             if (event.target.classList.contains('fund-actions-btn')) {
+                event.stopPropagation(); // Prevent immediate close
                 const fundId = parseInt(event.target.getAttribute('data-fund-id'));
-                showActionModal(fundId);
+                showActionModal(fundId, event.target);
                 return;
+            }
+
+            // Close action dropdown when clicking outside
+            const actionDropdown = document.getElementById('actionDropdown');
+            if (actionDropdown && actionDropdown.classList.contains('show')) {
+                if (!actionDropdown.contains(event.target)) {
+                    closeActionModal();
+                }
             }
 
             // Handle group edit button
@@ -3997,8 +4045,8 @@
             if (event.key === 'Escape') {
                 const sidebar = document.getElementById('sidebar');
                 const detailsModal = document.getElementById('detailsModal');
-                const actionModal = document.getElementById('actionModal');
-                const investmentModal = document.getElementById('investmentModal');
+                const actionDropdown = document.getElementById('actionDropdown');
+                const fundModal = document.getElementById('fundModal');
                 const manageFundsModal = document.getElementById('manageFundNamesModal');
                 const editFundNameModal = document.getElementById('editFundNameModal');
                 const manageGroupsModal = document.getElementById('manageGroupsModal');
@@ -4007,10 +4055,10 @@
                     closeSidebar();
                 } else if (detailsModal && detailsModal.classList.contains('show')) {
                     closeDetailsModal();
-                } else if (actionModal && actionModal.classList.contains('show')) {
+                } else if (actionDropdown && actionDropdown.classList.contains('show')) {
                     closeActionModal();
-                } else if (investmentModal && investmentModal.classList.contains('show')) {
-                    closeInvestmentModal();
+                } else if (fundModal && fundModal.classList.contains('show')) {
+                    closeFundModal();
                 } else if (editFundNameModal && editFundNameModal.classList.contains('show')) {
                     closeEditFundNameModal();
                 } else if (manageFundsModal && manageFundsModal.classList.contains('show')) {
