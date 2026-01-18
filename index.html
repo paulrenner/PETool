@@ -954,6 +954,10 @@
             <div class="control-group">
                 <button class="btn-secondary" onclick="resetFilters()">Reset Filters</button>
             </div>
+            <div class="control-group" style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="showTagsCheckbox" onchange="toggleTagsDisplay()" checked title="Show/hide fund tags">
+                <label for="showTagsCheckbox" style="margin: 0; cursor: pointer;" title="Show/hide fund tags">Show Tags</label>
+            </div>
             <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
                 <div class="dropdown">
                     <button class="btn-primary" onclick="toggleManageDropdown()">Manage ▾</button>
@@ -1888,9 +1892,10 @@
                     const row = document.createElement('tr');
 
                     // Build tags HTML - look up tags from fund name
+                    const showTags = document.getElementById('showTagsCheckbox').checked;
                     const fundNameObj = fundNameData.get(fund.fundName);
                     const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
-                    const tagsHtml = tags.length > 0
+                    const tagsHtml = (showTags && tags.length > 0)
                         ? `<div class="table-tags">${tags.map(tag => `<span class="table-tag">${escapeHtml(tag)}</span>`).join('')}</div>`
                         : '';
 
@@ -2113,6 +2118,19 @@
             currentGroupDescendants = null;
             updateHeader();
             renderTable();
+        }
+
+        function toggleTagsDisplay() {
+            const checkbox = document.getElementById('showTagsCheckbox');
+            // Save preference to localStorage
+            localStorage.setItem('showTags', checkbox.checked);
+            // Re-render table to show/hide tags
+            renderTable();
+            // Also refresh Manage Funds list if it's open
+            const manageFundsModal = document.getElementById('manageFundNamesModal');
+            if (manageFundsModal && manageFundsModal.classList.contains('show')) {
+                loadFundNamesList();
+            }
         }
 
         function sortData(data, column, direction) {
@@ -2878,8 +2896,9 @@
                     nameSpan.style.marginBottom = '4px';
                     nameDiv.appendChild(nameSpan);
 
-                    // Show tags if any
-                    if (fundNameObj.tags && fundNameObj.tags.length > 0) {
+                    // Show tags if any and if tags are enabled
+                    const showTags = document.getElementById('showTagsCheckbox').checked;
+                    if (showTags && fundNameObj.tags && fundNameObj.tags.length > 0) {
                         const tagsDiv = document.createElement('div');
                         tagsDiv.className = 'table-tags';
                         tagsDiv.style.marginTop = '4px';
@@ -3929,6 +3948,10 @@
                 // Set default cutoff date to latest quarter end
                 const quarterEnd = getLatestQuarterEnd();
                 document.getElementById('cutoffDate').value = quarterEnd.toISOString().split('T')[0];
+
+                // Restore tag display preference from localStorage (default: true)
+                const showTags = localStorage.getItem('showTags');
+                document.getElementById('showTagsCheckbox').checked = showTags === null ? true : showTags === 'true';
 
                 await renderTable();
 
