@@ -1024,13 +1024,6 @@
             background: #F8F9FA;
         }
 
-        .sidebar-item a span,
-        .sidebar-import-label span {
-            font-size: 18px;
-            width: 24px;
-            text-align: center;
-        }
-
         .sidebar-checkbox-label {
             display: flex;
             align-items: center;
@@ -1110,7 +1103,7 @@
             </div>
             <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
                 <button class="btn-primary" onclick="toggleSidebar()" title="Settings and Actions">
-                    <span style="font-size: 18px;">⚙</span> Menu
+                    <span style="font-size: 18px;">☰</span> Menu
                 </button>
             </div>
         </div>
@@ -1378,17 +1371,17 @@
                 <h4 class="sidebar-section-title">Manage</h4>
                 <div class="sidebar-item">
                     <a href="#" onclick="closeSidebar(); showAddFundModal(); return false;">
-                        <span>📝</span> New Investment
+                        New Investment
                     </a>
                 </div>
                 <div class="sidebar-item">
                     <a href="#" onclick="closeSidebar(); showManageFundsModal(); return false;">
-                        <span>📋</span> Manage Funds
+                        Manage Funds
                     </a>
                 </div>
                 <div class="sidebar-item">
                     <a href="#" onclick="closeSidebar(); showManageGroupsModal(); return false;">
-                        <span>📁</span> Manage Groups
+                        Manage Groups
                     </a>
                 </div>
             </div>
@@ -1398,22 +1391,22 @@
                 <h4 class="sidebar-section-title">Data</h4>
                 <div class="sidebar-item">
                     <a href="#" onclick="closeSidebar(); exportToCSV(); return false;">
-                        <span>📊</span> Export to CSV
+                        Export to CSV
                     </a>
                 </div>
                 <div class="sidebar-item">
                     <a href="#" onclick="closeSidebar(); exportDatabase(); return false;">
-                        <span>💾</span> Export to JSON
+                        Export to JSON
                     </a>
                 </div>
                 <div class="sidebar-item">
                     <a href="#" onclick="closeSidebar(); exportToPDF(); return false;">
-                        <span>📄</span> Export to PDF
+                        Export to PDF
                     </a>
                 </div>
                 <div class="sidebar-item">
                     <label for="sidebarImportFile" class="sidebar-import-label">
-                        <span>📥</span> Import JSON
+                        Import JSON
                     </label>
                     <input type="file" id="sidebarImportFile" accept=".json" onchange="importDatabase(event); closeSidebar();" style="display: none;">
                 </div>
