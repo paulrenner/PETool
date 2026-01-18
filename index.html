@@ -2392,7 +2392,7 @@
                     // Set main title to group name
                     headerTitle.textContent = group.name;
 
-                    // Set subtitle to parent group name if exists, otherwise show type or default
+                    // Set subtitle to parent group name if exists, otherwise hide subtitle for top-level groups
                     if (group.parentGroupId) {
                         const parentGroup = groups.find(g => g.id === group.parentGroupId);
                         if (parentGroup) {
@@ -2401,8 +2401,8 @@
                             headerSubtitle.textContent = group.type || 'Account Group';
                         }
                     } else {
-                        // Top level group - show type or generic text
-                        headerSubtitle.textContent = group.type || 'Account Group';
+                        // Top level group - no subtitle
+                        headerSubtitle.textContent = '';
                     }
                 }
             } else {
