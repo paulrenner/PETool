@@ -962,6 +962,102 @@
             .control-group {
                 width: 100%;
             }
+
+            .table-container table {
+                min-width: 1200px; /* Reduced from 1400px */
+            }
+        }
+
+        /* Mobile responsive improvements */
+        @media (max-width: 768px) {
+            body {
+                padding: var(--spacing-sm);
+            }
+
+            header {
+                padding: 16px var(--spacing-md);
+            }
+
+            header h1 {
+                font-size: 1.4em;
+            }
+
+            .controls-bar {
+                padding: var(--spacing-md);
+                gap: 12px;
+            }
+
+            .content {
+                padding: var(--spacing-md);
+            }
+
+            /* Make table scrollable horizontally on mobile */
+            .table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Adjust modal for mobile */
+            .modal-content {
+                padding: 20px;
+                margin: 20px;
+                max-width: calc(100% - 40px);
+            }
+
+            /* Stack form actions vertically on mobile */
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .form-actions button {
+                width: 100%;
+            }
+
+            /* Adjust sidebar for mobile */
+            .sidebar {
+                width: 280px;
+                right: -280px;
+            }
+
+            /* Smaller buttons on mobile */
+            .btn-icon {
+                font-size: 18px !important;
+                padding: 6px;
+            }
+
+            /* Adjust table font sizes for mobile */
+            th, td {
+                font-size: 0.85em;
+                padding: 8px 6px;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 480px) {
+            header h1 {
+                font-size: 1.2em;
+            }
+
+            header p {
+                font-size: 0.85em;
+            }
+
+            .controls-bar {
+                gap: 8px;
+            }
+
+            .modal-content {
+                padding: 15px;
+            }
+
+            .modal-content h2 {
+                font-size: 1.2em;
+            }
+
+            th, td {
+                font-size: 0.8em;
+                padding: 6px 4px;
+            }
         }
 
         /* Print Styles for PDF Export */
@@ -1298,6 +1394,8 @@
                 <button class="btn-icon" id="resetFiltersBtn" title="Reset Filters" style="font-size: 20px; margin-top: auto;">↻</button>
             </div>
             <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+                <button class="btn-icon" id="undoBtn" title="Undo last action" style="font-size: 20px;" disabled>↶</button>
+                <button class="btn-icon" id="redoBtn" title="Redo last undone action" style="font-size: 20px;" disabled>↷</button>
                 <button class="btn-icon" id="toggleSidebarBtn" title="Settings and Actions" style="font-size: 20px;">☰</button>
             </div>
         </div>
@@ -1534,6 +1632,37 @@
         </div>
     </div>
 
+    <!-- Backup Warning Modal -->
+    <div id="backupWarningModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close" id="closeBackupWarningBtn">&times;</span>
+            <h2 style="color: #E67E22; margin-bottom: 15px;">⚠️ Important: Backup Your Data</h2>
+            <p style="line-height: 1.6; margin-bottom: 15px;">
+                Your PE Fund Manager data is stored <strong>locally in your browser</strong>.
+                This means your data could be lost if:
+            </p>
+            <ul style="margin: 15px 0 15px 25px; line-height: 1.8;">
+                <li>You clear your browser cache or cookies</li>
+                <li>You uninstall your browser</li>
+                <li>Your computer crashes or is reset</li>
+                <li>You switch to a different device</li>
+            </ul>
+            <p style="line-height: 1.6; margin-bottom: 20px; font-weight: 600; color: #E74C3C;">
+                Please export your data regularly to avoid data loss!
+            </p>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="dontShowBackupWarning" style="margin-right: 8px;">
+                    Don't show this warning again (you'll see a reminder every 30 days)
+                </label>
+            </div>
+            <div class="form-actions">
+                <button class="btn-success" id="exportNowBtn">Export Now</button>
+                <button class="btn-secondary" id="remindLaterBtn">Remind Me Later</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar Panel -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div id="sidebar" class="sidebar">
@@ -1602,6 +1731,33 @@
     </div>
 
     <script>
+        /**
+         * PE Fund Manager - Private Equity Fund Analytics & Management Tool
+         *
+         * A comprehensive single-file application for managing private equity fund investments.
+         * All data is stored locally in IndexedDB with no external dependencies.
+         *
+         * Key Features:
+         * - Fund portfolio management with cash flows and NAV tracking
+         * - IRR and MOIC calculations using Newton-Raphson method
+         * - Hierarchical account grouping with cycle detection
+         * - Undo/redo functionality with persistent history
+         * - CSV/JSON import/export with formula injection protection
+         * - Mobile-responsive design with accessibility features
+         * - Performance optimizations: metrics caching, debouncing, race condition handling
+         * - Input validation and sanitization for security
+         * - Automatic backup reminders with local storage tracking
+         *
+         * Architecture:
+         * - State Management: Centralized AppState object with caching
+         * - Database: IndexedDB with 4 stores (funds, fundNames, groups, undoHistory)
+         * - UI: Event-driven with delegation patterns and keyboard shortcuts
+         * - Performance: Debounced filters, cached metrics, abort controllers for cancellation
+         *
+         * @version 2.0.0
+         * @author PE Fund Manager Team
+         * @license MIT
+         */
         (function() {
             'use strict';
 
@@ -1619,16 +1775,21 @@
             FUNDS_STORE: 'funds',
             FUNDNAMES_STORE: 'fundNames',
             GROUPS_STORE: 'groups',
-            DB_VERSION: 6,
+            UNDO_STORE: 'undoHistory',
+            DB_VERSION: 7,
 
             // Currency formatting
             CURRENCY_FORMAT: 'en-US',
             CURRENCY_CODE: 'USD',
+            CURRENCY_MIN: -1e12,
+            CURRENCY_MAX: 1e12,
 
             // IRR calculation
             IRR_MAX_ITERATIONS: 1000,
             IRR_PRECISION: 1e-6,
             IRR_GUESS: 0.1,
+            IRR_MIN_RATE: -0.99,
+            IRR_MAX_RATE: 10.0,
 
             // Date format validation
             DATE_FORMAT: /^\d{4}-\d{2}-\d{2}$/,
@@ -1636,9 +1797,35 @@
             // Debounce delays (ms)
             DEBOUNCE_FILTER: 300,
             DEBOUNCE_SEARCH: 300,
+            DEBOUNCE_INPUT: 300,
+
+            // UI constraints
+            MIN_COLUMN_WIDTH: 50,
+            MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB
+            DUPLICATE_MULTIPLIER_MAX: 1000,
+            DUPLICATE_MULTIPLIER_MIN: 0.001,
+            FUND_NAME_MIN_LENGTH: 2,
+            FUND_NAME_MAX_LENGTH: 100,
+
+            // Performance
+            METRICS_CACHE_TTL: 5000, // 5 seconds
+            PAGINATION_SIZE: 50,
+            VIRTUAL_SCROLL_BUFFER: 10,
+
+            // Validation
+            ALLOWED_FUND_NAME_PATTERN: /^[a-zA-Z0-9\s\-_.,&()]+$/,
+            MAX_IMPORT_FUNDS: 10000,
+            MAX_JSON_DEPTH: 10,
 
             // LocalStorage keys
-            STORAGE_COLUMN_WIDTHS: 'columnWidths'
+            STORAGE_COLUMN_WIDTHS: 'columnWidths',
+            STORAGE_SHOW_TAGS: 'showTags',
+            STORAGE_BACKUP_WARNING: 'backupWarningShown',
+            STORAGE_LAST_BACKUP: 'lastBackupDate',
+
+            // Undo
+            MAX_UNDO_HISTORY: 50,
+            UNDO_RETENTION_DAYS: 7
         };
 
         // ===========================
@@ -1732,12 +1919,64 @@
         const GROUPS_STORE = CONFIG.GROUPS_STORE;
         const DB_VERSION = CONFIG.DB_VERSION;
 
-        // Application state
+        // Application state - centralized state management
+        const AppState = {
+            // Data
+            currentFunds: [],
+            fundNames: new Set(),
+            fundNameData: new Map(),
+            groups: [],
+            groupDescendantsCache: new Map(), // groupId -> array of descendant IDs
+
+            // UI state
+            currentGroupDescendants: null,
+            sortColumn: null,
+            sortDirection: 'asc',
+            currentActionFundId: null,
+            currentDetailsFundId: null,
+            hasUnsavedChanges: false,
+
+            // Cache
+            metricsCache: new Map(), // fundId -> { metrics, timestamp }
+            filterCache: null,
+
+            // Undo/Redo
+            undoStack: [],
+            redoStack: [],
+
+            // Performance
+            abortController: null, // For canceling in-flight requests
+
+            // Getters
+            getFunds() { return this.currentFunds; },
+            getGroups() { return this.groups; },
+
+            // Cache management
+            clearMetricsCache() {
+                this.metricsCache.clear();
+            },
+
+            getMetricsFromCache(fundId, cutoffDate) {
+                const key = `${fundId}-${cutoffDate}`;
+                const cached = this.metricsCache.get(key);
+                if (cached && (Date.now() - cached.timestamp < CONFIG.METRICS_CACHE_TTL)) {
+                    return cached.metrics;
+                }
+                return null;
+            },
+
+            setMetricsCache(fundId, cutoffDate, metrics) {
+                const key = `${fundId}-${cutoffDate}`;
+                this.metricsCache.set(key, { metrics, timestamp: Date.now() });
+            }
+        };
+
+        // Legacy compatibility - will be removed gradually
         let currentFunds = [];
-        let fundNames = new Set(); // Just the names for quick lookup
-        let fundNameData = new Map(); // Full data: name -> { name, tags }
+        let fundNames = new Set();
+        let fundNameData = new Map();
         let groups = [];
-        let currentGroupDescendants = null; // Cache for selected group and its descendants
+        let currentGroupDescendants = null;
         let sortColumn = null;
         let sortDirection = 'asc';
         let currentActionFundId = null;
@@ -1787,6 +2026,16 @@
                         });
                         groupsStore.createIndex('parentGroupId', 'parentGroupId', { unique: false });
                         groupsStore.createIndex('name', 'name', { unique: false });
+                    }
+
+                    // Undo history store
+                    if (!db.objectStoreNames.contains(CONFIG.UNDO_STORE)) {
+                        const undoStore = db.createObjectStore(CONFIG.UNDO_STORE, {
+                            keyPath: 'id',
+                            autoIncrement: true
+                        });
+                        undoStore.createIndex('timestamp', 'timestamp', { unique: false });
+                        undoStore.createIndex('type', 'type', { unique: false });
                     }
 
                     // Migrate from v5 to v6: Move tags from investments to fund names
@@ -2063,17 +2312,262 @@
             });
         }
 
-        // Helper function to get all descendant group IDs recursively
-        async function getAllDescendantGroupIds(groupId) {
-            const descendants = [groupId];
-            const children = await getGroupsByParent(groupId);
+        /**
+         * Get all descendant group IDs recursively with cycle detection
+         * @param {number} groupId - Group ID to get descendants for
+         * @param {Set} visited - Set of visited group IDs (for cycle detection)
+         * @returns {Promise<Array<number>>} Array of descendant group IDs
+         */
+        async function getAllDescendantGroupIds(groupId, visited = new Set()) {
+            // Detect circular reference
+            if (visited.has(groupId)) {
+                console.warn(`Circular reference detected for group ${groupId}`);
+                return [];
+            }
 
-            for (const child of children) {
-                const childDescendants = await getAllDescendantGroupIds(child.id);
-                descendants.push(...childDescendants);
+            visited.add(groupId);
+            const descendants = [groupId];
+
+            try {
+                const children = await getGroupsByParent(groupId);
+
+                for (const child of children) {
+                    const childDescendants = await getAllDescendantGroupIds(child.id, visited);
+                    descendants.push(...childDescendants);
+                }
+            } catch (err) {
+                console.error('Error getting descendants for group', groupId, err);
             }
 
             return descendants;
+        }
+
+        /**
+         * Check if setting parentId for groupId would create a circular reference
+         * @param {number} groupId - The group being modified
+         * @param {number} parentId - The proposed parent group ID
+         * @param {Array} allGroups - All groups in the system
+         * @returns {boolean} True if circular reference would be created
+         */
+        function wouldCreateCircularReference(groupId, parentId, allGroups) {
+            if (groupId === parentId) return true;
+            if (!parentId) return false;
+
+            // Build a map of group relationships
+            const childrenMap = new Map();
+            allGroups.forEach(g => {
+                if (!childrenMap.has(g.parentGroupId)) {
+                    childrenMap.set(g.parentGroupId, []);
+                }
+                childrenMap.get(g.parentGroupId).push(g.id);
+            });
+
+            // Check if parentId is a descendant of groupId
+            const visited = new Set();
+            const stack = [groupId];
+
+            while (stack.length > 0) {
+                const current = stack.pop();
+
+                if (visited.has(current)) continue;
+                visited.add(current);
+
+                if (current === parentId) return true; // Circular reference detected
+
+                const children = childrenMap.get(current) || [];
+                stack.push(...children);
+            }
+
+            return false;
+        }
+
+        // ===========================
+        // Undo/Redo Operations
+        // ===========================
+
+        /**
+         * Save an action to undo history
+         * @param {string} type - Action type (create, update, delete)
+         * @param {string} entity - Entity type (fund, group, fundName)
+         * @param {Object} before - State before action
+         * @param {Object} after - State after action
+         */
+        async function saveUndoAction(type, entity, before, after) {
+            try {
+                const undoAction = {
+                    type,
+                    entity,
+                    before,
+                    after,
+                    timestamp: new Date().toISOString()
+                };
+
+                const transaction = db.transaction([CONFIG.UNDO_STORE], 'readwrite');
+                const store = transaction.objectStore(CONFIG.UNDO_STORE);
+                await store.add(undoAction);
+
+                // Limit undo history
+                const allActions = await getUndoHistory();
+                if (allActions.length > CONFIG.MAX_UNDO_HISTORY) {
+                    const toDelete = allActions.slice(0, allActions.length - CONFIG.MAX_UNDO_HISTORY);
+                    for (const action of toDelete) {
+                        await store.delete(action.id);
+                    }
+                }
+
+                // Clear redo stack when new action is performed
+                AppState.redoStack = [];
+
+                // Update undo button state
+                updateUndoRedoButtons();
+            } catch (err) {
+                console.error('Error saving undo action:', err);
+            }
+        }
+
+        /**
+         * Get undo history
+         */
+        function getUndoHistory() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([CONFIG.UNDO_STORE], 'readonly');
+                const store = transaction.objectStore(CONFIG.UNDO_STORE);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * Undo last action
+         */
+        async function undoLastAction() {
+            const history = await getUndoHistory();
+            if (history.length === 0) {
+                showStatus('Nothing to undo', 'warning');
+                return;
+            }
+
+            const lastAction = history[history.length - 1];
+
+            try {
+                // Restore previous state
+                switch (lastAction.entity) {
+                    case 'fund':
+                        if (lastAction.type === 'delete') {
+                            await saveFundToDB(lastAction.before);
+                        } else if (lastAction.type === 'create') {
+                            await deleteFundFromDB(lastAction.after.id);
+                        } else if (lastAction.type === 'update') {
+                            await saveFundToDB(lastAction.before);
+                        }
+                        break;
+                    case 'group':
+                        if (lastAction.type === 'delete') {
+                            await saveGroup(lastAction.before);
+                        } else if (lastAction.type === 'create') {
+                            await deleteGroup(lastAction.after.id);
+                        } else if (lastAction.type === 'update') {
+                            await saveGroup(lastAction.before);
+                        }
+                        break;
+                    case 'fundName':
+                        if (lastAction.type === 'delete') {
+                            await saveFundName(lastAction.before);
+                        } else if (lastAction.type === 'create') {
+                            await deleteFundName(lastAction.after.name);
+                        } else if (lastAction.type === 'update') {
+                            await saveFundName(lastAction.before);
+                        }
+                        break;
+                }
+
+                // Move action to redo stack
+                AppState.redoStack.push(lastAction);
+
+                // Remove from undo history
+                const transaction = db.transaction([CONFIG.UNDO_STORE], 'readwrite');
+                await transaction.objectStore(CONFIG.UNDO_STORE).delete(lastAction.id);
+
+                await renderTable();
+                showStatus('Action undone', 'success');
+                updateUndoRedoButtons();
+            } catch (err) {
+                showStatus('Error undoing action: ' + err.message, 'error');
+            }
+        }
+
+        /**
+         * Redo last undone action
+         */
+        async function redoLastAction() {
+            if (AppState.redoStack.length === 0) {
+                showStatus('Nothing to redo', 'warning');
+                return;
+            }
+
+            const action = AppState.redoStack.pop();
+
+            try {
+                // Reapply action
+                switch (action.entity) {
+                    case 'fund':
+                        if (action.type === 'delete') {
+                            await deleteFundFromDB(action.after.id);
+                        } else if (action.type === 'create') {
+                            await saveFundToDB(action.after);
+                        } else if (action.type === 'update') {
+                            await saveFundToDB(action.after);
+                        }
+                        break;
+                    case 'group':
+                        if (action.type === 'delete') {
+                            await deleteGroup(action.after.id);
+                        } else if (action.type === 'create') {
+                            await saveGroup(action.after);
+                        } else if (action.type === 'update') {
+                            await saveGroup(action.after);
+                        }
+                        break;
+                    case 'fundName':
+                        if (action.type === 'delete') {
+                            await deleteFundName(action.after.name);
+                        } else if (action.type === 'create') {
+                            await saveFundName(action.after);
+                        } else if (action.type === 'update') {
+                            await saveFundName(action.after);
+                        }
+                        break;
+                }
+
+                // Add back to undo history
+                await saveUndoAction(action.type, action.entity, action.before, action.after);
+
+                await renderTable();
+                showStatus('Action redone', 'success');
+                updateUndoRedoButtons();
+            } catch (err) {
+                showStatus('Error redoing action: ' + err.message, 'error');
+            }
+        }
+
+        /**
+         * Update undo/redo button states
+         */
+        async function updateUndoRedoButtons() {
+            const undoBtn = document.getElementById('undoBtn');
+            const redoBtn = document.getElementById('redoBtn');
+
+            if (undoBtn) {
+                const history = await getUndoHistory();
+                undoBtn.disabled = history.length === 0;
+                undoBtn.title = history.length > 0 ? `Undo (${history.length} actions available)` : 'Nothing to undo';
+            }
+
+            if (redoBtn) {
+                redoBtn.disabled = AppState.redoStack.length === 0;
+                redoBtn.title = AppState.redoStack.length > 0 ? `Redo (${AppState.redoStack.length} actions available)` : 'Nothing to redo';
+            }
         }
 
         // ===========================
@@ -2081,19 +2575,35 @@
         // ===========================
 
         /**
-         * Parse currency string to number with robust error handling
+         * Parse currency string to number with robust error handling and validation
          * @param {string|number|null} val - Value to parse
+         * @param {boolean} validate - Whether to validate range (default: true)
          * @returns {number} Parsed number or NaN
          */
-        function parseCurrency(val) {
+        function parseCurrency(val, validate = true) {
             if (val === null || typeof val === 'undefined') return NaN;
-            if (typeof val === 'number') return isFinite(val) ? val : NaN;
+
+            if (typeof val === 'number') {
+                if (!isFinite(val)) return NaN;
+                if (validate && (val < CONFIG.CURRENCY_MIN || val > CONFIG.CURRENCY_MAX)) {
+                    console.warn('Currency value out of range:', val);
+                    return NaN;
+                }
+                return val;
+            }
+
             if (typeof val === 'string') {
                 const cleaned = val.replace(/[$,]/g, '').replace(/^\((.*)\)$/, '-$1').trim();
-                if (cleaned === '') return NaN;
+                if (cleaned === '' || cleaned === '-') return NaN;
                 const num = parseFloat(cleaned);
-                return isFinite(num) ? num : NaN;
+                if (!isFinite(num)) return NaN;
+                if (validate && (num < CONFIG.CURRENCY_MIN || num > CONFIG.CURRENCY_MAX)) {
+                    console.warn('Currency value out of range:', num);
+                    return NaN;
+                }
+                return num;
             }
+
             return NaN;
         }
 
@@ -2128,7 +2638,8 @@
         }
 
         /**
-         * Validate date string format (YYYY-MM-DD)
+         * Validate date string format (YYYY-MM-DD) and check for valid date
+         * Handles timezone issues by parsing date components directly
          * @param {string} dateStr - Date string to validate
          * @returns {boolean} True if valid date format
          */
@@ -2136,8 +2647,44 @@
             if (typeof dateStr !== 'string' || !CONFIG.DATE_FORMAT.test(dateStr)) {
                 return false;
             }
-            const date = new Date(dateStr);
-            return !isNaN(date.getTime());
+
+            // Parse date components to avoid timezone issues
+            const [year, month, day] = dateStr.split('-').map(Number);
+
+            // Check if date components are valid
+            if (month < 1 || month > 12) return false;
+            if (day < 1 || day > 31) return false;
+            if (year < 1900 || year > 2100) return false;
+
+            // Check if day is valid for the given month
+            const daysInMonth = new Date(year, month, 0).getDate();
+            if (day > daysInMonth) return false;
+
+            return true;
+        }
+
+        /**
+         * Parse date string to Date object in UTC to avoid timezone issues
+         * @param {string} dateStr - Date string in YYYY-MM-DD format
+         * @returns {Date|null} Date object or null if invalid
+         */
+        function parseDate(dateStr) {
+            if (!isValidDate(dateStr)) return null;
+            const [year, month, day] = dateStr.split('-').map(Number);
+            return new Date(Date.UTC(year, month - 1, day));
+        }
+
+        /**
+         * Compare two date strings
+         * @param {string} date1 - First date string
+         * @param {string} date2 - Second date string
+         * @returns {number} -1 if date1 < date2, 0 if equal, 1 if date1 > date2
+         */
+        function compareDates(date1, date2) {
+            const d1 = parseDate(date1);
+            const d2 = parseDate(date2);
+            if (!d1 || !d2) return 0;
+            return d1 < d2 ? -1 : (d1 > d2 ? 1 : 0);
         }
 
         function getVintageYear(fund) {
@@ -2235,6 +2782,7 @@
 
         /**
          * Calculate Internal Rate of Return using Newton-Raphson method
+         * Handles edge cases: all positive/negative flows, zero contributions, extreme values
          * @param {Array<{date: string, amount: number}>} cashFlows - Array of cash flows
          * @param {number} guess - Initial guess for IRR (default from CONFIG)
          * @returns {number|null} IRR as decimal or null if calculation fails
@@ -2242,16 +2790,37 @@
         function calculateIRR(cashFlows, guess = CONFIG.IRR_GUESS) {
             if (!Array.isArray(cashFlows) || cashFlows.length < 2) return null;
 
-            const flows = [...cashFlows].sort((a, b) => new Date(a.date) - new Date(b.date));
-            const firstDate = new Date(flows[0].date);
+            // Validate cash flows
+            const hasNegative = cashFlows.some(f => f.amount < 0);
+            const hasPositive = cashFlows.some(f => f.amount > 0);
+
+            // IRR cannot be calculated if all flows are same sign
+            if (!hasNegative || !hasPositive) return null;
+
+            // Check for zero contributions (denominator in MOIC)
+            const contributions = cashFlows.filter(f => f.amount < 0).reduce((sum, f) => sum + Math.abs(f.amount), 0);
+            if (contributions === 0) return null;
+
+            const flows = [...cashFlows].sort((a, b) => {
+                const d1 = parseDate(a.date);
+                const d2 = parseDate(b.date);
+                return d1 - d2;
+            });
+
+            const firstDate = parseDate(flows[0].date);
+            if (!firstDate) return null;
 
             const npv = rate => flows.reduce((acc, cf) => {
-                const yearsDiff = (new Date(cf.date) - firstDate) / (365.25 * 24 * 60 * 60 * 1000);
+                const cfDate = parseDate(cf.date);
+                if (!cfDate) return acc;
+                const yearsDiff = (cfDate - firstDate) / (365.25 * 24 * 60 * 60 * 1000);
                 return acc + cf.amount / Math.pow(1 + rate, yearsDiff);
             }, 0);
 
             const dNpv = rate => flows.reduce((acc, cf) => {
-                const yearsDiff = (new Date(cf.date) - firstDate) / (365.25 * 24 * 60 * 60 * 1000);
+                const cfDate = parseDate(cf.date);
+                if (!cfDate) return acc;
+                const yearsDiff = (cfDate - firstDate) / (365.25 * 24 * 60 * 60 * 1000);
                 if (yearsDiff === 0) return acc;
                 return acc - (yearsDiff * cf.amount) / Math.pow(1 + rate, yearsDiff + 1);
             }, 0);
@@ -2263,23 +2832,34 @@
                 const derivativeValue = dNpv(rate);
 
                 if (Math.abs(npvValue) < CONFIG.IRR_PRECISION) {
-                    if (rate > 10 || rate < -1) return null;
+                    // Validate result is within reasonable bounds
+                    if (rate > CONFIG.IRR_MAX_RATE || rate < CONFIG.IRR_MIN_RATE) return null;
                     return rate;
                 }
+
+                // Avoid division by near-zero derivative
                 if (Math.abs(derivativeValue) < CONFIG.IRR_PRECISION) return null;
 
                 const newRate = rate - npvValue / derivativeValue;
+
+                // Check convergence
                 if (Math.abs(newRate - rate) < CONFIG.IRR_PRECISION) {
-                    if (newRate > 10 || newRate < -1) return null;
+                    if (newRate > CONFIG.IRR_MAX_RATE || newRate < CONFIG.IRR_MIN_RATE) return null;
                     return newRate;
                 }
 
-                rate = newRate;
+                // Prevent rate from going too extreme
+                rate = Math.max(CONFIG.IRR_MIN_RATE, Math.min(CONFIG.IRR_MAX_RATE, newRate));
             }
 
             return null;
         }
 
+        /**
+         * Calculate Multiple on Invested Capital (MOIC)
+         * @param {Array<{date: string, amount: number}>} cashFlows - Array of cash flows
+         * @returns {number|null} MOIC or null if cannot be calculated
+         */
         function calculateMOIC(cashFlows) {
             if (!Array.isArray(cashFlows) || cashFlows.length === 0) return null;
 
@@ -2293,10 +2873,49 @@
 
             // Cannot calculate meaningful MOIC without contributions
             if (contributions === 0) return null;
-            return distributions / contributions;
+
+            const moic = distributions / contributions;
+
+            // Validate MOIC is reasonable (between 0 and 100x)
+            if (!isFinite(moic) || moic < 0 || moic > 100) return null;
+
+            return moic;
         }
 
-        function calculateMetrics(fund, cutoffDate) {
+        /**
+         * Format MOIC for display with consistent null handling
+         * @param {number|null} moic - MOIC value
+         * @returns {string} Formatted MOIC string
+         */
+        function formatMOIC(moic) {
+            if (moic === null || moic === undefined || !isFinite(moic)) return 'N/A';
+            return moic.toFixed(2) + 'x';
+        }
+
+        /**
+         * Format IRR for display with consistent null handling
+         * @param {number|null} irr - IRR value as decimal
+         * @returns {string} Formatted IRR string
+         */
+        function formatIRR(irr) {
+            if (irr === null || irr === undefined || !isFinite(irr)) return 'N/A';
+            return (irr * 100).toFixed(2) + '%';
+        }
+
+        /**
+         * Calculate metrics for a fund with caching support
+         * @param {Object} fund - Fund object
+         * @param {Date|null} cutoffDate - Cutoff date for calculations
+         * @param {boolean} useCache - Whether to use cached metrics (default: true)
+         * @returns {Object} Calculated metrics
+         */
+        function calculateMetrics(fund, cutoffDate, useCache = true) {
+            // Check cache first
+            if (useCache && fund.id) {
+                const cached = AppState.getMetricsFromCache(fund.id, cutoffDate);
+                if (cached) return cached;
+            }
+
             const commitment = parseCurrency(fund.commitment) || 0;
             const totalContributions = getTotalByType(fund, 'Contribution', cutoffDate);
             const totalDistributions = getTotalByType(fund, 'Distribution', cutoffDate);
@@ -2309,7 +2928,7 @@
             const irr = calculateIRR(cashFlowsForIRR);
             const moic = calculateMOIC(cashFlowsForIRR);
 
-            return {
+            const metrics = {
                 commitment,
                 totalContributions,
                 totalDistributions,
@@ -2320,6 +2939,13 @@
                 irr,
                 moic
             };
+
+            // Cache the result
+            if (fund.id) {
+                AppState.setMetricsCache(fund.id, cutoffDate, metrics);
+            }
+
+            return metrics;
         }
 
         function getLatestQuarterEnd() {
@@ -2328,6 +2954,182 @@
             const currentQuarter = Math.floor(currentMonth / 3);
             const quarterStartMonth = currentQuarter * 3;
             return new Date(now.getFullYear(), quarterStartMonth, 0);
+        }
+
+        // ===========================
+        // Input Validation & Sanitization
+        // ===========================
+
+        /**
+         * Validate fund name
+         * @param {string} name - Fund name to validate
+         * @returns {{valid: boolean, error: string|null}} Validation result
+         */
+        function validateFundName(name) {
+            if (!name || typeof name !== 'string') {
+                return { valid: false, error: 'Fund name is required' };
+            }
+
+            const trimmed = name.trim();
+
+            if (trimmed.length < CONFIG.FUND_NAME_MIN_LENGTH) {
+                return { valid: false, error: `Fund name must be at least ${CONFIG.FUND_NAME_MIN_LENGTH} characters` };
+            }
+
+            if (trimmed.length > CONFIG.FUND_NAME_MAX_LENGTH) {
+                return { valid: false, error: `Fund name must be at most ${CONFIG.FUND_NAME_MAX_LENGTH} characters` };
+            }
+
+            if (!CONFIG.ALLOWED_FUND_NAME_PATTERN.test(trimmed)) {
+                return { valid: false, error: 'Fund name contains invalid characters. Only letters, numbers, spaces, and basic punctuation allowed.' };
+            }
+
+            // Check for potentially dangerous patterns
+            const dangerous = ['<script', 'javascript:', 'onerror=', 'onclick='];
+            const lowerName = trimmed.toLowerCase();
+            for (const pattern of dangerous) {
+                if (lowerName.includes(pattern)) {
+                    return { valid: false, error: 'Fund name contains invalid pattern' };
+                }
+            }
+
+            return { valid: true, error: null };
+        }
+
+        /**
+         * Sanitize text for CSV export to prevent formula injection
+         * @param {string} value - Value to sanitize
+         * @returns {string} Sanitized value
+         */
+        function sanitizeForCSV(value) {
+            if (value === null || value === undefined) return '';
+
+            const str = String(value);
+
+            // Check if starts with formula injection characters
+            if (str.length > 0 && ['=', '+', '-', '@', '\t', '\r'].includes(str[0])) {
+                // Prefix with single quote to prevent formula execution
+                return "'" + str;
+            }
+
+            return str;
+        }
+
+        /**
+         * Escape CSV value (quote if contains special chars)
+         * @param {*} value - Value to escape
+         * @returns {string} Escaped CSV value
+         */
+        function escapeCSV(value) {
+            const sanitized = sanitizeForCSV(value);
+            if (sanitized === '') return '';
+
+            const str = String(sanitized);
+            // If contains comma, quote, or newline, wrap in quotes and escape quotes
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return '"' + str.replace(/"/g, '""') + '"';
+            }
+
+            return str;
+        }
+
+        /**
+         * Validate account number
+         * @param {string} accountNumber - Account number to validate
+         * @returns {{valid: boolean, error: string|null}} Validation result
+         */
+        function validateAccountNumber(accountNumber) {
+            if (!accountNumber || typeof accountNumber !== 'string') {
+                return { valid: false, error: 'Account number is required' };
+            }
+
+            const trimmed = accountNumber.trim();
+
+            if (trimmed.length === 0) {
+                return { valid: false, error: 'Account number cannot be empty' };
+            }
+
+            if (trimmed.length > 100) {
+                return { valid: false, error: 'Account number is too long' };
+            }
+
+            return { valid: true, error: null };
+        }
+
+        /**
+         * Validate cash flow data
+         * @param {Array} cashFlows - Array of cash flows
+         * @returns {{valid: boolean, error: string|null, index: number|null}} Validation result
+         */
+        function validateCashFlows(cashFlows) {
+            if (!Array.isArray(cashFlows)) {
+                return { valid: false, error: 'Cash flows must be an array', index: null };
+            }
+
+            for (let i = 0; i < cashFlows.length; i++) {
+                const cf = cashFlows[i];
+
+                if (!cf.date) {
+                    return { valid: false, error: 'Cash flow missing date', index: i };
+                }
+
+                if (!isValidDate(cf.date)) {
+                    return { valid: false, error: 'Invalid date format (use YYYY-MM-DD)', index: i };
+                }
+
+                if (typeof cf.amount === 'undefined') {
+                    return { valid: false, error: 'Cash flow missing amount', index: i };
+                }
+
+                const amount = parseCurrency(cf.amount);
+                if (isNaN(amount)) {
+                    return { valid: false, error: 'Invalid amount', index: i };
+                }
+
+                if (!['Contribution', 'Distribution'].includes(cf.type)) {
+                    return { valid: false, error: 'Invalid cash flow type (must be Contribution or Distribution)', index: i };
+                }
+            }
+
+            return { valid: true, error: null, index: null };
+        }
+
+        /**
+         * Validate NAV data
+         * @param {Array} monthlyNav - Array of NAV entries
+         * @returns {{valid: boolean, error: string|null, index: number|null}} Validation result
+         */
+        function validateMonthlyNav(monthlyNav) {
+            if (!Array.isArray(monthlyNav)) {
+                return { valid: false, error: 'Monthly NAV must be an array', index: null };
+            }
+
+            for (let i = 0; i < monthlyNav.length; i++) {
+                const nav = monthlyNav[i];
+
+                if (!nav.date) {
+                    return { valid: false, error: 'NAV entry missing date', index: i };
+                }
+
+                if (!isValidDate(nav.date)) {
+                    return { valid: false, error: 'Invalid date format (use YYYY-MM-DD)', index: i };
+                }
+
+                if (typeof nav.amount === 'undefined') {
+                    return { valid: false, error: 'NAV entry missing amount', index: i };
+                }
+
+                const amount = parseCurrency(nav.amount);
+                if (isNaN(amount)) {
+                    return { valid: false, error: 'Invalid NAV amount', index: i };
+                }
+
+                if (amount < 0) {
+                    return { valid: false, error: 'NAV amount cannot be negative', index: i };
+                }
+            }
+
+            return { valid: true, error: null, index: null };
         }
 
         // ===========================
@@ -2442,8 +3244,8 @@
                         <td class="number">${formatCurrency(m.totalDistributions)}</td>
                         <td class="number">${formatCurrency(m.nav)}</td>
                         <td class="number ${m.investmentReturn >= 0 ? 'positive' : 'negative'}">${formatCurrency(m.investmentReturn)}</td>
-                        <td class="number">${m.moic !== null && isFinite(m.moic) ? m.moic.toFixed(2) + 'x' : 'N/A'}</td>
-                        <td class="number ${m.irr !== null && m.irr >= 0 ? 'positive' : 'negative'}">${m.irr !== null ? (m.irr * 100).toFixed(2) + '%' : 'N/A'}</td>
+                        <td class="number">${formatMOIC(m.moic)}</td>
+                        <td class="number ${m.irr !== null && m.irr >= 0 ? 'positive' : 'negative'}">${formatIRR(m.irr)}</td>
                         <td class="number">${formatCurrency(m.outstandingCommitment)}</td>
                         <td class="center">
                             <button class="btn-icon fund-actions-btn" data-fund-id="${fund.id}" title="Actions">⚙</button>
@@ -2503,8 +3305,8 @@
                 <td class="number"><strong>${formatCurrency(totals.totalDistributions)}</strong></td>
                 <td class="number"><strong>${formatCurrency(totals.nav)}</strong></td>
                 <td class="number ${totals.investmentReturn >= 0 ? 'positive' : 'negative'}"><strong>${formatCurrency(totals.investmentReturn)}</strong></td>
-                <td class="number"><strong>${aggregateMOIC !== null && isFinite(aggregateMOIC) ? aggregateMOIC.toFixed(2) + 'x' : 'N/A'}</strong></td>
-                <td class="number ${aggregateIRR !== null && aggregateIRR >= 0 ? 'positive' : 'negative'}"><strong>${aggregateIRR !== null ? (aggregateIRR * 100).toFixed(2) + '%' : 'N/A'}</strong></td>
+                <td class="number"><strong>${formatMOIC(aggregateMOIC)}</strong></td>
+                <td class="number ${aggregateIRR !== null && aggregateIRR >= 0 ? 'positive' : 'negative'}"><strong>${formatIRR(aggregateIRR)}</strong></td>
                 <td class="number"><strong>${formatCurrency(totals.outstandingCommitment)}</strong></td>
                 <td></td>
             `;
@@ -2716,25 +3518,65 @@
         }
 
         /**
-         * Apply filters to the funds table
+         * Apply filters to the funds table with race condition protection
          * @returns {Promise<void>}
          */
         async function applyFilters() {
-            const groupFilterValue = document.getElementById('groupFilter').value;
-
-            // Precompute descendants if group filter is active
-            if (groupFilterValue) {
-                const groupId = parseInt(groupFilterValue);
-                const descendants = await getAllDescendantGroupIds(groupId);
-                currentGroupDescendants = { groupId, ids: descendants };
-            } else {
-                currentGroupDescendants = null;
+            // Cancel any in-flight filter operation
+            if (AppState.abortController) {
+                AppState.abortController.abort();
             }
 
-            // Update header based on selected group
-            updateHeader();
+            // Create new abort controller for this operation
+            AppState.abortController = new AbortController();
+            const signal = AppState.abortController.signal;
 
-            renderTable();
+            try {
+                const groupFilterValue = document.getElementById('groupFilter').value;
+
+                // Check if cancelled
+                if (signal.aborted) return;
+
+                // Precompute descendants if group filter is active
+                if (groupFilterValue) {
+                    const groupId = parseInt(groupFilterValue);
+
+                    // Use cached descendants if available
+                    if (!AppState.groupDescendantsCache.has(groupId)) {
+                        const descendants = await getAllDescendantGroupIds(groupId);
+                        if (signal.aborted) return; // Check again after async operation
+                        AppState.groupDescendantsCache.set(groupId, descendants);
+                    }
+
+                    currentGroupDescendants = {
+                        groupId,
+                        ids: AppState.groupDescendantsCache.get(groupId)
+                    };
+                } else {
+                    currentGroupDescendants = null;
+                }
+
+                if (signal.aborted) return;
+
+                // Update header based on selected group
+                updateHeader();
+
+                if (signal.aborted) return;
+
+                renderTable();
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    // Operation was cancelled, ignore
+                    return;
+                }
+                console.error('Error applying filters:', err);
+                showStatus('Error applying filters: ' + err.message, 'error');
+            } finally {
+                // Clear abort controller if this is still the current one
+                if (AppState.abortController && !AppState.abortController.signal.aborted) {
+                    AppState.abortController = null;
+                }
+            }
         }
 
         /**
@@ -3005,9 +3847,23 @@
                 const cashFlowsText = document.getElementById('cashFlows').value.trim();
                 const monthlyNavText = document.getElementById('monthlyNav').value.trim();
 
-                // Validate
-                if (!fundName || !accountNumber || !commitmentText) {
-                    showStatus('Please fill in all required fields', 'error');
+                // Validate fund name
+                const fundNameValidation = validateFundName(fundName);
+                if (!fundNameValidation.valid) {
+                    showStatus(fundNameValidation.error, 'error');
+                    return;
+                }
+
+                // Validate account number
+                const accountValidation = validateAccountNumber(accountNumber);
+                if (!accountValidation.valid) {
+                    showStatus(accountValidation.error, 'error');
+                    return;
+                }
+
+                // Validate commitment is present
+                if (!commitmentText) {
+                    showStatus('Please enter a commitment amount', 'error');
                     return;
                 }
 
@@ -3022,7 +3878,7 @@
                     return;
                 }
 
-                // Parse JSON
+                // Parse and validate JSON
                 let cashFlows, monthlyNav;
 
                 // Parse cash flows (optional)
@@ -3030,35 +3886,40 @@
                     try {
                         cashFlows = JSON.parse(cashFlowsText);
                         if (!Array.isArray(cashFlows)) throw new Error('Cash flows must be an array');
-
-                        // Validate cash flow structure
-                        cashFlows.forEach((cf, i) => {
-                            if (!cf.date || typeof cf.amount === 'undefined' || !cf.type) {
-                                throw new Error(`Invalid cash flow at index ${i}`);
-                            }
-                            if (!['Contribution', 'Distribution'].includes(cf.type)) {
-                                throw new Error(`Invalid cash flow type at index ${i}`);
-                            }
-                        });
                     } catch (err) {
                         showStatus('Invalid cash flows JSON: ' + err.message, 'error');
+                        return;
+                    }
+
+                    // Validate cash flows using validation function
+                    const cashFlowValidation = validateCashFlows(cashFlows);
+                    if (!cashFlowValidation.valid) {
+                        const errorMsg = cashFlowValidation.index !== null
+                            ? `Cash flow #${cashFlowValidation.index + 1}: ${cashFlowValidation.error}`
+                            : cashFlowValidation.error;
+                        showStatus(errorMsg, 'error');
                         return;
                     }
                 } else {
                     cashFlows = [];
                 }
 
+                // Parse monthly NAV
                 try {
                     monthlyNav = monthlyNavText ? JSON.parse(monthlyNavText) : [];
                     if (!Array.isArray(monthlyNav)) throw new Error('Monthly NAV must be an array');
-
-                    monthlyNav.forEach((nav, i) => {
-                        if (!nav.date || typeof nav.amount === 'undefined') {
-                            throw new Error(`Invalid NAV entry at index ${i}`);
-                        }
-                    });
                 } catch (err) {
                     showStatus('Invalid monthly NAV JSON: ' + err.message, 'error');
+                    return;
+                }
+
+                // Validate monthly NAV using validation function
+                const navValidation = validateMonthlyNav(monthlyNav);
+                if (!navValidation.valid) {
+                    const errorMsg = navValidation.index !== null
+                        ? `NAV entry #${navValidation.index + 1}: ${navValidation.error}`
+                        : navValidation.error;
+                    showStatus(errorMsg, 'error');
                     return;
                 }
 
@@ -3106,21 +3967,38 @@
                     timestamp: new Date().toISOString()
                 };
 
+                // Save undo history for updates
+                let beforeState = null;
                 if (fundId) {
                     fundData.id = parseInt(fundId);
+                    beforeState = await getFundById(parseInt(fundId));
                 }
 
-                await saveFundToDB(fundData);
+                const savedId = await saveFundToDB(fundData);
+
+                // Save undo action
+                if (fundId) {
+                    await saveUndoAction('update', 'fund', beforeState, fundData);
+                } else {
+                    await saveUndoAction('create', 'fund', null, { ...fundData, id: savedId });
+                }
 
                 // Save fund name if new
                 if (!fundNames.has(fundName)) {
                     await saveFundName(fundName);
                     fundNames.add(fundName);
+                    fundNameData.set(fundName, { name: fundName, tags: [] });
                 }
+
+                // Clear metrics cache since data changed
+                AppState.clearMetricsCache();
 
                 closeFundModal();
                 await renderTable();
                 showStatus(fundId ? 'Fund updated successfully' : 'Fund added successfully');
+
+                // Update last backup reminder
+                checkBackupReminder();
 
             } catch (err) {
                 showStatus('Error saving fund: ' + err.message, 'error');
@@ -3201,10 +4079,17 @@
                 }
 
                 if (confirm(`Are you sure you want to delete "${fund.fundName} - ${fund.accountNumber}"?`)) {
+                    // Save undo action before deleting
+                    await saveUndoAction('delete', 'fund', fund, null);
+
                     await deleteFundFromDB(currentActionFundId);
+
+                    // Clear metrics cache
+                    AppState.clearMetricsCache();
+
                     closeActionModal();
                     await renderTable();
-                    showStatus('Fund deleted successfully');
+                    showStatus('Fund deleted successfully (Undo available)', 'success');
                 }
             } catch (err) {
                 showStatus('Error deleting fund: ' + err.message, 'error');
@@ -3651,8 +4536,14 @@
             }
 
             try {
-                await saveFundName(name);
+                const fundNameObj = { name, tags: [] };
+                await saveFundName(fundNameObj);
+
+                // Save undo action
+                await saveUndoAction('create', 'fundName', null, fundNameObj);
+
                 fundNames.add(name);
+                fundNameData.set(name, fundNameObj);
                 input.value = '';
                 await loadFundNamesList();
                 showStatus('Fund name added successfully');
@@ -3754,6 +4645,9 @@
             try {
                 showLoading('Updating fund name...');
 
+                const oldFundNameObj = fundNameData.get(oldName);
+                const newFundNameObj = { name: newName, tags };
+
                 // If name changed, update all funds that use this name
                 if (newName !== oldName) {
                     const funds = await getAllFunds();
@@ -3776,19 +4670,29 @@
 
                     // Delete old name and save new name with tags
                     await deleteFundName(oldName);
-                    await saveFundName({ name: newName, tags });
+                    await saveFundName(newFundNameObj);
+
+                    // Save undo action (store the rename operation)
+                    await saveUndoAction('update', 'fundName', oldFundNameObj, newFundNameObj);
 
                     fundNames.delete(oldName);
                     fundNames.add(newName);
                     fundNameData.delete(oldName);
-                    fundNameData.set(newName, { name: newName, tags });
+                    fundNameData.set(newName, newFundNameObj);
+
+                    // Clear metrics cache
+                    AppState.clearMetricsCache();
 
                     await renderTable();
                     showStatus(`Fund name updated successfully (${fundsToUpdate.length} fund(s) updated)`);
                 } else {
                     // Just update tags
-                    await saveFundName({ name: newName, tags });
-                    fundNameData.set(newName, { name: newName, tags });
+                    await saveFundName(newFundNameObj);
+
+                    // Save undo action
+                    await saveUndoAction('update', 'fundName', oldFundNameObj, newFundNameObj);
+
+                    fundNameData.set(newName, newFundNameObj);
                     await renderTable();
                     showStatus('Tags updated successfully');
                 }
@@ -3809,11 +4713,16 @@
             }
 
             try {
+                const fundNameObj = fundNameData.get(name);
+
+                // Save undo action before deleting
+                await saveUndoAction('delete', 'fundName', fundNameObj, null);
+
                 await deleteFundName(name);
                 fundNames.delete(name);
                 fundNameData.delete(name);
                 await loadFundNamesList();
-                showStatus('Fund name deleted successfully');
+                showStatus('Fund name deleted successfully (Undo available)', 'success');
             } catch (err) {
                 showStatus('Error deleting fund name: ' + err.message, 'error');
             }
@@ -3946,22 +4855,10 @@
                 const groupId = parseInt(editId);
                 const parentGroupId = parseInt(parentId);
 
-                // Check if trying to set itself as parent
-                if (groupId === parentGroupId) {
-                    showStatus('Error: A group cannot be its own parent', 'error');
-                    return;
-                }
-
-                // Check if parent is a descendant (would create circular reference)
-                try {
-                    const descendants = await getAllDescendantGroupIds(groupId);
-                    if (descendants.includes(parentGroupId)) {
-                        showStatus('Error: Cannot set a descendant group as parent (circular reference)', 'error');
-                        return;
-                    }
-                } catch (err) {
-                    console.error('Error checking descendants:', err);
-                    showStatus('Error validating group hierarchy', 'error');
+                // Use improved circular reference detection
+                const allGroups = await getAllGroups();
+                if (wouldCreateCircularReference(groupId, parentGroupId, allGroups)) {
+                    showStatus('Error: This would create a circular reference in the group hierarchy', 'error');
                     return;
                 }
             }
@@ -3973,12 +4870,24 @@
                     type: type || null
                 };
 
-                // If editing, include the ID
+                // Save undo history for updates
+                let beforeState = null;
                 if (editId) {
                     groupData.id = parseInt(editId);
+                    beforeState = await getGroupById(parseInt(editId));
                 }
 
-                await saveGroup(groupData);
+                const savedId = await saveGroup(groupData);
+
+                // Save undo action
+                if (editId) {
+                    await saveUndoAction('update', 'group', beforeState, groupData);
+                } else {
+                    await saveUndoAction('create', 'group', null, { ...groupData, id: savedId });
+                }
+
+                // Clear group descendants cache since hierarchy changed
+                AppState.groupDescendantsCache.clear();
 
                 // Reset form
                 cancelGroupEdit();
@@ -4059,11 +4968,18 @@
             }
 
             try {
+                // Save undo action before deleting
+                await saveUndoAction('delete', 'group', group, null);
+
                 await deleteGroup(id);
+
+                // Clear cache
+                AppState.groupDescendantsCache.clear();
+
                 await loadGroupsList();
                 await populateGroupParentDropdown();
                 await renderTable();
-                showStatus('Group deleted successfully');
+                showStatus('Group deleted successfully (Undo available)', 'success');
             } catch (err) {
                 showStatus('Error deleting group: ' + err.message, 'error');
             }
@@ -4217,6 +5133,7 @@
                 URL.revokeObjectURL(url);
 
                 showStatus('Data exported successfully');
+                updateLastBackupTime();
             } catch (err) {
                 showStatus('Error exporting data: ' + err.message, 'error');
                 console.error(err);
@@ -4259,16 +5176,7 @@
                     'Outstanding Commitment'
                 ];
 
-                // Helper function to escape CSV values
-                const escapeCSV = (value) => {
-                    if (value === null || value === undefined) return '';
-                    const str = String(value);
-                    // If contains comma, quote, or newline, wrap in quotes and escape quotes
-                    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-                        return '"' + str.replace(/"/g, '""') + '"';
-                    }
-                    return str;
-                };
+                // Use the sanitization function defined earlier (no need to redefine)
 
                 // Helper to format number without $ symbol for CSV
                 const formatNumber = (value) => {
@@ -4277,21 +5185,21 @@
                     return val.toFixed(2);
                 };
 
-                // Create CSV rows
+                // Create CSV rows with sanitization
                 const rows = fundsWithMetrics.map(fund => {
                     const m = fund.metrics;
                     return [
                         escapeCSV(fund.fundName),
                         escapeCSV(fund.accountNumber),
                         escapeCSV(m.vintage || ''),
-                        formatNumber(m.commitment),
-                        formatNumber(m.totalContributions),
-                        formatNumber(m.totalDistributions),
-                        formatNumber(m.nav),
-                        formatNumber(m.investmentReturn),
-                        m.moic !== null && isFinite(m.moic) ? m.moic.toFixed(2) : '',
-                        m.irr !== null ? (m.irr * 100).toFixed(2) : '',
-                        formatNumber(m.outstandingCommitment)
+                        sanitizeForCSV(formatNumber(m.commitment)),
+                        sanitizeForCSV(formatNumber(m.totalContributions)),
+                        sanitizeForCSV(formatNumber(m.totalDistributions)),
+                        sanitizeForCSV(formatNumber(m.nav)),
+                        sanitizeForCSV(formatNumber(m.investmentReturn)),
+                        sanitizeForCSV(m.moic !== null && isFinite(m.moic) ? m.moic.toFixed(2) : ''),
+                        sanitizeForCSV(m.irr !== null ? (m.irr * 100).toFixed(2) : ''),
+                        sanitizeForCSV(formatNumber(m.outstandingCommitment))
                     ].join(',');
                 });
 
@@ -4421,6 +5329,34 @@
                 if (detailsModal && detailsModal.classList.contains('show')) {
                     saveDetailsChanges();
                 }
+                return;
+            }
+
+            // Ctrl/Cmd+Z: Undo
+            if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
+                event.preventDefault();
+                undoLastAction();
+                return;
+            }
+
+            // Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y: Redo
+            if ((event.ctrlKey || event.metaKey) && ((event.key === 'z' && event.shiftKey) || event.key === 'y')) {
+                event.preventDefault();
+                redoLastAction();
+                return;
+            }
+
+            // Ctrl/Cmd+E: Export
+            if ((event.ctrlKey || event.metaKey) && event.key === 'e') {
+                event.preventDefault();
+                exportDatabase();
+                return;
+            }
+
+            // Ctrl/Cmd+N: New investment
+            if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
+                event.preventDefault();
+                showAddFundModal();
                 return;
             }
         });
@@ -4649,7 +5585,7 @@
 
                         const onMouseMove = (e) => {
                             const diff = e.pageX - startX;
-                            const newWidth = Math.max(50, startWidth + diff); // Minimum 50px
+                            const newWidth = Math.max(CONFIG.MIN_COLUMN_WIDTH, startWidth + diff);
                             th.style.width = newWidth + 'px';
                             th.style.minWidth = newWidth + 'px';
                             th.style.maxWidth = newWidth + 'px';
@@ -4673,10 +5609,19 @@
                             document.body.style.userSelect = '';
                             document.removeEventListener('mousemove', onMouseMove);
                             document.removeEventListener('mouseup', onMouseUp);
+                            document.removeEventListener('blur', onMouseUp); // Clean up blur listener
+                        };
+
+                        const cleanup = () => {
+                            // Ensure cleanup happens even if mouse leaves window
+                            if (th.classList.contains('resizing')) {
+                                onMouseUp();
+                            }
                         };
 
                         document.addEventListener('mousemove', onMouseMove);
                         document.addEventListener('mouseup', onMouseUp);
+                        window.addEventListener('blur', cleanup); // Handle tab switch/window blur
                     });
                 }
             });
@@ -4724,6 +5669,77 @@
         }
 
         // ===========================
+        // Backup Warning & Reminders
+        // ===========================
+
+        /**
+         * Check if backup warning should be shown
+         */
+        function shouldShowBackupWarning() {
+            const warningShown = Storage.get(CONFIG.STORAGE_BACKUP_WARNING, false);
+            const lastBackup = Storage.get(CONFIG.STORAGE_LAST_BACKUP, null);
+
+            // Always show if never shown
+            if (!warningShown) return true;
+
+            // Show if more than 30 days since last backup
+            if (lastBackup) {
+                const daysSinceBackup = (Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24);
+                if (daysSinceBackup > 30) return true;
+            }
+
+            return false;
+        }
+
+        /**
+         * Show backup warning modal
+         */
+        function showBackupWarning() {
+            const modal = document.getElementById('backupWarningModal');
+            if (modal) {
+                modal.classList.add('show');
+            }
+        }
+
+        /**
+         * Close backup warning modal
+         */
+        function closeBackupWarning() {
+            const modal = document.getElementById('backupWarningModal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+        }
+
+        /**
+         * Check backup reminder after data changes
+         */
+        function checkBackupReminder() {
+            const lastBackup = Storage.get(CONFIG.STORAGE_LAST_BACKUP, null);
+            if (lastBackup) {
+                const daysSinceBackup = (Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24);
+                if (daysSinceBackup > 7) {
+                    // Show subtle reminder in sidebar
+                    const sidebar = document.getElementById('sidebar');
+                    if (sidebar && !document.getElementById('backupReminder')) {
+                        const reminder = document.createElement('div');
+                        reminder.id = 'backupReminder';
+                        reminder.style.cssText = 'padding: 10px 20px; background: #FFF3CD; color: #856404; font-size: 12px; border-top: 1px solid #FFEAA7;';
+                        reminder.textContent = `⚠️ ${Math.floor(daysSinceBackup)} days since last backup`;
+                        sidebar.appendChild(reminder);
+                    }
+                }
+            }
+        }
+
+        /**
+         * Update last backup timestamp
+         */
+        function updateLastBackupTime() {
+            Storage.set(CONFIG.STORAGE_LAST_BACKUP, new Date().toISOString());
+        }
+
+        // ===========================
         // Initialization
         // ===========================
 
@@ -4739,6 +5755,11 @@
             document.getElementById('searchInput').addEventListener('input', applyFilters);
             document.getElementById('cutoffDate').addEventListener('change', applyFilters);
             document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+
+            // Undo/Redo buttons
+            document.getElementById('undoBtn').addEventListener('click', undoLastAction);
+            document.getElementById('redoBtn').addEventListener('click', redoLastAction);
+
             document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
 
             // Table header sorting - use event delegation
@@ -4818,6 +5839,21 @@
                 if (btn) {
                     removeEditFundTag(btn);
                 }
+            });
+
+            // Backup warning modal
+            document.getElementById('closeBackupWarningBtn').addEventListener('click', closeBackupWarning);
+            document.getElementById('exportNowBtn').addEventListener('click', () => {
+                closeBackupWarning();
+                exportDatabase();
+                updateLastBackupTime();
+            });
+            document.getElementById('remindLaterBtn').addEventListener('click', () => {
+                const dontShow = document.getElementById('dontShowBackupWarning').checked;
+                if (dontShow) {
+                    Storage.set(CONFIG.STORAGE_BACKUP_WARNING, true);
+                }
+                closeBackupWarning();
             });
 
             // Sidebar
@@ -4901,7 +5937,17 @@
                 // Initialize event listeners
                 initializeEventListeners();
 
+                // Update undo/redo button states
+                await updateUndoRedoButtons();
+
                 setControlsEnabled(true);
+
+                // Show backup warning if needed
+                setTimeout(() => {
+                    if (shouldShowBackupWarning()) {
+                        showBackupWarning();
+                    }
+                }, 1000); // Delay to not interfere with initial load
 
                 console.log('PE Fund Manager initialized successfully');
             } catch (err) {
