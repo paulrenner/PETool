@@ -907,6 +907,160 @@
                 margin: 0.5in;
             }
         }
+
+        /* Sidebar Styles */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9998;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .sidebar-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: -320px;
+            width: 320px;
+            height: 100%;
+            background: white;
+            box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.show {
+            right: 0;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #E0E0E0;
+            background: #F8F9FA;
+        }
+
+        .sidebar-header h3 {
+            margin: 0;
+            color: #2C3E50;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .sidebar-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #7F8C8D;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .sidebar-close:hover {
+            background: #E0E0E0;
+            color: #2C3E50;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .sidebar-section {
+            margin-bottom: 10px;
+        }
+
+        .sidebar-section-title {
+            padding: 12px 20px 8px;
+            margin: 0;
+            font-size: 12px;
+            font-weight: 600;
+            color: #7F8C8D;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar-item {
+            padding: 0;
+        }
+
+        .sidebar-item a,
+        .sidebar-import-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: #2C3E50;
+            text-decoration: none;
+            transition: background 0.2s ease;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .sidebar-item a:hover,
+        .sidebar-import-label:hover {
+            background: #F8F9FA;
+        }
+
+        .sidebar-item a span,
+        .sidebar-import-label span {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            font-size: 14px;
+        }
+
+        .sidebar-checkbox-label:hover {
+            background: #F8F9FA;
+        }
+
+        .sidebar-checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .sidebar-checkbox-label span {
+            color: #2C3E50;
+            flex: 1;
+        }
+
+        /* Adjust body when sidebar is open to prevent scroll issues */
+        body.sidebar-open {
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
@@ -954,29 +1108,10 @@
             <div class="control-group">
                 <button class="btn-secondary" onclick="resetFilters()">Reset Filters</button>
             </div>
-            <div class="control-group" style="display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="showTagsCheckbox" onchange="toggleTagsDisplay()" checked title="Show/hide fund tags">
-                <label for="showTagsCheckbox" style="margin: 0; cursor: pointer;" title="Show/hide fund tags">Show Tags</label>
-            </div>
             <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
-                <div class="dropdown">
-                    <button class="btn-primary" onclick="toggleManageDropdown()">Manage ▾</button>
-                    <div id="manageDropdown" class="dropdown-menu">
-                        <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showAddFundModal(); return false;">New Investment</a>
-                        <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showManageFundsModal(); return false;">Manage Funds</a>
-                        <a href="#" onclick="document.getElementById('manageDropdown').classList.remove('show'); showManageGroupsModal(); return false;">Manage Groups</a>
-                    </div>
-                </div>
-                <div class="dropdown">
-                    <button class="btn-success" onclick="toggleExportDropdown()">Export ▾</button>
-                    <div id="exportDropdown" class="dropdown-menu">
-                        <a href="#" onclick="exportToCSV(); return false;">Export to CSV</a>
-                        <a href="#" onclick="exportDatabase(); return false;">Export to JSON</a>
-                        <a href="#" onclick="exportToPDF(); return false;">Export to PDF</a>
-                    </div>
-                </div>
-                <label for="importFile" class="file-input-label">Import</label>
-                <input type="file" id="importFile" accept=".json" onchange="importDatabase(event)">
+                <button class="btn-primary" onclick="toggleSidebar()" title="Settings and Actions">
+                    <span style="font-size: 18px;">⚙</span> Menu
+                </button>
             </div>
         </div>
 
@@ -1215,6 +1350,73 @@
             <div class="form-actions">
                 <button class="btn-primary" onclick="saveDetailsChanges()">Save Changes</button>
                 <button class="btn-secondary" onclick="closeDetailsModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Panel -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h3>Settings & Actions</h3>
+            <button class="sidebar-close" onclick="closeSidebar()" title="Close">&times;</button>
+        </div>
+        <div class="sidebar-content">
+            <!-- View Options Section -->
+            <div class="sidebar-section">
+                <h4 class="sidebar-section-title">View Options</h4>
+                <div class="sidebar-item">
+                    <label class="sidebar-checkbox-label">
+                        <input type="checkbox" id="sidebarShowTagsCheckbox" onchange="toggleTagsDisplay()" checked>
+                        <span>Show Tags</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Manage Section -->
+            <div class="sidebar-section">
+                <h4 class="sidebar-section-title">Manage</h4>
+                <div class="sidebar-item">
+                    <a href="#" onclick="closeSidebar(); showAddFundModal(); return false;">
+                        <span>📝</span> New Investment
+                    </a>
+                </div>
+                <div class="sidebar-item">
+                    <a href="#" onclick="closeSidebar(); showManageFundsModal(); return false;">
+                        <span>📋</span> Manage Funds
+                    </a>
+                </div>
+                <div class="sidebar-item">
+                    <a href="#" onclick="closeSidebar(); showManageGroupsModal(); return false;">
+                        <span>📁</span> Manage Groups
+                    </a>
+                </div>
+            </div>
+
+            <!-- Data Section -->
+            <div class="sidebar-section">
+                <h4 class="sidebar-section-title">Data</h4>
+                <div class="sidebar-item">
+                    <a href="#" onclick="closeSidebar(); exportToCSV(); return false;">
+                        <span>📊</span> Export to CSV
+                    </a>
+                </div>
+                <div class="sidebar-item">
+                    <a href="#" onclick="closeSidebar(); exportDatabase(); return false;">
+                        <span>💾</span> Export to JSON
+                    </a>
+                </div>
+                <div class="sidebar-item">
+                    <a href="#" onclick="closeSidebar(); exportToPDF(); return false;">
+                        <span>📄</span> Export to PDF
+                    </a>
+                </div>
+                <div class="sidebar-item">
+                    <label for="sidebarImportFile" class="sidebar-import-label">
+                        <span>📥</span> Import JSON
+                    </label>
+                    <input type="file" id="sidebarImportFile" accept=".json" onchange="importDatabase(event); closeSidebar();" style="display: none;">
+                </div>
             </div>
         </div>
     </div>
@@ -1892,7 +2094,7 @@
                     const row = document.createElement('tr');
 
                     // Build tags HTML - look up tags from fund name
-                    const showTags = document.getElementById('showTagsCheckbox').checked;
+                    const showTags = document.getElementById('sidebarShowTagsCheckbox').checked;
                     const fundNameObj = fundNameData.get(fund.fundName);
                     const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
                     const tagsHtml = (showTags && tags.length > 0)
@@ -2120,8 +2322,24 @@
             renderTable();
         }
 
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.add('show');
+            overlay.classList.add('show');
+            document.body.classList.add('sidebar-open');
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.remove('show');
+            overlay.classList.remove('show');
+            document.body.classList.remove('sidebar-open');
+        }
+
         function toggleTagsDisplay() {
-            const checkbox = document.getElementById('showTagsCheckbox');
+            const checkbox = document.getElementById('sidebarShowTagsCheckbox');
             // Save preference to localStorage
             localStorage.setItem('showTags', checkbox.checked);
             // Re-render table to show/hide tags
@@ -2897,7 +3115,7 @@
                     nameDiv.appendChild(nameSpan);
 
                     // Show tags if any and if tags are enabled
-                    const showTags = document.getElementById('showTagsCheckbox').checked;
+                    const showTags = document.getElementById('sidebarShowTagsCheckbox').checked;
                     if (showTags && fundNameObj.tags && fundNameObj.tags.length > 0) {
                         const tagsDiv = document.createElement('div');
                         tagsDiv.className = 'table-tags';
@@ -3517,24 +3735,7 @@
             }
         }
 
-        function toggleExportDropdown() {
-            const dropdown = document.getElementById('exportDropdown');
-            dropdown.classList.toggle('show');
-            // Close other dropdowns
-            document.getElementById('manageDropdown').classList.remove('show');
-        }
-
-        function toggleManageDropdown() {
-            const dropdown = document.getElementById('manageDropdown');
-            dropdown.classList.toggle('show');
-            // Close other dropdowns
-            document.getElementById('exportDropdown').classList.remove('show');
-        }
-
         async function exportToCSV() {
-            // Close the dropdown
-            document.getElementById('exportDropdown').classList.remove('show');
-
             showLoading('Exporting to CSV...');
             try {
                 // Get filtered and sorted data (same as what's displayed in the table)
@@ -3691,8 +3892,9 @@
 
         // Keyboard shortcuts
         document.addEventListener('keydown', function(event) {
-            // Escape key: Close open modals
+            // Escape key: Close sidebar or open modals
             if (event.key === 'Escape') {
+                const sidebar = document.getElementById('sidebar');
                 const detailsModal = document.getElementById('detailsModal');
                 const actionModal = document.getElementById('actionModal');
                 const investmentModal = document.getElementById('investmentModal');
@@ -3700,7 +3902,9 @@
                 const editFundNameModal = document.getElementById('editFundNameModal');
                 const manageGroupsModal = document.getElementById('manageGroupsModal');
 
-                if (detailsModal && detailsModal.classList.contains('show')) {
+                if (sidebar && sidebar.classList.contains('show')) {
+                    closeSidebar();
+                } else if (detailsModal && detailsModal.classList.contains('show')) {
                     closeDetailsModal();
                 } else if (actionModal && actionModal.classList.contains('show')) {
                     closeActionModal();
@@ -3951,7 +4155,7 @@
 
                 // Restore tag display preference from localStorage (default: true)
                 const showTags = localStorage.getItem('showTags');
-                document.getElementById('showTagsCheckbox').checked = showTags === null ? true : showTags === 'true';
+                document.getElementById('sidebarShowTagsCheckbox').checked = showTags === null ? true : showTags === 'true';
 
                 await renderTable();
 
