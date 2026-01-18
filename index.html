@@ -2290,10 +2290,24 @@
                 });
             };
 
+            // Check if current fund selection is compatible with current group selection
+            // If not, clear the group filter to prioritize the fund selection
+            let adjustedGroupValue = currentGroupValue;
+            if (currentFundValue && currentGroupValue) {
+                const fundsMatchingCurrentFund = allFunds.filter(f => f.fundName === currentFundValue);
+                const fundsInCurrentGroup = filterByGroup(fundsMatchingCurrentFund, currentGroupValue);
+
+                // If the selected fund doesn't exist in the selected group, clear the group filter
+                if (fundsInCurrentGroup.length === 0) {
+                    adjustedGroupValue = '';
+                    groupFilter.value = '';
+                }
+            }
+
             // 1. Update FUND dropdown (filter by group and account, excluding fund itself)
             let fundsForFundDropdown = allFunds;
-            if (currentGroupValue) {
-                fundsForFundDropdown = filterByGroup(fundsForFundDropdown, currentGroupValue);
+            if (adjustedGroupValue) {
+                fundsForFundDropdown = filterByGroup(fundsForFundDropdown, adjustedGroupValue);
             }
             if (currentAccountValue) {
                 fundsForFundDropdown = fundsForFundDropdown.filter(f => f.accountNumber === currentAccountValue);
@@ -2314,8 +2328,8 @@
 
             // 2. Update ACCOUNT dropdown (filter by group and fund, excluding account itself)
             let fundsForAccountDropdown = allFunds;
-            if (currentGroupValue) {
-                fundsForAccountDropdown = filterByGroup(fundsForAccountDropdown, currentGroupValue);
+            if (adjustedGroupValue) {
+                fundsForAccountDropdown = filterByGroup(fundsForAccountDropdown, adjustedGroupValue);
             }
             if (currentFundValue) {
                 fundsForAccountDropdown = fundsForAccountDropdown.filter(f => f.fundName === currentFundValue);
@@ -2363,16 +2377,16 @@
 
                     addGroupOptionsToSelectFiltered(groupFilter, tree, 0, validGroupIds);
 
-                    // Only restore value if it's valid
-                    if (currentGroupValue && validGroupIds.has(parseInt(currentGroupValue))) {
-                        groupFilter.value = currentGroupValue;
+                    // Only restore value if it's valid (use adjustedGroupValue which may have been cleared)
+                    if (adjustedGroupValue && validGroupIds.has(parseInt(adjustedGroupValue))) {
+                        groupFilter.value = adjustedGroupValue;
                     } else {
                         groupFilter.value = '';
                     }
                 } else {
                     // No fund/account filter - show all groups
                     addGroupOptionsToSelect(groupFilter, tree, 0);
-                    groupFilter.value = currentGroupValue;
+                    groupFilter.value = adjustedGroupValue;
                 }
             }
         }
