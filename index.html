@@ -1020,12 +1020,56 @@
                 font-size: 10px;
             }
 
-            /* Limit Account column width for PDF export */
+            /* Reset inline styles and set specific widths for print to fit landscape page */
+            #fundsTable th,
+            #fundsTable td {
+                min-width: auto !important;
+                max-width: none !important;
+            }
+
+            /* Fund Name - allow it to be wider */
+            #fundsTable th:nth-child(1),
+            #fundsTable td:nth-child(1) {
+                width: 140px !important;
+            }
+
+            /* Account - limit width to fit page */
             #fundsTable th:nth-child(2),
             #fundsTable td:nth-child(2) {
-                max-width: 120px !important;
+                width: 100px !important;
+                max-width: 100px !important;
                 overflow: hidden;
                 text-overflow: ellipsis;
+            }
+
+            /* Vintage */
+            #fundsTable th:nth-child(3),
+            #fundsTable td:nth-child(3) {
+                width: 50px !important;
+            }
+
+            /* Numeric columns - compact width */
+            #fundsTable th:nth-child(4),
+            #fundsTable td:nth-child(4),
+            #fundsTable th:nth-child(5),
+            #fundsTable td:nth-child(5),
+            #fundsTable th:nth-child(6),
+            #fundsTable td:nth-child(6),
+            #fundsTable th:nth-child(7),
+            #fundsTable td:nth-child(7),
+            #fundsTable th:nth-child(8),
+            #fundsTable td:nth-child(8),
+            #fundsTable th:nth-child(11),
+            #fundsTable td:nth-child(11) {
+                width: 75px !important;
+            }
+
+            /* MOIC and IRR - narrower */
+            #fundsTable th:nth-child(9),
+            #fundsTable td:nth-child(9),
+            #fundsTable th:nth-child(10),
+            #fundsTable td:nth-child(10) {
+                width: 55px !important;
             }
 
             /* Hide Actions column in print view */
