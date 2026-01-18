@@ -1330,9 +1330,9 @@
                     <thead>
                         <tr>
                             <th>Date</th>
-                            <th>Amount (USD)</th>
-                            <th>Type</th>
-                            <th>Affects Commitment?</th>
+                            <th class="number">Amount (USD)</th>
+                            <th class="center">Type</th>
+                            <th class="center">Affects Commitment?</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -2913,14 +2913,14 @@
 
                         row.innerHTML = `
                             <td><input type="date" value="${escapeHtml(cf.date || '')}" data-field="date" data-index="${index}"></td>
-                            <td><input type="text" value="${displayAmount}" data-field="amount" data-index="${index}"></td>
-                            <td>
+                            <td class="number"><input type="text" value="${displayAmount}" data-field="amount" data-index="${index}"></td>
+                            <td class="center">
                                 <select data-field="type" data-index="${index}">
                                     <option value="Contribution" ${cf.type === 'Contribution' ? 'selected' : ''}>Contribution</option>
                                     <option value="Distribution" ${cf.type === 'Distribution' ? 'selected' : ''}>Distribution</option>
                                 </select>
                             </td>
-                            <td style="text-align: center;">
+                            <td class="center">
                                 <input type="checkbox" ${cf.affectsCommitment !== false ? 'checked' : ''} data-field="affectsCommitment" data-index="${index}">
                             </td>
                             <td>
@@ -2996,14 +2996,14 @@
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td><input type="date" data-field="date" data-index="${index}"></td>
-                <td><input type="text" placeholder="0" data-field="amount" data-index="${index}"></td>
-                <td>
+                <td class="number"><input type="text" placeholder="0" data-field="amount" data-index="${index}"></td>
+                <td class="center">
                     <select data-field="type" data-index="${index}">
                         <option value="Contribution">Contribution</option>
                         <option value="Distribution">Distribution</option>
                     </select>
                 </td>
-                <td style="text-align: center;">
+                <td class="center">
                     <input type="checkbox" checked data-field="affectsCommitment" data-index="${index}">
                 </td>
                 <td>
