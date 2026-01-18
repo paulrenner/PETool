@@ -5,6 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PE Fund Manager</title>
     <style>
+        /* ===========================
+           CSS Variables
+           =========================== */
+        :root {
+            /* Primary Colors */
+            --color-primary: #2C3E50;
+            --color-primary-light: #34495E;
+            --color-background: #ECF0F1;
+            --color-white: #ffffff;
+
+            /* Action Colors */
+            --color-action: #3498DB;
+            --color-action-hover: #2980B9;
+            --color-success: #27AE60;
+            --color-success-hover: #229954;
+            --color-danger: #E74C3C;
+            --color-danger-hover: #C0392B;
+            --color-secondary: #95A5A6;
+            --color-secondary-hover: #7F8C8D;
+
+            /* Neutral Colors */
+            --color-text: #2C3E50;
+            --color-text-light: #95A5A6;
+            --color-border: #E0E0E0;
+            --color-border-input: #BDC3C7;
+            --color-hover-bg: #F8F9FA;
+            --color-alt-bg: #FAFAFA;
+
+            /* Spacing */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 12px;
+            --spacing-lg: 20px;
+            --spacing-xl: 30px;
+
+            /* Border Radius */
+            --radius-sm: 3px;
+            --radius-md: 4px;
+
+            /* Shadows */
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.15);
+            --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+            /* Transitions */
+            --transition-fast: all 0.15s ease;
+            --transition-medium: all 0.2s ease;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -13,25 +62,25 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #ECF0F1;
+            background: var(--color-background);
             min-height: 100vh;
-            padding: 20px;
+            padding: var(--spacing-lg);
         }
 
         .container {
             max-width: 1800px;
             margin: 0 auto;
-            background: white;
-            border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            background: var(--color-white);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
             overflow: hidden;
         }
 
         header {
-            background: #2C3E50;
-            color: white;
-            padding: 24px 30px;
-            border-bottom: 1px solid #34495E;
+            background: var(--color-primary);
+            color: var(--color-white);
+            padding: 24px var(--spacing-xl);
+            border-bottom: 1px solid var(--color-primary-light);
         }
 
         header h1 {
@@ -48,13 +97,13 @@
         }
 
         .controls-bar {
-            background: #FAFAFA;
-            padding: 20px 30px;
+            background: var(--color-alt-bg);
+            padding: var(--spacing-lg) var(--spacing-xl);
             display: flex;
             gap: 16px;
             flex-wrap: wrap;
             align-items: flex-end;
-            border-bottom: 1px solid #E0E0E0;
+            border-bottom: 1px solid var(--color-border);
         }
 
         .control-group {
@@ -66,37 +115,37 @@
         .control-group label {
             font-weight: 500;
             font-size: 0.85em;
-            color: #2C3E50;
+            color: var(--color-text);
         }
 
         .control-group select,
         .control-group input[type="date"],
         .control-group input[type="text"] {
-            padding: 8px 12px;
-            border: 1px solid #BDC3C7;
-            border-radius: 3px;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--color-border-input);
+            border-radius: var(--radius-sm);
             font-size: 14px;
             min-width: 150px;
-            background: white;
-            color: #2C3E50;
+            background: var(--color-white);
+            color: var(--color-text);
         }
 
         .control-group select:focus,
         .control-group input[type="date"]:focus,
         .control-group input[type="text"]:focus {
             outline: none;
-            border-color: #3498DB;
+            border-color: var(--color-action);
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
         }
 
         button {
             padding: 9px 18px;
             border: none;
-            border-radius: 3px;
+            border-radius: var(--radius-sm);
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: var(--transition-fast);
         }
 
         .controls-bar button {
@@ -104,48 +153,48 @@
         }
 
         .btn-primary {
-            background: #3498DB;
-            color: white;
+            background: var(--color-action);
+            color: var(--color-white);
         }
 
         .btn-primary:hover {
-            background: #2980B9;
+            background: var(--color-action-hover);
         }
 
         .btn-secondary {
-            background: #95A5A6;
-            color: white;
+            background: var(--color-secondary);
+            color: var(--color-white);
         }
 
         .btn-secondary:hover {
-            background: #7F8C8D;
+            background: var(--color-secondary-hover);
         }
 
         .btn-success {
-            background: #27AE60;
-            color: white;
+            background: var(--color-success);
+            color: var(--color-white);
         }
 
         .btn-success:hover {
-            background: #229954;
+            background: var(--color-success-hover);
         }
 
         .btn-danger {
-            background: #E74C3C;
-            color: white;
+            background: var(--color-danger);
+            color: var(--color-white);
         }
 
         .btn-danger:hover {
-            background: #C0392B;
+            background: var(--color-danger-hover);
         }
 
         .btn-info {
-            background: #34495E;
-            color: white;
+            background: var(--color-primary-light);
+            color: var(--color-white);
         }
 
         .btn-info:hover {
-            background: #2C3E50;
+            background: var(--color-primary);
         }
 
         button:disabled {
@@ -156,28 +205,28 @@
         .btn-icon {
             background: none;
             border: none;
-            color: #95A5A6;
+            color: var(--color-text-light);
             font-size: 16px;
-            padding: 4px 8px;
+            padding: var(--spacing-xs) var(--spacing-sm);
             cursor: pointer;
-            transition: color 0.15s ease;
+            transition: var(--transition-fast);
         }
 
         .btn-icon:hover {
-            color: #34495E;
+            color: var(--color-primary-light);
         }
 
         /* Action Dropdown */
         .action-dropdown {
             display: none;
             position: fixed;
-            background: white;
-            border: 1px solid #E0E0E0;
-            border-radius: 4px;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+            background: var(--color-white);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
             min-width: 160px;
             z-index: 10000;
-            padding: 4px 0;
+            padding: var(--spacing-xs) 0;
         }
 
         .action-dropdown.show {
@@ -187,18 +236,18 @@
         .action-dropdown a {
             display: block;
             padding: 10px 16px;
-            color: #2C3E50;
+            color: var(--color-text);
             text-decoration: none;
             font-size: 14px;
-            transition: background 0.15s ease;
+            transition: var(--transition-fast);
         }
 
         .action-dropdown a:hover {
-            background: #F8F9FA;
+            background: var(--color-hover-bg);
         }
 
         .action-dropdown a.danger-action {
-            color: #E74C3C;
+            color: var(--color-danger);
         }
 
         .action-dropdown a.danger-action:hover {
@@ -216,13 +265,13 @@
             position: absolute;
             top: 100%;
             right: 0;
-            background: white;
-            border: 1px solid #E0E0E0;
-            border-radius: 3px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            background: var(--color-white);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-md);
             min-width: 160px;
             z-index: 1000;
-            margin-top: 4px;
+            margin-top: var(--spacing-xs);
         }
 
         .dropdown-menu.show {
@@ -232,62 +281,58 @@
         .dropdown-menu a {
             display: block;
             padding: 10px 16px;
-            color: #2C3E50;
+            color: var(--color-text);
             text-decoration: none;
             font-size: 14px;
-            transition: background 0.15s ease;
+            transition: var(--transition-fast);
         }
 
         .dropdown-menu a:hover {
-            background: #F8F9FA;
+            background: var(--color-hover-bg);
         }
 
         .dropdown-menu a:first-child {
-            border-radius: 3px 3px 0 0;
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
         }
 
         .dropdown-menu a:last-child {
-            border-radius: 0 0 3px 3px;
+            border-radius: 0 0 var(--radius-sm) var(--radius-sm);
         }
 
         .content {
-            padding: 30px;
+            padding: var(--spacing-xl);
         }
 
         .table-container {
             overflow-x: auto;
-            margin-bottom: 30px;
+            margin-bottom: var(--spacing-xl);
         }
 
-        .table-container table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border: 1px solid #E0E0E0;
-            border-radius: 3px;
-            overflow: hidden;
-            min-width: 1400px;
-        }
-
+        /* Consolidated table styles - removed duplicate definition */
+        .table-container table,
         table {
             width: 100%;
             border-collapse: collapse;
-            background: white;
-            border: 1px solid #E0E0E0;
-            border-radius: 3px;
+            background: var(--color-white);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
             overflow: hidden;
         }
 
+        .table-container table {
+            min-width: 1400px;
+        }
+
         thead {
-            background: #34495E;
-            color: white;
+            background: var(--color-primary-light);
+            color: var(--color-white);
             position: sticky;
             top: 0;
             z-index: 10;
         }
 
         th {
-            padding: 14px 12px;
+            padding: 14px var(--spacing-md);
             text-align: left;
             font-weight: 500;
             cursor: pointer;
@@ -297,7 +342,7 @@
         }
 
         th:hover {
-            background: #2C3E50;
+            background: var(--color-primary);
         }
 
         th.sorted-asc::after {
@@ -338,7 +383,7 @@
         }
 
         th .resizer:hover {
-            background-color: #3498DB;
+            background-color: var(--color-action);
         }
 
         th.resizing {
@@ -358,18 +403,18 @@
             padding: 12px;
             border-bottom: 1px solid #F0F0F0;
             font-size: 0.9em;
-            color: #2C3E50;
+            color: var(--color-primary);
         }
 
         tbody tr:hover {
-            background: #F8F9FA;
+            background: var(--color-hover-bg);
         }
 
         tbody tr:last-child {
-            border-top: 2px solid #34495E;
-            border-bottom: 2px solid #34495E;
+            border-top: 2px solid var(--color-primary-light);
+            border-bottom: 2px solid var(--color-primary-light);
             font-weight: 600;
-            background: #FAFAFA;
+            background: var(--color-alt-bg);
         }
 
         tbody tr:last-child td {
@@ -387,17 +432,17 @@
         }
 
         .positive {
-            color: #27AE60;
+            color: var(--color-success);
         }
 
         .negative {
-            color: #E74C3C;
+            color: var(--color-danger);
         }
 
         .empty-state {
             text-align: center;
             padding: 60px 20px;
-            color: #95A5A6;
+            color: var(--color-text-light);
         }
 
         .action-buttons {
@@ -434,9 +479,9 @@
         }
 
         .modal-content {
-            background-color: #fff;
+            background-color: var(--color-white);
             padding: 30px;
-            border-radius: 4px;
+            border-radius: var(--radius-md);
             width: 100%;
             max-width: 700px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -446,7 +491,7 @@
 
         .modal-content h2 {
             margin-bottom: 24px;
-            color: #2C3E50;
+            color: var(--color-primary);
             font-size: 1.5em;
             font-weight: 600;
         }
@@ -457,7 +502,7 @@
             right: 20px;
             font-size: 28px;
             font-weight: 300;
-            color: #95A5A6;
+            color: var(--color-text-light);
             cursor: pointer;
             line-height: 1;
             width: 30px;
@@ -465,13 +510,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 3px;
-            transition: background 0.2s ease, color 0.2s ease;
+            border-radius: var(--radius-sm);
+            transition: var(--transition-medium);
         }
 
         .modal .close:hover {
-            background: #E0E0E0;
-            color: #2C3E50;
+            background: var(--color-border);
+            color: var(--color-primary);
         }
 
         .form-group {
@@ -482,7 +527,7 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 500;
-            color: #2C3E50;
+            color: var(--color-primary);
             font-size: 0.9em;
         }
 
@@ -491,18 +536,18 @@
         .form-group textarea {
             width: 100%;
             padding: 10px 12px;
-            border: 1px solid #BDC3C7;
-            border-radius: 3px;
+            border: 1px solid var(--color-border-input);
+            border-radius: var(--radius-sm);
             font-size: 14px;
-            transition: border-color 0.15s ease;
-            background: white;
+            transition: var(--transition-fast);
+            background: var(--color-white);
         }
 
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: #3498DB;
+            border-color: var(--color-action);
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
         }
 
@@ -514,7 +559,7 @@
 
         .form-group .hint {
             font-size: 12px;
-            color: #7F8C8D;
+            color: var(--color-secondary-hover);
             margin-top: 5px;
         }
 
@@ -529,8 +574,8 @@
         .tag {
             display: inline-flex;
             align-items: center;
-            background: #3498DB;
-            color: white;
+            background: var(--color-action);
+            color: var(--color-white);
             padding: 4px 10px;
             border-radius: 12px;
             font-size: 13px;
@@ -559,7 +604,7 @@
         .table-tag {
             display: inline-block;
             background: #E8F4F8;
-            color: #2C3E50;
+            color: var(--color-primary);
             padding: 2px 8px;
             border-radius: 10px;
             font-size: 11px;
@@ -582,8 +627,8 @@
             top: 20px;
             right: 20px;
             padding: 14px 45px 14px 20px;
-            border-radius: 3px;
-            background: white;
+            border-radius: var(--radius-sm);
+            background: var(--color-white);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
             z-index: 2000;
             animation: slideIn 0.2s ease;
@@ -592,11 +637,11 @@
         }
 
         .status-message.success {
-            border-left-color: #27AE60;
+            border-left-color: var(--color-success);
         }
 
         .status-message.error {
-            border-left-color: #E74C3C;
+            border-left-color: var(--color-danger);
         }
 
         .status-message.warning {
@@ -609,7 +654,7 @@
             right: 12px;
             font-size: 20px;
             font-weight: 300;
-            color: #95A5A6;
+            color: var(--color-text-light);
             cursor: pointer;
             line-height: 1;
             background: none;
@@ -618,7 +663,7 @@
         }
 
         .status-message .close-status:hover {
-            color: #2C3E50;
+            color: var(--color-primary);
         }
 
         @keyframes slideIn {
@@ -650,7 +695,7 @@
         }
 
         .loading-content {
-            background: white;
+            background: var(--color-white);
             padding: 30px 40px;
             border-radius: 5px;
             text-align: center;
@@ -659,7 +704,7 @@
 
         .loading-spinner {
             border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498DB;
+            border-top: 4px solid var(--color-action);
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -673,7 +718,7 @@
         }
 
         .loading-text {
-            color: #2C3E50;
+            color: var(--color-primary);
             font-size: 16px;
             font-weight: 500;
         }
@@ -685,17 +730,17 @@
         .file-input-label {
             display: inline-block;
             padding: 9px 18px;
-            background: #34495E;
-            color: white;
-            border-radius: 3px;
+            background: var(--color-primary-light);
+            color: var(--color-white);
+            border-radius: var(--radius-sm);
             cursor: pointer;
             font-weight: 500;
-            transition: all 0.15s ease;
+            transition: var(--transition-fast);
             font-size: 14px;
         }
 
         .file-input-label:hover {
-            background: #2C3E50;
+            background: var(--color-primary);
         }
 
         input:disabled,
@@ -710,8 +755,8 @@
         .details-table-wrapper {
             overflow-x: auto;
             margin-top: 15px;
-            border: 1px solid #E0E0E0;
-            border-radius: 3px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
             max-width: 100%;
         }
 
@@ -721,29 +766,29 @@
         }
 
         .details-table th {
-            background-color: #34495E;
-            color: #fff;
+            background-color: var(--color-primary-light);
+            color: var(--color-white);
             padding: 6px 8px;
             text-align: left;
-            border: 1px solid #2C3E50;
+            border: 1px solid var(--color-primary);
             font-weight: 500;
             font-size: 0.85em;
         }
 
         .details-table td {
             padding: 4px;
-            border: 1px solid #E0E0E0;
+            border: 1px solid var(--color-border);
         }
 
         .details-table tbody tr:nth-child(even) {
-            background-color: #FAFAFA;
+            background-color: var(--color-alt-bg);
         }
 
         .details-table input,
         .details-table select {
             padding: 6px 8px;
-            border: 1px solid #BDC3C7;
-            border-radius: 3px;
+            border: 1px solid var(--color-border-input);
+            border-radius: var(--radius-sm);
             font-size: 1em;
             box-sizing: border-box;
         }
@@ -824,24 +869,24 @@
         .delete-row-btn {
             background: none;
             border: none;
-            color: #E74C3C;
+            color: var(--color-danger);
             font-size: 18px;
             padding: 4px 8px;
             cursor: pointer;
-            transition: color 0.15s ease;
+            transition: var(--transition-fast);
         }
 
         .delete-row-btn:hover {
-            color: #C0392B;
+            color: var(--color-danger-hover);
         }
 
         .validation-error-row {
             background-color: #ffebee !important;
-            border-left: 3px solid #E74C3C;
+            border-left: 3px solid var(--color-danger);
         }
 
         .validation-error-row input {
-            border-color: #E74C3C !important;
+            border-color: var(--color-danger) !important;
         }
 
         #manageFundNamesModal .fund-name-item {
@@ -850,9 +895,9 @@
             align-items: center;
             padding: 10px;
             margin-bottom: 8px;
-            background: #FAFAFA;
-            border: 1px solid #E0E0E0;
-            border-radius: 3px;
+            background: var(--color-alt-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
             gap: 10px;
         }
 
@@ -867,9 +912,9 @@
             align-items: center;
             padding: 8px 10px;
             margin-bottom: 4px;
-            background: #FAFAFA;
-            border: 1px solid #E0E0E0;
-            border-radius: 3px;
+            background: var(--color-alt-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
         }
 
         .group-item.level-0 {
@@ -899,7 +944,7 @@
 
         .group-item-type {
             font-size: 0.85em;
-            color: #7F8C8D;
+            color: var(--color-secondary-hover);
             font-style: italic;
         }
 
@@ -922,7 +967,7 @@
         /* Print Styles for PDF Export */
         @media print {
             body {
-                background: white;
+                background: var(--color-white);
                 padding: 0;
             }
 
@@ -938,9 +983,9 @@
             }
 
             header {
-                background: white;
-                color: #2C3E50;
-                border-bottom: 2px solid #2C3E50;
+                background: var(--color-white);
+                color: var(--color-primary);
+                border-bottom: 2px solid var(--color-primary);
                 padding: 15px;
             }
 
@@ -951,7 +996,7 @@
             table {
                 min-width: 100%;
                 page-break-inside: auto;
-                border: 1px solid #2C3E50;
+                border: 1px solid var(--color-primary);
             }
 
             /* Override min-width for main table in print view */
@@ -960,7 +1005,7 @@
             }
 
             thead {
-                background: #2C3E50 !important;
+                background: var(--color-primary) !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
@@ -982,21 +1027,21 @@
             }
 
             tbody tr:last-child {
-                border-top: 2px solid #2C3E50;
-                border-bottom: 2px solid #2C3E50;
+                border-top: 2px solid var(--color-primary);
+                border-bottom: 2px solid var(--color-primary);
                 background: #F0F0F0 !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
 
             .positive {
-                color: #27AE60 !important;
+                color: var(--color-success) !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
 
             .negative {
-                color: #E74C3C !important;
+                color: var(--color-danger) !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
@@ -1032,7 +1077,7 @@
             right: -320px;
             width: 320px;
             height: 100%;
-            background: white;
+            background: var(--color-white);
             box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
             z-index: 9999;
             transition: right 0.3s ease;
@@ -1049,13 +1094,13 @@
             justify-content: space-between;
             align-items: center;
             padding: 20px;
-            border-bottom: 1px solid #E0E0E0;
-            background: #F8F9FA;
+            border-bottom: 1px solid var(--color-border);
+            background: var(--color-hover-bg);
         }
 
         .sidebar-header h3 {
             margin: 0;
-            color: #2C3E50;
+            color: var(--color-primary);
             font-size: 18px;
             font-weight: 600;
         }
@@ -1064,7 +1109,7 @@
             background: none;
             border: none;
             font-size: 28px;
-            color: #7F8C8D;
+            color: var(--color-secondary-hover);
             cursor: pointer;
             padding: 0;
             width: 30px;
@@ -1072,13 +1117,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 3px;
-            transition: background 0.2s ease, color 0.2s ease;
+            border-radius: var(--radius-sm);
+            transition: var(--transition-medium);
         }
 
         .sidebar-close:hover {
-            background: #E0E0E0;
-            color: #2C3E50;
+            background: var(--color-border);
+            color: var(--color-primary);
         }
 
         .sidebar-content {
@@ -1096,7 +1141,7 @@
             margin: 0;
             font-size: 12px;
             font-weight: 600;
-            color: #7F8C8D;
+            color: var(--color-secondary-hover);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -1111,16 +1156,16 @@
             align-items: center;
             gap: 12px;
             padding: 12px 20px;
-            color: #2C3E50;
+            color: var(--color-primary);
             text-decoration: none;
-            transition: background 0.2s ease;
+            transition: var(--transition-medium);
             cursor: pointer;
             font-size: 14px;
         }
 
         .sidebar-item a:hover,
         .sidebar-import-label:hover {
-            background: #F8F9FA;
+            background: var(--color-hover-bg);
         }
 
         .sidebar-checkbox-label {
@@ -1129,12 +1174,12 @@
             gap: 12px;
             padding: 12px 20px;
             cursor: pointer;
-            transition: background 0.2s ease;
+            transition: var(--transition-medium);
             font-size: 14px;
         }
 
         .sidebar-checkbox-label:hover {
-            background: #F8F9FA;
+            background: var(--color-hover-bg);
         }
 
         .sidebar-checkbox-label input[type="checkbox"] {
@@ -1145,7 +1190,7 @@
         }
 
         .sidebar-checkbox-label span {
-            color: #2C3E50;
+            color: var(--color-primary);
             flex: 1;
         }
 
@@ -1506,17 +1551,133 @@
 
     <script>
         // ===========================
+        // Configuration & Constants
+        // ===========================
+
+        /**
+         * Application configuration constants
+         * @const {Object}
+         */
+        const CONFIG = {
+            // Database
+            DB_NAME: 'FundsDB',
+            FUNDS_STORE: 'funds',
+            FUNDNAMES_STORE: 'fundNames',
+            GROUPS_STORE: 'groups',
+            DB_VERSION: 6,
+
+            // Currency formatting
+            CURRENCY_FORMAT: 'en-US',
+            CURRENCY_CODE: 'USD',
+
+            // IRR calculation
+            IRR_MAX_ITERATIONS: 1000,
+            IRR_PRECISION: 1e-6,
+            IRR_GUESS: 0.1,
+
+            // Date format validation
+            DATE_FORMAT: /^\d{4}-\d{2}-\d{2}$/,
+
+            // Debounce delays (ms)
+            DEBOUNCE_FILTER: 300,
+            DEBOUNCE_SEARCH: 300,
+
+            // LocalStorage keys
+            STORAGE_COLUMN_WIDTHS: 'columnWidths'
+        };
+
+        // ===========================
+        // Utility Functions
+        // ===========================
+
+        /**
+         * Debounce function to limit rate of function calls
+         * @param {Function} func - Function to debounce
+         * @param {number} wait - Wait time in milliseconds
+         * @returns {Function} Debounced function
+         */
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        /**
+         * Safe localStorage operations with error handling
+         * @namespace Storage
+         */
+        const Storage = {
+            /**
+             * Get item from localStorage with error handling
+             * @param {string} key - Storage key
+             * @param {*} defaultValue - Default value if not found
+             * @returns {*} Parsed value or default
+             */
+            get(key, defaultValue = null) {
+                try {
+                    const item = localStorage.getItem(key);
+                    return item ? JSON.parse(item) : defaultValue;
+                } catch (error) {
+                    console.error(`Error reading from localStorage: ${key}`, error);
+                    return defaultValue;
+                }
+            },
+
+            /**
+             * Set item in localStorage with error handling
+             * @param {string} key - Storage key
+             * @param {*} value - Value to store
+             * @returns {boolean} Success status
+             */
+            set(key, value) {
+                try {
+                    localStorage.setItem(key, JSON.stringify(value));
+                    return true;
+                } catch (error) {
+                    console.error(`Error writing to localStorage: ${key}`, error);
+                    if (error.name === 'QuotaExceededError') {
+                        console.warn('localStorage quota exceeded');
+                    }
+                    return false;
+                }
+            },
+
+            /**
+             * Remove item from localStorage with error handling
+             * @param {string} key - Storage key
+             * @returns {boolean} Success status
+             */
+            remove(key) {
+                try {
+                    localStorage.removeItem(key);
+                    return true;
+                } catch (error) {
+                    console.error(`Error removing from localStorage: ${key}`, error);
+                    return false;
+                }
+            }
+        };
+
+        // ===========================
         // IndexedDB Operations
         // ===========================
 
+        // Database state (maintained for backward compatibility)
         let db;
         let dbReady = false;
-        const DB_NAME = 'FundsDB';
-        const FUNDS_STORE = 'funds';
-        const FUNDNAMES_STORE = 'fundNames';
-        const GROUPS_STORE = 'groups';
-        const DB_VERSION = 6;
+        const DB_NAME = CONFIG.DB_NAME;
+        const FUNDS_STORE = CONFIG.FUNDS_STORE;
+        const FUNDNAMES_STORE = CONFIG.FUNDNAMES_STORE;
+        const GROUPS_STORE = CONFIG.GROUPS_STORE;
+        const DB_VERSION = CONFIG.DB_VERSION;
 
+        // Application state
         let currentFunds = [];
         let fundNames = new Set(); // Just the names for quick lookup
         let fundNameData = new Map(); // Full data: name -> { name, tags }
@@ -1528,6 +1689,10 @@
         let currentDetailsFundId = null;
         let hasUnsavedChanges = false;
 
+        /**
+         * Initialize IndexedDB database
+         * @returns {Promise<IDBDatabase>} Resolves with database instance
+         */
         function initDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -1860,6 +2025,11 @@
         // Calculation Functions
         // ===========================
 
+        /**
+         * Parse currency string to number with robust error handling
+         * @param {string|number|null} val - Value to parse
+         * @returns {number} Parsed number or NaN
+         */
         function parseCurrency(val) {
             if (val === null || typeof val === 'undefined') return NaN;
             if (typeof val === 'number') return isFinite(val) ? val : NaN;
@@ -1872,6 +2042,11 @@
             return NaN;
         }
 
+        /**
+         * Format number with commas for thousands separator
+         * @param {number} num - Number to format
+         * @returns {string} Formatted number string
+         */
         function formatNumberWithCommas(num) {
             if (num === null || num === undefined || isNaN(num)) return '';
             // Format with commas and up to 2 decimal places if needed
@@ -1880,19 +2055,30 @@
             return parts.join('.');
         }
 
+        /**
+         * Format number as currency using configured locale
+         * @param {number|string} value - Value to format
+         * @param {boolean} showCents - Whether to show cents (default: false)
+         * @returns {string} Formatted currency string
+         */
         function formatCurrency(value, showCents = false) {
             const val = parseFloat(value);
             if (!isFinite(val) || isNaN(val)) return '$0';
-            return val.toLocaleString('en-US', {
+            return val.toLocaleString(CONFIG.CURRENCY_FORMAT, {
                 style: 'currency',
-                currency: 'USD',
+                currency: CONFIG.CURRENCY_CODE,
                 minimumFractionDigits: showCents ? 2 : 0,
                 maximumFractionDigits: showCents ? 2 : 0
             });
         }
 
+        /**
+         * Validate date string format (YYYY-MM-DD)
+         * @param {string} dateStr - Date string to validate
+         * @returns {boolean} True if valid date format
+         */
         function isValidDate(dateStr) {
-            if (typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            if (typeof dateStr !== 'string' || !CONFIG.DATE_FORMAT.test(dateStr)) {
                 return false;
             }
             const date = new Date(dateStr);
@@ -1992,7 +2178,13 @@
             return flows.sort((a, b) => new Date(a.date) - new Date(b.date));
         }
 
-        function calculateIRR(cashFlows, guess = 0.1) {
+        /**
+         * Calculate Internal Rate of Return using Newton-Raphson method
+         * @param {Array<{date: string, amount: number}>} cashFlows - Array of cash flows
+         * @param {number} guess - Initial guess for IRR (default from CONFIG)
+         * @returns {number|null} IRR as decimal or null if calculation fails
+         */
+        function calculateIRR(cashFlows, guess = CONFIG.IRR_GUESS) {
             if (!Array.isArray(cashFlows) || cashFlows.length < 2) return null;
 
             const flows = [...cashFlows].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -2010,21 +2202,19 @@
             }, 0);
 
             let rate = guess;
-            const maxIterations = 1000;
-            const precision = 1e-6;
 
-            for (let i = 0; i < maxIterations; i++) {
+            for (let i = 0; i < CONFIG.IRR_MAX_ITERATIONS; i++) {
                 const npvValue = npv(rate);
                 const derivativeValue = dNpv(rate);
 
-                if (Math.abs(npvValue) < precision) {
+                if (Math.abs(npvValue) < CONFIG.IRR_PRECISION) {
                     if (rate > 10 || rate < -1) return null;
                     return rate;
                 }
-                if (Math.abs(derivativeValue) < precision) return null;
+                if (Math.abs(derivativeValue) < CONFIG.IRR_PRECISION) return null;
 
                 const newRate = rate - npvValue / derivativeValue;
-                if (Math.abs(newRate - rate) < precision) {
+                if (Math.abs(newRate - rate) < CONFIG.IRR_PRECISION) {
                     if (newRate > 10 || newRate < -1) return null;
                     return newRate;
                 }
@@ -2470,6 +2660,10 @@
             return false;
         }
 
+        /**
+         * Apply filters to the funds table
+         * @returns {Promise<void>}
+         */
         async function applyFilters() {
             const groupFilterValue = document.getElementById('groupFilter').value;
 
@@ -2487,6 +2681,12 @@
 
             renderTable();
         }
+
+        /**
+         * Debounced version of applyFilters to reduce excessive calls
+         * @const {Function}
+         */
+        const applyFiltersDebounced = debounce(applyFilters, CONFIG.DEBOUNCE_FILTER);
 
         function updateHeader() {
             const groupFilterValue = document.getElementById('groupFilter').value;
@@ -2555,7 +2755,7 @@
         function toggleTagsDisplay() {
             const checkbox = document.getElementById('sidebarShowTagsCheckbox');
             // Save preference to localStorage
-            localStorage.setItem('showTags', checkbox.checked);
+            Storage.set('showTags', checkbox.checked);
             // Re-render table to show/hide tags
             renderTable();
             // Also refresh Manage Funds list if it's open
@@ -4430,14 +4630,22 @@
             restoreColumnWidths();
         }
 
+        /**
+         * Save column width to localStorage
+         * @param {number} columnIndex - Column index
+         * @param {number} width - Column width in pixels
+         */
         function saveColumnWidth(columnIndex, width) {
-            const savedWidths = JSON.parse(localStorage.getItem('columnWidths') || '{}');
+            const savedWidths = Storage.get(CONFIG.STORAGE_COLUMN_WIDTHS, {});
             savedWidths[columnIndex] = width;
-            localStorage.setItem('columnWidths', JSON.stringify(savedWidths));
+            Storage.set(CONFIG.STORAGE_COLUMN_WIDTHS, savedWidths);
         }
 
+        /**
+         * Restore saved column widths from localStorage
+         */
         function restoreColumnWidths() {
-            const savedWidths = JSON.parse(localStorage.getItem('columnWidths') || '{}');
+            const savedWidths = Storage.get(CONFIG.STORAGE_COLUMN_WIDTHS, {});
             const table = document.getElementById('fundsTable');
             const ths = table.querySelectorAll('thead th');
 
@@ -4492,8 +4700,8 @@
                 document.getElementById('cutoffDate').value = quarterEnd.toISOString().split('T')[0];
 
                 // Restore tag display preference from localStorage (default: true)
-                const showTags = localStorage.getItem('showTags');
-                document.getElementById('sidebarShowTagsCheckbox').checked = showTags === null ? true : showTags === 'true';
+                const showTags = Storage.get('showTags', true);
+                document.getElementById('sidebarShowTagsCheckbox').checked = showTags;
 
                 await renderTable();
 
