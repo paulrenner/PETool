@@ -52,13 +52,18 @@ Automatically calculated for each fund:
 
 ## Custom Tags Feature
 
+Tags are stored at the **fund name level**, meaning all investments using the same fund name share the same tags. This makes sense because tags describe the fund itself (e.g., "Venture Capital", "Technology"), not individual investment accounts.
+
 ### Adding Tags to Funds
 
-1. **Open Fund Modal**: When adding or editing a fund, scroll to the "Tags" section
-2. **Enter Tag Name**: Type a tag name (e.g., "Venture Capital", "Technology", "Asia-Pacific")
-3. **Press Enter**: Hit Enter to add the tag
+1. **Open Manage Funds**: Click the "Manage Funds" button in the top navigation
+2. **Click Edit**: Click the "Edit" button next to the fund name you want to tag
+3. **Add Tags**: In the "Edit Fund" modal, type a tag name and press Enter
 4. **Autocomplete**: Previously used tags appear as suggestions while you type
 5. **Remove Tags**: Click the × button on any tag to remove it
+6. **Save Changes**: Click "Save Changes" to update the fund
+
+All investments using that fund name will now display those tags.
 
 ### Tag Examples
 
@@ -78,16 +83,18 @@ Use the search box at the top of the table to find funds by tag:
 
 ### Tag Display
 
-- **In Modal**: Tags appear as blue pills with × buttons for removal
-- **In Table**: Tags appear as small light-blue pills below the fund name
-- **In Exports**: Tags are included in JSON and CSV exports
+- **In Manage Funds List**: Tags appear as small light-blue pills below the fund name
+- **In Edit Fund Modal**: Tags appear as blue pills with × buttons for removal
+- **In Main Table**: Tags appear as small light-blue pills below the fund name
+- **In Exports**: Tags are included in JSON exports (with fund names)
 
 ### Tag Management
 
-Tags are automatically:
-- **Saved**: First time you use a tag, it's saved for autocomplete
+- **Stored with Fund Names**: Each fund name has its own tags
+- **Shared Across Investments**: All investments using the same fund name inherit its tags
+- **Edit Anytime**: Update tags by editing the fund name in "Manage Funds"
 - **Persisted**: Tags are stored in your browser's IndexedDB
-- **Exported**: Included in database exports
+- **Exported**: Included in database exports as part of fund name data
 - **Imported**: Restored when importing database backups
 
 ## Technical Details
@@ -95,7 +102,7 @@ Tags are automatically:
 ### Technology Stack
 - **Frontend**: Pure HTML/CSS/JavaScript (no framework dependencies)
 - **Storage**: IndexedDB for local browser storage
-- **Testing**: Jest with 152 unit tests (95.78% coverage)
+- **Testing**: Jest with 164 unit tests (95.78% coverage)
 - **Exports**: jsPDF and jsPDF-AutoTable for PDF generation
 
 ### Browser Compatibility
@@ -139,7 +146,7 @@ npm run test:watch
 ## Testing
 
 The application includes comprehensive unit tests:
-- **152 tests** across 4 test suites
+- **164 tests** across 4 test suites
 - **95.78%** statement coverage
 - **86.45%** branch coverage
 - **97.72%** function coverage
@@ -204,8 +211,16 @@ This application is provided as-is for personal and commercial use.
 
 ## Version History
 
-### v1.3.0 (Current)
-- Added custom tagging system
+### v1.4.0 (Current)
+- **BREAKING CHANGE**: Tags moved from investment level to fund name level
+- Added "Edit Fund" modal for managing fund names and tags together
+- Updated "Manage Funds" with Edit/Delete buttons
+- Database migration from v5 to v6 (automatic)
+- 41 comprehensive tag tests (164 total tests)
+- Improved tag workflow and user experience
+
+### v1.3.0
+- Added custom tagging system (investment level)
 - Tag autocomplete functionality
 - Tag search integration
 - 29 new tests for tag features

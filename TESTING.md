@@ -5,7 +5,7 @@ This document describes the comprehensive unit testing setup for the PE Fund Man
 ## Overview
 
 The application now includes a full test suite using Jest with:
-- **152 unit tests** across 4 test suites
+- **164 unit tests** across 4 test suites
 - **95.78% statement coverage**
 - **86.45% branch coverage**
 - **97.72% function coverage**
@@ -102,42 +102,57 @@ Tests for formatting and parsing:
 - **escapeHtml()** - Escape HTML special characters
 - **escapeCSV()** - Escape CSV special characters
 
-### tags.test.js (29 tests)
-Tests for tag functionality:
-- **Tag Structure** - Array storage on fund objects
-  - Tags stored as array
-  - Empty arrays for funds without tags
+### tags.test.js (41 tests)
+Tests for tag functionality at the **fund name level**:
+- **Fund Name Data Structure** (4 tests) - Fund name objects with tags
+  - Fund name object contains name and tags array
+  - Empty tags array default
+  - Multiple fund names with different tags
   - Special character handling
-- **Tag Validation** - Input validation rules
+- **Investment Lookup** (3 tests) - How investments access tags
+  - Lookup tags from fund name data
+  - Unknown fund names return empty tags
+  - Multiple investments share tags from same fund name
+- **Tag Validation** (4 tests) - Input validation rules
   - Empty string prevention
   - Whitespace trimming
-  - Duplicate tag detection
+  - Duplicate tag detection on same fund
   - Case-sensitive storage
-- **Tag Search** - Search functionality integration
+- **Tag Search** (6 tests) - Search functionality integration
   - Exact tag name matching
   - Partial tag name matching
   - Multi-tag search support
-  - Handling missing tags
-- **Tag Display** - UI rendering
+  - Handling funds with no tags
+  - Handling missing fund names
+- **Tag Display** (4 tests) - UI rendering
   - Table tag formatting
   - Modal tag chips with remove buttons
   - Empty state handling
-- **Tag Data Operations** - Data manipulation
+  - Manage Funds list display
+- **Tag Data Operations** (5 tests) - Data manipulation
   - Set to Array conversion
   - Uniqueness in Set
-  - Tag removal from arrays
-- **Tag Export/Import** - Data portability
-  - Tags included in exports
-  - Missing tags in imports
-  - Unique tag collection
-  - Tag preservation in duplication
-- **Tag Autocomplete** - User experience
-  - Datalist population
-  - Selected tag filtering
-- **Tag Edge Cases** - Robustness
+  - Tag removal from fund
+  - Tag addition to fund
+  - Update fund name and preserve tags
+- **Tag Export/Import** (6 tests) - Data portability
+  - Export fund names with tags as objects
+  - Import fund names as objects
+  - Support old format (strings) for backward compatibility
+  - Handle mixed format imports
+  - Investments should not have tags field
+- **Tag Autocomplete** (2 tests) - User experience
+  - Collect all unique tags from all funds
+  - Populate datalist with available tags
+- **Tag Edge Cases** (5 tests) - Robustness
   - Very long tag names
   - Special characters and Unicode
   - Null and undefined handling
+  - Many tags on single fund
+- **Tag Workflow** (3 tests) - Business logic
+  - Updating fund tags affects all investments with that fund name
+  - Renaming fund transfers tags to new name
+  - Deleting fund name removes tag lookup for investments
 
 ## Key Test Cases
 

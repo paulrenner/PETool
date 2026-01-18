@@ -1,46 +1,113 @@
 /**
  * Tests for tag functionality in PE Fund Manager
  *
- * Note: These tests focus on the tag-related utility functions.
- * Database operations (getAllTags, saveTag, deleteTag) require IndexedDB
- * which would need a more complex test setup with fake-indexeddb.
+ * Tags are now stored at the FUND NAME level, not investment level.
+ * Each fund name can have multiple tags, and all investments using that
+ * fund name inherit those tags.
+ *
+ * Note: Database operations require IndexedDB which would need fake-indexeddb
+ * for complete testing. These tests focus on the data structures and logic.
  */
 
-describe('Tag Management', () => {
-    describe('Tag Structure', () => {
-        test('tags should be stored as array on fund object', () => {
-            const fund = {
-                fundName: 'Test Fund',
-                accountNumber: '12345',
-                tags: ['Venture Capital', 'Growth Equity']
+describe('Tag Management - Fund Name Level', () => {
+    describe('Fund Name Data Structure', () => {
+        test('fund name object should contain name and tags array', () => {
+            const fundNameObj = {
+                name: 'ABC Venture Fund',
+                tags: ['Venture Capital', 'Technology']
             };
 
-            expect(Array.isArray(fund.tags)).toBe(true);
-            expect(fund.tags).toHaveLength(2);
-            expect(fund.tags).toContain('Venture Capital');
-            expect(fund.tags).toContain('Growth Equity');
+            expect(fundNameObj).toHaveProperty('name');
+            expect(fundNameObj).toHaveProperty('tags');
+            expect(Array.isArray(fundNameObj.tags)).toBe(true);
+            expect(fundNameObj.tags).toHaveLength(2);
         });
 
-        test('fund without tags should have empty array', () => {
-            const fund = {
-                fundName: 'Test Fund',
-                accountNumber: '12345',
+        test('fund name without tags should have empty array', () => {
+            const fundNameObj = {
+                name: 'XYZ Growth Fund',
                 tags: []
             };
 
-            expect(Array.isArray(fund.tags)).toBe(true);
-            expect(fund.tags).toHaveLength(0);
+            expect(Array.isArray(fundNameObj.tags)).toBe(true);
+            expect(fundNameObj.tags).toHaveLength(0);
+        });
+
+        test('should support multiple fund names with different tags', () => {
+            const fundNameData = new Map([
+                ['Fund A', { name: 'Fund A', tags: ['Venture Capital', 'Technology'] }],
+                ['Fund B', { name: 'Fund B', tags: ['Real Estate', 'Commercial'] }],
+                ['Fund C', { name: 'Fund C', tags: [] }]
+            ]);
+
+            expect(fundNameData.size).toBe(3);
+            expect(fundNameData.get('Fund A').tags).toHaveLength(2);
+            expect(fundNameData.get('Fund B').tags).toHaveLength(2);
+            expect(fundNameData.get('Fund C').tags).toHaveLength(0);
         });
 
         test('tags should handle special characters', () => {
-            const fund = {
-                fundName: 'Test Fund',
+            const fundNameObj = {
+                name: 'Multi-Strategy Fund',
                 tags: ['Real Estate - Commercial', 'Energy & Infrastructure', 'Tech (Early Stage)']
             };
 
-            expect(fund.tags[0]).toBe('Real Estate - Commercial');
-            expect(fund.tags[1]).toBe('Energy & Infrastructure');
-            expect(fund.tags[2]).toBe('Tech (Early Stage)');
+            expect(fundNameObj.tags[0]).toBe('Real Estate - Commercial');
+            expect(fundNameObj.tags[1]).toBe('Energy & Infrastructure');
+            expect(fundNameObj.tags[2]).toBe('Tech (Early Stage)');
+        });
+    });
+
+    describe('Investment Lookup', () => {
+        test('investment should lookup tags from fund name', () => {
+            const fundNameData = new Map([
+                ['ABC Venture Fund', { name: 'ABC Venture Fund', tags: ['Venture Capital', 'Series A'] }]
+            ]);
+
+            const investment = {
+                fundName: 'ABC Venture Fund',
+                accountNumber: '12345',
+                commitment: 1000000
+            };
+
+            const fundNameObj = fundNameData.get(investment.fundName);
+            const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+
+            expect(tags).toEqual(['Venture Capital', 'Series A']);
+        });
+
+        test('investment with unknown fund name should have empty tags', () => {
+            const fundNameData = new Map([
+                ['Fund A', { name: 'Fund A', tags: ['Tag1'] }]
+            ]);
+
+            const investment = {
+                fundName: 'Fund B',
+                accountNumber: '12345'
+            };
+
+            const fundNameObj = fundNameData.get(investment.fundName);
+            const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+
+            expect(tags).toEqual([]);
+        });
+
+        test('multiple investments with same fund name should share tags', () => {
+            const fundNameData = new Map([
+                ['Shared Fund', { name: 'Shared Fund', tags: ['Growth Equity', 'Healthcare'] }]
+            ]);
+
+            const investment1 = { fundName: 'Shared Fund', accountNumber: '001' };
+            const investment2 = { fundName: 'Shared Fund', accountNumber: '002' };
+            const investment3 = { fundName: 'Shared Fund', accountNumber: '003' };
+
+            const tags1 = fundNameData.get(investment1.fundName).tags;
+            const tags2 = fundNameData.get(investment2.fundName).tags;
+            const tags3 = fundNameData.get(investment3.fundName).tags;
+
+            expect(tags1).toEqual(tags2);
+            expect(tags2).toEqual(tags3);
+            expect(tags1).toEqual(['Growth Equity', 'Healthcare']);
         });
     });
 
@@ -54,18 +121,22 @@ describe('Tag Management', () => {
         });
 
         test('tag names should be trimmed', () => {
-            const tagWithSpaces = '  Venture Capital  ';
+            const tagWithSpaces = '  Growth Equity  ';
             const trimmed = tagWithSpaces.trim();
 
-            expect(trimmed).toBe('Venture Capital');
+            expect(trimmed).toBe('Growth Equity');
             expect(trimmed.length).toBeLessThan(tagWithSpaces.length);
         });
 
-        test('duplicate tags should be prevented', () => {
-            const tags = ['Venture Capital', 'Growth Equity'];
-            const newTag = 'Venture Capital';
+        test('duplicate tags should be prevented on same fund', () => {
+            const fundNameObj = {
+                name: 'Test Fund',
+                tags: ['Venture Capital', 'Technology']
+            };
 
-            const isDuplicate = tags.includes(newTag);
+            const newTag = 'Venture Capital';
+            const isDuplicate = fundNameObj.tags.includes(newTag);
+
             expect(isDuplicate).toBe(true);
         });
 
@@ -79,70 +150,92 @@ describe('Tag Management', () => {
     });
 
     describe('Tag Search', () => {
-        test('should match exact tag name', () => {
-            const fund = {
-                fundName: 'Test Fund',
-                tags: ['Venture Capital', 'Growth Equity']
-            };
+        test('should match exact tag name on fund', () => {
+            const fundNameData = new Map([
+                ['Fund A', { name: 'Fund A', tags: ['Venture Capital', 'Technology'] }]
+            ]);
+
+            const investment = { fundName: 'Fund A' };
             const searchTerm = 'venture capital';
-            const fundTags = fund.tags.map(tag => tag.toLowerCase()).join(' ');
+
+            const fundNameObj = fundNameData.get(investment.fundName);
+            const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+            const fundTags = tags.map(tag => tag.toLowerCase()).join(' ');
 
             expect(fundTags.includes(searchTerm)).toBe(true);
         });
 
         test('should match partial tag name', () => {
-            const fund = {
-                fundName: 'Test Fund',
-                tags: ['Venture Capital', 'Growth Equity']
-            };
+            const fundNameData = new Map([
+                ['Fund A', { name: 'Fund A', tags: ['Venture Capital', 'Technology'] }]
+            ]);
+
+            const investment = { fundName: 'Fund A' };
             const searchTerm = 'venture';
-            const fundTags = fund.tags.map(tag => tag.toLowerCase()).join(' ');
+
+            const fundNameObj = fundNameData.get(investment.fundName);
+            const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+            const fundTags = tags.map(tag => tag.toLowerCase()).join(' ');
 
             expect(fundTags.includes(searchTerm)).toBe(true);
         });
 
         test('should not match tags that do not exist', () => {
-            const fund = {
-                fundName: 'Test Fund',
-                tags: ['Venture Capital', 'Growth Equity']
-            };
+            const fundNameData = new Map([
+                ['Fund A', { name: 'Fund A', tags: ['Venture Capital'] }]
+            ]);
+
+            const investment = { fundName: 'Fund A' };
             const searchTerm = 'real estate';
-            const fundTags = fund.tags.map(tag => tag.toLowerCase()).join(' ');
+
+            const fundNameObj = fundNameData.get(investment.fundName);
+            const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+            const fundTags = tags.map(tag => tag.toLowerCase()).join(' ');
 
             expect(fundTags.includes(searchTerm)).toBe(false);
         });
 
         test('should match across multiple tags', () => {
-            const fund = {
-                fundName: 'Test Fund',
-                tags: ['Venture Capital', 'Growth Equity', 'Technology']
-            };
-            const searchTerms = ['venture', 'technology'];
-            const fundTags = fund.tags.map(tag => tag.toLowerCase()).join(' ');
+            const fundNameData = new Map([
+                ['Fund A', { name: 'Fund A', tags: ['Venture Capital', 'Technology', 'Healthcare'] }]
+            ]);
+
+            const investment = { fundName: 'Fund A' };
+            const searchTerms = ['venture', 'technology', 'healthcare'];
+
+            const fundNameObj = fundNameData.get(investment.fundName);
+            const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+            const fundTags = tags.map(tag => tag.toLowerCase()).join(' ');
 
             searchTerms.forEach(term => {
                 expect(fundTags.includes(term)).toBe(true);
             });
         });
 
-        test('should handle funds with no tags', () => {
-            const fund = {
-                fundName: 'Test Fund',
-                tags: []
-            };
+        test('should handle fund with no tags', () => {
+            const fundNameData = new Map([
+                ['Fund A', { name: 'Fund A', tags: [] }]
+            ]);
+
+            const investment = { fundName: 'Fund A' };
             const searchTerm = 'venture';
-            const fundTags = fund.tags.map(tag => tag.toLowerCase()).join(' ');
+
+            const fundNameObj = fundNameData.get(investment.fundName);
+            const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+            const fundTags = tags.map(tag => tag.toLowerCase()).join(' ');
 
             expect(fundTags).toBe('');
             expect(fundTags.includes(searchTerm)).toBe(false);
         });
 
-        test('should handle funds with undefined tags', () => {
-            const fund = {
-                fundName: 'Test Fund'
-            };
+        test('should handle missing fund name in data', () => {
+            const fundNameData = new Map();
+            const investment = { fundName: 'Unknown Fund' };
             const searchTerm = 'venture';
-            const fundTags = (fund.tags || []).map(tag => tag.toLowerCase()).join(' ');
+
+            const fundNameObj = fundNameData.get(investment.fundName);
+            const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+            const fundTags = tags.map(tag => tag.toLowerCase()).join(' ');
 
             expect(fundTags).toBe('');
             expect(fundTags.includes(searchTerm)).toBe(false);
@@ -151,12 +244,12 @@ describe('Tag Management', () => {
 
     describe('Tag Display', () => {
         test('should format tags for table display', () => {
-            const tags = ['Venture Capital', 'Growth Equity'];
+            const tags = ['Venture Capital', 'Technology'];
             const tagsHtml = tags.map(tag => `<span class="table-tag">${tag}</span>`).join('');
 
             expect(tagsHtml).toContain('table-tag');
             expect(tagsHtml).toContain('Venture Capital');
-            expect(tagsHtml).toContain('Growth Equity');
+            expect(tagsHtml).toContain('Technology');
         });
 
         test('should handle empty tag array for display', () => {
@@ -175,6 +268,22 @@ describe('Tag Management', () => {
             expect(tagHtml).toContain('Venture Capital');
             expect(tagHtml).toContain('tag-remove');
             expect(tagHtml).toContain('×');
+        });
+
+        test('should display tags in Manage Funds list', () => {
+            const fundNameObj = {
+                name: 'ABC Venture Fund',
+                tags: ['Venture Capital', 'Series A']
+            };
+
+            const hasTagsToDisplay = fundNameObj.tags && fundNameObj.tags.length > 0;
+            expect(hasTagsToDisplay).toBe(true);
+
+            if (hasTagsToDisplay) {
+                const tagsDisplay = fundNameObj.tags.map(tag => `<span class="table-tag">${tag}</span>`).join('');
+                expect(tagsDisplay).toContain('Venture Capital');
+                expect(tagsDisplay).toContain('Series A');
+            }
         });
     });
 
@@ -199,90 +308,168 @@ describe('Tag Management', () => {
             expect(tagsSet.has('Growth Equity')).toBe(true);
         });
 
-        test('should remove tag from array', () => {
-            const tags = ['Venture Capital', 'Growth Equity', 'Real Estate'];
-            const tagToRemove = 'Growth Equity';
-            const filteredTags = tags.filter(tag => tag !== tagToRemove);
+        test('should remove tag from fund', () => {
+            const fundNameObj = {
+                name: 'Test Fund',
+                tags: ['Venture Capital', 'Growth Equity', 'Real Estate']
+            };
 
-            expect(filteredTags).toHaveLength(2);
-            expect(filteredTags).toContain('Venture Capital');
-            expect(filteredTags).toContain('Real Estate');
-            expect(filteredTags).not.toContain('Growth Equity');
+            const tagToRemove = 'Growth Equity';
+            fundNameObj.tags = fundNameObj.tags.filter(tag => tag !== tagToRemove);
+
+            expect(fundNameObj.tags).toHaveLength(2);
+            expect(fundNameObj.tags).toContain('Venture Capital');
+            expect(fundNameObj.tags).toContain('Real Estate');
+            expect(fundNameObj.tags).not.toContain('Growth Equity');
+        });
+
+        test('should add tag to fund', () => {
+            const fundNameObj = {
+                name: 'Test Fund',
+                tags: ['Venture Capital']
+            };
+
+            const newTag = 'Technology';
+            if (!fundNameObj.tags.includes(newTag)) {
+                fundNameObj.tags.push(newTag);
+            }
+
+            expect(fundNameObj.tags).toHaveLength(2);
+            expect(fundNameObj.tags).toContain('Venture Capital');
+            expect(fundNameObj.tags).toContain('Technology');
+        });
+
+        test('should update fund name and preserve tags', () => {
+            const fundNameObj = {
+                name: 'Old Fund Name',
+                tags: ['Venture Capital', 'Technology']
+            };
+
+            const newName = 'New Fund Name';
+            const updatedObj = {
+                name: newName,
+                tags: fundNameObj.tags
+            };
+
+            expect(updatedObj.name).toBe('New Fund Name');
+            expect(updatedObj.tags).toEqual(['Venture Capital', 'Technology']);
         });
     });
 
     describe('Tag Export/Import', () => {
-        test('should include tags in fund export data', () => {
-            const fund = {
-                fundName: 'Test Fund',
-                accountNumber: '12345',
-                tags: ['Venture Capital', 'Growth Equity'],
-                commitment: 1000000
-            };
-
-            const exportData = JSON.stringify(fund);
-            const parsed = JSON.parse(exportData);
-
-            expect(parsed.tags).toBeDefined();
-            expect(Array.isArray(parsed.tags)).toBe(true);
-            expect(parsed.tags).toEqual(['Venture Capital', 'Growth Equity']);
-        });
-
-        test('should handle missing tags in import data', () => {
-            const importedFund = {
-                fundName: 'Test Fund',
-                accountNumber: '12345',
-                commitment: 1000000
-                // tags field missing
-            };
-
-            const tags = importedFund.tags || [];
-            expect(Array.isArray(tags)).toBe(true);
-            expect(tags).toHaveLength(0);
-        });
-
-        test('should collect unique tags from multiple funds', () => {
-            const funds = [
-                { fundName: 'Fund 1', tags: ['Venture Capital', 'Technology'] },
-                { fundName: 'Fund 2', tags: ['Growth Equity', 'Technology'] },
-                { fundName: 'Fund 3', tags: ['Real Estate'] }
+        test('should export fund names with tags as objects', () => {
+            const fundNameObjects = [
+                { name: 'Fund A', tags: ['Venture Capital', 'Technology'] },
+                { name: 'Fund B', tags: ['Real Estate'] },
+                { name: 'Fund C', tags: [] }
             ];
 
-            const uniqueTags = new Set();
-            funds.forEach(fund => {
-                if (fund.tags && Array.isArray(fund.tags)) {
-                    fund.tags.forEach(tag => uniqueTags.add(tag));
-                }
-            });
+            const exportData = {
+                fundNames: fundNameObjects,
+                exportDate: new Date().toISOString()
+            };
 
-            expect(uniqueTags.size).toBe(4);
-            expect(uniqueTags.has('Venture Capital')).toBe(true);
-            expect(uniqueTags.has('Technology')).toBe(true);
-            expect(uniqueTags.has('Growth Equity')).toBe(true);
-            expect(uniqueTags.has('Real Estate')).toBe(true);
+            const json = JSON.stringify(exportData);
+            const parsed = JSON.parse(json);
+
+            expect(parsed.fundNames).toHaveLength(3);
+            expect(parsed.fundNames[0].name).toBe('Fund A');
+            expect(parsed.fundNames[0].tags).toEqual(['Venture Capital', 'Technology']);
         });
 
-        test('should preserve tags during fund duplication', () => {
-            const originalFund = {
-                fundName: 'Original Fund',
+        test('should import fund names as objects with tags', () => {
+            const importData = {
+                fundNames: [
+                    { name: 'Fund A', tags: ['Venture Capital'] },
+                    { name: 'Fund B', tags: ['Real Estate', 'Commercial'] }
+                ]
+            };
+
+            const fundNameData = new Map();
+            importData.fundNames.forEach(obj => {
+                fundNameData.set(obj.name, obj);
+            });
+
+            expect(fundNameData.size).toBe(2);
+            expect(fundNameData.get('Fund A').tags).toEqual(['Venture Capital']);
+            expect(fundNameData.get('Fund B').tags).toEqual(['Real Estate', 'Commercial']);
+        });
+
+        test('should support importing old format (strings) as fund names', () => {
+            const importData = {
+                fundNames: ['Fund A', 'Fund B', 'Fund C']
+            };
+
+            const fundNameData = new Map();
+            importData.fundNames.forEach(nameOrObj => {
+                const obj = typeof nameOrObj === 'string'
+                    ? { name: nameOrObj, tags: [] }
+                    : nameOrObj;
+                fundNameData.set(obj.name, obj);
+            });
+
+            expect(fundNameData.size).toBe(3);
+            expect(fundNameData.get('Fund A').tags).toEqual([]);
+            expect(fundNameData.get('Fund B').tags).toEqual([]);
+        });
+
+        test('should handle mixed format import (strings and objects)', () => {
+            const importData = {
+                fundNames: [
+                    'Old Format Fund',
+                    { name: 'New Format Fund', tags: ['Technology'] }
+                ]
+            };
+
+            const fundNameData = new Map();
+            importData.fundNames.forEach(nameOrObj => {
+                const obj = typeof nameOrObj === 'string'
+                    ? { name: nameOrObj, tags: [] }
+                    : { name: nameOrObj.name, tags: nameOrObj.tags || [] };
+                fundNameData.set(obj.name, obj);
+            });
+
+            expect(fundNameData.size).toBe(2);
+            expect(fundNameData.get('Old Format Fund').tags).toEqual([]);
+            expect(fundNameData.get('New Format Fund').tags).toEqual(['Technology']);
+        });
+
+        test('investments should not have tags field', () => {
+            const investment = {
+                fundName: 'ABC Venture Fund',
                 accountNumber: '12345',
-                tags: ['Venture Capital', 'Technology'],
-                commitment: 1000000
+                commitment: 1000000,
+                cashFlows: [],
+                monthlyNav: []
             };
 
-            const duplicatedFund = {
-                ...originalFund,
-                fundName: 'Original Fund (Copy)',
-                accountNumber: '12346'
-            };
-
-            expect(duplicatedFund.tags).toEqual(originalFund.tags);
-            expect(duplicatedFund.tags).toContain('Venture Capital');
-            expect(duplicatedFund.tags).toContain('Technology');
+            expect(investment).not.toHaveProperty('tags');
+            expect(investment).toHaveProperty('fundName');
         });
     });
 
     describe('Tag Autocomplete', () => {
+        test('should collect all unique tags from all funds', () => {
+            const fundNameData = new Map([
+                ['Fund A', { name: 'Fund A', tags: ['Venture Capital', 'Technology'] }],
+                ['Fund B', { name: 'Fund B', tags: ['Real Estate', 'Technology'] }],
+                ['Fund C', { name: 'Fund C', tags: ['Healthcare'] }]
+            ]);
+
+            const allTags = new Set();
+            fundNameData.forEach(obj => {
+                if (obj.tags) {
+                    obj.tags.forEach(tag => allTags.add(tag));
+                }
+            });
+
+            expect(allTags.size).toBe(4);
+            expect(allTags.has('Venture Capital')).toBe(true);
+            expect(allTags.has('Technology')).toBe(true);
+            expect(allTags.has('Real Estate')).toBe(true);
+            expect(allTags.has('Healthcare')).toBe(true);
+        });
+
         test('should populate datalist with available tags', () => {
             const availableTags = ['Venture Capital', 'Growth Equity', 'Real Estate'];
             const datalistOptions = availableTags.map(tag => `<option value="${tag}">`).join('');
@@ -291,29 +478,18 @@ describe('Tag Management', () => {
             expect(datalistOptions).toContain('Growth Equity');
             expect(datalistOptions).toContain('Real Estate');
         });
-
-        test('should filter tags already selected', () => {
-            const availableTags = ['Venture Capital', 'Growth Equity', 'Real Estate'];
-            const selectedTags = ['Venture Capital'];
-            const unselectedTags = availableTags.filter(tag => !selectedTags.includes(tag));
-
-            expect(unselectedTags).toHaveLength(2);
-            expect(unselectedTags).toContain('Growth Equity');
-            expect(unselectedTags).toContain('Real Estate');
-            expect(unselectedTags).not.toContain('Venture Capital');
-        });
     });
 
     describe('Tag Edge Cases', () => {
         test('should handle very long tag names', () => {
             const longTag = 'A'.repeat(100);
-            const fund = {
-                fundName: 'Test Fund',
+            const fundNameObj = {
+                name: 'Test Fund',
                 tags: [longTag]
             };
 
-            expect(fund.tags[0]).toHaveLength(100);
-            expect(fund.tags[0]).toBe(longTag);
+            expect(fundNameObj.tags[0]).toHaveLength(100);
+            expect(fundNameObj.tags[0]).toBe(longTag);
         });
 
         test('should handle special characters in tag names', () => {
@@ -325,28 +501,32 @@ describe('Tag Management', () => {
                 'Fund-of-Funds'
             ];
 
+            const fundNameObj = {
+                name: 'Multi-Strategy Fund',
+                tags: specialTags
+            };
+
             specialTags.forEach(tag => {
-                expect(tag).toBeTruthy();
-                expect(tag.length).toBeGreaterThan(0);
+                expect(fundNameObj.tags).toContain(tag);
             });
         });
 
         test('should handle unicode characters in tags', () => {
             const unicodeTags = ['Technology 🚀', 'Healthcare ⚕️', 'Finance 💰'];
-            const fund = {
-                fundName: 'Test Fund',
+            const fundNameObj = {
+                name: 'Test Fund',
                 tags: unicodeTags
             };
 
-            expect(fund.tags).toHaveLength(3);
-            expect(fund.tags[0]).toContain('🚀');
-            expect(fund.tags[1]).toContain('⚕️');
-            expect(fund.tags[2]).toContain('💰');
+            expect(fundNameObj.tags).toHaveLength(3);
+            expect(fundNameObj.tags[0]).toContain('🚀');
+            expect(fundNameObj.tags[1]).toContain('⚕️');
+            expect(fundNameObj.tags[2]).toContain('💰');
         });
 
         test('should handle null and undefined tags gracefully', () => {
-            const fund1 = { fundName: 'Fund 1', tags: null };
-            const fund2 = { fundName: 'Fund 2', tags: undefined };
+            const fund1 = { name: 'Fund 1', tags: null };
+            const fund2 = { name: 'Fund 2', tags: undefined };
 
             const tags1 = fund1.tags || [];
             const tags2 = fund2.tags || [];
@@ -355,6 +535,77 @@ describe('Tag Management', () => {
             expect(Array.isArray(tags2)).toBe(true);
             expect(tags1).toHaveLength(0);
             expect(tags2).toHaveLength(0);
+        });
+
+        test('should handle fund name with many tags', () => {
+            const manyTags = Array.from({ length: 20 }, (_, i) => `Tag ${i + 1}`);
+            const fundNameObj = {
+                name: 'Heavily Tagged Fund',
+                tags: manyTags
+            };
+
+            expect(fundNameObj.tags).toHaveLength(20);
+            expect(fundNameObj.tags[0]).toBe('Tag 1');
+            expect(fundNameObj.tags[19]).toBe('Tag 20');
+        });
+    });
+
+    describe('Tag Workflow', () => {
+        test('updating fund tags should affect all investments with that fund name', () => {
+            const fundNameData = new Map([
+                ['Shared Fund', { name: 'Shared Fund', tags: ['Original Tag'] }]
+            ]);
+
+            const investments = [
+                { id: 1, fundName: 'Shared Fund', accountNumber: '001' },
+                { id: 2, fundName: 'Shared Fund', accountNumber: '002' },
+                { id: 3, fundName: 'Shared Fund', accountNumber: '003' }
+            ];
+
+            // Update tags for the fund
+            fundNameData.get('Shared Fund').tags = ['New Tag 1', 'New Tag 2'];
+
+            // All investments should now have access to new tags
+            investments.forEach(inv => {
+                const tags = fundNameData.get(inv.fundName).tags;
+                expect(tags).toEqual(['New Tag 1', 'New Tag 2']);
+            });
+        });
+
+        test('renaming fund should transfer tags to new name', () => {
+            const oldName = 'Old Fund Name';
+            const newName = 'New Fund Name';
+            const tags = ['Venture Capital', 'Technology'];
+
+            const fundNameData = new Map([
+                [oldName, { name: oldName, tags }]
+            ]);
+
+            // Simulate rename
+            const oldObj = fundNameData.get(oldName);
+            fundNameData.delete(oldName);
+            fundNameData.set(newName, { name: newName, tags: oldObj.tags });
+
+            expect(fundNameData.has(oldName)).toBe(false);
+            expect(fundNameData.has(newName)).toBe(true);
+            expect(fundNameData.get(newName).tags).toEqual(tags);
+        });
+
+        test('deleting fund name should not affect investments (they just lose tag lookup)', () => {
+            const fundNameData = new Map([
+                ['Fund A', { name: 'Fund A', tags: ['Tag1'] }]
+            ]);
+
+            const investment = { fundName: 'Fund A', accountNumber: '001' };
+
+            // Delete fund name
+            fundNameData.delete('Fund A');
+
+            // Investment still exists but tags lookup returns empty
+            expect(investment.fundName).toBe('Fund A');
+            const fundNameObj = fundNameData.get(investment.fundName);
+            const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+            expect(tags).toEqual([]);
         });
     });
 });
