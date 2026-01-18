@@ -153,6 +153,20 @@
             cursor: not-allowed;
         }
 
+        .btn-icon {
+            background: none;
+            border: none;
+            color: #95A5A6;
+            font-size: 16px;
+            padding: 4px 8px;
+            cursor: pointer;
+            transition: color 0.15s ease;
+        }
+
+        .btn-icon:hover {
+            color: #34495E;
+        }
+
         /* Dropdown Menu */
         .dropdown {
             position: relative;
@@ -2112,8 +2126,8 @@
                         <td class="number">${m.moic !== null && isFinite(m.moic) ? m.moic.toFixed(2) + 'x' : 'N/A'}</td>
                         <td class="number ${m.irr !== null && m.irr >= 0 ? 'positive' : 'negative'}">${m.irr !== null ? (m.irr * 100).toFixed(2) + '%' : 'N/A'}</td>
                         <td class="number">${formatCurrency(m.outstandingCommitment)}</td>
-                        <td>
-                            <button class="btn-sm btn-info fund-actions-btn" data-fund-id="${fund.id}" title="Actions">⚙</button>
+                        <td class="center">
+                            <button class="btn-icon fund-actions-btn" data-fund-id="${fund.id}" title="Actions">⚙</button>
                         </td>
                     `;
 
