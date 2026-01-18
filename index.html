@@ -2290,24 +2290,11 @@
                 });
             };
 
-            // Check if current fund selection is compatible with current group selection
-            // If not, clear the group filter to prioritize the fund selection
-            let adjustedGroupValue = currentGroupValue;
-            if (currentFundValue && currentGroupValue) {
-                const fundsMatchingCurrentFund = allFunds.filter(f => f.fundName === currentFundValue);
-                const fundsInCurrentGroup = filterByGroup(fundsMatchingCurrentFund, currentGroupValue);
-
-                // If the selected fund doesn't exist in the selected group, clear the group filter
-                if (fundsInCurrentGroup.length === 0) {
-                    adjustedGroupValue = '';
-                    groupFilter.value = '';
-                }
-            }
-
-            // 1. Update FUND dropdown (filter by group and account, excluding fund itself)
+            // 1. Update FUND dropdown (filter by group and account)
+            // Group filter always takes priority - fund dropdown only shows funds from selected group
             let fundsForFundDropdown = allFunds;
-            if (adjustedGroupValue) {
-                fundsForFundDropdown = filterByGroup(fundsForFundDropdown, adjustedGroupValue);
+            if (currentGroupValue) {
+                fundsForFundDropdown = filterByGroup(fundsForFundDropdown, currentGroupValue);
             }
             if (currentAccountValue) {
                 fundsForFundDropdown = fundsForFundDropdown.filter(f => f.accountNumber === currentAccountValue);
@@ -2326,10 +2313,10 @@
                 fundFilter.value = '';
             }
 
-            // 2. Update ACCOUNT dropdown (filter by group and fund, excluding account itself)
+            // 2. Update ACCOUNT dropdown (filter by group and fund)
             let fundsForAccountDropdown = allFunds;
-            if (adjustedGroupValue) {
-                fundsForAccountDropdown = filterByGroup(fundsForAccountDropdown, adjustedGroupValue);
+            if (currentGroupValue) {
+                fundsForAccountDropdown = filterByGroup(fundsForAccountDropdown, currentGroupValue);
             }
             if (currentFundValue) {
                 fundsForAccountDropdown = fundsForAccountDropdown.filter(f => f.fundName === currentFundValue);
