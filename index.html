@@ -772,19 +772,6 @@
             top: 0;
         }
 
-        /* Screen reader only text */
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
-
         /* Announce live regions for screen readers */
         .sr-announce {
             position: absolute;
@@ -2647,15 +2634,11 @@
             // UI constraints
             MIN_COLUMN_WIDTH: 50,
             MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB
-            DUPLICATE_MULTIPLIER_MAX: 1000,
-            DUPLICATE_MULTIPLIER_MIN: 0.001,
             FUND_NAME_MIN_LENGTH: 2,
             FUND_NAME_MAX_LENGTH: 100,
 
             // Performance
             METRICS_CACHE_TTL: 5000, // 5 seconds
-            PAGINATION_SIZE: 50,
-            VIRTUAL_SCROLL_BUFFER: 10,
             LAZY_RENDER_TIMELINE: true, // Only render timeline when expanded
 
             // Validation & Security
@@ -3222,7 +3205,6 @@
 
             // Cache
             metricsCache: new Map(), // fundId -> { metrics, timestamp }
-            filterCache: null,
 
             // Performance
             abortController: null, // For canceling in-flight requests
@@ -3301,6 +3283,16 @@
             setFundNameData(data) {
                 this.fundNameData = data;
                 fundNameData = data; // Sync legacy alias
+            },
+
+            setSortColumns(columns) {
+                this.sortColumns = columns;
+                sortColumns = columns; // Sync legacy alias
+            },
+
+            setCurrentGroupDescendants(descendants) {
+                this.currentGroupDescendants = descendants;
+                currentGroupDescendants = descendants; // Sync legacy alias
             }
         };
 
@@ -3913,19 +3905,6 @@
             if (!isValidDate(dateStr)) return null;
             const [year, month, day] = dateStr.split('-').map(Number);
             return new Date(Date.UTC(year, month - 1, day));
-        }
-
-        /**
-         * Compare two date strings
-         * @param {string} date1 - First date string
-         * @param {string} date2 - Second date string
-         * @returns {number} -1 if date1 < date2, 0 if equal, 1 if date1 > date2
-         */
-        function compareDates(date1, date2) {
-            const d1 = parseDate(date1);
-            const d2 = parseDate(date2);
-            if (!d1 || !d2) return 0;
-            return d1 < d2 ? -1 : (d1 > d2 ? 1 : 0);
         }
 
         function getVintageYear(fund) {
@@ -4955,12 +4934,12 @@
                         AppState.groupDescendantsCache.set(groupId, descendants);
                     }
 
-                    currentGroupDescendants = {
+                    AppState.setCurrentGroupDescendants({
                         groupId,
                         ids: AppState.groupDescendantsCache.get(groupId)
-                    };
+                    });
                 } else {
-                    currentGroupDescendants = null;
+                    AppState.setCurrentGroupDescendants(null);
                 }
 
                 if (signal.aborted) return;
@@ -5031,7 +5010,7 @@
             }
         }
 
-        function resetFilters() {
+        async function resetFilters() {
             document.getElementById('fundFilter').value = '';
             document.getElementById('accountFilter').value = '';
             document.getElementById('groupFilter').value = '';
@@ -5043,13 +5022,13 @@
             document.getElementById('cutoffDate').value = quarterEnd.toISOString().split('T')[0];
 
             // Clear all sort columns
-            sortColumns = [];
+            AppState.setSortColumns([]);
             updateSortHeaders();
 
-            currentGroupDescendants = null;
+            AppState.setCurrentGroupDescendants(null);
             updateHeader();
             updateActiveFiltersIndicator();
-            renderTable();
+            await renderTable();
 
             announceToScreenReader('All filters have been reset.');
         }
@@ -5611,16 +5590,16 @@
             document.body.classList.remove('sidebar-open');
         }
 
-        function toggleTagsDisplay() {
+        async function toggleTagsDisplay() {
             const checkbox = document.getElementById('sidebarShowTagsCheckbox');
             // Save preference to localStorage
             Storage.set('showTags', checkbox.checked);
             // Re-render table to show/hide tags
-            renderTable();
+            await renderTable();
             // Also refresh Manage Funds list if it's open
             const manageFundsModal = document.getElementById('manageFundNamesModal');
             if (manageFundsModal && manageFundsModal.classList.contains('show')) {
-                loadFundNamesList();
+                await loadFundNamesList();
             }
         }
 
@@ -5678,23 +5657,25 @@
             });
         }
 
-        function sortTable(column) {
+        async function sortTable(column) {
             const existingIndex = sortColumns.findIndex(s => s.column === column);
 
             if (existingIndex === -1) {
                 // Column not in sort list - add as ascending
-                sortColumns.push({ column, direction: 'asc' });
+                AppState.setSortColumns([...sortColumns, { column, direction: 'asc' }]);
             } else if (sortColumns[existingIndex].direction === 'asc') {
                 // Currently ascending - change to descending
-                sortColumns[existingIndex].direction = 'desc';
+                const newColumns = [...sortColumns];
+                newColumns[existingIndex] = { ...newColumns[existingIndex], direction: 'desc' };
+                AppState.setSortColumns(newColumns);
             } else {
                 // Currently descending - remove from sort list
-                sortColumns.splice(existingIndex, 1);
+                AppState.setSortColumns(sortColumns.filter((_, i) => i !== existingIndex));
             }
 
             // Update header classes
             updateSortHeaders();
-            renderTable();
+            await renderTable();
         }
 
         function updateSortHeaders() {
@@ -5758,26 +5739,31 @@
         // ===========================
 
         async function showAddFundModal() {
-            document.getElementById('fundModalTitle').textContent = 'Add New Investment';
-            document.getElementById('fundId').value = '';
-            document.getElementById('isDuplicate').value = '';
-            document.getElementById('duplicateMultiplierContainer').style.display = 'none';
+            try {
+                document.getElementById('fundModalTitle').textContent = 'Add New Investment';
+                document.getElementById('fundId').value = '';
+                document.getElementById('isDuplicate').value = '';
+                document.getElementById('duplicateMultiplierContainer').style.display = 'none';
 
-            // Reset inline fund name input state
-            document.getElementById('newFundNameContainer').style.display = 'none';
-            document.getElementById('fundName').style.display = '';
-            clearFieldErrors();
+                // Reset inline fund name input state
+                document.getElementById('newFundNameContainer').style.display = 'none';
+                document.getElementById('fundName').style.display = '';
+                clearFieldErrors();
 
-            await populateFundNamesDropdown();
-            await populateFundGroupDropdown();
+                await populateFundNamesDropdown();
+                await populateFundGroupDropdown();
 
-            // Reset other form fields (not the fund name dropdown which we just populated)
-            document.getElementById('accountNumber').value = '';
-            document.getElementById('commitment').value = '';
-            document.getElementById('cashFlows').value = '';
-            document.getElementById('monthlyNav').value = '';
+                // Reset other form fields (not the fund name dropdown which we just populated)
+                document.getElementById('accountNumber').value = '';
+                document.getElementById('commitment').value = '';
+                document.getElementById('cashFlows').value = '';
+                document.getElementById('monthlyNav').value = '';
 
-            document.getElementById('fundModal').classList.add('show');
+                document.getElementById('fundModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error opening add investment modal: ' + err.message, 'error');
+                Debug.error('Error in showAddFundModal:', err);
+            }
         }
 
         async function editFund(id) {
@@ -6528,9 +6514,14 @@
         }
 
         async function showManageFundsModal() {
-            await loadFundNamesList();
-            await populateFundNamesDropdown();
-            document.getElementById('manageFundNamesModal').classList.add('show');
+            try {
+                await loadFundNamesList();
+                await populateFundNamesDropdown();
+                document.getElementById('manageFundNamesModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error opening manage funds modal: ' + err.message, 'error');
+                Debug.error('Error in showManageFundsModal:', err);
+            }
         }
 
         function closeManageFundsModal() {
@@ -6848,9 +6839,14 @@
         // ===========================
 
         async function showManageGroupsModal() {
-            await loadGroupsList();
-            await populateGroupParentDropdown();
-            document.getElementById('manageGroupsModal').classList.add('show');
+            try {
+                await loadGroupsList();
+                await populateGroupParentDropdown();
+                document.getElementById('manageGroupsModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error opening manage groups modal: ' + err.message, 'error');
+                Debug.error('Error in showManageGroupsModal:', err);
+            }
         }
 
         function closeManageGroupsModal() {
@@ -7374,12 +7370,12 @@
         }
 
         // Event delegation for dynamically created buttons and dropdown handling
-        document.addEventListener('click', function(event) {
+        document.addEventListener('click', async function(event) {
             // Handle fund actions button
             if (event.target.classList.contains('fund-actions-btn')) {
                 event.stopPropagation(); // Prevent immediate close
                 const fundId = parseInt(event.target.getAttribute('data-fund-id'));
-                showActionModal(fundId, event.target);
+                await showActionModal(fundId, event.target);
                 return;
             }
 
@@ -7394,14 +7390,14 @@
             // Handle group edit button
             if (event.target.classList.contains('group-edit-btn')) {
                 const groupId = parseInt(event.target.getAttribute('data-group-id'));
-                editGroup(groupId);
+                await editGroup(groupId);
                 return;
             }
 
             // Handle group delete button
             if (event.target.classList.contains('group-delete-btn')) {
                 const groupId = parseInt(event.target.getAttribute('data-group-id'));
-                removeGroup(groupId);
+                await removeGroup(groupId);
                 return;
             }
 
@@ -7428,7 +7424,7 @@
         });
 
         // Keyboard shortcuts
-        document.addEventListener('keydown', function(event) {
+        document.addEventListener('keydown', async function(event) {
             // Check if user is typing in an input field
             const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName);
 
@@ -7486,7 +7482,7 @@
                 event.preventDefault();
                 const detailsModal = document.getElementById('detailsModal');
                 if (detailsModal && detailsModal.classList.contains('show')) {
-                    saveDetailsChanges();
+                    await saveDetailsChanges();
                 }
                 return;
             }
@@ -7494,14 +7490,14 @@
             // Ctrl/Cmd+E: Export
             if ((event.ctrlKey || event.metaKey) && event.key === 'e') {
                 event.preventDefault();
-                exportDatabase();
+                await exportDatabase();
                 return;
             }
 
             // Ctrl/Cmd+N: New investment
             if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
                 event.preventDefault();
-                showAddFundModal();
+                await showAddFundModal();
                 return;
             }
 
@@ -7542,7 +7538,7 @@
                     const actionBtn = focusedRow.querySelector('.fund-actions-btn');
                     if (actionBtn) {
                         const fundId = parseInt(focusedRow.getAttribute('data-fund-id'));
-                        showActionModal(fundId, actionBtn);
+                        await showActionModal(fundId, actionBtn);
                     }
                     return;
                 }
@@ -7894,18 +7890,21 @@
                             saveColumnWidth(columnIndex, newWidth);
                         };
 
+                        // Declare cleanup early so onMouseUp can reference it
+                        let cleanup;
+
                         const onMouseUp = () => {
                             th.classList.remove('resizing');
                             document.body.style.cursor = '';
                             document.body.style.userSelect = '';
                             document.removeEventListener('mousemove', onMouseMove);
                             document.removeEventListener('mouseup', onMouseUp);
-                            document.removeEventListener('blur', onMouseUp); // Clean up blur listener
+                            window.removeEventListener('blur', cleanup); // Clean up blur listener
                             // Reset flag after a short delay so click handler can check it
                             setTimeout(() => { isResizingColumn = false; }, 50);
                         };
 
-                        const cleanup = () => {
+                        cleanup = () => {
                             // Ensure cleanup happens even if mouse leaves window
                             if (th.classList.contains('resizing')) {
                                 onMouseUp();
@@ -8138,9 +8137,9 @@
             /** Backup warning modal */
             setupBackupWarning() {
                 document.getElementById('closeBackupWarningBtn').addEventListener('click', closeBackupWarning);
-                document.getElementById('exportNowBtn').addEventListener('click', () => {
+                document.getElementById('exportNowBtn').addEventListener('click', async () => {
                     closeBackupWarning();
-                    exportDatabase();
+                    await exportDatabase();
                     updateLastBackupTime();
                 });
                 document.getElementById('remindLaterBtn').addEventListener('click', () => {
@@ -8175,8 +8174,8 @@
                     });
                 });
 
-                document.getElementById('sidebarImportFile').addEventListener('change', (e) => {
-                    importDatabase(e);
+                document.getElementById('sidebarImportFile').addEventListener('change', async (e) => {
+                    await importDatabase(e);
                     closeSidebar();
                 });
             },
