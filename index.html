@@ -54,24 +54,24 @@
             --transition-medium: all 0.2s ease;
         }
 
-        /* Dark Mode Theme */
+        /* Dark Mode Theme - Improved contrast for WCAG AA compliance */
         [data-theme="dark"] {
-            --color-primary: #E8E8E8;
+            --color-primary: #F0F0F0;
             --color-primary-light: #2D3748;
             --color-background: #1A202C;
             --color-white: #2D3748;
 
-            --color-action: #4299E1;
-            --color-action-hover: #3182CE;
-            --color-success: #48BB78;
-            --color-success-hover: #38A169;
+            --color-action: #63B3ED;
+            --color-action-hover: #4299E1;
+            --color-success: #68D391;
+            --color-success-hover: #48BB78;
             --color-danger: #FC8181;
             --color-danger-hover: #F56565;
-            --color-secondary: #718096;
-            --color-secondary-hover: #A0AEC0;
+            --color-secondary: #A0AEC0;
+            --color-secondary-hover: #CBD5E0;
 
-            --color-text: #E2E8F0;
-            --color-text-light: #A0AEC0;
+            --color-text: #F7FAFC;
+            --color-text-light: #CBD5E0;
             --color-border: #4A5568;
             --color-border-input: #4A5568;
             --color-hover-bg: #374151;
@@ -613,6 +613,99 @@
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+
+        /* Focus indicators for accessibility - visible focus ring for keyboard navigation */
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible {
+            outline: 2px solid var(--color-action);
+            outline-offset: 2px;
+        }
+
+        /* Remove default outline but keep focus-visible */
+        button:focus:not(:focus-visible),
+        a:focus:not(:focus-visible),
+        input:focus:not(:focus-visible),
+        select:focus:not(:focus-visible) {
+            outline: none;
+        }
+
+        /* Skip to main content link for screen readers */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--color-action);
+            color: white;
+            padding: 8px;
+            z-index: 100000;
+            transition: top 0.3s;
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
+
+        /* Screen reader only text */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Announce live regions for screen readers */
+        .sr-announce {
+            position: absolute;
+            left: -10000px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
+
+        /* Loading indicator for filter operations */
+        .filter-loading {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            color: var(--color-text-light);
+            font-size: 13px;
+        }
+
+        .filter-loading.show {
+            display: flex;
+        }
+
+        .filter-loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--color-border);
+            border-top-color: var(--color-action);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Table row keyboard focus */
+        tbody tr:focus {
+            outline: 2px solid var(--color-action);
+            outline-offset: -2px;
+        }
+
+        tbody tr[tabindex]:hover {
+            background: var(--color-hover-bg);
         }
 
         .btn-icon {
@@ -1781,21 +1874,27 @@
     </style>
 </head>
 <body>
+    <!-- Skip to main content for keyboard/screen reader users -->
+    <a href="#mainContent" class="skip-link">Skip to main content</a>
+
+    <!-- Screen reader announcements for dynamic content updates -->
+    <div id="srAnnounce" class="sr-announce" aria-live="polite" aria-atomic="true"></div>
+
     <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay">
+    <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-labelledby="loadingText" aria-modal="true">
         <div class="loading-content">
-            <div class="loading-spinner"></div>
+            <div class="loading-spinner" aria-hidden="true"></div>
             <div class="loading-text" id="loadingText">Loading...</div>
         </div>
     </div>
 
-    <div class="container">
-        <header>
+    <div class="container" role="main">
+        <header role="banner">
             <h1 id="headerTitle">PE Fund Manager</h1>
             <p id="headerSubtitle">Private Equity Fund Analytics & Management Tool</p>
         </header>
 
-        <div class="controls-bar">
+        <div class="controls-bar" role="search" aria-label="Filter and search controls">
             <div class="control-group">
                 <label for="groupFilter">Filter by Group</label>
                 <select id="groupFilter">
@@ -1829,17 +1928,22 @@
                 <input type="date" id="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date" aria-label="Cutoff date for calculating metrics">
             </div>
             <div class="control-group">
-                <button class="btn-icon" id="resetFiltersBtn" title="Reset Filters" style="font-size: 20px; margin-top: auto;">↻</button>
-                <span id="activeFiltersIndicator" style="display: none; margin-left: 5px; color: var(--color-action); font-size: 12px; font-weight: 600;">●</span>
+                <button class="btn-icon" id="resetFiltersBtn" title="Reset Filters" aria-label="Reset all filters" style="font-size: 20px; margin-top: auto;">↻</button>
+                <span id="activeFiltersIndicator" style="display: none; margin-left: 5px; color: var(--color-action); font-size: 12px; font-weight: 600;" aria-hidden="true">●</span>
+            </div>
+            <!-- Filter loading indicator -->
+            <div id="filterLoading" class="filter-loading" aria-live="polite">
+                <div class="filter-loading-spinner" aria-hidden="true"></div>
+                <span>Filtering...</span>
             </div>
             <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
-                <button class="btn-icon" id="undoBtn" title="Undo last action" style="font-size: 20px;" disabled>↶</button>
-                <button class="btn-icon" id="redoBtn" title="Redo last undone action" style="font-size: 20px;" disabled>↷</button>
-                <button class="btn-icon" id="toggleSidebarBtn" title="Settings and Actions" style="font-size: 20px;">☰</button>
+                <button class="btn-icon" id="undoBtn" title="Undo last action" aria-label="Undo last action" style="font-size: 20px;" disabled>↶</button>
+                <button class="btn-icon" id="redoBtn" title="Redo last undone action" aria-label="Redo last undone action" style="font-size: 20px;" disabled>↷</button>
+                <button class="btn-icon" id="toggleSidebarBtn" title="Settings and Actions" aria-label="Open settings sidebar" style="font-size: 20px;">☰</button>
             </div>
         </div>
 
-        <div class="content">
+        <div class="content" id="mainContent">
             <!-- Portfolio Summary Stats -->
             <div id="portfolioSummary" class="portfolio-summary">
                 <div class="summary-stat">
@@ -2222,6 +2326,15 @@
 
                 <div class="shortcut-key"><kbd>Esc</kbd></div>
                 <div class="shortcut-desc">Close modal/sidebar</div>
+
+                <div class="shortcut-key"><kbd>↑</kbd> / <kbd>↓</kbd></div>
+                <div class="shortcut-desc">Navigate table rows (when focused)</div>
+
+                <div class="shortcut-key"><kbd>Enter</kbd></div>
+                <div class="shortcut-desc">Open fund details (when row focused)</div>
+
+                <div class="shortcut-key"><kbd>Space</kbd></div>
+                <div class="shortcut-desc">Open action menu (when row focused)</div>
             </div>
             <p style="margin-top: 20px; font-size: 12px; color: var(--color-text-light);">
                 On Mac, use <kbd style="display: inline-block; padding: 2px 6px; font-family: monospace; font-size: 11px; background: var(--color-alt-bg); border: 1px solid var(--color-border); border-radius: 3px;">⌘</kbd> instead of <kbd style="display: inline-block; padding: 2px 6px; font-family: monospace; font-size: 11px; background: var(--color-alt-bg); border: 1px solid var(--color-border); border-radius: 3px;">Ctrl</kbd>
@@ -2351,7 +2464,7 @@
             FUNDNAMES_STORE: 'fundNames',
             GROUPS_STORE: 'groups',
             UNDO_STORE: 'undoHistory',
-            DB_VERSION: 7,
+            DB_VERSION: 8, // Bumped for migration support
 
             // Currency formatting
             CURRENCY_FORMAT: 'en-US',
@@ -2386,11 +2499,15 @@
             METRICS_CACHE_TTL: 5000, // 5 seconds
             PAGINATION_SIZE: 50,
             VIRTUAL_SCROLL_BUFFER: 10,
+            LAZY_RENDER_TIMELINE: true, // Only render timeline when expanded
 
-            // Validation
-            ALLOWED_FUND_NAME_PATTERN: /^[a-zA-Z0-9\s\-_.,&()]+$/,
+            // Validation & Security
+            ALLOWED_FUND_NAME_PATTERN: /^[a-zA-Z0-9\s\-_.,&']+$/, // Removed parentheses for security
             MAX_IMPORT_FUNDS: 10000,
+            MAX_IMPORT_GROUPS: 1000,
+            MAX_IMPORT_FUNDNAMES: 5000,
             MAX_JSON_DEPTH: 10,
+            DANGEROUS_KEYS: ['__proto__', 'constructor', 'prototype'], // Prototype pollution prevention
 
             // LocalStorage keys
             STORAGE_COLUMN_WIDTHS: 'columnWidths',
@@ -2400,7 +2517,10 @@
 
             // Undo
             MAX_UNDO_HISTORY: 50,
-            UNDO_RETENTION_DAYS: 7
+            UNDO_RETENTION_DAYS: 7,
+
+            // Backup reminder
+            BACKUP_REMINDER_DAYS: 30
         };
 
         // ===========================
@@ -2423,6 +2543,123 @@
                 clearTimeout(timeout);
                 timeout = setTimeout(later, wait);
             };
+        }
+
+        /**
+         * Sanitize object to prevent prototype pollution attacks
+         * @param {Object} obj - Object to sanitize
+         * @param {number} depth - Current recursion depth
+         * @returns {Object} Sanitized object
+         */
+        function sanitizeObject(obj, depth = 0) {
+            if (depth > CONFIG.MAX_JSON_DEPTH) {
+                throw new Error('Object too deeply nested');
+            }
+
+            if (obj === null || typeof obj !== 'object') {
+                return obj;
+            }
+
+            if (Array.isArray(obj)) {
+                return obj.map(item => sanitizeObject(item, depth + 1));
+            }
+
+            const sanitized = Object.create(null);
+            for (const key of Object.keys(obj)) {
+                // Skip dangerous keys that could cause prototype pollution
+                if (CONFIG.DANGEROUS_KEYS.includes(key)) {
+                    console.warn(`Blocked potentially dangerous key: ${key}`);
+                    continue;
+                }
+                sanitized[key] = sanitizeObject(obj[key], depth + 1);
+            }
+            return sanitized;
+        }
+
+        /**
+         * Safe JSON parse with prototype pollution protection
+         * @param {string} jsonString - JSON string to parse
+         * @returns {Object} Parsed and sanitized object
+         */
+        function safeJSONParse(jsonString) {
+            const parsed = JSON.parse(jsonString);
+            return sanitizeObject(parsed);
+        }
+
+        /**
+         * Deep clone an object safely
+         * @param {Object} obj - Object to clone
+         * @returns {Object} Cloned object
+         */
+        function deepClone(obj) {
+            if (obj === null || typeof obj !== 'object') {
+                return obj;
+            }
+            if (obj instanceof Date) {
+                return new Date(obj.getTime());
+            }
+            if (Array.isArray(obj)) {
+                return obj.map(item => deepClone(item));
+            }
+            const cloned = {};
+            for (const key of Object.keys(obj)) {
+                cloned[key] = deepClone(obj[key]);
+            }
+            return cloned;
+        }
+
+        /**
+         * Announce message to screen readers
+         * @param {string} message - Message to announce
+         */
+        function announceToScreenReader(message) {
+            const announcer = document.getElementById('srAnnounce');
+            if (announcer) {
+                announcer.textContent = message;
+                // Clear after announcement to allow repeat announcements
+                setTimeout(() => {
+                    announcer.textContent = '';
+                }, 1000);
+            }
+        }
+
+        /**
+         * Show/hide filter loading indicator
+         * @param {boolean} show - Whether to show or hide
+         */
+        function setFilterLoading(show) {
+            const indicator = document.getElementById('filterLoading');
+            if (indicator) {
+                indicator.classList.toggle('show', show);
+            }
+        }
+
+        /**
+         * Normalize date to avoid timezone issues
+         * Creates a date at noon local time to avoid day-boundary problems
+         * @param {string} dateStr - Date string in YYYY-MM-DD format
+         * @returns {Date} Normalized date object
+         */
+        function normalizeDate(dateStr) {
+            if (!dateStr || typeof dateStr !== 'string') return null;
+            const [year, month, day] = dateStr.split('-').map(Number);
+            if (!year || !month || !day) return null;
+            // Create date at noon to avoid timezone issues
+            return new Date(year, month - 1, day, 12, 0, 0, 0);
+        }
+
+        /**
+         * Consistent error handler for async operations
+         * @param {Error} error - The error object
+         * @param {string} operation - Description of the operation that failed
+         * @param {boolean} showToUser - Whether to show error message to user
+         */
+        function handleError(error, operation, showToUser = true) {
+            const message = `Error in ${operation}: ${error.message}`;
+            console.error(message, error);
+            if (showToUser) {
+                showStatus(message, 'error');
+            }
         }
 
         /**
@@ -2613,6 +2850,9 @@
                         undoStore.createIndex('type', 'type', { unique: false });
                     }
 
+                    // Log migration info
+                    console.log(`Database upgrade from v${oldVersion} to v${DB_VERSION}`);
+
                     // Migrate from v5 to v6: Move tags from investments to fund names
                     if (oldVersion < 6 && oldVersion >= 5) {
                         // Delete old tags store
@@ -2657,6 +2897,12 @@
                             }
                         };
                     }
+
+                    // Migration v7 to v8: No schema changes, just version bump for migration system
+                    // Future migrations can be added here using the pattern:
+                    // if (oldVersion < 8) {
+                    //     // Migration code
+                    // }
                 };
             });
         }
@@ -3124,8 +3370,20 @@
                         break;
                 }
 
-                // Add back to undo history
-                await saveUndoAction(action.type, action.entity, action.before, action.after);
+                // Add back to undo history directly (not via saveUndoAction to preserve action structure)
+                // This avoids race conditions with saveUndoAction's side effects
+                const transaction = db.transaction([CONFIG.UNDO_STORE], 'readwrite');
+                const store = transaction.objectStore(CONFIG.UNDO_STORE);
+
+                // Create a new entry with a fresh ID but same action data
+                const undoEntry = {
+                    type: action.type,
+                    entity: action.entity,
+                    before: action.before,
+                    after: action.after,
+                    timestamp: Date.now()
+                };
+                await store.add(undoEntry);
 
                 await renderTable();
                 showStatus('Action redone', 'success');
@@ -3875,9 +4133,15 @@
                     return;
                 }
 
-                fundsWithMetrics.forEach(fund => {
+                fundsWithMetrics.forEach((fund, index) => {
                     const m = fund.metrics;
                     const row = document.createElement('tr');
+
+                    // Add keyboard navigation attributes
+                    row.setAttribute('tabindex', '0');
+                    row.setAttribute('data-fund-id', fund.id);
+                    row.setAttribute('role', 'row');
+                    row.setAttribute('aria-rowindex', index + 2); // +2 for header row
 
                     // Build tags HTML - look up tags from fund name
                     const showTags = document.getElementById('sidebarShowTagsCheckbox').checked;
@@ -4204,6 +4468,9 @@
             AppState.abortController = new AbortController();
             const signal = AppState.abortController.signal;
 
+            // Show loading indicator
+            setFilterLoading(true);
+
             try {
                 const groupFilterValue = document.getElementById('groupFilter').value;
 
@@ -4214,7 +4481,7 @@
                 if (groupFilterValue) {
                     const groupId = parseInt(groupFilterValue);
 
-                    // Use cached descendants if available
+                    // Use cached descendants if available and valid
                     if (!AppState.groupDescendantsCache.has(groupId)) {
                         const descendants = await getAllDescendantGroupIds(groupId);
                         if (signal.aborted) return; // Check again after async operation
@@ -4236,7 +4503,11 @@
 
                 if (signal.aborted) return;
 
-                renderTable();
+                await renderTable();
+
+                // Announce results to screen readers
+                const fundCount = document.getElementById('summaryFundCount').textContent;
+                announceToScreenReader(`Filter applied. Showing ${fundCount} funds.`);
             } catch (err) {
                 if (err.name === 'AbortError') {
                     // Operation was cancelled, ignore
@@ -4245,6 +4516,8 @@
                 console.error('Error applying filters:', err);
                 showStatus('Error applying filters: ' + err.message, 'error');
             } finally {
+                // Hide loading indicator
+                setFilterLoading(false);
                 // Clear abort controller if this is still the current one
                 if (AppState.abortController && !AppState.abortController.signal.aborted) {
                     AppState.abortController = null;
@@ -4292,6 +4565,22 @@
         }
 
         function resetFilters() {
+            // Check if there are active filters
+            const hasActiveFilters =
+                document.getElementById('fundFilter').value ||
+                document.getElementById('accountFilter').value ||
+                document.getElementById('groupFilter').value ||
+                document.getElementById('searchInput').value ||
+                document.getElementById('vintageFilter').value ||
+                sortColumns.length > 0;
+
+            // Confirm reset if there are active filters
+            if (hasActiveFilters) {
+                if (!confirm('Are you sure you want to reset all filters and sort settings?')) {
+                    return;
+                }
+            }
+
             document.getElementById('fundFilter').value = '';
             document.getElementById('accountFilter').value = '';
             document.getElementById('groupFilter').value = '';
@@ -4310,6 +4599,8 @@
             updateHeader();
             updateActiveFiltersIndicator();
             renderTable();
+
+            announceToScreenReader('All filters have been reset.');
         }
 
         /**
@@ -4600,6 +4891,14 @@
          */
         function renderTimelineTable(funds) {
             const container = document.getElementById('timelineTableContainer');
+            const panel = document.getElementById('timelinePanel');
+
+            // Lazy rendering: skip if panel is collapsed (will render when expanded)
+            if (CONFIG.LAZY_RENDER_TIMELINE && panel && !panel.classList.contains('expanded')) {
+                // Clear existing content to trigger re-render when expanded
+                container.innerHTML = '';
+                return;
+            }
 
             if (!funds || funds.length === 0) {
                 container.innerHTML = '<p class="timeline-no-data">No data to display. Add investments with cash flows to see the timeline.</p>';
@@ -4682,10 +4981,12 @@
         function buildTimelineRow(label, type, yearRange, historicalData, projectedData, expandable, fundNames, historicalByFund, projectedByFund, dataType) {
             let html = '';
 
-            // Main row
+            // Main row - escape label and type for XSS protection
+            const safeLabel = escapeHtml(label);
+            const safeType = escapeHtml(type);
             const rowClass = type === 'calls' ? 'row-calls' : 'row-distributions';
-            html += `<tr class="${rowClass} ${expandable ? 'timeline-expand-row' : ''}" ${expandable ? `data-type="${type}"` : ''}>`;
-            html += `<td class="row-label">${expandable ? '<span class="timeline-expand-icon">▶</span>' : ''}${label}</td>`;
+            html += `<tr class="${rowClass} ${expandable ? 'timeline-expand-row' : ''}" ${expandable ? `data-type="${safeType}"` : ''}>`;
+            html += `<td class="row-label">${expandable ? '<span class="timeline-expand-icon">▶</span>' : ''}${safeLabel}</td>`;
 
             yearRange.years.forEach(year => {
                 const isProjected = yearRange.firstProjectedYear && year >= yearRange.firstProjectedYear;
@@ -4707,7 +5008,7 @@
             // Fund breakdown rows (hidden by default)
             if (expandable && fundNames) {
                 fundNames.forEach(fundName => {
-                    html += `<tr class="timeline-fund-row" data-type="${type}">`;
+                    html += `<tr class="timeline-fund-row" data-type="${safeType}">`;
                     html += `<td>${escapeHtml(fundName)}</td>`;
 
                     yearRange.years.forEach(year => {
@@ -4770,11 +5071,21 @@
         }
 
         /**
-         * Toggle timeline panel expand/collapse
+         * Toggle timeline panel expand/collapse with lazy rendering
          */
         function toggleTimelinePanel() {
             const panel = document.getElementById('timelinePanel');
+            const wasExpanded = panel.classList.contains('expanded');
             panel.classList.toggle('expanded');
+
+            // Lazy render: only render when expanding and not yet rendered
+            if (!wasExpanded && CONFIG.LAZY_RENDER_TIMELINE) {
+                const container = document.getElementById('timelineTableContainer');
+                // Check if we need to render (empty or placeholder content)
+                if (!container.querySelector('.timeline-table')) {
+                    renderTimelineTable(currentFunds.filter(fund => applyCurrentFilters(fund)));
+                }
+            }
 
             // Save preference
             Storage.set('timelinePanelExpanded', panel.classList.contains('expanded'));
@@ -4879,12 +5190,19 @@
         function sortData(data, sortSpecs) {
             if (!sortSpecs || sortSpecs.length === 0) return data;
 
-            return [...data].sort((a, b) => {
-                const cutoffDateValue = document.getElementById('cutoffDate').value;
-                const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue) : null;
+            // Pre-compute metrics ONCE for all items (performance optimization)
+            const cutoffDateValue = document.getElementById('cutoffDate').value;
+            const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue) : null;
 
-                const metricsA = calculateMetrics(a, cutoffDate);
-                const metricsB = calculateMetrics(b, cutoffDate);
+            // Create a map of fund id -> metrics to avoid recalculating during sort
+            const metricsMap = new Map();
+            data.forEach(fund => {
+                metricsMap.set(fund.id, calculateMetrics(fund, cutoffDate));
+            });
+
+            return [...data].sort((a, b) => {
+                const metricsA = metricsMap.get(a.id);
+                const metricsB = metricsMap.get(b.id);
 
                 for (const { column, direction } of sortSpecs) {
                     let valA, valB;
@@ -5266,10 +5584,41 @@
                 const dropdown = document.getElementById('actionDropdown');
                 const rect = buttonElement.getBoundingClientRect();
 
-                // Position dropdown below and to the left of the button
-                // Since dropdown uses position: fixed, we don't add window.scrollY/X
-                dropdown.style.top = `${rect.bottom + 2}px`;
-                dropdown.style.left = `${rect.left - 100}px`;
+                // Get dropdown dimensions (temporarily show to measure)
+                dropdown.style.visibility = 'hidden';
+                dropdown.classList.add('show');
+                const dropdownWidth = dropdown.offsetWidth || 160;
+                const dropdownHeight = dropdown.offsetHeight || 200;
+                dropdown.classList.remove('show');
+                dropdown.style.visibility = '';
+
+                // Calculate position with viewport boundary checks
+                let top = rect.bottom + 2;
+                let left = rect.left - (dropdownWidth - rect.width);
+
+                // Check if dropdown would go below viewport
+                if (top + dropdownHeight > window.innerHeight) {
+                    // Position above the button instead
+                    top = rect.top - dropdownHeight - 2;
+                }
+
+                // Check if dropdown would go past left edge
+                if (left < 8) {
+                    left = 8;
+                }
+
+                // Check if dropdown would go past right edge
+                if (left + dropdownWidth > window.innerWidth - 8) {
+                    left = window.innerWidth - dropdownWidth - 8;
+                }
+
+                // Ensure top is not negative
+                if (top < 8) {
+                    top = 8;
+                }
+
+                dropdown.style.top = `${top}px`;
+                dropdown.style.left = `${left}px`;
 
                 dropdown.classList.add('show');
             } catch (err) {
@@ -6658,16 +7007,58 @@
                 showAddFundModal();
                 return;
             }
+
+            // Table row keyboard navigation
+            const focusedRow = document.activeElement;
+            const tbody = document.getElementById('fundsTableBody');
+            if (focusedRow && focusedRow.tagName === 'TR' && focusedRow.hasAttribute('data-fund-id') && tbody && tbody.contains(focusedRow)) {
+                const rows = Array.from(tbody.querySelectorAll('tr[data-fund-id]'));
+                const currentIndex = rows.indexOf(focusedRow);
+
+                // Arrow Down: Focus next row
+                if (event.key === 'ArrowDown' && currentIndex < rows.length - 1) {
+                    event.preventDefault();
+                    rows[currentIndex + 1].focus();
+                    return;
+                }
+
+                // Arrow Up: Focus previous row
+                if (event.key === 'ArrowUp' && currentIndex > 0) {
+                    event.preventDefault();
+                    rows[currentIndex - 1].focus();
+                    return;
+                }
+
+                // Enter: Open details modal for focused row
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    const fundId = parseInt(focusedRow.getAttribute('data-fund-id'));
+                    if (fundId != null) {
+                        openDetailsModal(fundId);
+                    }
+                    return;
+                }
+
+                // Space: Open action menu for focused row
+                if (event.key === ' ') {
+                    event.preventDefault();
+                    const actionBtn = focusedRow.querySelector('.fund-actions-btn');
+                    if (actionBtn) {
+                        const fundId = parseInt(focusedRow.getAttribute('data-fund-id'));
+                        showActionModal(fundId, actionBtn);
+                    }
+                    return;
+                }
+            }
         });
 
         async function importDatabase(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            // Validate file size (max 50MB)
-            const maxSize = 50 * 1024 * 1024; // 50MB in bytes
-            if (file.size > maxSize) {
-                showStatus(`File too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum size is 50MB.`, 'error');
+            // Validate file size using CONFIG constant
+            if (file.size > CONFIG.MAX_FILE_SIZE) {
+                showStatus(`File too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum size is ${CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB.`, 'error');
                 event.target.value = '';
                 return;
             }
@@ -6675,13 +7066,19 @@
             showLoading('Importing data...');
             try {
                 const text = await file.text();
-                const data = JSON.parse(text);
+
+                // Use safe JSON parse to prevent prototype pollution attacks
+                const data = safeJSONParse(text);
 
                 let imported = 0;
                 const oldGroupIdToNew = {}; // Map old group IDs to new ones
 
                 // Import groups first (since funds may reference them)
                 if (data.groups && Array.isArray(data.groups)) {
+                    // Validate import limits
+                    if (data.groups.length > CONFIG.MAX_IMPORT_GROUPS) {
+                        throw new Error(`Too many groups (${data.groups.length}). Maximum allowed is ${CONFIG.MAX_IMPORT_GROUPS}.`);
+                    }
                     // Validate group hierarchy before importing
                     const groupIds = new Set(data.groups.map(g => g.id));
 
@@ -6753,6 +7150,10 @@
 
                 // Import fund names (now with tags and fund terms)
                 if (data.fundNames && Array.isArray(data.fundNames)) {
+                    // Validate import limits
+                    if (data.fundNames.length > CONFIG.MAX_IMPORT_FUNDNAMES) {
+                        throw new Error(`Too many fund names (${data.fundNames.length}). Maximum allowed is ${CONFIG.MAX_IMPORT_FUNDNAMES}.`);
+                    }
                     for (const fundNameItem of data.fundNames) {
                         // Support both old format (string) and new format (object with tags/terms)
                         const fundNameObj = typeof fundNameItem === 'string'
@@ -6777,6 +7178,11 @@
                     throw new Error('Invalid format: expected array of funds');
                 }
 
+                // Validate import limits
+                if (fundsToImport.length > CONFIG.MAX_IMPORT_FUNDS) {
+                    throw new Error(`Too many funds (${fundsToImport.length}). Maximum allowed is ${CONFIG.MAX_IMPORT_FUNDS}.`);
+                }
+
                 // Collect unique fund names from imported funds (in case fundNames array is missing)
                 const uniqueFundNames = new Set();
                 fundsToImport.forEach(fund => {
@@ -6795,10 +7201,29 @@
 
                 const totalFunds = fundsToImport.length;
                 const failedImports = [];
+                const skippedDuplicates = [];
+
+                // Build a set of existing fund keys for duplicate detection
+                const existingFundKeys = new Set();
+                currentFunds.forEach(f => {
+                    const key = `${f.fundName}|${f.accountNumber}`.toLowerCase();
+                    existingFundKeys.add(key);
+                });
 
                 for (let i = 0; i < fundsToImport.length; i++) {
                     const fund = fundsToImport[i];
+
+                    // Check for duplicate (same fund name and account number)
+                    const importKey = `${fund.fundName}|${fund.accountNumber}`.toLowerCase();
+                    if (existingFundKeys.has(importKey)) {
+                        skippedDuplicates.push({ index: i, name: fund.fundName, account: fund.accountNumber });
+                        continue;
+                    }
+
                     try {
+                        // Add to existing keys to prevent duplicates within import batch
+                        existingFundKeys.add(importKey);
+
                         // Normalize cash flows to ensure proper structure
                         const cashFlows = (fund.cashFlows || []).map(cf => ({
                             date: cf.date,
@@ -6839,11 +7264,22 @@
 
                 await renderTable();
 
-                if (failedImports.length > 0) {
-                    const failedCount = failedImports.length;
-                    showStatus(`Partial import: ${imported}/${totalFunds} funds imported. ${failedCount} failed (see console for details)`, 'error');
-                    console.error('Failed imports:', failedImports);
-                    // Don't clear input on partial failure
+                if (failedImports.length > 0 || skippedDuplicates.length > 0) {
+                    const messages = [];
+                    if (imported > 0) messages.push(`${imported} imported`);
+                    if (skippedDuplicates.length > 0) {
+                        messages.push(`${skippedDuplicates.length} duplicates skipped`);
+                        console.log('Skipped duplicates:', skippedDuplicates);
+                    }
+                    if (failedImports.length > 0) {
+                        messages.push(`${failedImports.length} failed`);
+                        console.error('Failed imports:', failedImports);
+                    }
+                    const status = failedImports.length > 0 ? 'error' : 'success';
+                    showStatus(`Import complete: ${messages.join(', ')} (see console for details)`, status);
+                    if (failedImports.length === 0) {
+                        event.target.value = '';
+                    }
                 } else {
                     showStatus(`Successfully imported ${imported} fund(s)`);
                     event.target.value = '';
