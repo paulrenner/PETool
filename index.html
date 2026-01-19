@@ -1672,6 +1672,10 @@
                     <span class="summary-value" id="summaryDPI">N/A</span>
                 </div>
                 <div class="summary-stat">
+                    <span class="summary-label">RVPI</span>
+                    <span class="summary-value" id="summaryRVPI">N/A</span>
+                </div>
+                <div class="summary-stat">
                     <span class="summary-label">TVPI</span>
                     <span class="summary-value" id="summaryTVPI">N/A</span>
                 </div>
@@ -3234,7 +3238,21 @@
         }
 
         /**
-         * Format DPI/TVPI for display
+         * Calculate Residual Value to Paid-In (RVPI)
+         * RVPI = NAV / Total Contributions (unrealized value)
+         * @param {number} nav - Current Net Asset Value
+         * @param {number} totalContributions - Sum of all contributions
+         * @returns {number|null} RVPI or null if cannot be calculated
+         */
+        function calculateRVPI(nav, totalContributions) {
+            if (totalContributions === 0) return null;
+            const rvpi = nav / totalContributions;
+            if (!isFinite(rvpi) || rvpi < 0) return null;
+            return rvpi;
+        }
+
+        /**
+         * Format DPI/TVPI/RVPI for display
          * @param {number|null} value - DPI or TVPI value
          * @returns {string} Formatted string
          */
@@ -3289,6 +3307,7 @@
             const irr = calculateIRR(cashFlowsForIRR);
             const moic = calculateMOIC(cashFlowsForIRR);
             const dpi = calculateDPI(totalDistributions, totalContributions);
+            const rvpi = calculateRVPI(nav, totalContributions);
             const tvpi = calculateTVPI(nav, totalDistributions, totalContributions);
 
             const metrics = {
@@ -3302,6 +3321,7 @@
                 irr,
                 moic,
                 dpi,
+                rvpi,
                 tvpi
             };
 
@@ -4094,8 +4114,9 @@
                 ? validMOICs.reduce((a, b) => a + b, 0) / validMOICs.length
                 : null;
 
-            // Calculate aggregate DPI and TVPI
+            // Calculate aggregate DPI, RVPI, and TVPI
             const portfolioDPI = calculateDPI(totalDistributions, totalContributions);
+            const portfolioRVPI = calculateRVPI(totalNav, totalContributions);
             const portfolioTVPI = calculateTVPI(totalNav, totalDistributions, totalContributions);
 
             // Update DOM
@@ -4114,6 +4135,10 @@
             const dpiElement = document.getElementById('summaryDPI');
             dpiElement.textContent = formatMultiple(portfolioDPI);
             dpiElement.className = 'summary-value' + (portfolioDPI !== null ? (portfolioDPI >= 1 ? ' positive' : '') : '');
+
+            const rvpiElement = document.getElementById('summaryRVPI');
+            rvpiElement.textContent = formatMultiple(portfolioRVPI);
+            rvpiElement.className = 'summary-value';
 
             const tvpiElement = document.getElementById('summaryTVPI');
             tvpiElement.textContent = formatMultiple(portfolioTVPI);
