@@ -5704,8 +5704,12 @@
 
                 const handleKeydown = (e) => {
                     if (e.key === 'Escape') {
+                        e.preventDefault();
+                        e.stopPropagation();
                         handleCancel();
                     } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
                         handleConfirm();
                     }
                 };
@@ -5713,11 +5717,14 @@
                 // Attach listeners
                 confirmBtn.addEventListener('click', handleConfirm);
                 cancelBtn.addEventListener('click', handleCancel);
-                document.addEventListener('keydown', handleKeydown);
 
-                // Show modal
+                // Show modal first, then attach keydown listener after a tick
+                // to avoid catching the keypress that triggered the confirm dialog
                 modal.classList.add('show');
                 confirmBtn.focus();
+                setTimeout(() => {
+                    document.addEventListener('keydown', handleKeydown);
+                }, 0);
             });
         }
 
@@ -5761,17 +5768,22 @@
 
                 const handleKeydown = (e) => {
                     if (e.key === 'Escape' || e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
                         handleConfirm();
                     }
                 };
 
                 // Attach listeners
                 confirmBtn.addEventListener('click', handleConfirm);
-                document.addEventListener('keydown', handleKeydown);
 
-                // Show modal
+                // Show modal first, then attach keydown listener after a tick
+                // to avoid catching the keypress that triggered the alert dialog
                 modal.classList.add('show');
                 confirmBtn.focus();
+                setTimeout(() => {
+                    document.addEventListener('keydown', handleKeydown);
+                }, 0);
             });
         }
 
