@@ -5286,6 +5286,9 @@
                 }
 
                 fund.cashFlows.forEach(cf => {
+                    // Skip adjustments - they don't affect the cash flow timeline
+                    if (cf.type === 'Adjustment') return;
+
                     const cfDate = new Date(cf.date);
                     const year = cfDate.getFullYear();
 
@@ -5345,6 +5348,7 @@
                     const commitment = fund.commitment || 0;
                     const totalCalled = (fund.cashFlows || [])
                         .filter(cf => {
+                            if (cf.type === 'Adjustment') return false; // Adjustments don't count as capital calls
                             if (cutoffDate && new Date(cf.date) > cutoffDate) return false;
                             return cf.amount < 0 || cf.type === 'Contribution';
                         })
@@ -5383,6 +5387,8 @@
                 const commitment = fund.commitment || 0;
                 const totalCalled = (fund.cashFlows || [])
                     .filter(cf => {
+                        // Adjustments don't count as capital calls
+                        if (cf.type === 'Adjustment') return false;
                         // Only count contributions on or before cutoff date
                         if (cutoffDate && new Date(cf.date) > cutoffDate) return false;
                         return cf.amount < 0 || cf.type === 'Contribution';
