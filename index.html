@@ -421,7 +421,7 @@
             background: #2C4A5E;
         }
 
-        /* Estimated projections (funds missing final close date) */
+        /* Estimated projections (funds missing term start date) */
         .timeline-table .year-estimated {
             background: var(--color-warning-bg);
             font-style: italic;
@@ -2320,15 +2320,9 @@
             <details id="newFundTermsDetails" style="margin-bottom: 15px;">
                 <summary style="cursor: pointer; color: var(--color-action); font-size: 13px; margin-bottom: 10px;">+ Add Fund Terms (optional)</summary>
                 <div style="padding: 10px; background: var(--color-alt-bg); border-radius: var(--radius-sm); margin-top: 10px;">
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label for="newFundFirstClose" style="font-size: 12px;">First Close Date</label>
-                            <input type="date" id="newFundFirstClose">
-                        </div>
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label for="newFundFinalClose" style="font-size: 12px;">Final Close Date</label>
-                            <input type="date" id="newFundFinalClose">
-                        </div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label for="newFundTermStartDate" style="font-size: 12px;">Investment Term Start Date</label>
+                        <input type="date" id="newFundTermStartDate">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <label for="newFundInvestmentTerm" style="font-size: 12px;">Investment Term (years)</label>
@@ -2373,21 +2367,15 @@
 
             <h3 style="margin: 20px 0 15px 0; color: var(--color-text); font-weight: 600; font-size: 1em; border-top: 1px solid var(--color-border); padding-top: 20px;">Fund Terms (for capital call projections)</h3>
 
-            <div class="form-row" style="display: flex; gap: 15px;">
-                <div class="form-group" style="flex: 1;">
-                    <label for="editFundFirstClose">First Close Date</label>
-                    <input type="date" id="editFundFirstClose">
-                </div>
-                <div class="form-group" style="flex: 1;">
-                    <label for="editFundFinalClose">Final Close Date</label>
-                    <input type="date" id="editFundFinalClose">
-                </div>
+            <div class="form-group">
+                <label for="editFundTermStartDate">Investment Term Start Date</label>
+                <input type="date" id="editFundTermStartDate">
             </div>
 
             <div class="form-group">
                 <label for="editFundInvestmentTerm">Investment Term (years)</label>
                 <input type="number" id="editFundInvestmentTerm" min="1" max="15" step="1" placeholder="e.g., 5">
-                <div class="hint">Number of years from final close during which capital can be called (typically 3-5 years)</div>
+                <div class="hint">Number of years from term start during which capital can be called (typically 3-5 years)</div>
             </div>
 
             <div class="form-actions">
@@ -3698,11 +3686,11 @@
 
                 request.onsuccess = () => {
                     // Ensure all objects have required fields with defaults
+                    // Support backward compatibility: finalCloseDate -> investmentTermStartDate
                     const objects = request.result.map(item => ({
                         name: item.name,
                         tags: item.tags || [],
-                        firstCloseDate: item.firstCloseDate || null,
-                        finalCloseDate: item.finalCloseDate || null,
+                        investmentTermStartDate: item.investmentTermStartDate || item.finalCloseDate || null,
                         investmentTermYears: item.investmentTermYears || null
                     }));
                     resolve(objects);
@@ -3733,8 +3721,7 @@
                     : {
                         name: nameOrObject.name,
                         tags: nameOrObject.tags || [],
-                        firstCloseDate: nameOrObject.firstCloseDate || null,
-                        finalCloseDate: nameOrObject.finalCloseDate || null,
+                        investmentTermStartDate: nameOrObject.investmentTermStartDate || null,
                         investmentTermYears: nameOrObject.investmentTermYears || null
                     };
 
@@ -5334,7 +5321,7 @@
             const result = {
                 projectedCalls: {},
                 byFund: {},
-                // Estimated projections for funds missing final close date
+                // Estimated projections for funds missing term start date
                 estimatedCalls: {},
                 estimatedByFund: {},
                 // Track which years have estimated data
@@ -5344,16 +5331,16 @@
             // Use cutoff date if provided, otherwise use current date
             const referenceDate = cutoffDate || new Date();
             const referenceYear = referenceDate.getFullYear();
-            const DEFAULT_ESTIMATION_YEARS = 4; // Spread across 4 years when final close date is missing
+            const DEFAULT_ESTIMATION_YEARS = 4; // Spread across 4 years when term start date is missing
 
             funds.forEach(fund => {
                 const fundNameObj = fundNameData.get(fund.fundName);
                 if (!fundNameObj) return;
 
-                const { finalCloseDate, investmentTermYears } = fundNameObj;
+                const { investmentTermStartDate, investmentTermYears } = fundNameObj;
 
-                // Handle funds missing final close date or investment term
-                if (!finalCloseDate || !investmentTermYears) {
+                // Handle funds missing term start date or investment term
+                if (!investmentTermStartDate || !investmentTermYears) {
                     // Calculate remaining uncalled capital
                     const commitment = fund.commitment || 0;
                     const totalCalled = (fund.cashFlows || [])
@@ -5385,8 +5372,8 @@
                 }
 
                 // Calculate investment period end
-                const finalClose = new Date(finalCloseDate);
-                const investmentEndDate = new Date(finalClose);
+                const termStart = new Date(investmentTermStartDate);
+                const investmentEndDate = new Date(termStart);
                 investmentEndDate.setFullYear(investmentEndDate.getFullYear() + investmentTermYears);
 
                 // Skip if investment period has ended relative to cutoff date
@@ -5406,7 +5393,7 @@
                 if (uncalledCapital <= 0) return;
 
                 // Calculate years remaining in investment period (starting after cutoff year)
-                const startYear = Math.max(referenceYear + 1, finalClose.getFullYear());
+                const startYear = Math.max(referenceYear + 1, termStart.getFullYear());
                 const endYear = investmentEndDate.getFullYear();
                 const yearsRemaining = [];
 
@@ -5449,7 +5436,7 @@
             Object.keys(historical.calls).forEach(y => dataYears.add(parseInt(y)));
             Object.keys(historical.distributions).forEach(y => dataYears.add(parseInt(y)));
             Object.keys(projected.projectedCalls).forEach(y => dataYears.add(parseInt(y)));
-            // Include estimated years (from funds missing final close date)
+            // Include estimated years (from funds missing term start date)
             Object.keys(projected.estimatedCalls || {}).forEach(y => dataYears.add(parseInt(y)));
 
             // Find the min and max years with data
@@ -5543,7 +5530,7 @@
                 const cellClass = `${isProjected && !isEstimated ? 'year-projected' : ''} ${isEstimated ? 'year-estimated' : ''} ${isDivider ? 'timeline-divider' : ''}`;
                 let indicator = '';
                 if (isEstimated) {
-                    indicator = '<span class="timeline-estimated-indicator" title="Estimated: fund(s) missing final close date">&#8224;</span>';
+                    indicator = '<span class="timeline-estimated-indicator" title="Estimated: fund(s) missing term start date">&#8224;</span>';
                 } else if (isProjected) {
                     indicator = '*';
                 }
@@ -5577,13 +5564,13 @@
                         : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
                     footnoteHtml += `<p style="margin: 0;">${footnoteText}</p>`;
                 } else if (hasEstimatedData && !yearRange.firstProjectedYear) {
-                    footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing final close date (spread over 4 years). <a href="#" onclick="showManageFundsModal({ expandFundTerms: true }); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
+                    footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing term start date (spread over 4 years). <a href="#" onclick="showManageFundsModal({ expandFundTerms: true }); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
                 } else if (yearRange.firstProjectedYear && hasEstimatedData) {
                     const footnoteText = cutoffDate
                         ? `* Projected values (after ${cutoffDateValue}) based on remaining uncalled capital distributed linearly across investment period`
                         : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
                     footnoteHtml += `<p style="margin: 0 0 4px 0;">${footnoteText}</p>`;
-                    footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing final close date (spread over 4 years). <a href="#" onclick="showManageFundsModal({ expandFundTerms: true }); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
+                    footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing term start date (spread over 4 years). <a href="#" onclick="showManageFundsModal({ expandFundTerms: true }); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
                 }
                 footnoteHtml += '</div>';
                 html += footnoteHtml;
@@ -7077,8 +7064,7 @@
             }
 
             // Get optional fund term fields
-            const firstCloseDate = document.getElementById('newFundFirstClose').value || null;
-            const finalCloseDate = document.getElementById('newFundFinalClose').value || null;
+            const investmentTermStartDate = document.getElementById('newFundTermStartDate').value || null;
             const investmentTermYears = document.getElementById('newFundInvestmentTerm').value
                 ? parseInt(document.getElementById('newFundInvestmentTerm').value)
                 : null;
@@ -7087,8 +7073,7 @@
                 const fundNameObj = {
                     name,
                     tags: [],
-                    firstCloseDate,
-                    finalCloseDate,
+                    investmentTermStartDate,
                     investmentTermYears
                 };
                 await saveFundName(fundNameObj);
@@ -7098,8 +7083,7 @@
 
                 // Reset form fields
                 input.value = '';
-                document.getElementById('newFundFirstClose').value = '';
-                document.getElementById('newFundFinalClose').value = '';
+                document.getElementById('newFundTermStartDate').value = '';
                 document.getElementById('newFundInvestmentTerm').value = '';
                 document.getElementById('newFundTermsDetails').removeAttribute('open');
 
@@ -7126,8 +7110,7 @@
             setEditFundTags(fundNameObj.tags || []);
 
             // Populate fund terms
-            document.getElementById('editFundFirstClose').value = fundNameObj.firstCloseDate || '';
-            document.getElementById('editFundFinalClose').value = fundNameObj.finalCloseDate || '';
+            document.getElementById('editFundTermStartDate').value = fundNameObj.investmentTermStartDate || '';
             document.getElementById('editFundInvestmentTerm').value = fundNameObj.investmentTermYears || '';
 
             document.getElementById('editFundNameModal').classList.add('show');
@@ -7196,8 +7179,7 @@
             const tags = getEditFundTags();
 
             // Get fund term fields
-            const firstCloseDate = document.getElementById('editFundFirstClose').value || null;
-            const finalCloseDate = document.getElementById('editFundFinalClose').value || null;
+            const investmentTermStartDate = document.getElementById('editFundTermStartDate').value || null;
             const investmentTermYears = document.getElementById('editFundInvestmentTerm').value
                 ? parseInt(document.getElementById('editFundInvestmentTerm').value)
                 : null;
@@ -7219,8 +7201,7 @@
                 const newFundNameObj = {
                     name: newName,
                     tags,
-                    firstCloseDate,
-                    finalCloseDate,
+                    investmentTermStartDate,
                     investmentTermYears
                 };
 
@@ -8172,13 +8153,13 @@
                     }
                     for (const fundNameItem of data.fundNames) {
                         // Support both old format (string) and new format (object with tags/terms)
+                        // Backward compatibility: finalCloseDate -> investmentTermStartDate
                         const fundNameObj = typeof fundNameItem === 'string'
                             ? { name: fundNameItem, tags: [] }
                             : {
                                 name: fundNameItem.name,
                                 tags: fundNameItem.tags || [],
-                                firstCloseDate: fundNameItem.firstCloseDate || null,
-                                finalCloseDate: fundNameItem.finalCloseDate || null,
+                                investmentTermStartDate: fundNameItem.investmentTermStartDate || fundNameItem.finalCloseDate || null,
                                 investmentTermYears: fundNameItem.investmentTermYears || null
                             };
 
