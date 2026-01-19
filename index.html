@@ -2778,7 +2778,13 @@
 
                 const fundNameObj = typeof nameOrObject === 'string'
                     ? { name: nameOrObject, tags: [] }
-                    : { name: nameOrObject.name, tags: nameOrObject.tags || [] };
+                    : {
+                        name: nameOrObject.name,
+                        tags: nameOrObject.tags || [],
+                        firstCloseDate: nameOrObject.firstCloseDate || null,
+                        finalCloseDate: nameOrObject.finalCloseDate || null,
+                        investmentTermYears: nameOrObject.investmentTermYears || null
+                    };
 
                 const transaction = db.transaction([FUNDNAMES_STORE], 'readwrite');
                 const objectStore = transaction.objectStore(FUNDNAMES_STORE);
@@ -4408,18 +4414,20 @@
         // ===========================
 
         /**
-         * Aggregate historical cash flows by year for a set of funds
-         * @param {Array} funds - Array of fund objects with cash flows
-         * @returns {Object} { calls: {year: amount}, distributions: {year: amount}, byFund: {fundName: {calls: {}, distributions: {}}} }
+         * Aggregate historical cash flows by year
+         * @param {Array} funds - Array of fund objects
+         * @param {Date|null} cutoffDate - Cutoff date for separating historical from projected
+         * @returns {Object} { calls: {year: amount}, distributions: {year: amount}, byFund: {...} }
          */
-        function aggregateHistoricalCashFlows(funds) {
+        function aggregateHistoricalCashFlows(funds, cutoffDate) {
             const result = {
                 calls: {},
                 distributions: {},
                 byFund: {}
             };
 
-            const currentYear = new Date().getFullYear();
+            // Use cutoff date if provided, otherwise use current date
+            const cutoffYear = cutoffDate ? cutoffDate.getFullYear() : new Date().getFullYear();
 
             funds.forEach(fund => {
                 if (!fund.cashFlows || fund.cashFlows.length === 0) return;
@@ -4430,9 +4438,12 @@
                 }
 
                 fund.cashFlows.forEach(cf => {
-                    const year = new Date(cf.date).getFullYear();
-                    // Only include historical data (up to current year)
-                    if (year > currentYear) return;
+                    const cfDate = new Date(cf.date);
+                    const year = cfDate.getFullYear();
+
+                    // Only include historical data (on or before cutoff date)
+                    if (cutoffDate && cfDate > cutoffDate) return;
+                    if (year > cutoffYear) return;
 
                     const amount = Math.abs(cf.amount);
 
@@ -4455,16 +4466,18 @@
          * Calculate projected capital calls by year for a set of funds
          * @param {Array} funds - Array of fund objects
          * @param {Map} fundNameData - Map of fund name to fund name object (with terms)
+         * @param {Date|null} cutoffDate - Cutoff date for separating historical from projected
          * @returns {Object} { projectedCalls: {year: amount}, byFund: {fundName: {year: amount}} }
          */
-        function calculateProjectedCalls(funds, fundNameData) {
+        function calculateProjectedCalls(funds, fundNameData, cutoffDate) {
             const result = {
                 projectedCalls: {},
                 byFund: {}
             };
 
-            const currentYear = new Date().getFullYear();
-            const currentDate = new Date();
+            // Use cutoff date if provided, otherwise use current date
+            const referenceDate = cutoffDate || new Date();
+            const referenceYear = referenceDate.getFullYear();
 
             funds.forEach(fund => {
                 const fundNameObj = fundNameData.get(fund.fundName);
@@ -4480,20 +4493,24 @@
                 const investmentEndDate = new Date(finalClose);
                 investmentEndDate.setFullYear(investmentEndDate.getFullYear() + investmentTermYears);
 
-                // Skip if investment period has ended
-                if (investmentEndDate < currentDate) return;
+                // Skip if investment period has ended relative to cutoff date
+                if (investmentEndDate < referenceDate) return;
 
-                // Calculate remaining uncalled capital
+                // Calculate remaining uncalled capital as of cutoff date
                 const commitment = fund.commitment || 0;
                 const totalCalled = (fund.cashFlows || [])
-                    .filter(cf => cf.amount < 0 || cf.type === 'Contribution')
+                    .filter(cf => {
+                        // Only count contributions on or before cutoff date
+                        if (cutoffDate && new Date(cf.date) > cutoffDate) return false;
+                        return cf.amount < 0 || cf.type === 'Contribution';
+                    })
                     .reduce((sum, cf) => sum + Math.abs(cf.amount), 0);
                 const uncalledCapital = Math.max(0, commitment - totalCalled);
 
                 if (uncalledCapital <= 0) return;
 
-                // Calculate years remaining in investment period
-                const startYear = Math.max(currentYear + 1, finalClose.getFullYear());
+                // Calculate years remaining in investment period (starting after cutoff year)
+                const startYear = Math.max(referenceYear + 1, finalClose.getFullYear());
                 const endYear = investmentEndDate.getFullYear();
                 const yearsRemaining = [];
 
@@ -4524,10 +4541,12 @@
          * Get the range of years to display in the timeline
          * @param {Object} historical - Historical cash flow data
          * @param {Object} projected - Projected call data
-         * @returns {Object} { years: [], currentYear: number, firstProjectedYear: number }
+         * @param {number|null} cutoffYear - The cutoff year (last historical year)
+         * @returns {Object} { years: [], cutoffYear: number, firstProjectedYear: number }
          */
-        function getTimelineYearRange(historical, projected) {
-            const currentYear = new Date().getFullYear();
+        function getTimelineYearRange(historical, projected, cutoffYear) {
+            // Use cutoff year if provided, otherwise use current year
+            const dividerYear = cutoffYear || new Date().getFullYear();
 
             // Collect all years that have data
             const dataYears = new Set();
@@ -4538,22 +4557,22 @@
             // Find the min and max years with data
             const yearsWithData = Array.from(dataYears);
             if (yearsWithData.length === 0) {
-                // No data, show current year and next 4 years
+                // No data, show cutoff year and next 4 years
                 const years = [];
-                for (let y = currentYear; y <= currentYear + 4; y++) {
+                for (let y = dividerYear; y <= dividerYear + 4; y++) {
                     years.push(y);
                 }
-                return { years, currentYear, firstProjectedYear: currentYear + 1 };
+                return { years, cutoffYear: dividerYear, firstProjectedYear: dividerYear + 1 };
             }
 
             const minDataYear = Math.min(...yearsWithData);
             const maxDataYear = Math.max(...yearsWithData);
 
             // Determine display range:
-            // Historical: from minDataYear to currentYear (at least 5 years back from current if data exists)
-            // Projected: from currentYear+1 to at least 5 years out or maxDataYear
-            const historicalStart = Math.min(minDataYear, currentYear - 4);
-            const projectedEnd = Math.max(maxDataYear, currentYear + 5);
+            // Historical: from minDataYear to cutoffYear (at least 5 years back from cutoff if data exists)
+            // Projected: from cutoffYear+1 to at least 5 years out or maxDataYear
+            const historicalStart = Math.min(minDataYear, dividerYear - 4);
+            const projectedEnd = Math.max(maxDataYear, dividerYear + 5);
 
             // Build continuous year range
             const years = [];
@@ -4561,16 +4580,16 @@
                 years.push(y);
             }
 
-            // Limit to reasonable display (last 5 historical + current + next 5 projected = 11 years max)
-            const historicalYears = years.filter(y => y <= currentYear);
-            const projectedYears = years.filter(y => y > currentYear);
+            // Limit to reasonable display (last 5 historical + next 5 projected = 10 years max)
+            const historicalYears = years.filter(y => y <= dividerYear);
+            const projectedYears = years.filter(y => y > dividerYear);
 
             const displayHistorical = historicalYears.slice(-5);
             const displayProjected = projectedYears.slice(0, 5);
 
             return {
                 years: [...displayHistorical, ...displayProjected],
-                currentYear,
+                cutoffYear: dividerYear,
                 firstProjectedYear: displayProjected.length > 0 ? displayProjected[0] : null
             };
         }
@@ -4587,10 +4606,15 @@
                 return;
             }
 
-            // Aggregate data
-            const historical = aggregateHistoricalCashFlows(funds);
-            const projected = calculateProjectedCalls(funds, fundNameData);
-            const yearRange = getTimelineYearRange(historical, projected);
+            // Get the cutoff date from the filter
+            const cutoffDateValue = document.getElementById('cutoffDate').value;
+            const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue) : null;
+            const cutoffYear = cutoffDate ? cutoffDate.getFullYear() : null;
+
+            // Aggregate data using cutoff date
+            const historical = aggregateHistoricalCashFlows(funds, cutoffDate);
+            const projected = calculateProjectedCalls(funds, fundNameData, cutoffDate);
+            const yearRange = getTimelineYearRange(historical, projected, cutoffYear);
 
             if (yearRange.years.length === 0) {
                 container.innerHTML = '<p class="timeline-no-data">No cash flow data available for the selected funds.</p>';
@@ -4628,7 +4652,10 @@
 
             // Add footnote for projected
             if (yearRange.firstProjectedYear) {
-                html += '<p style="margin-top: 10px; font-size: 11px; color: var(--color-text-light); font-style: italic;">* Projected values based on remaining uncalled capital distributed linearly across investment period</p>';
+                const footnoteText = cutoffDate
+                    ? `* Projected values (after ${cutoffDateValue}) based on remaining uncalled capital distributed linearly across investment period`
+                    : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
+                html += `<p style="margin-top: 10px; font-size: 11px; color: var(--color-text-light); font-style: italic;">${footnoteText}</p>`;
             }
 
             container.innerHTML = html;
