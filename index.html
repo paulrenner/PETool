@@ -6506,7 +6506,7 @@
                 fund.timestamp = new Date().toISOString();
 
                 await saveFundToDB(fund);
-                hasUnsavedChanges = false; // Mark as saved before closing
+                AppState.setUnsavedChanges(false); // Mark as saved before closing
                 closeDetailsModal();
                 await renderTable();
                 showStatus('Details updated successfully');
