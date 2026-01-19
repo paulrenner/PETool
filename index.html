@@ -6300,9 +6300,10 @@
                     return;
                 }
 
-                // Build all cash flow rows using Templates
+                // Build all cash flow rows using Templates (sorted oldest to newest)
                 Debug.log('Cash flows:', fund.cashFlows);
-                const cashFlowsHtml = (fund.cashFlows || [])
+                const cashFlowsHtml = [...(fund.cashFlows || [])]
+                    .sort((a, b) => new Date(a.date) - new Date(b.date))
                     .map((cf, index) => Templates.cashFlowRow(cf, index))
                     .join('');
                 cashFlowsTableBody.innerHTML = cashFlowsHtml;
@@ -6321,9 +6322,10 @@
                     return;
                 }
 
-                // Build all NAV rows using Templates
+                // Build all NAV rows using Templates (sorted oldest to newest)
                 Debug.log('Monthly NAV:', fund.monthlyNav);
-                const navHtml = (fund.monthlyNav || [])
+                const navHtml = [...(fund.monthlyNav || [])]
+                    .sort((a, b) => new Date(a.date) - new Date(b.date))
                     .map((nav, index) => Templates.navRow(nav, index))
                     .join('');
                 navTableBody.innerHTML = navHtml;
