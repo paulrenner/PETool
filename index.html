@@ -5577,6 +5577,12 @@
                     resizer.className = 'resizer';
                     th.appendChild(resizer);
 
+                    // Prevent click events on resizer from triggering sort
+                    resizer.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                    });
+
                     // Variables for resizing
                     let startX, startWidth;
 
@@ -5775,8 +5781,8 @@
             // Table header sorting - use event delegation
             const thead = document.querySelector('#fundsTable thead');
             thead.addEventListener('click', (e) => {
-                // Skip sorting if we just finished resizing a column
-                if (isResizingColumn) return;
+                // Skip sorting if we just finished resizing a column or clicked on resizer
+                if (isResizingColumn || e.target.classList.contains('resizer')) return;
                 const th = e.target.closest('th[data-sort]');
                 if (th) {
                     const sortColumn = th.getAttribute('data-sort');
