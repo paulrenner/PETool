@@ -4506,26 +4506,43 @@
          */
         function getTimelineYearRange(historical, projected) {
             const currentYear = new Date().getFullYear();
-            const allYears = new Set();
 
-            // Add historical years
-            Object.keys(historical.calls).forEach(y => allYears.add(parseInt(y)));
-            Object.keys(historical.distributions).forEach(y => allYears.add(parseInt(y)));
+            // Collect all years that have data
+            const dataYears = new Set();
+            Object.keys(historical.calls).forEach(y => dataYears.add(parseInt(y)));
+            Object.keys(historical.distributions).forEach(y => dataYears.add(parseInt(y)));
+            Object.keys(projected.projectedCalls).forEach(y => dataYears.add(parseInt(y)));
 
-            // Add projected years
-            Object.keys(projected.projectedCalls).forEach(y => allYears.add(parseInt(y)));
+            // Find the min and max years with data
+            const yearsWithData = Array.from(dataYears);
+            if (yearsWithData.length === 0) {
+                // No data, show current year and next 4 years
+                const years = [];
+                for (let y = currentYear; y <= currentYear + 4; y++) {
+                    years.push(y);
+                }
+                return { years, currentYear, firstProjectedYear: currentYear + 1 };
+            }
 
-            // Ensure we have at least current year
-            allYears.add(currentYear);
+            const minDataYear = Math.min(...yearsWithData);
+            const maxDataYear = Math.max(...yearsWithData);
 
-            // Sort and limit range (last 5 historical + next 5 projected)
-            const sortedYears = Array.from(allYears).sort((a, b) => a - b);
+            // Determine display range:
+            // Historical: from minDataYear to currentYear (at least 5 years back from current if data exists)
+            // Projected: from currentYear+1 to at least 5 years out or maxDataYear
+            const historicalStart = Math.min(minDataYear, currentYear - 4);
+            const projectedEnd = Math.max(maxDataYear, currentYear + 5);
 
-            // Find the split point
-            const historicalYears = sortedYears.filter(y => y <= currentYear);
-            const projectedYears = sortedYears.filter(y => y > currentYear);
+            // Build continuous year range
+            const years = [];
+            for (let y = historicalStart; y <= projectedEnd; y++) {
+                years.push(y);
+            }
 
-            // Take last 5 historical and first 5 projected
+            // Limit to reasonable display (last 5 historical + current + next 5 projected = 11 years max)
+            const historicalYears = years.filter(y => y <= currentYear);
+            const projectedYears = years.filter(y => y > currentYear);
+
             const displayHistorical = historicalYears.slice(-5);
             const displayProjected = projectedYears.slice(0, 5);
 
