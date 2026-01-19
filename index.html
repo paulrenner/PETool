@@ -22,6 +22,8 @@
             --color-success-hover: #229954;
             --color-danger: #E74C3C;
             --color-danger-hover: #C0392B;
+            --color-warning: #F39C12;
+            --color-warning-bg: #FEF9E7;
             --color-secondary: #95A5A6;
             --color-secondary-hover: #7F8C8D;
 
@@ -67,6 +69,8 @@
             --color-success-hover: #48BB78;
             --color-danger: #FC8181;
             --color-danger-hover: #F56565;
+            --color-warning: #F6E05E;
+            --color-warning-bg: #744210;
             --color-secondary: #A0AEC0;
             --color-secondary-hover: #CBD5E0;
 
@@ -415,6 +419,25 @@
 
         [data-theme="dark"] .timeline-table .year-projected th {
             background: #2C4A5E;
+        }
+
+        /* Estimated projections (funds missing final close date) */
+        .timeline-table .year-estimated {
+            background: var(--color-warning-bg);
+            font-style: italic;
+        }
+
+        .timeline-table .year-estimated th {
+            background: var(--color-warning-bg);
+        }
+
+        .timeline-estimated-indicator {
+            display: inline-block;
+            font-size: 10px;
+            color: var(--color-warning);
+            margin-left: 4px;
+            vertical-align: super;
+            cursor: help;
         }
 
         .timeline-table .row-calls td {
@@ -5310,12 +5333,18 @@
         function calculateProjectedCalls(funds, fundNameData, cutoffDate) {
             const result = {
                 projectedCalls: {},
-                byFund: {}
+                byFund: {},
+                // Estimated projections for funds missing final close date
+                estimatedCalls: {},
+                estimatedByFund: {},
+                // Track which years have estimated data
+                estimatedYears: new Set()
             };
 
             // Use cutoff date if provided, otherwise use current date
             const referenceDate = cutoffDate || new Date();
             const referenceYear = referenceDate.getFullYear();
+            const DEFAULT_ESTIMATION_YEARS = 4; // Spread across 4 years when final close date is missing
 
             funds.forEach(fund => {
                 const fundNameObj = fundNameData.get(fund.fundName);
@@ -5323,8 +5352,37 @@
 
                 const { finalCloseDate, investmentTermYears } = fundNameObj;
 
-                // Skip if missing required fund terms
-                if (!finalCloseDate || !investmentTermYears) return;
+                // Handle funds missing final close date or investment term
+                if (!finalCloseDate || !investmentTermYears) {
+                    // Calculate remaining uncalled capital
+                    const commitment = fund.commitment || 0;
+                    const totalCalled = (fund.cashFlows || [])
+                        .filter(cf => {
+                            if (cutoffDate && new Date(cf.date) > cutoffDate) return false;
+                            return cf.amount < 0 || cf.type === 'Contribution';
+                        })
+                        .reduce((sum, cf) => sum + Math.abs(cf.amount), 0);
+                    const uncalledCapital = Math.max(0, commitment - totalCalled);
+
+                    if (uncalledCapital > 0) {
+                        // Spread remaining commitment across DEFAULT_ESTIMATION_YEARS starting next year
+                        const startYear = referenceYear + 1;
+                        const annualCall = uncalledCapital / DEFAULT_ESTIMATION_YEARS;
+                        const fundKey = fund.fundName;
+
+                        if (!result.estimatedByFund[fundKey]) {
+                            result.estimatedByFund[fundKey] = {};
+                        }
+
+                        for (let i = 0; i < DEFAULT_ESTIMATION_YEARS; i++) {
+                            const year = startYear + i;
+                            result.estimatedCalls[year] = (result.estimatedCalls[year] || 0) + annualCall;
+                            result.estimatedByFund[fundKey][year] = (result.estimatedByFund[fundKey][year] || 0) + annualCall;
+                            result.estimatedYears.add(year);
+                        }
+                    }
+                    return;
+                }
 
                 // Calculate investment period end
                 const finalClose = new Date(finalCloseDate);
@@ -5391,6 +5449,8 @@
             Object.keys(historical.calls).forEach(y => dataYears.add(parseInt(y)));
             Object.keys(historical.distributions).forEach(y => dataYears.add(parseInt(y)));
             Object.keys(projected.projectedCalls).forEach(y => dataYears.add(parseInt(y)));
+            // Include estimated years (from funds missing final close date)
+            Object.keys(projected.estimatedCalls || {}).forEach(y => dataYears.add(parseInt(y)));
 
             // Find the min and max years with data
             const yearsWithData = Array.from(dataYears);
@@ -5428,7 +5488,8 @@
             return {
                 years: [...displayHistorical, ...displayProjected],
                 cutoffYear: dividerYear,
-                firstProjectedYear: displayProjected.length > 0 ? displayProjected[0] : null
+                firstProjectedYear: displayProjected.length > 0 ? displayProjected[0] : null,
+                estimatedYears: projected.estimatedYears || new Set()
             };
         }
 
@@ -5470,12 +5531,23 @@
             // Build table HTML
             let html = '<table class="timeline-table">';
 
+            // Check if there are any estimated years
+            const hasEstimatedData = yearRange.estimatedYears && yearRange.estimatedYears.size > 0;
+
             // Header row
             html += '<thead><tr><th></th>';
             yearRange.years.forEach(year => {
                 const isProjected = yearRange.firstProjectedYear && year >= yearRange.firstProjectedYear;
                 const isDivider = year === yearRange.firstProjectedYear;
-                html += `<th class="${isProjected ? 'year-projected' : ''} ${isDivider ? 'timeline-divider' : ''}">${year}${isProjected ? '*' : ''}</th>`;
+                const isEstimated = yearRange.estimatedYears && yearRange.estimatedYears.has(year);
+                const cellClass = `${isProjected && !isEstimated ? 'year-projected' : ''} ${isEstimated ? 'year-estimated' : ''} ${isDivider ? 'timeline-divider' : ''}`;
+                let indicator = '';
+                if (isEstimated) {
+                    indicator = '<span class="timeline-estimated-indicator" title="Estimated: fund(s) missing final close date">&#8224;</span>';
+                } else if (isProjected) {
+                    indicator = '*';
+                }
+                html += `<th class="${cellClass}">${year}${indicator}</th>`;
             });
             html += '</tr></thead>';
 
@@ -5485,23 +5557,36 @@
             // Get unique fund names for expandable rows
             const fundNames = [...new Set(funds.map(f => f.fundName))].sort();
 
-            // Capital Calls row (expandable)
-            html += buildTimelineRow('Capital Calls', 'calls', yearRange, historical.calls, projected.projectedCalls, true, fundNames, historical.byFund, projected.byFund, 'calls');
+            // Capital Calls row (expandable) - include estimated data
+            html += buildTimelineRow('Capital Calls', 'calls', yearRange, historical.calls, projected.projectedCalls, true, fundNames, historical.byFund, projected.byFund, 'calls', projected.estimatedCalls, projected.estimatedByFund);
 
             // Distributions row (expandable)
-            html += buildTimelineRow('Distributions', 'distributions', yearRange, historical.distributions, {}, true, fundNames, historical.byFund, {}, 'distributions');
+            html += buildTimelineRow('Distributions', 'distributions', yearRange, historical.distributions, {}, true, fundNames, historical.byFund, {}, 'distributions', {}, {});
 
             // Net Cash Flow row
             html += buildNetCashFlowRow(yearRange, historical, projected);
 
             html += '</tbody></table>';
 
-            // Add footnote for projected
-            if (yearRange.firstProjectedYear) {
-                const footnoteText = cutoffDate
-                    ? `* Projected values (after ${cutoffDateValue}) based on remaining uncalled capital distributed linearly across investment period`
-                    : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
-                html += `<p style="margin-top: 10px; font-size: 11px; color: var(--color-text-light); font-style: italic;">${footnoteText}</p>`;
+            // Add footnotes for projected and estimated
+            if (yearRange.firstProjectedYear || hasEstimatedData) {
+                let footnoteHtml = '<div style="margin-top: 10px; font-size: 11px; color: var(--color-text-light); font-style: italic;">';
+                if (yearRange.firstProjectedYear && !hasEstimatedData) {
+                    const footnoteText = cutoffDate
+                        ? `* Projected values (after ${cutoffDateValue}) based on remaining uncalled capital distributed linearly across investment period`
+                        : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
+                    footnoteHtml += `<p style="margin: 0;">${footnoteText}</p>`;
+                } else if (hasEstimatedData && !yearRange.firstProjectedYear) {
+                    footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing final close date (spread over 4 years). <a href="#" onclick="openSettingsTab('fundNames'); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
+                } else if (yearRange.firstProjectedYear && hasEstimatedData) {
+                    const footnoteText = cutoffDate
+                        ? `* Projected values (after ${cutoffDateValue}) based on remaining uncalled capital distributed linearly across investment period`
+                        : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
+                    footnoteHtml += `<p style="margin: 0 0 4px 0;">${footnoteText}</p>`;
+                    footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing final close date (spread over 4 years). <a href="#" onclick="openSettingsTab('fundNames'); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
+                }
+                footnoteHtml += '</div>';
+                html += footnoteHtml;
             }
 
             container.innerHTML = html;
@@ -5525,7 +5610,7 @@
         /**
          * Build a timeline row with expandable fund breakdown
          */
-        function buildTimelineRow(label, type, yearRange, historicalData, projectedData, expandable, fundNames, historicalByFund, projectedByFund, dataType) {
+        function buildTimelineRow(label, type, yearRange, historicalData, projectedData, expandable, fundNames, historicalByFund, projectedByFund, dataType, estimatedData = {}, estimatedByFund = {}) {
             let html = '';
 
             // Main row - escape label and type for XSS protection
@@ -5538,15 +5623,26 @@
             yearRange.years.forEach(year => {
                 const isProjected = yearRange.firstProjectedYear && year >= yearRange.firstProjectedYear;
                 const isDivider = year === yearRange.firstProjectedYear;
+                const isEstimated = yearRange.estimatedYears && yearRange.estimatedYears.has(year);
 
                 let value = 0;
-                if (isProjected && projectedData[year]) {
-                    value = projectedData[year];
-                } else if (!isProjected && historicalData[year]) {
+                let hasEstimatedValue = false;
+                if (isProjected) {
+                    // Combine projected and estimated values
+                    const projectedValue = projectedData[year] || 0;
+                    const estimatedValue = estimatedData[year] || 0;
+                    value = projectedValue + estimatedValue;
+                    hasEstimatedValue = estimatedValue > 0;
+                } else if (historicalData[year]) {
                     value = historicalData[year];
                 }
 
-                const cellClass = `${isProjected ? 'year-projected' : ''} ${isDivider ? 'timeline-divider' : ''}`;
+                let cellClass = isDivider ? 'timeline-divider' : '';
+                if (isEstimated && hasEstimatedValue) {
+                    cellClass += ' year-estimated';
+                } else if (isProjected) {
+                    cellClass += ' year-projected';
+                }
                 html += `<td class="${cellClass}">${value > 0 ? formatCurrency(value) : '-'}</td>`;
             });
 
@@ -5561,15 +5657,25 @@
                     yearRange.years.forEach(year => {
                         const isProjected = yearRange.firstProjectedYear && year >= yearRange.firstProjectedYear;
                         const isDivider = year === yearRange.firstProjectedYear;
+                        const isEstimated = yearRange.estimatedYears && yearRange.estimatedYears.has(year);
 
                         let value = 0;
-                        if (isProjected && projectedByFund[fundName] && projectedByFund[fundName][year]) {
-                            value = projectedByFund[fundName][year];
-                        } else if (!isProjected && historicalByFund[fundName] && historicalByFund[fundName][dataType] && historicalByFund[fundName][dataType][year]) {
+                        let hasEstimatedValue = false;
+                        if (isProjected) {
+                            const projectedValue = (projectedByFund[fundName] && projectedByFund[fundName][year]) || 0;
+                            const estimatedValue = (estimatedByFund[fundName] && estimatedByFund[fundName][year]) || 0;
+                            value = projectedValue + estimatedValue;
+                            hasEstimatedValue = estimatedValue > 0;
+                        } else if (historicalByFund[fundName] && historicalByFund[fundName][dataType] && historicalByFund[fundName][dataType][year]) {
                             value = historicalByFund[fundName][dataType][year];
                         }
 
-                        const cellClass = `${isProjected ? 'year-projected' : ''} ${isDivider ? 'timeline-divider' : ''}`;
+                        let cellClass = isDivider ? 'timeline-divider' : '';
+                        if (isEstimated && hasEstimatedValue) {
+                            cellClass += ' year-estimated';
+                        } else if (isProjected) {
+                            cellClass += ' year-projected';
+                        }
                         html += `<td class="${cellClass}">${value > 0 ? formatCurrency(value) : '-'}</td>`;
                     });
 
@@ -5590,12 +5696,18 @@
             yearRange.years.forEach(year => {
                 const isProjected = yearRange.firstProjectedYear && year >= yearRange.firstProjectedYear;
                 const isDivider = year === yearRange.firstProjectedYear;
+                const isEstimated = yearRange.estimatedYears && yearRange.estimatedYears.has(year);
 
                 let calls = 0;
                 let distributions = 0;
+                let hasEstimatedValue = false;
 
                 if (isProjected) {
-                    calls = projected.projectedCalls[year] || 0;
+                    // Combine projected and estimated calls
+                    const projectedCalls = projected.projectedCalls[year] || 0;
+                    const estimatedCalls = projected.estimatedCalls ? (projected.estimatedCalls[year] || 0) : 0;
+                    calls = projectedCalls + estimatedCalls;
+                    hasEstimatedValue = estimatedCalls > 0;
                     // No projected distributions
                 } else {
                     calls = historical.calls[year] || 0;
@@ -5603,7 +5715,13 @@
                 }
 
                 const net = distributions - calls;
-                const cellClass = `${isProjected ? 'year-projected' : ''} ${isDivider ? 'timeline-divider' : ''} ${net >= 0 ? 'positive' : 'negative'}`;
+                let cellClass = isDivider ? 'timeline-divider' : '';
+                if (isEstimated && hasEstimatedValue) {
+                    cellClass += ' year-estimated';
+                } else if (isProjected) {
+                    cellClass += ' year-projected';
+                }
+                cellClass += ` ${net >= 0 ? 'positive' : 'negative'}`;
 
                 let displayValue = '-';
                 if (calls > 0 || distributions > 0) {
