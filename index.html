@@ -5871,7 +5871,45 @@
             try {
                 const fundId = document.getElementById('fundId').value;
                 const isDuplicate = document.getElementById('isDuplicate').value;
-                const fundName = document.getElementById('fundName').value.trim();
+                let fundName = document.getElementById('fundName').value.trim();
+
+                // Handle inline fund name creation - if dropdown is "__new__", use the inline input
+                if (fundName === '__new__') {
+                    const inlineInput = document.getElementById('newFundNameInline');
+                    const inlineName = inlineInput.value.trim();
+
+                    if (!inlineName) {
+                        highlightFieldError('fundName');
+                        showStatus('Please enter a fund name or click Cancel to select an existing one', 'error');
+                        inlineInput.focus();
+                        return;
+                    }
+
+                    // Validate the inline fund name
+                    if (inlineName.length < 2) {
+                        highlightFieldError('fundName');
+                        showStatus('Fund name too short (min 2 characters)', 'error');
+                        inlineInput.focus();
+                        return;
+                    }
+
+                    if (inlineName.length > 100) {
+                        highlightFieldError('fundName');
+                        showStatus('Fund name too long (max 100 characters)', 'error');
+                        inlineInput.focus();
+                        return;
+                    }
+
+                    // Save the new fund name if it doesn't exist
+                    if (!fundNames.has(inlineName)) {
+                        await saveFundName(inlineName);
+                        fundNames.add(inlineName);
+                        fundNameData.set(inlineName, { name: inlineName, tags: [] });
+                    }
+
+                    fundName = inlineName;
+                }
+
                 const accountNumber = document.getElementById('accountNumber').value.trim();
                 const groupId = document.getElementById('fundGroup').value;
                 const commitmentText = document.getElementById('commitment').value.trim();
