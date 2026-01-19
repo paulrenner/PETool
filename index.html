@@ -6964,6 +6964,9 @@
                 await loadFundNamesList();
                 await populateFundNamesDropdown();
 
+                // Clear the Add Fund form when opening
+                clearAddFundForm();
+
                 // Expand fund terms section if requested (e.g., from timeline "Add fund terms" link)
                 const fundTermsDetails = document.getElementById('newFundTermsDetails');
                 if (fundTermsDetails) {
@@ -6977,7 +6980,35 @@
             }
         }
 
-        function closeManageFundsModal() {
+        function clearAddFundForm() {
+            document.getElementById('newFundNameInput').value = '';
+            document.getElementById('newFundTermStartDate').value = '';
+            document.getElementById('newFundInvestmentTerm').value = '';
+            const fundTermsDetails = document.getElementById('newFundTermsDetails');
+            if (fundTermsDetails) {
+                fundTermsDetails.removeAttribute('open');
+            }
+        }
+
+        function hasUnsavedAddFundData() {
+            const name = document.getElementById('newFundNameInput').value.trim();
+            const termStartDate = document.getElementById('newFundTermStartDate').value;
+            const investmentTerm = document.getElementById('newFundInvestmentTerm').value;
+            return name !== '' || termStartDate !== '' || investmentTerm !== '';
+        }
+
+        async function closeManageFundsModal() {
+            if (hasUnsavedAddFundData()) {
+                const confirmed = await showConfirm('You have unsaved data in the Add Fund form. Are you sure you want to close?', {
+                    title: 'Unsaved Changes',
+                    confirmText: 'Close Anyway',
+                    cancelText: 'Go Back'
+                });
+                if (!confirmed) {
+                    return;
+                }
+            }
+            clearAddFundForm();
             document.getElementById('manageFundNamesModal').classList.remove('show');
         }
 
