@@ -4026,6 +4026,7 @@
         function parseCashFlowsForIRR(fund, cutoffDate) {
             const flows = (fund.cashFlows || [])
                 .filter(cf => isValidDate(cf.date) && (!cutoffDate || new Date(cf.date) <= cutoffDate))
+                .filter(cf => cf.type !== 'Adjustment') // Adjustments don't affect IRR/MOIC
                 .map(cf => {
                     const amount = parseCurrency(cf.amount) || 0;
                     return {
