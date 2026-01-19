@@ -320,7 +320,8 @@
         }
 
         .table-container table {
-            min-width: 1400px;
+            width: 100%;
+            table-layout: auto;
         }
 
         thead {
@@ -962,10 +963,6 @@
             .control-group {
                 width: 100%;
             }
-
-            .table-container table {
-                min-width: 1200px; /* Reduced from 1400px */
-            }
         }
 
         /* Mobile responsive improvements */
@@ -1057,6 +1054,11 @@
             th, td {
                 font-size: 0.8em;
                 padding: 6px 4px;
+            }
+
+            /* Only enforce min-width on extremely narrow screens */
+            .table-container table {
+                min-width: 800px;
             }
         }
 
