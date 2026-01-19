@@ -3247,7 +3247,7 @@
                             <div>${escapeHtml(fund.fundName)}</div>
                             ${tagsHtml}
                         </td>
-                        <td title="${escapeHtml(getParentAccountDisplay(fund))}">${escapeHtml(getParentAccountDisplay(fund))}</td>
+                        <td title="${escapeHtml(getParentAccountDisplay(fund))}">${getInvestorCellHtml(fund)}</td>
                         <td class="center">${m.vintage || 'N/A'}</td>
                         <td class="number">${formatCurrency(m.commitment)}</td>
                         <td class="number">${formatCurrency(m.totalContributions)}</td>
@@ -3491,10 +3491,19 @@
             return group ? group.name : '';
         }
 
-        // Helper function to get parent name + account display text
+        // Helper function to get parent name + account display text (for sorting/tooltips)
         function getParentAccountDisplay(fund) {
             const parentName = getImmediateParentName(fund);
             return parentName ? `${parentName} (${fund.accountNumber})` : fund.accountNumber;
+        }
+
+        // Helper function to get HTML for investor cell display
+        function getInvestorCellHtml(fund) {
+            const groupName = getImmediateParentName(fund);
+            if (groupName) {
+                return `<div>${escapeHtml(groupName)}</div><div style="font-size: 0.85em; color: #7f8c8d;">${escapeHtml(fund.accountNumber)}</div>`;
+            }
+            return escapeHtml(fund.accountNumber);
         }
 
         // Helper function to add group options but only include groups with valid funds
