@@ -320,7 +320,8 @@
         }
 
         .table-container table {
-            min-width: 1400px;
+            width: 100%;
+            table-layout: auto;
         }
 
         thead {
@@ -374,16 +375,18 @@
         th .resizer {
             position: absolute;
             top: 0;
-            right: 0;
-            width: 5px;
+            right: -8px;
+            width: 16px;
             height: 100%;
             cursor: col-resize;
             user-select: none;
-            z-index: 1;
+            z-index: 10;
         }
 
         th .resizer:hover {
             background-color: var(--color-action);
+            width: 4px;
+            right: 0;
         }
 
         th.resizing {
@@ -962,10 +965,6 @@
             .control-group {
                 width: 100%;
             }
-
-            .table-container table {
-                min-width: 1200px; /* Reduced from 1400px */
-            }
         }
 
         /* Mobile responsive improvements */
@@ -1057,6 +1056,11 @@
             th, td {
                 font-size: 0.8em;
                 padding: 6px 4px;
+            }
+
+            /* Only enforce min-width on extremely narrow screens */
+            .table-container table {
+                min-width: 800px;
             }
         }
 
@@ -1558,7 +1562,8 @@
 
             <div class="form-group">
                 <label for="newGroupName">Group Name</label>
-                <input type="text" id="newGroupName" placeholder="Enter group name">
+                <input type="text" id="newGroupName" placeholder="e.g., John Smith, Smith Family Trust">
+                <small style="color: #7f8c8d; font-size: 0.85em; margin-top: 4px; display: block;">Use groups to organize by account holder or entity (e.g., individuals, trusts, IRAs)</small>
             </div>
 
             <div class="form-group">
@@ -1982,6 +1987,8 @@
         let currentGroupDescendants = null;
         let sortColumn = null;
         let sortDirection = 'asc';
+        let isResizingColumn = false;
+        let lastMousedownOnResizer = false;
         let currentActionFundId = null;
         let currentDetailsFundId = null;
         let hasUnsavedChanges = false;
@@ -3240,7 +3247,7 @@
                             <div>${escapeHtml(fund.fundName)}</div>
                             ${tagsHtml}
                         </td>
-                        <td title="${escapeHtml(getParentAccountDisplay(fund))}">${escapeHtml(getParentAccountDisplay(fund))}</td>
+                        <td title="${escapeHtml(getParentAccountDisplay(fund))}">${getInvestorCellHtml(fund)}</td>
                         <td class="center">${m.vintage || 'N/A'}</td>
                         <td class="number">${formatCurrency(m.commitment)}</td>
                         <td class="number">${formatCurrency(m.totalContributions)}</td>
@@ -3484,10 +3491,19 @@
             return group ? group.name : '';
         }
 
-        // Helper function to get parent name + account display text
+        // Helper function to get parent name + account display text (for sorting/tooltips)
         function getParentAccountDisplay(fund) {
             const parentName = getImmediateParentName(fund);
             return parentName ? `${parentName} (${fund.accountNumber})` : fund.accountNumber;
+        }
+
+        // Helper function to get HTML for investor cell display
+        function getInvestorCellHtml(fund) {
+            const groupName = getImmediateParentName(fund);
+            if (groupName) {
+                return `<div>${escapeHtml(groupName)}</div><div style="font-size: 0.85em; color: #7f8c8d;">${escapeHtml(fund.accountNumber)}</div>`;
+            }
+            return escapeHtml(fund.accountNumber);
         }
 
         // Helper function to add group options but only include groups with valid funds
@@ -3500,8 +3516,9 @@
                 if (hasValidFunds) {
                     const option = document.createElement('option');
                     option.value = node.id;
-                    const indent = '  '.repeat(level);
-                    option.textContent = indent + (level > 0 ? '└─ ' : '') + node.name;
+                    // Use increasing dashes to show hierarchy depth
+                    const prefix = level > 0 ? '–'.repeat(level) + ' ' : '';
+                    option.textContent = prefix + node.name;
                     selectElement.appendChild(option);
 
                     if (node.children.length > 0) {
@@ -4831,8 +4848,9 @@
                 }
                 const option = document.createElement('option');
                 option.value = group.id;
-                const indent = '  '.repeat(level);
-                option.textContent = indent + (level > 0 ? '└─ ' : '') + group.name;
+                // Use increasing dashes to show hierarchy depth
+                const prefix = level > 0 ? '–'.repeat(level) + ' ' : '';
+                option.textContent = prefix + group.name;
                 select.appendChild(option);
 
                 // Recursively add children
@@ -5574,14 +5592,22 @@
                     resizer.className = 'resizer';
                     th.appendChild(resizer);
 
+                    // Prevent click events on resizer from triggering sort
+                    resizer.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                    });
+
                     // Variables for resizing
                     let startX, startWidth;
 
                     resizer.addEventListener('mousedown', (e) => {
                         e.stopPropagation(); // Prevent sort trigger
+                        e.preventDefault(); // Prevent text selection
                         startX = e.pageX;
                         startWidth = th.offsetWidth;
 
+                        isResizingColumn = true;
                         th.classList.add('resizing');
                         document.body.style.cursor = 'col-resize';
                         document.body.style.userSelect = 'none';
@@ -5613,6 +5639,8 @@
                             document.removeEventListener('mousemove', onMouseMove);
                             document.removeEventListener('mouseup', onMouseUp);
                             document.removeEventListener('blur', onMouseUp); // Clean up blur listener
+                            // Reset flag after a short delay so click handler can check it
+                            setTimeout(() => { isResizingColumn = false; }, 50);
                         };
 
                         const cleanup = () => {
@@ -5767,7 +5795,19 @@
 
             // Table header sorting - use event delegation
             const thead = document.querySelector('#fundsTable thead');
+
+            // Track mousedown on resizer to prevent sort on click
+            thead.addEventListener('mousedown', (e) => {
+                lastMousedownOnResizer = e.target.closest('.resizer') !== null;
+            });
+
             thead.addEventListener('click', (e) => {
+                // Skip sorting if mousedown was on resizer, currently resizing, or click target is resizer
+                if (lastMousedownOnResizer || isResizingColumn || e.target.closest('.resizer')) {
+                    lastMousedownOnResizer = false;
+                    return;
+                }
+                lastMousedownOnResizer = false;
                 const th = e.target.closest('th[data-sort]');
                 if (th) {
                     const sortColumn = th.getAttribute('data-sort');
