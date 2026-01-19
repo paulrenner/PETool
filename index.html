@@ -2726,10 +2726,13 @@
                 const request = objectStore.getAll();
 
                 request.onsuccess = () => {
-                    // Ensure all objects have tags array
+                    // Ensure all objects have required fields with defaults
                     const objects = request.result.map(item => ({
                         name: item.name,
-                        tags: item.tags || []
+                        tags: item.tags || [],
+                        firstCloseDate: item.firstCloseDate || null,
+                        finalCloseDate: item.finalCloseDate || null,
+                        investmentTermYears: item.investmentTermYears || null
                     }));
                     resolve(objects);
                 };
