@@ -2704,7 +2704,7 @@
             FUNDS_STORE: 'funds',
             FUNDNAMES_STORE: 'fundNames',
             GROUPS_STORE: 'groups',
-            DB_VERSION: 9,
+            DB_VERSION: 10,
 
             // Currency formatting
             CURRENCY_FORMAT: 'en-US',
@@ -3510,6 +3510,54 @@
                     // if (oldVersion < 8) {
                     //     // Migration code
                     // }
+
+                    // Migration v9 to v10: Fix store names if they were renamed to investments/investmentNames
+                    if (oldVersion === 9) {
+                        // Check if stores were renamed during failed migration
+                        if (db.objectStoreNames.contains('investments') && !db.objectStoreNames.contains('funds')) {
+                            // Create funds store
+                            const fundsStore = db.createObjectStore('funds', {
+                                keyPath: 'id',
+                                autoIncrement: true
+                            });
+                            fundsStore.createIndex('fundName', 'fundName', { unique: false });
+                            fundsStore.createIndex('accountNumber', 'accountNumber', { unique: false });
+
+                            // Copy data from investments to funds
+                            const investmentsStore = transaction.objectStore('investments');
+                            investmentsStore.openCursor().onsuccess = function(event) {
+                                const cursor = event.target.result;
+                                if (cursor) {
+                                    fundsStore.put(cursor.value);
+                                    cursor.continue();
+                                }
+                            };
+                        }
+
+                        if (db.objectStoreNames.contains('investmentNames') && !db.objectStoreNames.contains('fundNames')) {
+                            // Create fundNames store
+                            db.createObjectStore('fundNames', { keyPath: 'name' });
+
+                            // Copy data from investmentNames to fundNames
+                            const investmentNamesStore = transaction.objectStore('investmentNames');
+                            const fundNamesStore = transaction.objectStore('fundNames');
+                            investmentNamesStore.openCursor().onsuccess = function(event) {
+                                const cursor = event.target.result;
+                                if (cursor) {
+                                    fundNamesStore.put(cursor.value);
+                                    cursor.continue();
+                                }
+                            };
+                        }
+
+                        // Delete old stores after data is copied
+                        if (db.objectStoreNames.contains('investments')) {
+                            db.deleteObjectStore('investments');
+                        }
+                        if (db.objectStoreNames.contains('investmentNames')) {
+                            db.deleteObjectStore('investmentNames');
+                        }
+                    }
                 };
             });
         }
