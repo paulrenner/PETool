@@ -54,6 +54,224 @@
             --transition-medium: all 0.2s ease;
         }
 
+        /* Dark Mode Theme */
+        [data-theme="dark"] {
+            --color-primary: #E8E8E8;
+            --color-primary-light: #2D3748;
+            --color-background: #1A202C;
+            --color-white: #2D3748;
+
+            --color-action: #4299E1;
+            --color-action-hover: #3182CE;
+            --color-success: #48BB78;
+            --color-success-hover: #38A169;
+            --color-danger: #FC8181;
+            --color-danger-hover: #F56565;
+            --color-secondary: #718096;
+            --color-secondary-hover: #A0AEC0;
+
+            --color-text: #E2E8F0;
+            --color-text-light: #A0AEC0;
+            --color-border: #4A5568;
+            --color-border-input: #4A5568;
+            --color-hover-bg: #374151;
+            --color-alt-bg: #1F2937;
+
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        [data-theme="dark"] header {
+            background: #1F2937;
+            border-bottom-color: #374151;
+        }
+
+        [data-theme="dark"] thead {
+            background: #374151;
+        }
+
+        [data-theme="dark"] th:hover {
+            background: #4A5568;
+        }
+
+        [data-theme="dark"] td {
+            border-bottom-color: #374151;
+        }
+
+        [data-theme="dark"] tbody tr:last-child {
+            border-color: #4A5568;
+            background: #1F2937;
+        }
+
+        [data-theme="dark"] .modal-content {
+            background: #2D3748;
+        }
+
+        [data-theme="dark"] .sidebar {
+            background: #2D3748;
+        }
+
+        [data-theme="dark"] .sidebar-header {
+            background: #1F2937;
+            border-bottom-color: #4A5568;
+        }
+
+        [data-theme="dark"] .status-message {
+            background: #2D3748;
+        }
+
+        [data-theme="dark"] .table-tag {
+            background: #374151;
+            color: #E2E8F0;
+        }
+
+        [data-theme="dark"] .tag {
+            background: #4299E1;
+        }
+
+        [data-theme="dark"] input:disabled,
+        [data-theme="dark"] textarea:disabled,
+        [data-theme="dark"] select:disabled {
+            background: #1F2937;
+        }
+
+        [data-theme="dark"] .details-table th {
+            background-color: #374151;
+            border-color: #4A5568;
+        }
+
+        [data-theme="dark"] .details-table td {
+            border-color: #4A5568;
+        }
+
+        [data-theme="dark"] .details-table tbody tr:nth-child(even) {
+            background-color: #1F2937;
+        }
+
+        [data-theme="dark"] .group-item,
+        [data-theme="dark"] .fund-name-item {
+            background: #1F2937;
+            border-color: #4A5568;
+        }
+
+        [data-theme="dark"] .action-dropdown {
+            background: #2D3748;
+            border-color: #4A5568;
+        }
+
+        [data-theme="dark"] .action-dropdown a:hover {
+            background: #374151;
+        }
+
+        [data-theme="dark"] .action-dropdown a.danger-action:hover {
+            background: #742A2A;
+        }
+
+        [data-theme="dark"] .loading-content {
+            background: #2D3748;
+        }
+
+        /* Portfolio Summary Stats */
+        .portfolio-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding: 16px 20px;
+            background: var(--color-alt-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+        }
+
+        .summary-stat {
+            display: flex;
+            flex-direction: column;
+            min-width: 100px;
+            padding: 8px 16px;
+            background: var(--color-white);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--color-border);
+        }
+
+        .summary-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--color-text-light);
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .summary-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--color-text);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .summary-value.positive {
+            color: var(--color-success);
+        }
+
+        .summary-value.negative {
+            color: var(--color-danger);
+        }
+
+        /* Keyboard Shortcuts Modal */
+        .shortcuts-modal .modal-content {
+            max-width: 500px;
+        }
+
+        .shortcuts-list {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 12px 20px;
+            margin-top: 16px;
+        }
+
+        .shortcut-key {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .shortcut-key kbd {
+            display: inline-block;
+            padding: 4px 8px;
+            font-family: monospace;
+            font-size: 12px;
+            background: var(--color-alt-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .shortcut-desc {
+            color: var(--color-text);
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .portfolio-summary {
+                gap: 8px;
+                padding: 12px;
+            }
+
+            .summary-stat {
+                min-width: 80px;
+                padding: 6px 10px;
+            }
+
+            .summary-label {
+                font-size: 10px;
+            }
+
+            .summary-value {
+                font-size: 14px;
+            }
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -1406,11 +1624,18 @@
                 <input type="text" id="searchInput" placeholder="Search funds..." title="Search by fund name or account number" aria-label="Search funds by name or account number">
             </div>
             <div class="control-group">
+                <label for="vintageFilter">Filter by Vintage</label>
+                <select id="vintageFilter">
+                    <option value="">All Vintages</option>
+                </select>
+            </div>
+            <div class="control-group">
                 <label for="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date">Cutoff Date</label>
                 <input type="date" id="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date" aria-label="Cutoff date for calculating metrics">
             </div>
             <div class="control-group">
                 <button class="btn-icon" id="resetFiltersBtn" title="Reset Filters" style="font-size: 20px; margin-top: auto;">↻</button>
+                <span id="activeFiltersIndicator" style="display: none; margin-left: 5px; color: var(--color-action); font-size: 12px; font-weight: 600;">●</span>
             </div>
             <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
                 <button class="btn-icon" id="undoBtn" title="Undo last action" style="font-size: 20px;" disabled>↶</button>
@@ -1420,6 +1645,38 @@
         </div>
 
         <div class="content">
+            <!-- Portfolio Summary Stats -->
+            <div id="portfolioSummary" class="portfolio-summary">
+                <div class="summary-stat">
+                    <span class="summary-label">Funds</span>
+                    <span class="summary-value" id="summaryFundCount">0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Total Commitment</span>
+                    <span class="summary-value" id="summaryCommitment">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Total NAV</span>
+                    <span class="summary-value" id="summaryNav">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Avg IRR</span>
+                    <span class="summary-value" id="summaryIRR">N/A</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Avg MOIC</span>
+                    <span class="summary-value" id="summaryMOIC">N/A</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">DPI</span>
+                    <span class="summary-value" id="summaryDPI">N/A</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">TVPI</span>
+                    <span class="summary-value" id="summaryTVPI">N/A</span>
+                </div>
+            </div>
+
             <div class="table-container">
                 <table id="fundsTable">
                     <thead>
@@ -1683,6 +1940,45 @@
         </div>
     </div>
 
+    <!-- Keyboard Shortcuts Help Modal -->
+    <div id="shortcutsModal" class="modal shortcuts-modal">
+        <div class="modal-content">
+            <span class="close" id="closeShortcutsModalBtn">&times;</span>
+            <h2>Keyboard Shortcuts</h2>
+            <div class="shortcuts-list">
+                <div class="shortcut-key"><kbd>?</kbd></div>
+                <div class="shortcut-desc">Show this help</div>
+
+                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>F</kbd></div>
+                <div class="shortcut-desc">Focus search input</div>
+
+                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>N</kbd></div>
+                <div class="shortcut-desc">Add new investment</div>
+
+                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>E</kbd></div>
+                <div class="shortcut-desc">Export to JSON</div>
+
+                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>Z</kbd></div>
+                <div class="shortcut-desc">Undo last action</div>
+
+                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></div>
+                <div class="shortcut-desc">Redo last action</div>
+
+                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>S</kbd></div>
+                <div class="shortcut-desc">Save (in details modal)</div>
+
+                <div class="shortcut-key"><kbd>Esc</kbd></div>
+                <div class="shortcut-desc">Close modal/sidebar</div>
+            </div>
+            <p style="margin-top: 20px; font-size: 12px; color: var(--color-text-light);">
+                On Mac, use <kbd style="display: inline-block; padding: 2px 6px; font-family: monospace; font-size: 11px; background: var(--color-alt-bg); border: 1px solid var(--color-border); border-radius: 3px;">⌘</kbd> instead of <kbd style="display: inline-block; padding: 2px 6px; font-family: monospace; font-size: 11px; background: var(--color-alt-bg); border: 1px solid var(--color-border); border-radius: 3px;">Ctrl</kbd>
+            </p>
+            <div class="form-actions">
+                <button class="btn-secondary" id="closeShortcutsModal2Btn">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar Panel -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div id="sidebar" class="sidebar">
@@ -1698,6 +1994,12 @@
                     <label class="sidebar-checkbox-label">
                         <input type="checkbox" id="sidebarShowTagsCheckbox" checked>
                         <span>Show Tags</span>
+                    </label>
+                </div>
+                <div class="sidebar-item">
+                    <label class="sidebar-checkbox-label">
+                        <input type="checkbox" id="sidebarDarkModeCheckbox">
+                        <span>Dark Mode</span>
                     </label>
                 </div>
             </div>
@@ -2903,6 +3205,45 @@
         }
 
         /**
+         * Calculate Distributed to Paid-In (DPI)
+         * DPI = Total Distributions / Total Contributions
+         * @param {number} totalDistributions - Sum of all distributions
+         * @param {number} totalContributions - Sum of all contributions
+         * @returns {number|null} DPI or null if cannot be calculated
+         */
+        function calculateDPI(totalDistributions, totalContributions) {
+            if (totalContributions === 0) return null;
+            const dpi = totalDistributions / totalContributions;
+            if (!isFinite(dpi) || dpi < 0) return null;
+            return dpi;
+        }
+
+        /**
+         * Calculate Total Value to Paid-In (TVPI)
+         * TVPI = (NAV + Total Distributions) / Total Contributions
+         * @param {number} nav - Current Net Asset Value
+         * @param {number} totalDistributions - Sum of all distributions
+         * @param {number} totalContributions - Sum of all contributions
+         * @returns {number|null} TVPI or null if cannot be calculated
+         */
+        function calculateTVPI(nav, totalDistributions, totalContributions) {
+            if (totalContributions === 0) return null;
+            const tvpi = (nav + totalDistributions) / totalContributions;
+            if (!isFinite(tvpi) || tvpi < 0) return null;
+            return tvpi;
+        }
+
+        /**
+         * Format DPI/TVPI for display
+         * @param {number|null} value - DPI or TVPI value
+         * @returns {string} Formatted string
+         */
+        function formatMultiple(value) {
+            if (value === null || value === undefined || !isFinite(value)) return 'N/A';
+            return value.toFixed(2) + 'x';
+        }
+
+        /**
          * Format MOIC for display with consistent null handling
          * @param {number|null} moic - MOIC value
          * @returns {string} Formatted MOIC string
@@ -2947,6 +3288,8 @@
             const cashFlowsForIRR = parseCashFlowsForIRR(fund, cutoffDate);
             const irr = calculateIRR(cashFlowsForIRR);
             const moic = calculateMOIC(cashFlowsForIRR);
+            const dpi = calculateDPI(totalDistributions, totalContributions);
+            const tvpi = calculateTVPI(nav, totalDistributions, totalContributions);
 
             const metrics = {
                 commitment,
@@ -2957,7 +3300,9 @@
                 investmentReturn,
                 vintage,
                 irr,
-                moic
+                moic,
+                dpi,
+                tvpi
             };
 
             // Cache the result
@@ -3212,6 +3557,12 @@
                 // Each dropdown shows only options compatible with other selected filters
                 updateFilterDropdowns(funds);
 
+                // Update vintage filter
+                updateVintageFilter(funds);
+
+                // Update active filters indicator
+                updateActiveFiltersIndicator();
+
                 // Get cutoff date
                 const cutoffDateValue = document.getElementById('cutoffDate').value;
                 const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue) : null;
@@ -3221,6 +3572,9 @@
                     ...fund,
                     metrics: calculateMetrics(fund, cutoffDate)
                 }));
+
+                // Update portfolio summary statistics
+                updatePortfolioSummary(fundsWithMetrics, cutoffDate);
 
                 // Render table body
                 const tbody = document.getElementById('fundsTableBody');
@@ -3339,6 +3693,7 @@
             const accountFilter = document.getElementById('accountFilter').value;
             const groupFilter = document.getElementById('groupFilter').value;
             const searchInput = document.getElementById('searchInput').value.toLowerCase().trim();
+            const vintageFilter = document.getElementById('vintageFilter').value;
 
             return funds.filter(fund => {
                 if (fundFilter && fund.fundName !== fundFilter) return false;
@@ -3351,6 +3706,13 @@
                         return false; // Will be set by async filter
                     }
                     if (!currentGroupDescendants.ids.includes(fund.groupId)) return false;
+                }
+                // Vintage filter
+                if (vintageFilter) {
+                    const fundVintage = getVintageYear(fund);
+                    if (!fundVintage || fundVintage !== parseInt(vintageFilter)) {
+                        return false;
+                    }
                 }
                 // Search filter: check fund name, account number, and tags
                 if (searchInput) {
@@ -3653,6 +4015,7 @@
             document.getElementById('accountFilter').value = '';
             document.getElementById('groupFilter').value = '';
             document.getElementById('searchInput').value = '';
+            document.getElementById('vintageFilter').value = '';
 
             // Reset cutoff date to latest quarter end (same as page load)
             const quarterEnd = getLatestQuarterEnd();
@@ -3664,7 +4027,167 @@
 
             currentGroupDescendants = null;
             updateHeader();
+            updateActiveFiltersIndicator();
             renderTable();
+        }
+
+        /**
+         * Update the active filters indicator
+         */
+        function updateActiveFiltersIndicator() {
+            const fundFilter = document.getElementById('fundFilter').value;
+            const accountFilter = document.getElementById('accountFilter').value;
+            const groupFilter = document.getElementById('groupFilter').value;
+            const searchInput = document.getElementById('searchInput').value.trim();
+            const vintageFilter = document.getElementById('vintageFilter').value;
+
+            const hasActiveFilters = fundFilter || accountFilter || groupFilter || searchInput || vintageFilter;
+            const indicator = document.getElementById('activeFiltersIndicator');
+
+            if (indicator) {
+                indicator.style.display = hasActiveFilters ? 'inline' : 'none';
+                indicator.title = hasActiveFilters ? 'Filters are active' : '';
+            }
+        }
+
+        /**
+         * Update portfolio summary statistics
+         * @param {Array} fundsWithMetrics - Array of funds with calculated metrics
+         * @param {Date|null} cutoffDate - Cutoff date for calculations
+         */
+        function updatePortfolioSummary(fundsWithMetrics, cutoffDate) {
+            const count = fundsWithMetrics.length;
+
+            // Calculate totals
+            let totalCommitment = 0;
+            let totalNav = 0;
+            let totalContributions = 0;
+            let totalDistributions = 0;
+            let validIRRs = [];
+            let validMOICs = [];
+            let aggregateFlows = [];
+
+            fundsWithMetrics.forEach(fund => {
+                const m = fund.metrics;
+                totalCommitment += m.commitment || 0;
+                totalNav += m.nav || 0;
+                totalContributions += m.totalContributions || 0;
+                totalDistributions += m.totalDistributions || 0;
+
+                if (m.irr !== null && isFinite(m.irr)) {
+                    validIRRs.push(m.irr);
+                }
+                if (m.moic !== null && isFinite(m.moic)) {
+                    validMOICs.push(m.moic);
+                }
+
+                // Collect cash flows for aggregate calculations
+                const flows = parseCashFlowsForIRR(fund, cutoffDate);
+                aggregateFlows.push(...flows);
+            });
+
+            // Calculate averages
+            const avgIRR = validIRRs.length > 0
+                ? validIRRs.reduce((a, b) => a + b, 0) / validIRRs.length
+                : null;
+            const avgMOIC = validMOICs.length > 0
+                ? validMOICs.reduce((a, b) => a + b, 0) / validMOICs.length
+                : null;
+
+            // Calculate aggregate DPI and TVPI
+            const portfolioDPI = calculateDPI(totalDistributions, totalContributions);
+            const portfolioTVPI = calculateTVPI(totalNav, totalDistributions, totalContributions);
+
+            // Update DOM
+            document.getElementById('summaryFundCount').textContent = count;
+            document.getElementById('summaryCommitment').textContent = formatCurrency(totalCommitment);
+            document.getElementById('summaryNav').textContent = formatCurrency(totalNav);
+
+            const irrElement = document.getElementById('summaryIRR');
+            irrElement.textContent = formatIRR(avgIRR);
+            irrElement.className = 'summary-value' + (avgIRR !== null ? (avgIRR >= 0 ? ' positive' : ' negative') : '');
+
+            const moicElement = document.getElementById('summaryMOIC');
+            moicElement.textContent = formatMOIC(avgMOIC);
+            moicElement.className = 'summary-value' + (avgMOIC !== null ? (avgMOIC >= 1 ? ' positive' : ' negative') : '');
+
+            const dpiElement = document.getElementById('summaryDPI');
+            dpiElement.textContent = formatMultiple(portfolioDPI);
+            dpiElement.className = 'summary-value' + (portfolioDPI !== null ? (portfolioDPI >= 1 ? ' positive' : '') : '');
+
+            const tvpiElement = document.getElementById('summaryTVPI');
+            tvpiElement.textContent = formatMultiple(portfolioTVPI);
+            tvpiElement.className = 'summary-value' + (portfolioTVPI !== null ? (portfolioTVPI >= 1 ? ' positive' : ' negative') : '');
+        }
+
+        /**
+         * Toggle dark mode
+         */
+        function toggleDarkMode() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const newTheme = isDark ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            Storage.set('darkMode', newTheme === 'dark');
+            document.getElementById('sidebarDarkModeCheckbox').checked = newTheme === 'dark';
+        }
+
+        /**
+         * Initialize dark mode from saved preference
+         */
+        function initializeDarkMode() {
+            const savedDarkMode = Storage.get('darkMode', false);
+            if (savedDarkMode) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.getElementById('sidebarDarkModeCheckbox').checked = true;
+            }
+        }
+
+        /**
+         * Update vintage year filter dropdown
+         * @param {Array} funds - All funds
+         */
+        function updateVintageFilter(funds) {
+            const vintageFilter = document.getElementById('vintageFilter');
+            const currentValue = vintageFilter.value;
+
+            // Get unique vintage years
+            const vintages = new Set();
+            funds.forEach(fund => {
+                const vintage = getVintageYear(fund);
+                if (vintage) {
+                    vintages.add(vintage);
+                }
+            });
+
+            // Sort vintages in descending order
+            const sortedVintages = Array.from(vintages).sort((a, b) => b - a);
+
+            vintageFilter.innerHTML = '<option value="">All Vintages</option>';
+            sortedVintages.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                vintageFilter.appendChild(option);
+            });
+
+            // Restore selection if still valid
+            if (currentValue && sortedVintages.includes(parseInt(currentValue))) {
+                vintageFilter.value = currentValue;
+            }
+        }
+
+        /**
+         * Show keyboard shortcuts modal
+         */
+        function showShortcutsModal() {
+            document.getElementById('shortcutsModal').classList.add('show');
+        }
+
+        /**
+         * Close keyboard shortcuts modal
+         */
+        function closeShortcutsModal() {
+            document.getElementById('shortcutsModal').classList.remove('show');
         }
 
         function toggleSidebar() {
@@ -5351,9 +5874,20 @@
 
         // Keyboard shortcuts
         document.addEventListener('keydown', function(event) {
+            // Check if user is typing in an input field
+            const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName);
+
+            // ? key: Show keyboard shortcuts help (only if not typing)
+            if (event.key === '?' && !isTyping) {
+                event.preventDefault();
+                showShortcutsModal();
+                return;
+            }
+
             // Escape key: Close sidebar or open modals
             if (event.key === 'Escape') {
                 const sidebar = document.getElementById('sidebar');
+                const shortcutsModal = document.getElementById('shortcutsModal');
                 const detailsModal = document.getElementById('detailsModal');
                 const actionDropdown = document.getElementById('actionDropdown');
                 const fundModal = document.getElementById('fundModal');
@@ -5361,7 +5895,9 @@
                 const editFundNameModal = document.getElementById('editFundNameModal');
                 const manageGroupsModal = document.getElementById('manageGroupsModal');
 
-                if (sidebar && sidebar.classList.contains('show')) {
+                if (shortcutsModal && shortcutsModal.classList.contains('show')) {
+                    closeShortcutsModal();
+                } else if (sidebar && sidebar.classList.contains('show')) {
                     closeSidebar();
                 } else if (detailsModal && detailsModal.classList.contains('show')) {
                     closeDetailsModal();
@@ -5375,6 +5911,17 @@
                     closeManageFundsModal();
                 } else if (manageGroupsModal && manageGroupsModal.classList.contains('show')) {
                     closeManageGroupsModal();
+                }
+                return;
+            }
+
+            // Ctrl/Cmd+F: Focus search input
+            if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+                event.preventDefault();
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.select();
                 }
                 return;
             }
@@ -5819,6 +6366,7 @@
             document.getElementById('groupFilter').addEventListener('change', applyFilters);
             document.getElementById('fundFilter').addEventListener('change', applyFilters);
             document.getElementById('accountFilter').addEventListener('change', applyFilters);
+            document.getElementById('vintageFilter').addEventListener('change', applyFilters);
             document.getElementById('searchInput').addEventListener('input', applyFilters);
             document.getElementById('cutoffDate').addEventListener('change', applyFilters);
             document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
@@ -5826,6 +6374,10 @@
             // Undo/Redo buttons
             document.getElementById('undoBtn').addEventListener('click', undoLastAction);
             document.getElementById('redoBtn').addEventListener('click', redoLastAction);
+
+            // Keyboard shortcuts modal
+            document.getElementById('closeShortcutsModalBtn').addEventListener('click', closeShortcutsModal);
+            document.getElementById('closeShortcutsModal2Btn').addEventListener('click', closeShortcutsModal);
 
             document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
 
@@ -5939,6 +6491,7 @@
             document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
             document.getElementById('closeSidebarBtn').addEventListener('click', closeSidebar);
             document.getElementById('sidebarShowTagsCheckbox').addEventListener('change', toggleTagsDisplay);
+            document.getElementById('sidebarDarkModeCheckbox').addEventListener('change', toggleDarkMode);
 
             // Sidebar menu items
             document.getElementById('sidebarNewInvestment').addEventListener('click', (e) => {
@@ -6007,6 +6560,9 @@
                 // Restore tag display preference from localStorage (default: true)
                 const showTags = Storage.get('showTags', true);
                 document.getElementById('sidebarShowTagsCheckbox').checked = showTags;
+
+                // Initialize dark mode from saved preference
+                initializeDarkMode();
 
                 await renderTable();
 
