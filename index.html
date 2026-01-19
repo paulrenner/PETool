@@ -2210,7 +2210,7 @@
                         <button type="button" class="btn-link" onclick="fillCashFlowsExample()" style="font-size: 12px;">View Example</button>
                     </div>
                     <textarea id="cashFlows" placeholder='[{"date":"2024-01-15","amount":-1000000,"type":"Contribution","affectsCommitment":true}]'></textarea>
-                    <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number,"type":"Contribution|Distribution","affectsCommitment":true}]</div>
+                    <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number,"type":"Contribution|Distribution|Adjustment","affectsCommitment":true}]</div>
                 </div>
 
                 <div class="form-group">
@@ -3032,6 +3032,7 @@
                             <select data-field="type" data-index="${index}">
                                 <option value="Contribution" ${typeValue === 'Contribution' ? 'selected' : ''}>Contribution</option>
                                 <option value="Distribution" ${typeValue === 'Distribution' ? 'selected' : ''}>Distribution</option>
+                                <option value="Adjustment" ${typeValue === 'Adjustment' ? 'selected' : ''}>Adjustment</option>
                             </select>
                         </td>
                         <td class="center">

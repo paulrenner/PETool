@@ -112,7 +112,7 @@ export function validateCashFlow(cashFlow, index) {
         return { valid: false, error: `Missing type at index ${index}` };
     }
 
-    if (!['Contribution', 'Distribution'].includes(cashFlow.type)) {
+    if (!['Contribution', 'Distribution', 'Adjustment'].includes(cashFlow.type)) {
         return { valid: false, error: `Invalid cash flow type at index ${index}` };
     }
 
