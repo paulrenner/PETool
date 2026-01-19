@@ -227,6 +227,192 @@
             color: var(--color-danger);
         }
 
+        /* Cash Flow Timeline Panel */
+        .timeline-panel {
+            background: var(--color-white);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--color-alt-bg);
+            border-bottom: 1px solid var(--color-border);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .timeline-header:hover {
+            background: var(--color-hover-bg);
+        }
+
+        .timeline-header h3 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .timeline-toggle {
+            font-size: 12px;
+            color: var(--color-text-light);
+            transition: transform 0.2s ease;
+        }
+
+        .timeline-panel.expanded .timeline-toggle {
+            transform: rotate(180deg);
+        }
+
+        .timeline-content {
+            display: none;
+            padding: 16px;
+            overflow-x: auto;
+        }
+
+        .timeline-panel.expanded .timeline-content {
+            display: block;
+        }
+
+        .timeline-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 600px;
+        }
+
+        .timeline-table th,
+        .timeline-table td {
+            padding: 8px 12px;
+            text-align: right;
+            border: 1px solid var(--color-border);
+            white-space: nowrap;
+        }
+
+        .timeline-table th {
+            background: var(--color-alt-bg);
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .timeline-table th:first-child,
+        .timeline-table td:first-child {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: var(--color-white);
+            z-index: 1;
+        }
+
+        .timeline-table th:first-child {
+            background: var(--color-alt-bg);
+        }
+
+        .timeline-table .year-projected {
+            background: var(--color-alt-bg);
+            font-style: italic;
+        }
+
+        .timeline-table .year-projected th {
+            background: #E8F4FD;
+        }
+
+        [data-theme="dark"] .timeline-table .year-projected th {
+            background: #2C4A5E;
+        }
+
+        .timeline-table .row-calls td {
+            color: var(--color-danger);
+        }
+
+        .timeline-table .row-distributions td {
+            color: var(--color-success);
+        }
+
+        .timeline-table .row-net td.positive {
+            color: var(--color-success);
+        }
+
+        .timeline-table .row-net td.negative {
+            color: var(--color-danger);
+        }
+
+        .timeline-table .row-net {
+            font-weight: 600;
+            border-top: 2px solid var(--color-border);
+        }
+
+        .timeline-table .row-label {
+            font-weight: 500;
+            color: var(--color-text);
+        }
+
+        .timeline-table td:first-child {
+            font-weight: 500;
+        }
+
+        .timeline-divider {
+            border-left: 3px solid var(--color-action) !important;
+        }
+
+        .timeline-expand-row {
+            cursor: pointer;
+        }
+
+        .timeline-expand-row:hover {
+            background: var(--color-hover-bg);
+        }
+
+        .timeline-expand-icon {
+            display: inline-block;
+            width: 16px;
+            font-size: 10px;
+            color: var(--color-text-light);
+        }
+
+        .timeline-fund-row {
+            display: none;
+        }
+
+        .timeline-fund-row.visible {
+            display: table-row;
+        }
+
+        .timeline-fund-row td {
+            background: var(--color-alt-bg);
+            font-size: 12px;
+        }
+
+        .timeline-fund-row td:first-child {
+            padding-left: 28px;
+            background: var(--color-alt-bg);
+        }
+
+        .timeline-no-data {
+            text-align: center;
+            padding: 30px;
+            color: var(--color-text-light);
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .timeline-table {
+                font-size: 11px;
+            }
+
+            .timeline-table th,
+            .timeline-table td {
+                padding: 6px 8px;
+            }
+        }
+
         /* Keyboard Shortcuts Modal */
         .shortcuts-modal .modal-content {
             max-width: 500px;
@@ -1690,6 +1876,22 @@
                 </div>
             </div>
 
+            <!-- Cash Flow Timeline Panel -->
+            <div id="timelinePanel" class="timeline-panel">
+                <div class="timeline-header" id="timelineHeader">
+                    <h3>
+                        <span>Cash Flow Timeline</span>
+                        <span style="font-weight: normal; font-size: 12px; color: var(--color-text-light);">(Historical + Projected)</span>
+                    </h3>
+                    <span class="timeline-toggle">▼</span>
+                </div>
+                <div class="timeline-content">
+                    <div id="timelineTableContainer">
+                        <p class="timeline-no-data">No data to display. Add investments with cash flows to see the timeline.</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="table-container">
                 <table id="fundsTable">
                     <thead>
@@ -1824,6 +2026,25 @@
                 <input type="text" id="editFundTagsInput" placeholder="Add tag (e.g., Venture Capital, Growth Equity)" list="editFundTagsDatalist">
                 <datalist id="editFundTagsDatalist"></datalist>
                 <div class="hint">Press Enter to add tags. Click × on a tag to remove it.</div>
+            </div>
+
+            <h3 style="margin: 20px 0 15px 0; color: var(--color-text); font-weight: 600; font-size: 1em; border-top: 1px solid var(--color-border); padding-top: 20px;">Fund Terms (for capital call projections)</h3>
+
+            <div class="form-row" style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label for="editFundFirstClose">First Close Date</label>
+                    <input type="date" id="editFundFirstClose">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="editFundFinalClose">Final Close Date</label>
+                    <input type="date" id="editFundFinalClose">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="editFundInvestmentTerm">Investment Term (years)</label>
+                <input type="number" id="editFundInvestmentTerm" min="1" max="15" step="1" placeholder="e.g., 5">
+                <div class="hint">Number of years from final close during which capital can be called (typically 3-5 years)</div>
             </div>
 
             <div class="form-actions">
@@ -3605,6 +3826,9 @@
                 // Update portfolio summary statistics
                 updatePortfolioSummary(fundsWithMetrics, cutoffDate);
 
+                // Render cash flow timeline (uses filtered funds)
+                renderTimelineTable(filtered);
+
                 // Render table body
                 const tbody = document.getElementById('fundsTableBody');
                 tbody.innerHTML = '';
@@ -4157,6 +4381,339 @@
         /**
          * Toggle dark mode
          */
+        // ===========================
+        // Cash Flow Timeline Functions
+        // ===========================
+
+        /**
+         * Aggregate historical cash flows by year for a set of funds
+         * @param {Array} funds - Array of fund objects with cash flows
+         * @returns {Object} { calls: {year: amount}, distributions: {year: amount}, byFund: {fundName: {calls: {}, distributions: {}}} }
+         */
+        function aggregateHistoricalCashFlows(funds) {
+            const result = {
+                calls: {},
+                distributions: {},
+                byFund: {}
+            };
+
+            const currentYear = new Date().getFullYear();
+
+            funds.forEach(fund => {
+                if (!fund.cashFlows || fund.cashFlows.length === 0) return;
+
+                const fundKey = fund.fundName;
+                if (!result.byFund[fundKey]) {
+                    result.byFund[fundKey] = { calls: {}, distributions: {} };
+                }
+
+                fund.cashFlows.forEach(cf => {
+                    const year = new Date(cf.date).getFullYear();
+                    // Only include historical data (up to current year)
+                    if (year > currentYear) return;
+
+                    const amount = Math.abs(cf.amount);
+
+                    if (cf.amount < 0 || cf.type === 'Contribution') {
+                        // Capital call (contribution)
+                        result.calls[year] = (result.calls[year] || 0) + amount;
+                        result.byFund[fundKey].calls[year] = (result.byFund[fundKey].calls[year] || 0) + amount;
+                    } else {
+                        // Distribution
+                        result.distributions[year] = (result.distributions[year] || 0) + amount;
+                        result.byFund[fundKey].distributions[year] = (result.byFund[fundKey].distributions[year] || 0) + amount;
+                    }
+                });
+            });
+
+            return result;
+        }
+
+        /**
+         * Calculate projected capital calls by year for a set of funds
+         * @param {Array} funds - Array of fund objects
+         * @param {Map} fundNameData - Map of fund name to fund name object (with terms)
+         * @returns {Object} { projectedCalls: {year: amount}, byFund: {fundName: {year: amount}} }
+         */
+        function calculateProjectedCalls(funds, fundNameData) {
+            const result = {
+                projectedCalls: {},
+                byFund: {}
+            };
+
+            const currentYear = new Date().getFullYear();
+            const currentDate = new Date();
+
+            funds.forEach(fund => {
+                const fundNameObj = fundNameData.get(fund.fundName);
+                if (!fundNameObj) return;
+
+                const { finalCloseDate, investmentTermYears } = fundNameObj;
+
+                // Skip if missing required fund terms
+                if (!finalCloseDate || !investmentTermYears) return;
+
+                // Calculate investment period end
+                const finalClose = new Date(finalCloseDate);
+                const investmentEndDate = new Date(finalClose);
+                investmentEndDate.setFullYear(investmentEndDate.getFullYear() + investmentTermYears);
+
+                // Skip if investment period has ended
+                if (investmentEndDate < currentDate) return;
+
+                // Calculate remaining uncalled capital
+                const commitment = fund.commitment || 0;
+                const totalCalled = (fund.cashFlows || [])
+                    .filter(cf => cf.amount < 0 || cf.type === 'Contribution')
+                    .reduce((sum, cf) => sum + Math.abs(cf.amount), 0);
+                const uncalledCapital = Math.max(0, commitment - totalCalled);
+
+                if (uncalledCapital <= 0) return;
+
+                // Calculate years remaining in investment period
+                const startYear = Math.max(currentYear + 1, finalClose.getFullYear());
+                const endYear = investmentEndDate.getFullYear();
+                const yearsRemaining = [];
+
+                for (let year = startYear; year <= endYear; year++) {
+                    yearsRemaining.push(year);
+                }
+
+                if (yearsRemaining.length === 0) return;
+
+                // Distribute uncalled capital linearly across remaining years
+                const annualCall = uncalledCapital / yearsRemaining.length;
+
+                const fundKey = fund.fundName;
+                if (!result.byFund[fundKey]) {
+                    result.byFund[fundKey] = {};
+                }
+
+                yearsRemaining.forEach(year => {
+                    result.projectedCalls[year] = (result.projectedCalls[year] || 0) + annualCall;
+                    result.byFund[fundKey][year] = (result.byFund[fundKey][year] || 0) + annualCall;
+                });
+            });
+
+            return result;
+        }
+
+        /**
+         * Get the range of years to display in the timeline
+         * @param {Object} historical - Historical cash flow data
+         * @param {Object} projected - Projected call data
+         * @returns {Object} { years: [], currentYear: number, firstProjectedYear: number }
+         */
+        function getTimelineYearRange(historical, projected) {
+            const currentYear = new Date().getFullYear();
+            const allYears = new Set();
+
+            // Add historical years
+            Object.keys(historical.calls).forEach(y => allYears.add(parseInt(y)));
+            Object.keys(historical.distributions).forEach(y => allYears.add(parseInt(y)));
+
+            // Add projected years
+            Object.keys(projected.projectedCalls).forEach(y => allYears.add(parseInt(y)));
+
+            // Ensure we have at least current year
+            allYears.add(currentYear);
+
+            // Sort and limit range (last 5 historical + next 5 projected)
+            const sortedYears = Array.from(allYears).sort((a, b) => a - b);
+
+            // Find the split point
+            const historicalYears = sortedYears.filter(y => y <= currentYear);
+            const projectedYears = sortedYears.filter(y => y > currentYear);
+
+            // Take last 5 historical and first 5 projected
+            const displayHistorical = historicalYears.slice(-5);
+            const displayProjected = projectedYears.slice(0, 5);
+
+            return {
+                years: [...displayHistorical, ...displayProjected],
+                currentYear,
+                firstProjectedYear: displayProjected.length > 0 ? displayProjected[0] : null
+            };
+        }
+
+        /**
+         * Render the cash flow timeline table
+         * @param {Array} funds - Filtered funds to display
+         */
+        function renderTimelineTable(funds) {
+            const container = document.getElementById('timelineTableContainer');
+
+            if (!funds || funds.length === 0) {
+                container.innerHTML = '<p class="timeline-no-data">No data to display. Add investments with cash flows to see the timeline.</p>';
+                return;
+            }
+
+            // Aggregate data
+            const historical = aggregateHistoricalCashFlows(funds);
+            const projected = calculateProjectedCalls(funds, fundNameData);
+            const yearRange = getTimelineYearRange(historical, projected);
+
+            if (yearRange.years.length === 0) {
+                container.innerHTML = '<p class="timeline-no-data">No cash flow data available for the selected funds.</p>';
+                return;
+            }
+
+            // Build table HTML
+            let html = '<table class="timeline-table">';
+
+            // Header row
+            html += '<thead><tr><th></th>';
+            yearRange.years.forEach(year => {
+                const isProjected = yearRange.firstProjectedYear && year >= yearRange.firstProjectedYear;
+                const isDivider = year === yearRange.firstProjectedYear;
+                html += `<th class="${isProjected ? 'year-projected' : ''} ${isDivider ? 'timeline-divider' : ''}">${year}${isProjected ? '*' : ''}</th>`;
+            });
+            html += '</tr></thead>';
+
+            // Body
+            html += '<tbody>';
+
+            // Get unique fund names for expandable rows
+            const fundNames = [...new Set(funds.map(f => f.fundName))].sort();
+
+            // Capital Calls row (expandable)
+            html += buildTimelineRow('Capital Calls', 'calls', yearRange, historical.calls, projected.projectedCalls, true, fundNames, historical.byFund, projected.byFund, 'calls');
+
+            // Distributions row (expandable)
+            html += buildTimelineRow('Distributions', 'distributions', yearRange, historical.distributions, {}, true, fundNames, historical.byFund, {}, 'distributions');
+
+            // Net Cash Flow row
+            html += buildNetCashFlowRow(yearRange, historical, projected);
+
+            html += '</tbody></table>';
+
+            // Add footnote for projected
+            if (yearRange.firstProjectedYear) {
+                html += '<p style="margin-top: 10px; font-size: 11px; color: var(--color-text-light); font-style: italic;">* Projected values based on remaining uncalled capital distributed linearly across investment period</p>';
+            }
+
+            container.innerHTML = html;
+
+            // Add click handlers for expandable rows
+            container.querySelectorAll('.timeline-expand-row').forEach(row => {
+                row.addEventListener('click', function() {
+                    const type = this.dataset.type;
+                    const isExpanded = this.classList.toggle('expanded');
+                    const icon = this.querySelector('.timeline-expand-icon');
+                    icon.textContent = isExpanded ? '▼' : '▶';
+
+                    // Toggle fund detail rows
+                    container.querySelectorAll(`.timeline-fund-row[data-type="${type}"]`).forEach(fundRow => {
+                        fundRow.classList.toggle('visible', isExpanded);
+                    });
+                });
+            });
+        }
+
+        /**
+         * Build a timeline row with expandable fund breakdown
+         */
+        function buildTimelineRow(label, type, yearRange, historicalData, projectedData, expandable, fundNames, historicalByFund, projectedByFund, dataType) {
+            let html = '';
+
+            // Main row
+            const rowClass = type === 'calls' ? 'row-calls' : 'row-distributions';
+            html += `<tr class="${rowClass} ${expandable ? 'timeline-expand-row' : ''}" ${expandable ? `data-type="${type}"` : ''}>`;
+            html += `<td class="row-label">${expandable ? '<span class="timeline-expand-icon">▶</span>' : ''}${label}</td>`;
+
+            yearRange.years.forEach(year => {
+                const isProjected = yearRange.firstProjectedYear && year >= yearRange.firstProjectedYear;
+                const isDivider = year === yearRange.firstProjectedYear;
+
+                let value = 0;
+                if (isProjected && projectedData[year]) {
+                    value = projectedData[year];
+                } else if (!isProjected && historicalData[year]) {
+                    value = historicalData[year];
+                }
+
+                const cellClass = `${isProjected ? 'year-projected' : ''} ${isDivider ? 'timeline-divider' : ''}`;
+                html += `<td class="${cellClass}">${value > 0 ? formatCurrency(value) : '-'}</td>`;
+            });
+
+            html += '</tr>';
+
+            // Fund breakdown rows (hidden by default)
+            if (expandable && fundNames) {
+                fundNames.forEach(fundName => {
+                    html += `<tr class="timeline-fund-row" data-type="${type}">`;
+                    html += `<td>${escapeHtml(fundName)}</td>`;
+
+                    yearRange.years.forEach(year => {
+                        const isProjected = yearRange.firstProjectedYear && year >= yearRange.firstProjectedYear;
+                        const isDivider = year === yearRange.firstProjectedYear;
+
+                        let value = 0;
+                        if (isProjected && projectedByFund[fundName] && projectedByFund[fundName][year]) {
+                            value = projectedByFund[fundName][year];
+                        } else if (!isProjected && historicalByFund[fundName] && historicalByFund[fundName][dataType] && historicalByFund[fundName][dataType][year]) {
+                            value = historicalByFund[fundName][dataType][year];
+                        }
+
+                        const cellClass = `${isProjected ? 'year-projected' : ''} ${isDivider ? 'timeline-divider' : ''}`;
+                        html += `<td class="${cellClass}">${value > 0 ? formatCurrency(value) : '-'}</td>`;
+                    });
+
+                    html += '</tr>';
+                });
+            }
+
+            return html;
+        }
+
+        /**
+         * Build the net cash flow row
+         */
+        function buildNetCashFlowRow(yearRange, historical, projected) {
+            let html = '<tr class="row-net">';
+            html += '<td class="row-label">Net Cash Flow</td>';
+
+            yearRange.years.forEach(year => {
+                const isProjected = yearRange.firstProjectedYear && year >= yearRange.firstProjectedYear;
+                const isDivider = year === yearRange.firstProjectedYear;
+
+                let calls = 0;
+                let distributions = 0;
+
+                if (isProjected) {
+                    calls = projected.projectedCalls[year] || 0;
+                    // No projected distributions
+                } else {
+                    calls = historical.calls[year] || 0;
+                    distributions = historical.distributions[year] || 0;
+                }
+
+                const net = distributions - calls;
+                const cellClass = `${isProjected ? 'year-projected' : ''} ${isDivider ? 'timeline-divider' : ''} ${net >= 0 ? 'positive' : 'negative'}`;
+
+                let displayValue = '-';
+                if (calls > 0 || distributions > 0) {
+                    displayValue = (net >= 0 ? '+' : '') + formatCurrency(net);
+                }
+
+                html += `<td class="${cellClass}">${displayValue}</td>`;
+            });
+
+            html += '</tr>';
+            return html;
+        }
+
+        /**
+         * Toggle timeline panel expand/collapse
+         */
+        function toggleTimelinePanel() {
+            const panel = document.getElementById('timelinePanel');
+            panel.classList.toggle('expanded');
+
+            // Save preference
+            Storage.set('timelinePanelExpanded', panel.classList.contains('expanded'));
+        }
+
         function toggleDarkMode() {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             const newTheme = isDark ? 'light' : 'dark';
@@ -5180,6 +5737,11 @@
             populateEditFundTagsDatalist();
             setEditFundTags(fundNameObj.tags || []);
 
+            // Populate fund terms
+            document.getElementById('editFundFirstClose').value = fundNameObj.firstCloseDate || '';
+            document.getElementById('editFundFinalClose').value = fundNameObj.finalCloseDate || '';
+            document.getElementById('editFundInvestmentTerm').value = fundNameObj.investmentTermYears || '';
+
             document.getElementById('editFundNameModal').classList.add('show');
         }
 
@@ -5245,6 +5807,13 @@
             const newName = document.getElementById('editFundNameInput').value.trim();
             const tags = getEditFundTags();
 
+            // Get fund term fields
+            const firstCloseDate = document.getElementById('editFundFirstClose').value || null;
+            const finalCloseDate = document.getElementById('editFundFinalClose').value || null;
+            const investmentTermYears = document.getElementById('editFundInvestmentTerm').value
+                ? parseInt(document.getElementById('editFundInvestmentTerm').value)
+                : null;
+
             if (!newName) {
                 showStatus('Fund name cannot be empty', 'error');
                 return;
@@ -5259,7 +5828,13 @@
                 showLoading('Updating fund name...');
 
                 const oldFundNameObj = fundNameData.get(oldName);
-                const newFundNameObj = { name: newName, tags };
+                const newFundNameObj = {
+                    name: newName,
+                    tags,
+                    firstCloseDate,
+                    finalCloseDate,
+                    investmentTermYears
+                };
 
                 // If name changed, update all funds that use this name
                 if (newName !== oldName) {
@@ -6405,6 +6980,9 @@
             document.getElementById('cutoffDate').addEventListener('change', applyFilters);
             document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
 
+            // Timeline panel toggle
+            document.getElementById('timelineHeader').addEventListener('click', toggleTimelinePanel);
+
             // Undo/Redo buttons
             document.getElementById('undoBtn').addEventListener('click', undoLastAction);
             document.getElementById('redoBtn').addEventListener('click', redoLastAction);
@@ -6597,6 +7175,12 @@
 
                 // Initialize dark mode from saved preference
                 initializeDarkMode();
+
+                // Initialize timeline panel state (default to collapsed)
+                const timelinePanelExpanded = Storage.get('timelinePanelExpanded', false);
+                if (timelinePanelExpanded) {
+                    document.getElementById('timelinePanel').classList.add('expanded');
+                }
 
                 await renderTable();
 
