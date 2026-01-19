@@ -227,6 +227,80 @@
             color: var(--color-danger);
         }
 
+        /* Metric Info Tooltips */
+        .summary-label-container {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--color-text-light);
+            color: var(--color-white);
+            font-size: 9px;
+            font-weight: 700;
+            cursor: help;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .info-icon:hover {
+            background: var(--color-action);
+        }
+
+        .info-icon .tooltip {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--color-primary);
+            color: white;
+            padding: 8px 12px;
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            font-weight: 400;
+            white-space: normal;
+            width: 220px;
+            text-align: left;
+            z-index: 1000;
+            box-shadow: var(--shadow-md);
+            line-height: 1.4;
+        }
+
+        .info-icon .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: var(--color-primary);
+        }
+
+        .info-icon:hover .tooltip {
+            display: block;
+        }
+
+        [data-theme="dark"] .info-icon {
+            background: var(--color-text-light);
+            color: var(--color-background);
+        }
+
+        [data-theme="dark"] .info-icon .tooltip {
+            background: #4A5568;
+        }
+
+        [data-theme="dark"] .info-icon .tooltip::after {
+            border-top-color: #4A5568;
+        }
+
         /* Cash Flow Timeline Panel */
         .timeline-panel {
             background: var(--color-white);
@@ -551,6 +625,41 @@
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
         }
 
+        /* Filter Badge */
+        .filter-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--color-action);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+            white-space: nowrap;
+        }
+
+        .filter-badge .clear-filters {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 10px;
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .filter-badge .clear-filters:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
         button {
             padding: 9px 18px;
             border: none;
@@ -599,6 +708,20 @@
 
         .btn-danger:hover {
             background: var(--color-danger-hover);
+        }
+
+        .btn-link {
+            background: none;
+            border: none;
+            color: var(--color-action);
+            cursor: pointer;
+            padding: 2px 4px;
+            font-size: inherit;
+            text-decoration: underline;
+        }
+
+        .btn-link:hover {
+            color: var(--color-action-hover);
         }
 
         .btn-info {
@@ -1070,6 +1193,20 @@
             outline: none;
             border-color: var(--color-action);
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .form-group.has-error input,
+        .form-group.has-error select,
+        .form-group.has-error textarea {
+            border-color: var(--color-danger);
+            background-color: rgba(231, 76, 60, 0.05);
+        }
+
+        .form-group.has-error input:focus,
+        .form-group.has-error select:focus,
+        .form-group.has-error textarea:focus {
+            border-color: var(--color-danger);
+            box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
         }
 
         .form-group textarea {
@@ -1927,9 +2064,9 @@
                 <label for="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date">Cutoff Date</label>
                 <input type="date" id="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date" aria-label="Cutoff date for calculating metrics">
             </div>
-            <div class="control-group">
+            <div class="control-group" style="position: relative;">
                 <button class="btn-icon" id="resetFiltersBtn" title="Reset Filters" aria-label="Reset all filters" style="font-size: 20px; margin-top: auto;">↻</button>
-                <span id="activeFiltersIndicator" style="display: none; margin-left: 5px; color: var(--color-action); font-size: 12px; font-weight: 600;" aria-hidden="true">●</span>
+                <span id="activeFiltersIndicator" class="filter-badge" style="display: none;" aria-live="polite"></span>
             </div>
             <!-- Filter loading indicator -->
             <div id="filterLoading" class="filter-loading" aria-live="polite">
@@ -1959,23 +2096,38 @@
                     <span class="summary-value" id="summaryNav">$0</span>
                 </div>
                 <div class="summary-stat">
-                    <span class="summary-label">Avg IRR</span>
+                    <div class="summary-label-container">
+                        <span class="summary-label">Avg IRR</span>
+                        <span class="info-icon" aria-label="IRR explanation">?<span class="tooltip">Internal Rate of Return: The annualized return rate that makes the net present value of all cash flows equal to zero. Higher is better.</span></span>
+                    </div>
                     <span class="summary-value" id="summaryIRR">N/A</span>
                 </div>
                 <div class="summary-stat">
-                    <span class="summary-label">Avg MOIC</span>
+                    <div class="summary-label-container">
+                        <span class="summary-label">Avg MOIC</span>
+                        <span class="info-icon" aria-label="MOIC explanation">?<span class="tooltip">Multiple on Invested Capital: Total value (distributions + NAV) divided by total contributions. A MOIC of 2.0x means you doubled your money.</span></span>
+                    </div>
                     <span class="summary-value" id="summaryMOIC">N/A</span>
                 </div>
                 <div class="summary-stat">
-                    <span class="summary-label">DPI</span>
+                    <div class="summary-label-container">
+                        <span class="summary-label">DPI</span>
+                        <span class="info-icon" aria-label="DPI explanation">?<span class="tooltip">Distributions to Paid-In: Total distributions divided by total contributions. Measures actual cash returned to investors. DPI of 1.0x means all invested capital has been returned.</span></span>
+                    </div>
                     <span class="summary-value" id="summaryDPI">N/A</span>
                 </div>
                 <div class="summary-stat">
-                    <span class="summary-label">RVPI</span>
+                    <div class="summary-label-container">
+                        <span class="summary-label">RVPI</span>
+                        <span class="info-icon" aria-label="RVPI explanation">?<span class="tooltip">Residual Value to Paid-In: Current NAV divided by total contributions. Represents unrealized value still held in the fund.</span></span>
+                    </div>
                     <span class="summary-value" id="summaryRVPI">N/A</span>
                 </div>
                 <div class="summary-stat">
-                    <span class="summary-label">TVPI</span>
+                    <div class="summary-label-container">
+                        <span class="summary-label">TVPI</span>
+                        <span class="info-icon" aria-label="TVPI explanation">?<span class="tooltip">Total Value to Paid-In: DPI + RVPI. Total value (distributions + NAV) divided by contributions. The most comprehensive measure of fund performance.</span></span>
+                    </div>
                     <span class="summary-value" id="summaryTVPI">N/A</span>
                 </div>
             </div>
@@ -1991,7 +2143,7 @@
                 </div>
                 <div class="timeline-content">
                     <div id="timelineTableContainer">
-                        <p class="timeline-no-data">No data to display. Add investments with cash flows to see the timeline.</p>
+                        <p class="timeline-no-data">No investments to display. <a href="#" onclick="showAddFundModal(); return false;" style="color: var(--color-action);">Add your first investment</a> with cash flows to see the timeline.</p>
                     </div>
                 </div>
             </div>
@@ -2034,6 +2186,13 @@
                 <div class="form-group">
                     <label for="fundName">Fund Name *</label>
                     <select id="fundName" required></select>
+                    <div id="newFundNameContainer" style="display: none; margin-top: 8px;">
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="newFundNameInline" placeholder="Enter new fund name" style="flex: 1;">
+                            <button type="button" class="btn-primary" id="addNewFundNameBtn" style="padding: 8px 12px; white-space: nowrap;">Add</button>
+                            <button type="button" class="btn-secondary" id="cancelNewFundNameBtn" style="padding: 8px 12px;">Cancel</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -2059,19 +2218,25 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="cashFlows">Cash Flows (JSON)</label>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label for="cashFlows">Cash Flows (JSON)</label>
+                        <button type="button" class="btn-link" onclick="fillCashFlowsExample()" style="font-size: 12px;">View Example</button>
+                    </div>
                     <textarea id="cashFlows" placeholder='[{"date":"2024-01-15","amount":-1000000,"type":"Contribution","affectsCommitment":true}]'></textarea>
                     <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number,"type":"Contribution|Distribution","affectsCommitment":true}]</div>
                 </div>
 
                 <div class="form-group">
-                    <label for="monthlyNav">Monthly NAV (JSON)</label>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label for="monthlyNav">Monthly NAV (JSON)</label>
+                        <button type="button" class="btn-link" onclick="fillNavExample()" style="font-size: 12px;">View Example</button>
+                    </div>
                     <textarea id="monthlyNav" placeholder='[{"date":"2024-01-31","amount":950000}]'></textarea>
                     <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number}]</div>
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" class="btn-primary">Save</button>
+                    <button type="submit" class="btn-primary" id="saveFundBtn">Save</button>
                     <button type="button" class="btn-secondary" id="cancelFundModalBtn">Cancel</button>
                 </div>
             </form>
@@ -4568,16 +4733,42 @@
                 tbody.innerHTML = '';
 
                 if (fundsWithMetrics.length === 0) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="12" class="empty-state">
-                                <div style="padding: 40px;">
-                                    <h3 style="margin-bottom: 10px;">No investments found</h3>
-                                    <p>Click "New Investment" to add your first fund</p>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
+                    // Check if this is due to filters or no data at all
+                    const hasFilters = document.getElementById('fundFilter').value ||
+                        document.getElementById('accountFilter').value ||
+                        document.getElementById('groupFilter').value ||
+                        document.getElementById('searchInput').value ||
+                        document.getElementById('vintageFilter').value;
+
+                    const hasAnyFunds = currentFunds.length > 0;
+
+                    let emptyStateHtml;
+                    if (hasFilters && hasAnyFunds) {
+                        emptyStateHtml = `
+                            <tr>
+                                <td colspan="12" class="empty-state">
+                                    <div style="padding: 40px;">
+                                        <h3 style="margin-bottom: 10px;">No matching investments</h3>
+                                        <p style="margin-bottom: 15px;">No investments match your current filters.</p>
+                                        <button type="button" class="btn-secondary" onclick="resetFilters()">Clear All Filters</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    } else {
+                        emptyStateHtml = `
+                            <tr>
+                                <td colspan="12" class="empty-state">
+                                    <div style="padding: 40px;">
+                                        <h3 style="margin-bottom: 10px;">No investments yet</h3>
+                                        <p style="margin-bottom: 15px;">Add your first investment to start tracking your portfolio.</p>
+                                        <button type="button" class="btn-primary" onclick="showAddFundModal()">Add Investment</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                    tbody.innerHTML = emptyStateHtml;
                     return;
                 }
 
@@ -5051,12 +5242,24 @@
             const searchInput = document.getElementById('searchInput').value.trim();
             const vintageFilter = document.getElementById('vintageFilter').value;
 
-            const hasActiveFilters = fundFilter || accountFilter || groupFilter || searchInput || vintageFilter;
+            // Count active filters
+            let filterCount = 0;
+            if (fundFilter) filterCount++;
+            if (accountFilter) filterCount++;
+            if (groupFilter) filterCount++;
+            if (searchInput) filterCount++;
+            if (vintageFilter) filterCount++;
+
             const indicator = document.getElementById('activeFiltersIndicator');
 
             if (indicator) {
-                indicator.style.display = hasActiveFilters ? 'inline' : 'none';
-                indicator.title = hasActiveFilters ? 'Filters are active' : '';
+                if (filterCount > 0) {
+                    indicator.style.display = 'inline-flex';
+                    indicator.innerHTML = `${filterCount} filter${filterCount > 1 ? 's' : ''} <button class="clear-filters" onclick="resetFilters(); event.stopPropagation();" title="Clear all filters" aria-label="Clear all filters">&times;</button>`;
+                } else {
+                    indicator.style.display = 'none';
+                    indicator.innerHTML = '';
+                }
             }
         }
 
@@ -5339,7 +5542,7 @@
             }
 
             if (!funds || funds.length === 0) {
-                container.innerHTML = '<p class="timeline-no-data">No data to display. Add investments with cash flows to see the timeline.</p>';
+                container.innerHTML = '<p class="timeline-no-data">No investments to display. <a href="#" onclick="showAddFundModal(); return false;" style="color: var(--color-action);">Add your first investment</a> with cash flows to see the timeline.</p>';
                 return;
             }
 
@@ -5725,6 +5928,36 @@
         }
 
         // ===========================
+        // JSON Example Functions
+        // ===========================
+
+        function fillCashFlowsExample() {
+            const textarea = document.getElementById('cashFlows');
+            const currentYear = new Date().getFullYear();
+            const example = [
+                { date: `${currentYear}-01-15`, amount: -500000, type: "Contribution", affectsCommitment: true },
+                { date: `${currentYear}-04-15`, amount: -300000, type: "Contribution", affectsCommitment: true },
+                { date: `${currentYear}-07-20`, amount: 150000, type: "Distribution", affectsCommitment: false }
+            ];
+            textarea.value = JSON.stringify(example, null, 2);
+            textarea.focus();
+            showStatus('Example cash flows added. Modify the dates and amounts as needed.', 'success');
+        }
+
+        function fillNavExample() {
+            const textarea = document.getElementById('monthlyNav');
+            const currentYear = new Date().getFullYear();
+            const example = [
+                { date: `${currentYear}-01-31`, amount: 480000 },
+                { date: `${currentYear}-02-28`, amount: 495000 },
+                { date: `${currentYear}-03-31`, amount: 510000 }
+            ];
+            textarea.value = JSON.stringify(example, null, 2);
+            textarea.focus();
+            showStatus('Example NAV entries added. Modify the dates and amounts as needed.', 'success');
+        }
+
+        // ===========================
         // Modal Functions
         // ===========================
 
@@ -5733,6 +5966,11 @@
             document.getElementById('fundId').value = '';
             document.getElementById('isDuplicate').value = '';
             document.getElementById('duplicateMultiplierContainer').style.display = 'none';
+
+            // Reset inline fund name input state
+            document.getElementById('newFundNameContainer').style.display = 'none';
+            document.getElementById('fundName').style.display = '';
+            clearFieldErrors();
 
             await populateFundNamesDropdown();
             await populateFundGroupDropdown();
@@ -5826,8 +6064,28 @@
             }
         });
 
+        // Form validation UX helpers
+        function highlightFieldError(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                const formGroup = field.closest('.form-group');
+                if (formGroup) {
+                    formGroup.classList.add('has-error');
+                }
+                field.focus();
+                field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function clearFieldErrors() {
+            document.querySelectorAll('.form-group.has-error').forEach(group => {
+                group.classList.remove('has-error');
+            });
+        }
+
         async function saveFund(event) {
             event.preventDefault();
+            clearFieldErrors();
 
             try {
                 const fundId = document.getElementById('fundId').value;
@@ -5842,6 +6100,7 @@
                 // Validate fund name
                 const fundNameValidation = validateFundName(fundName);
                 if (!fundNameValidation.valid) {
+                    highlightFieldError('fundName');
                     showStatus(fundNameValidation.error, 'error');
                     return;
                 }
@@ -5849,12 +6108,14 @@
                 // Validate account number
                 const accountValidation = validateAccountNumber(accountNumber);
                 if (!accountValidation.valid) {
+                    highlightFieldError('accountNumber');
                     showStatus(accountValidation.error, 'error');
                     return;
                 }
 
                 // Validate commitment is present
                 if (!commitmentText) {
+                    highlightFieldError('commitment');
                     showStatus('Please enter a commitment amount', 'error');
                     return;
                 }
@@ -5862,10 +6123,12 @@
                 // Parse commitment
                 let commitment = parseCurrency(commitmentText);
                 if (isNaN(commitment)) {
+                    highlightFieldError('commitment');
                     showStatus('Invalid commitment amount', 'error');
                     return;
                 }
                 if (commitment < 0) {
+                    highlightFieldError('commitment');
                     showStatus('Commitment amount cannot be negative', 'error');
                     return;
                 }
@@ -5879,6 +6142,7 @@
                         cashFlows = JSON.parse(cashFlowsText);
                         if (!Array.isArray(cashFlows)) throw new Error('Cash flows must be an array');
                     } catch (err) {
+                        highlightFieldError('cashFlows');
                         showStatus('Invalid cash flows JSON: ' + err.message, 'error');
                         return;
                     }
@@ -5886,6 +6150,7 @@
                     // Validate cash flows using validation function
                     const cashFlowValidation = validateCashFlows(cashFlows);
                     if (!cashFlowValidation.valid) {
+                        highlightFieldError('cashFlows');
                         const errorMsg = cashFlowValidation.index !== null
                             ? `Cash flow #${cashFlowValidation.index + 1}: ${cashFlowValidation.error}`
                             : cashFlowValidation.error;
@@ -5901,6 +6166,7 @@
                     monthlyNav = monthlyNavText ? JSON.parse(monthlyNavText) : [];
                     if (!Array.isArray(monthlyNav)) throw new Error('Monthly NAV must be an array');
                 } catch (err) {
+                    highlightFieldError('monthlyNav');
                     showStatus('Invalid monthly NAV JSON: ' + err.message, 'error');
                     return;
                 }
@@ -5908,11 +6174,30 @@
                 // Validate monthly NAV using validation function
                 const navValidation = validateMonthlyNav(monthlyNav);
                 if (!navValidation.valid) {
+                    highlightFieldError('monthlyNav');
                     const errorMsg = navValidation.index !== null
                         ? `NAV entry #${navValidation.index + 1}: ${navValidation.error}`
                         : navValidation.error;
                     showStatus(errorMsg, 'error');
                     return;
+                }
+
+                // Check for duplicate fund (same fund name + account number)
+                const existingFunds = currentFunds.filter(f =>
+                    f.fundName === fundName &&
+                    f.accountNumber === accountNumber &&
+                    (!fundId || f.id !== parseInt(fundId)) // Exclude current fund if editing
+                );
+
+                if (existingFunds.length > 0) {
+                    const proceed = confirm(
+                        `A fund with the same name "${fundName}" and account number "${accountNumber}" already exists.\n\n` +
+                        `Are you sure you want to create another one?`
+                    );
+                    if (!proceed) {
+                        highlightFieldError('accountNumber');
+                        return;
+                    }
                 }
 
                 // Handle duplicate multiplier
@@ -5959,6 +6244,12 @@
                     timestamp: new Date().toISOString()
                 };
 
+                // Show loading state
+                const saveBtn = document.getElementById('saveFundBtn');
+                const originalBtnText = saveBtn.textContent;
+                saveBtn.textContent = 'Saving...';
+                saveBtn.disabled = true;
+
                 // Save undo history for updates
                 let beforeState = null;
                 if (fundId) {
@@ -5993,6 +6284,12 @@
                 checkBackupReminder();
 
             } catch (err) {
+                // Reset loading state on error
+                const saveBtn = document.getElementById('saveFundBtn');
+                if (saveBtn) {
+                    saveBtn.textContent = 'Save';
+                    saveBtn.disabled = false;
+                }
                 showStatus('Error saving fund: ' + err.message, 'error');
                 Debug.error('Error saving fund:', err);
             }
@@ -7036,44 +7333,76 @@
 
                 Debug.log('Dropdown populated with', names.length, 'fund names');
 
-                // Handle new fund name creation
-                select.onchange = async function() {
+                // Handle new fund name creation - show inline input
+                select.onchange = function() {
                     if (this.value === '__new__') {
-                        const newName = prompt('Enter new fund name:');
-                        if (newName && newName.trim()) {
-                            const name = newName.trim();
-
-                            // Validate fund name
-                            if (name.length > 100) {
-                                showStatus('Fund name too long (max 100 characters)', 'error');
-                                this.value = '';
-                                return;
-                            }
-
-                            if (name.length < 2) {
-                                showStatus('Fund name too short (min 2 characters)', 'error');
-                                this.value = '';
-                                return;
-                            }
-
-                            if (!fundNames.has(name)) {
-                                try {
-                                    await saveFundName(name);
-                                    fundNames.add(name);
-                                    await populateFundNamesDropdown(name);
-                                    showStatus('Fund name added successfully');
-                                } catch (err) {
-                                    showStatus('Error adding fund name: ' + err.message, 'error');
-                                    this.value = '';
-                                }
-                            } else {
-                                select.value = name;
-                            }
-                        } else {
-                            this.value = '';
-                        }
+                        document.getElementById('newFundNameContainer').style.display = 'block';
+                        document.getElementById('newFundNameInline').value = '';
+                        document.getElementById('newFundNameInline').focus();
+                        this.style.display = 'none';
                     }
                 };
+
+                // Set up event listeners for inline fund name input (only once)
+                if (!select.dataset.listenersAdded) {
+                    select.dataset.listenersAdded = 'true';
+
+                    document.getElementById('addNewFundNameBtn').onclick = async function() {
+                        const input = document.getElementById('newFundNameInline');
+                        const name = input.value.trim();
+
+                        if (!name) {
+                            showStatus('Please enter a fund name', 'error');
+                            input.focus();
+                            return;
+                        }
+
+                        if (name.length > 100) {
+                            showStatus('Fund name too long (max 100 characters)', 'error');
+                            input.focus();
+                            return;
+                        }
+
+                        if (name.length < 2) {
+                            showStatus('Fund name too short (min 2 characters)', 'error');
+                            input.focus();
+                            return;
+                        }
+
+                        if (!fundNames.has(name)) {
+                            try {
+                                await saveFundName(name);
+                                fundNames.add(name);
+                                fundNameData.set(name, { name: name, tags: [] });
+                            } catch (err) {
+                                showStatus('Error adding fund name: ' + err.message, 'error');
+                                return;
+                            }
+                        }
+
+                        // Hide inline input, show dropdown, populate and select new value
+                        document.getElementById('newFundNameContainer').style.display = 'none';
+                        select.style.display = '';
+                        await populateFundNamesDropdown(name);
+                        showStatus('Fund name added successfully');
+                    };
+
+                    document.getElementById('cancelNewFundNameBtn').onclick = function() {
+                        document.getElementById('newFundNameContainer').style.display = 'none';
+                        select.style.display = '';
+                        select.value = '';
+                    };
+
+                    // Allow Enter key to add fund name
+                    document.getElementById('newFundNameInline').onkeydown = function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            document.getElementById('addNewFundNameBtn').click();
+                        } else if (e.key === 'Escape') {
+                            document.getElementById('cancelNewFundNameBtn').click();
+                        }
+                    };
+                }
             } catch (err) {
                 Debug.error('Error populating fund names:', err);
             }
@@ -7423,6 +7752,51 @@
                     if (actionBtn) {
                         const fundId = parseInt(focusedRow.getAttribute('data-fund-id'));
                         showActionModal(fundId, actionBtn);
+                    }
+                    return;
+                }
+
+                // Home: Jump to first row
+                if (event.key === 'Home') {
+                    event.preventDefault();
+                    if (rows.length > 0) {
+                        rows[0].focus();
+                    }
+                    return;
+                }
+
+                // End: Jump to last row
+                if (event.key === 'End') {
+                    event.preventDefault();
+                    if (rows.length > 0) {
+                        rows[rows.length - 1].focus();
+                    }
+                    return;
+                }
+
+                // Escape: Blur focused row
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    focusedRow.blur();
+                    return;
+                }
+
+                // e: Quick edit
+                if (event.key === 'e' || event.key === 'E') {
+                    event.preventDefault();
+                    const fundId = parseInt(focusedRow.getAttribute('data-fund-id'));
+                    if (fundId != null) {
+                        editFund(fundId);
+                    }
+                    return;
+                }
+
+                // Delete/Backspace: Delete fund (with confirmation)
+                if (event.key === 'Delete' || event.key === 'Backspace') {
+                    event.preventDefault();
+                    const fundId = parseInt(focusedRow.getAttribute('data-fund-id'));
+                    if (fundId != null) {
+                        deleteFund(fundId);
                     }
                     return;
                 }
