@@ -1165,6 +1165,36 @@
             color: var(--color-primary);
         }
 
+        /* Custom Confirm/Alert Modal */
+        .confirm-modal {
+            z-index: 2000;
+        }
+
+        .confirm-modal-content {
+            max-width: 450px;
+            text-align: center;
+        }
+
+        .confirm-modal-content h2 {
+            margin-bottom: 16px;
+        }
+
+        .confirm-modal-message {
+            color: var(--color-text);
+            line-height: 1.6;
+            margin-bottom: 8px;
+            white-space: pre-wrap;
+        }
+
+        .confirm-modal-content .form-actions {
+            justify-content: center;
+        }
+
+        .confirm-modal-content .form-actions button {
+            flex: 0 1 auto;
+            min-width: 100px;
+        }
+
         .form-group {
             margin-bottom: 20px;
         }
@@ -2534,6 +2564,18 @@
         </div>
     </div>
 
+    <!-- Custom Confirm/Alert Modal -->
+    <div id="confirmModal" class="modal confirm-modal">
+        <div class="modal-content confirm-modal-content">
+            <h2 id="confirmModalTitle">Confirm</h2>
+            <p id="confirmModalMessage" class="confirm-modal-message"></p>
+            <div class="form-actions">
+                <button class="btn-secondary" id="confirmModalCancelBtn">Cancel</button>
+                <button class="btn-danger" id="confirmModalConfirmBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar Panel -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div id="sidebar" class="sidebar">
@@ -2945,15 +2987,20 @@
              * Close a modal by ID
              * @param {string} modalId - The modal element ID
              * @param {Object} options - Optional callbacks and settings
-             * @returns {boolean} Whether the modal was closed
+             * @returns {Promise<boolean>} Whether the modal was closed
              */
-            close(modalId, options = {}) {
+            async close(modalId, options = {}) {
                 const modal = document.getElementById(modalId);
                 if (!modal) return false;
 
                 // Check for unsaved changes if specified
                 if (options.checkUnsaved && AppState.hasUnsavedChanges) {
-                    if (!confirm('You have unsaved changes. Are you sure you want to close without saving?')) {
+                    const confirmed = await showConfirm('You have unsaved changes. Are you sure you want to close without saving?', {
+                        title: 'Unsaved Changes',
+                        confirmText: 'Discard',
+                        cancelText: 'Keep Editing'
+                    });
+                    if (!confirmed) {
                         return false;
                     }
                 }
@@ -5611,6 +5658,124 @@
         }
 
         /**
+         * Show a custom confirmation modal
+         * @param {string} message - The message to display
+         * @param {Object} options - Optional configuration
+         * @param {string} options.title - Modal title (default: 'Confirm')
+         * @param {string} options.confirmText - Confirm button text (default: 'Confirm')
+         * @param {string} options.cancelText - Cancel button text (default: 'Cancel')
+         * @param {string} options.confirmClass - CSS class for confirm button (default: 'btn-danger')
+         * @returns {Promise<boolean>} - Resolves true if confirmed, false if cancelled
+         */
+        function showConfirm(message, options = {}) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirmModal');
+                const titleEl = document.getElementById('confirmModalTitle');
+                const messageEl = document.getElementById('confirmModalMessage');
+                const confirmBtn = document.getElementById('confirmModalConfirmBtn');
+                const cancelBtn = document.getElementById('confirmModalCancelBtn');
+
+                // Set content
+                titleEl.textContent = options.title || 'Confirm';
+                messageEl.textContent = message;
+                confirmBtn.textContent = options.confirmText || 'Confirm';
+                cancelBtn.textContent = options.cancelText || 'Cancel';
+
+                // Set confirm button style
+                confirmBtn.className = options.confirmClass || 'btn-danger';
+
+                // Cleanup function
+                const cleanup = () => {
+                    modal.classList.remove('show');
+                    confirmBtn.removeEventListener('click', handleConfirm);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                    document.removeEventListener('keydown', handleKeydown);
+                };
+
+                const handleConfirm = () => {
+                    cleanup();
+                    resolve(true);
+                };
+
+                const handleCancel = () => {
+                    cleanup();
+                    resolve(false);
+                };
+
+                const handleKeydown = (e) => {
+                    if (e.key === 'Escape') {
+                        handleCancel();
+                    } else if (e.key === 'Enter') {
+                        handleConfirm();
+                    }
+                };
+
+                // Attach listeners
+                confirmBtn.addEventListener('click', handleConfirm);
+                cancelBtn.addEventListener('click', handleCancel);
+                document.addEventListener('keydown', handleKeydown);
+
+                // Show modal
+                modal.classList.add('show');
+                confirmBtn.focus();
+            });
+        }
+
+        /**
+         * Show a custom alert modal (single button)
+         * @param {string} message - The message to display
+         * @param {Object} options - Optional configuration
+         * @param {string} options.title - Modal title (default: 'Alert')
+         * @param {string} options.buttonText - Button text (default: 'OK')
+         * @returns {Promise<void>} - Resolves when acknowledged
+         */
+        function showAlert(message, options = {}) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirmModal');
+                const titleEl = document.getElementById('confirmModalTitle');
+                const messageEl = document.getElementById('confirmModalMessage');
+                const confirmBtn = document.getElementById('confirmModalConfirmBtn');
+                const cancelBtn = document.getElementById('confirmModalCancelBtn');
+
+                // Set content
+                titleEl.textContent = options.title || 'Alert';
+                messageEl.textContent = message;
+                confirmBtn.textContent = options.buttonText || 'OK';
+                confirmBtn.className = 'btn-secondary';
+
+                // Hide cancel button for alerts
+                cancelBtn.style.display = 'none';
+
+                // Cleanup function
+                const cleanup = () => {
+                    modal.classList.remove('show');
+                    cancelBtn.style.display = '';
+                    confirmBtn.removeEventListener('click', handleConfirm);
+                    document.removeEventListener('keydown', handleKeydown);
+                };
+
+                const handleConfirm = () => {
+                    cleanup();
+                    resolve();
+                };
+
+                const handleKeydown = (e) => {
+                    if (e.key === 'Escape' || e.key === 'Enter') {
+                        handleConfirm();
+                    }
+                };
+
+                // Attach listeners
+                confirmBtn.addEventListener('click', handleConfirm);
+                document.addEventListener('keydown', handleKeydown);
+
+                // Show modal
+                modal.classList.add('show');
+                confirmBtn.focus();
+            });
+        }
+
+        /**
          * Show keyboard shortcuts modal
          */
         function showShortcutsModal() {
@@ -6060,9 +6225,9 @@
                 );
 
                 if (existingFunds.length > 0) {
-                    const proceed = confirm(
-                        `A fund with the same name "${fundName}" and account number "${accountNumber}" already exists.\n\n` +
-                        `Are you sure you want to create another one?`
+                    const proceed = await showConfirm(
+                        `A fund with the same name "${fundName}" and account number "${accountNumber}" already exists.\n\nAre you sure you want to create another one?`,
+                        { title: 'Duplicate Fund', confirmText: 'Create Anyway', cancelText: 'Cancel', confirmClass: 'btn-secondary' }
                     );
                     if (!proceed) {
                         highlightFieldError('accountNumber');
@@ -6080,15 +6245,21 @@
                     }
 
                     if (multiplier > 1000) {
-                        if (!confirm(`Warning: Multiplier of ${multiplier} is very large. This will create extremely large amounts. Continue?`)) {
-                            return;
-                        }
+                        const confirmed = await showConfirm(`Warning: Multiplier of ${multiplier} is very large. This will create extremely large amounts. Continue?`, {
+                            title: 'Large Multiplier',
+                            confirmText: 'Continue',
+                            cancelText: 'Cancel'
+                        });
+                        if (!confirmed) return;
                     }
 
                     if (multiplier < 0.001) {
-                        if (!confirm(`Warning: Multiplier of ${multiplier} is very small. This may result in rounding to zero. Continue?`)) {
-                            return;
-                        }
+                        const confirmed = await showConfirm(`Warning: Multiplier of ${multiplier} is very small. This may result in rounding to zero. Continue?`, {
+                            title: 'Small Multiplier',
+                            confirmText: 'Continue',
+                            cancelText: 'Cancel'
+                        });
+                        if (!confirmed) return;
                     }
 
                     commitment = commitment * multiplier;
@@ -6262,7 +6433,12 @@
                     return;
                 }
 
-                if (confirm(`Are you sure you want to delete "${fund.fundName} - ${fund.accountNumber}"?`)) {
+                const confirmed = await showConfirm(`Are you sure you want to delete "${fund.fundName} - ${fund.accountNumber}"?`, {
+                    title: 'Delete Fund',
+                    confirmText: 'Delete',
+                    cancelText: 'Cancel'
+                });
+                if (confirmed) {
                     await deleteFundFromDB(currentActionFundId);
 
                     // Clear metrics cache
@@ -6392,8 +6568,8 @@
             }
         }
 
-        function closeDetailsModal() {
-            const closed = Modal.close('detailsModal', {
+        async function closeDetailsModal() {
+            const closed = await Modal.close('detailsModal', {
                 checkUnsaved: true,
                 onClose: () => {
                     currentDetailsFundId = null;
@@ -6491,7 +6667,7 @@
             AppState.setUnsavedChanges(true);
         }
 
-        function deleteCashFlowRow(button) {
+        async function deleteCashFlowRow(button) {
             const row = button.closest('tr');
             if (row) {
                 const date = row.querySelector('[data-field="date"]').value;
@@ -6502,7 +6678,12 @@
                 const amountText = amount || '$0';
                 const typeText = type || 'contribution';
 
-                if (confirm(`Delete this cash flow?\n${typeText} on ${dateText}: ${amountText}`)) {
+                const confirmed = await showConfirm(`Delete this cash flow?\n${typeText} on ${dateText}: ${amountText}`, {
+                    title: 'Delete Cash Flow',
+                    confirmText: 'Delete',
+                    cancelText: 'Cancel'
+                });
+                if (confirmed) {
                     row.remove();
                     AppState.setUnsavedChanges(true);
                     updateDetailsSummary();
@@ -6518,7 +6699,7 @@
             AppState.setUnsavedChanges(true);
         }
 
-        function deleteNavRow(button) {
+        async function deleteNavRow(button) {
             const row = button.closest('tr');
             if (row) {
                 const date = row.querySelector('[data-field="date"]').value;
@@ -6527,7 +6708,12 @@
                 const dateText = date || 'no date';
                 const amountText = amount || '$0';
 
-                if (confirm(`Delete this NAV entry?\n${dateText}: ${amountText}`)) {
+                const confirmed = await showConfirm(`Delete this NAV entry?\n${dateText}: ${amountText}`, {
+                    title: 'Delete NAV Entry',
+                    confirmText: 'Delete',
+                    cancelText: 'Cancel'
+                });
+                if (confirmed) {
                     row.remove();
                     AppState.setUnsavedChanges(true);
                     updateDetailsSummary();
@@ -6621,15 +6807,21 @@
 
                 // Warn if significant data is being deleted
                 if (originalCashFlowCount > 0 && cashFlows.length < originalCashFlowCount / 2) {
-                    if (!confirm(`Warning: You are deleting ${originalCashFlowCount - cashFlows.length} cash flow(s). Continue?`)) {
-                        return;
-                    }
+                    const confirmed = await showConfirm(`Warning: You are deleting ${originalCashFlowCount - cashFlows.length} cash flow(s). Continue?`, {
+                        title: 'Confirm Deletion',
+                        confirmText: 'Continue',
+                        cancelText: 'Cancel'
+                    });
+                    if (!confirmed) return;
                 }
 
                 if (originalNavCount > 0 && monthlyNav.length < originalNavCount / 2) {
-                    if (!confirm(`Warning: You are deleting ${originalNavCount - monthlyNav.length} NAV entr(ies). Continue?`)) {
-                        return;
-                    }
+                    const confirmed = await showConfirm(`Warning: You are deleting ${originalNavCount - monthlyNav.length} NAV entry(s). Continue?`, {
+                        title: 'Confirm Deletion',
+                        confirmText: 'Continue',
+                        cancelText: 'Cancel'
+                    });
+                    if (!confirmed) return;
                 }
 
                 // Update fund
@@ -6955,9 +7147,12 @@
                 return;
             }
 
-            if (!confirm(`Are you sure you want to delete "${name}"?`)) {
-                return;
-            }
+            const confirmed = await showConfirm(`Are you sure you want to delete "${name}"?`, {
+                title: 'Delete Fund Name',
+                confirmText: 'Delete',
+                cancelText: 'Cancel'
+            });
+            if (!confirmed) return;
 
             try {
                 await deleteFundName(name);
@@ -7194,9 +7389,12 @@
             const funds = await getAllFunds();
             const fundsInGroup = funds.filter(f => f.groupId === id);
             if (fundsInGroup.length > 0) {
-                if (!confirm(`This group contains ${fundsInGroup.length} fund(s). Deleting the group will remove the group assignment from these funds. Continue?`)) {
-                    return;
-                }
+                const confirmed = await showConfirm(`This group contains ${fundsInGroup.length} fund(s). Deleting the group will remove the group assignment from these funds. Continue?`, {
+                    title: 'Delete Group',
+                    confirmText: 'Delete',
+                    cancelText: 'Cancel'
+                });
+                if (!confirmed) return;
 
                 // Remove groupId from affected funds
                 for (const fund of fundsInGroup) {
@@ -7575,12 +7773,18 @@
             if (event.key === 'Escape') {
                 const sidebar = document.getElementById('sidebar');
                 const shortcutsModal = document.getElementById('shortcutsModal');
+                const confirmModal = document.getElementById('confirmModal');
                 const detailsModal = document.getElementById('detailsModal');
                 const actionDropdown = document.getElementById('actionDropdown');
                 const fundModal = document.getElementById('fundModal');
                 const manageFundsModal = document.getElementById('manageFundNamesModal');
                 const editFundNameModal = document.getElementById('editFundNameModal');
                 const manageGroupsModal = document.getElementById('manageGroupsModal');
+
+                // Let the confirm modal handle its own Escape key
+                if (confirmModal && confirmModal.classList.contains('show')) {
+                    return;
+                }
 
                 if (shortcutsModal && shortcutsModal.classList.contains('show')) {
                     closeShortcutsModal();
