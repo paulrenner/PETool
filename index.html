@@ -1987,6 +1987,7 @@
         let sortColumn = null;
         let sortDirection = 'asc';
         let isResizingColumn = false;
+        let lastMousedownOnResizer = false;
         let currentActionFundId = null;
         let currentDetailsFundId = null;
         let hasUnsavedChanges = false;
@@ -5782,9 +5783,19 @@
 
             // Table header sorting - use event delegation
             const thead = document.querySelector('#fundsTable thead');
+
+            // Track mousedown on resizer to prevent sort on click
+            thead.addEventListener('mousedown', (e) => {
+                lastMousedownOnResizer = e.target.closest('.resizer') !== null;
+            });
+
             thead.addEventListener('click', (e) => {
-                // Skip sorting if we just finished resizing a column or clicked on resizer
-                if (isResizingColumn || e.target.classList.contains('resizer')) return;
+                // Skip sorting if mousedown was on resizer, currently resizing, or click target is resizer
+                if (lastMousedownOnResizer || isResizingColumn || e.target.closest('.resizer')) {
+                    lastMousedownOnResizer = false;
+                    return;
+                }
+                lastMousedownOnResizer = false;
                 const th = e.target.closest('th[data-sort]');
                 if (th) {
                     const sortColumn = th.getAttribute('data-sort');
