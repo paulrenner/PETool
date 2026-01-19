@@ -6744,7 +6744,7 @@
 
         async function loadGroupsList() {
             try {
-                groups = await getAllGroups();
+                AppState.setGroups(await getAllGroups());
                 const container = document.getElementById('groupsList');
                 container.innerHTML = '';
 
@@ -6802,7 +6802,7 @@
             const editId = document.getElementById('editGroupId').value;
 
             try {
-                groups = await getAllGroups();
+                AppState.setGroups(await getAllGroups());
 
                 select.innerHTML = '<option value="">None (Top Level)</option>';
 
@@ -6990,7 +6990,7 @@
             const select = document.getElementById('fundGroup');
 
             try {
-                groups = await getAllGroups();
+                AppState.setGroups(await getAllGroups());
 
                 select.innerHTML = '<option value="">No Group</option>';
 
@@ -7522,7 +7522,7 @@
                         }
                     }
                     // Reload groups cache
-                    groups = await getAllGroups();
+                    AppState.setGroups(await getAllGroups());
                 }
 
                 // Import fund names (now with tags and fund terms)
@@ -8068,7 +8068,7 @@
                 fundNameData = new Map(fundNameObjects.map(obj => [obj.name, obj]));
 
                 // Load groups
-                groups = await getAllGroups();
+                AppState.setGroups(await getAllGroups());
 
                 // Set default cutoff date to latest quarter end
                 const quarterEnd = getLatestQuarterEnd();
