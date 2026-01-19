@@ -2524,6 +2524,28 @@
         };
 
         // ===========================
+        // Debug Logger
+        // ===========================
+
+        /**
+         * Debug logger that can be toggled on/off
+         * @namespace Debug
+         */
+        const Debug = {
+            enabled: false, // Set to true to enable debug logging
+            log(...args) {
+                if (this.enabled) console.log('[DEBUG]', ...args);
+            },
+            warn(...args) {
+                if (this.enabled) console.warn('[DEBUG]', ...args);
+            },
+            error(...args) {
+                // Errors always log
+                console.error('[ERROR]', ...args);
+            }
+        };
+
+        // ===========================
         // Utility Functions
         // ===========================
 
@@ -2719,6 +2741,300 @@
         };
 
         // ===========================
+        // Modal Manager
+        // ===========================
+
+        /**
+         * Centralized modal management
+         * @namespace Modal
+         */
+        const Modal = {
+            /**
+             * Show a modal by ID
+             * @param {string} modalId - The modal element ID
+             * @param {Object} options - Optional callbacks
+             */
+            show(modalId, options = {}) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.classList.add('show');
+                    if (options.onShow) options.onShow(modal);
+                }
+            },
+
+            /**
+             * Close a modal by ID
+             * @param {string} modalId - The modal element ID
+             * @param {Object} options - Optional callbacks and settings
+             * @returns {boolean} Whether the modal was closed
+             */
+            close(modalId, options = {}) {
+                const modal = document.getElementById(modalId);
+                if (!modal) return false;
+
+                // Check for unsaved changes if specified
+                if (options.checkUnsaved && AppState.hasUnsavedChanges) {
+                    if (!confirm('You have unsaved changes. Are you sure you want to close without saving?')) {
+                        return false;
+                    }
+                }
+
+                modal.classList.remove('show');
+                if (options.onClose) options.onClose(modal);
+                return true;
+            },
+
+            /**
+             * Check if a modal is open
+             * @param {string} modalId - The modal element ID
+             * @returns {boolean}
+             */
+            isOpen(modalId) {
+                const modal = document.getElementById(modalId);
+                return modal ? modal.classList.contains('show') : false;
+            }
+        };
+
+        // ===========================
+        // Number Formatter
+        // ===========================
+
+        /**
+         * Centralized number formatting utilities
+         * @namespace Formatter
+         */
+        const Formatter = {
+            /**
+             * Format a number with options
+             * @param {number} value - Value to format
+             * @param {Object} options - Formatting options
+             * @returns {string} Formatted string
+             */
+            number(value, options = {}) {
+                const {
+                    prefix = '',
+                    suffix = '',
+                    decimals = 0,
+                    fallback = 'N/A',
+                    showSign = false,
+                    useCommas = true
+                } = options;
+
+                if (value === null || value === undefined || isNaN(value)) {
+                    return fallback;
+                }
+
+                let formatted = useCommas
+                    ? value.toLocaleString(CONFIG.CURRENCY_FORMAT, {
+                        minimumFractionDigits: decimals,
+                        maximumFractionDigits: decimals
+                    })
+                    : value.toFixed(decimals);
+
+                if (showSign && value > 0) {
+                    formatted = '+' + formatted;
+                }
+
+                return prefix + formatted + suffix;
+            },
+
+            /**
+             * Format as currency
+             * @param {number} value - Value to format
+             * @returns {string}
+             */
+            currency(value) {
+                return this.number(value, { prefix: '$', decimals: 0, fallback: '$0' });
+            },
+
+            /**
+             * Format as percentage (for IRR)
+             * @param {number} value - Decimal value (0.15 = 15%)
+             * @returns {string}
+             */
+            percent(value) {
+                if (value === null || value === undefined) return 'N/A';
+                return this.number(value * 100, { suffix: '%', decimals: 1, fallback: 'N/A' });
+            },
+
+            /**
+             * Format as multiple (for MOIC)
+             * @param {number} value - Multiple value
+             * @returns {string}
+             */
+            multiple(value) {
+                return this.number(value, { suffix: 'x', decimals: 2, fallback: 'N/A' });
+            }
+        };
+
+        // ===========================
+        // HTML Template Builders
+        // ===========================
+
+        /**
+         * HTML template builders for reusable components
+         * @namespace Templates
+         */
+        const Templates = {
+            /**
+             * Create a cash flow table row
+             * @param {Object} cf - Cash flow data (or empty for new row)
+             * @param {number} index - Row index
+             * @returns {string} HTML string
+             */
+            cashFlowRow(cf = {}, index) {
+                const dateValue = cf.date ? escapeHtml(cf.date) : '';
+                const amountValue = cf.amount !== undefined ? formatNumberWithCommas(parseCurrency(cf.amount)) : '';
+                const typeValue = cf.type || 'Contribution';
+                const affectsCommitment = cf.affectsCommitment !== false;
+
+                return `
+                    <tr>
+                        <td><input type="date" value="${dateValue}" data-field="date" data-index="${index}"></td>
+                        <td class="number"><input type="text" value="${amountValue}" placeholder="0" data-field="amount" data-index="${index}"></td>
+                        <td class="center">
+                            <select data-field="type" data-index="${index}">
+                                <option value="Contribution" ${typeValue === 'Contribution' ? 'selected' : ''}>Contribution</option>
+                                <option value="Distribution" ${typeValue === 'Distribution' ? 'selected' : ''}>Distribution</option>
+                            </select>
+                        </td>
+                        <td class="center">
+                            <input type="checkbox" ${affectsCommitment ? 'checked' : ''} data-field="affectsCommitment" data-index="${index}">
+                        </td>
+                        <td>
+                            <button class="delete-row-btn" data-action="deleteCashFlow" title="Delete">×</button>
+                        </td>
+                    </tr>
+                `;
+            },
+
+            /**
+             * Create a NAV table row
+             * @param {Object} nav - NAV data (or empty for new row)
+             * @param {number} index - Row index
+             * @returns {string} HTML string
+             */
+            navRow(nav = {}, index) {
+                const dateValue = nav.date ? escapeHtml(nav.date) : '';
+                const amountValue = nav.amount !== undefined ? formatNumberWithCommas(parseCurrency(nav.amount)) : '';
+
+                return `
+                    <tr>
+                        <td><input type="date" value="${dateValue}" data-field="date" data-index="${index}"></td>
+                        <td><input type="text" value="${amountValue}" placeholder="0" data-field="amount" data-index="${index}"></td>
+                        <td>
+                            <button class="delete-row-btn" data-action="deleteNav" title="Delete">×</button>
+                        </td>
+                    </tr>
+                `;
+            },
+
+            /**
+             * Create a fund table row
+             * @param {Object} fund - Fund with metrics
+             * @param {number} index - Row index
+             * @param {boolean} showTags - Whether to show tags
+             * @returns {string} HTML string
+             */
+            fundRow(fund, index, showTags = false) {
+                const m = fund.metrics;
+                const fundNameObj = AppState.fundNameData.get(fund.fundName);
+                const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+                const tagsHtml = (showTags && tags.length > 0)
+                    ? `<div class="table-tags">${tags.map(tag => `<span class="table-tag">${escapeHtml(tag)}</span>`).join('')}</div>`
+                    : '';
+
+                return `
+                    <td>
+                        <div>${escapeHtml(fund.fundName)}</div>
+                        ${tagsHtml}
+                    </td>
+                    <td title="${escapeHtml(getParentAccountDisplay(fund))}">${getInvestorCellHtml(fund)}</td>
+                    <td class="center">${m.vintage || 'N/A'}</td>
+                    <td class="number">${formatCurrency(m.commitment)}</td>
+                    <td class="number">${formatCurrency(m.totalContributions)}</td>
+                    <td class="number">${formatCurrency(m.totalDistributions)}</td>
+                    <td class="number">${formatCurrency(m.nav)}</td>
+                    <td class="number ${m.investmentReturn >= 0 ? 'positive' : 'negative'}">${formatCurrency(m.investmentReturn)}</td>
+                    <td class="number">${formatMOIC(m.moic)}</td>
+                    <td class="number ${m.irr !== null && m.irr >= 0 ? 'positive' : 'negative'}">${formatIRR(m.irr)}</td>
+                    <td class="number">${formatCurrency(m.outstandingCommitment)}</td>
+                    <td class="center">
+                        <button class="btn-icon fund-actions-btn" data-fund-id="${fund.id}" title="Actions" aria-label="Actions for ${escapeHtml(fund.fundName)}">⚙</button>
+                    </td>
+                `;
+            }
+        };
+
+        // ===========================
+        // Cash Flow Helpers
+        // ===========================
+
+        /**
+         * Get filtered cash flows with common filtering logic
+         * @param {Object} fund - Fund object
+         * @param {Date|null} cutoffDate - Optional cutoff date
+         * @param {string|null} typeFilter - Optional type filter ('Contribution' or 'Distribution')
+         * @returns {Array} Filtered cash flows
+         */
+        function getFilteredCashFlows(fund, cutoffDate = null, typeFilter = null) {
+            return (fund.cashFlows || []).filter(cf =>
+                isValidDate(cf.date) &&
+                (!cutoffDate || new Date(cf.date) <= cutoffDate) &&
+                (!typeFilter || cf.type === typeFilter)
+            );
+        }
+
+        /**
+         * Get filtered NAV entries
+         * @param {Object} fund - Fund object
+         * @param {Date|null} cutoffDate - Optional cutoff date
+         * @returns {Array} Filtered NAV entries sorted by date descending
+         */
+        function getFilteredNavs(fund, cutoffDate = null) {
+            return (fund.monthlyNav || [])
+                .filter(n => isValidDate(n.date) && (!cutoffDate || new Date(n.date) <= cutoffDate))
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
+        // ===========================
+        // Filter Configuration
+        // ===========================
+
+        /**
+         * Filter configurations for declarative filtering
+         */
+        const FilterConfigs = [
+            {
+                id: 'fundFilter',
+                apply: (fund, value) => !value || fund.fundName === value
+            },
+            {
+                id: 'accountFilter',
+                apply: (fund, value) => !value || fund.accountNumber === value
+            },
+            {
+                id: 'vintageFilter',
+                apply: (fund, value) => {
+                    if (!value) return true;
+                    const vintage = getVintageYear(fund);
+                    return vintage && vintage.toString() === value;
+                }
+            },
+            {
+                id: 'searchInput',
+                apply: (fund, value) => {
+                    if (!value) return true;
+                    const searchLower = value.toLowerCase();
+                    return (
+                        fund.fundName.toLowerCase().includes(searchLower) ||
+                        (fund.accountNumber && fund.accountNumber.toLowerCase().includes(searchLower))
+                    );
+                }
+            }
+        ];
+
+        // ===========================
         // IndexedDB Operations
         // ===========================
 
@@ -2731,7 +3047,7 @@
         const GROUPS_STORE = CONFIG.GROUPS_STORE;
         const DB_VERSION = CONFIG.DB_VERSION;
 
-        // Application state - centralized state management
+        // Application state - centralized state management (single source of truth)
         const AppState = {
             // Data
             currentFunds: [],
@@ -2746,6 +3062,8 @@
             currentActionFundId: null,
             currentDetailsFundId: null,
             hasUnsavedChanges: false,
+            isResizingColumn: false,
+            lastMousedownOnResizer: false,
 
             // Cache
             metricsCache: new Map(), // fundId -> { metrics, timestamp }
@@ -2779,21 +3097,38 @@
             setMetricsCache(fundId, cutoffDate, metrics) {
                 const key = `${fundId}-${cutoffDate}`;
                 this.metricsCache.set(key, { metrics, timestamp: Date.now() });
+            },
+
+            // State setters for controlled updates
+            setFunds(funds) {
+                this.currentFunds = funds;
+                currentFunds = funds; // Sync legacy alias
+            },
+
+            setGroups(groupList) {
+                this.groups = groupList;
+                groups = groupList; // Sync legacy alias
+            },
+
+            setUnsavedChanges(value) {
+                this.hasUnsavedChanges = value;
+                hasUnsavedChanges = value; // Sync legacy alias
             }
         };
 
-        // Legacy compatibility - will be removed gradually
-        let currentFunds = [];
-        let fundNames = new Set();
-        let fundNameData = new Map();
-        let groups = [];
-        let currentGroupDescendants = null;
-        let sortColumns = []; // Array of {column, direction} for multi-column sorting
-        let isResizingColumn = false;
-        let lastMousedownOnResizer = false;
-        let currentActionFundId = null;
-        let currentDetailsFundId = null;
-        let hasUnsavedChanges = false;
+        // Legacy variable aliases - point to AppState for backward compatibility
+        // These will be gradually removed as code is updated to use AppState directly
+        let currentFunds = AppState.currentFunds;
+        let fundNames = AppState.fundNames;
+        let fundNameData = AppState.fundNameData;
+        let groups = AppState.groups;
+        let currentGroupDescendants = AppState.currentGroupDescendants;
+        let sortColumns = AppState.sortColumns;
+        let isResizingColumn = AppState.isResizingColumn;
+        let lastMousedownOnResizer = AppState.lastMousedownOnResizer;
+        let currentActionFundId = AppState.currentActionFundId;
+        let currentDetailsFundId = AppState.currentDetailsFundId;
+        let hasUnsavedChanges = AppState.hasUnsavedChanges;
 
         /**
          * Initialize IndexedDB database
@@ -2851,7 +3186,7 @@
                     }
 
                     // Log migration info
-                    console.log(`Database upgrade from v${oldVersion} to v${DB_VERSION}`);
+                    Debug.log(`Database upgrade from v${oldVersion} to v${DB_VERSION}`);
 
                     // Migrate from v5 to v6: Move tags from investments to fund names
                     if (oldVersion < 6 && oldVersion >= 5) {
@@ -2905,6 +3240,134 @@
                     // }
                 };
             });
+        }
+
+        // ===========================
+        // IndexedDB Helper Wrapper
+        // ===========================
+
+        /**
+         * IndexedDB helper for common operations
+         * @namespace DB
+         */
+        const DB = {
+            /**
+             * Execute a transaction operation
+             * @param {string} storeName - Object store name
+             * @param {string} mode - Transaction mode ('readonly' or 'readwrite')
+             * @param {Function} operation - Function that receives the object store
+             * @returns {Promise}
+             */
+            async transaction(storeName, mode, operation) {
+                if (!db) {
+                    throw new Error('Database not initialized');
+                }
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([storeName], mode);
+                    const store = transaction.objectStore(storeName);
+                    try {
+                        const result = operation(store);
+                        if (result instanceof IDBRequest) {
+                            result.onsuccess = () => resolve(result.result);
+                            result.onerror = () => reject(result.error);
+                        } else {
+                            resolve(result);
+                        }
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            },
+
+            /**
+             * Get a record by key
+             * @param {string} storeName - Object store name
+             * @param {*} key - Record key
+             * @returns {Promise}
+             */
+            get(storeName, key) {
+                return this.transaction(storeName, 'readonly', store => store.get(key));
+            },
+
+            /**
+             * Get all records from a store
+             * @param {string} storeName - Object store name
+             * @returns {Promise<Array>}
+             */
+            getAll(storeName) {
+                return this.transaction(storeName, 'readonly', store => store.getAll());
+            },
+
+            /**
+             * Put (add/update) a record
+             * @param {string} storeName - Object store name
+             * @param {Object} data - Data to store
+             * @returns {Promise}
+             */
+            put(storeName, data) {
+                return this.transaction(storeName, 'readwrite', store => store.put(data));
+            },
+
+            /**
+             * Add a new record
+             * @param {string} storeName - Object store name
+             * @param {Object} data - Data to store
+             * @returns {Promise}
+             */
+            add(storeName, data) {
+                return this.transaction(storeName, 'readwrite', store => store.add(data));
+            },
+
+            /**
+             * Delete a record by key
+             * @param {string} storeName - Object store name
+             * @param {*} key - Record key
+             * @returns {Promise}
+             */
+            delete(storeName, key) {
+                return this.transaction(storeName, 'readwrite', store => store.delete(key));
+            }
+        };
+
+        // ===========================
+        // Entity Actions for Undo/Redo
+        // ===========================
+
+        /**
+         * Entity action handlers for undo/redo operations
+         * Maps entity types to their CRUD operations
+         */
+        const EntityActions = {
+            fund: {
+                create: async (data) => saveFundToDB(data),
+                update: async (data) => saveFundToDB(data),
+                delete: async (data) => deleteFundFromDB(data.id)
+            },
+            group: {
+                create: async (data) => saveGroup(data),
+                update: async (data) => saveGroup(data),
+                delete: async (data) => deleteGroup(data.id)
+            },
+            fundName: {
+                create: async (data) => saveFundName(data),
+                update: async (data) => saveFundName(data),
+                delete: async (data) => deleteFundName(data.name)
+            }
+        };
+
+        /**
+         * Execute an entity action
+         * @param {string} entity - Entity type ('fund', 'group', 'fundName')
+         * @param {string} actionType - Action type ('create', 'update', 'delete')
+         * @param {Object} data - Data for the action
+         * @returns {Promise}
+         */
+        async function executeEntityAction(entity, actionType, data) {
+            const handler = EntityActions[entity]?.[actionType];
+            if (!handler) {
+                throw new Error(`Unknown entity action: ${entity}.${actionType}`);
+            }
+            return handler(data);
         }
 
         function saveFundToDB(fundData) {
@@ -3151,7 +3614,7 @@
         async function getAllDescendantGroupIds(groupId, visited = new Set()) {
             // Detect circular reference
             if (visited.has(groupId)) {
-                console.warn(`Circular reference detected for group ${groupId}`);
+                Debug.warn(`Circular reference detected for group ${groupId}`);
                 return [];
             }
 
@@ -3166,7 +3629,7 @@
                     descendants.push(...childDescendants);
                 }
             } catch (err) {
-                console.error('Error getting descendants for group', groupId, err);
+                Debug.error('Error getting descendants for group', groupId, err);
             }
 
             return descendants;
@@ -3251,7 +3714,7 @@
                 // Update undo button state
                 updateUndoRedoButtons();
             } catch (err) {
-                console.error('Error saving undo action:', err);
+                Debug.error('Error saving undo action:', err);
             }
         }
 
@@ -3269,7 +3732,7 @@
         }
 
         /**
-         * Undo last action
+         * Undo last action - uses EntityActions for cleaner code
          */
         async function undoLastAction() {
             const history = await getUndoHistory();
@@ -3281,54 +3744,34 @@
             const lastAction = history[history.length - 1];
 
             try {
-                // Restore previous state
-                switch (lastAction.entity) {
-                    case 'fund':
-                        if (lastAction.type === 'delete') {
-                            await saveFundToDB(lastAction.before);
-                        } else if (lastAction.type === 'create') {
-                            await deleteFundFromDB(lastAction.after.id);
-                        } else if (lastAction.type === 'update') {
-                            await saveFundToDB(lastAction.before);
-                        }
-                        break;
-                    case 'group':
-                        if (lastAction.type === 'delete') {
-                            await saveGroup(lastAction.before);
-                        } else if (lastAction.type === 'create') {
-                            await deleteGroup(lastAction.after.id);
-                        } else if (lastAction.type === 'update') {
-                            await saveGroup(lastAction.before);
-                        }
-                        break;
-                    case 'fundName':
-                        if (lastAction.type === 'delete') {
-                            await saveFundName(lastAction.before);
-                        } else if (lastAction.type === 'create') {
-                            await deleteFundName(lastAction.after.name);
-                        } else if (lastAction.type === 'update') {
-                            await saveFundName(lastAction.before);
-                        }
-                        break;
-                }
+                // Determine the reverse action and data
+                // For undo: delete->create(before), create->delete(after), update->update(before)
+                const reverseActionMap = {
+                    'delete': { action: 'create', data: lastAction.before },
+                    'create': { action: 'delete', data: lastAction.after },
+                    'update': { action: 'update', data: lastAction.before }
+                };
+
+                const reverse = reverseActionMap[lastAction.type];
+                await executeEntityAction(lastAction.entity, reverse.action, reverse.data);
 
                 // Move action to redo stack
                 AppState.redoStack.push(lastAction);
 
                 // Remove from undo history
-                const transaction = db.transaction([CONFIG.UNDO_STORE], 'readwrite');
-                await transaction.objectStore(CONFIG.UNDO_STORE).delete(lastAction.id);
+                await DB.delete(CONFIG.UNDO_STORE, lastAction.id);
 
                 await renderTable();
                 showStatus('Action undone', 'success');
                 updateUndoRedoButtons();
             } catch (err) {
                 showStatus('Error undoing action: ' + err.message, 'error');
+                Debug.error('Undo failed:', err);
             }
         }
 
         /**
-         * Redo last undone action
+         * Redo last undone action - uses EntityActions for cleaner code
          */
         async function redoLastAction() {
             if (AppState.redoStack.length === 0) {
@@ -3339,43 +3782,18 @@
             const action = AppState.redoStack.pop();
 
             try {
-                // Reapply action
-                switch (action.entity) {
-                    case 'fund':
-                        if (action.type === 'delete') {
-                            await deleteFundFromDB(action.after.id);
-                        } else if (action.type === 'create') {
-                            await saveFundToDB(action.after);
-                        } else if (action.type === 'update') {
-                            await saveFundToDB(action.after);
-                        }
-                        break;
-                    case 'group':
-                        if (action.type === 'delete') {
-                            await deleteGroup(action.after.id);
-                        } else if (action.type === 'create') {
-                            await saveGroup(action.after);
-                        } else if (action.type === 'update') {
-                            await saveGroup(action.after);
-                        }
-                        break;
-                    case 'fundName':
-                        if (action.type === 'delete') {
-                            await deleteFundName(action.after.name);
-                        } else if (action.type === 'create') {
-                            await saveFundName(action.after);
-                        } else if (action.type === 'update') {
-                            await saveFundName(action.after);
-                        }
-                        break;
-                }
+                // Determine the action and data to reapply
+                // For redo: delete->delete(after), create->create(after), update->update(after)
+                const redoActionMap = {
+                    'delete': { actionType: 'delete', data: action.after },
+                    'create': { actionType: 'create', data: action.after },
+                    'update': { actionType: 'update', data: action.after }
+                };
+
+                const redo = redoActionMap[action.type];
+                await executeEntityAction(action.entity, redo.actionType, redo.data);
 
                 // Add back to undo history directly (not via saveUndoAction to preserve action structure)
-                // This avoids race conditions with saveUndoAction's side effects
-                const transaction = db.transaction([CONFIG.UNDO_STORE], 'readwrite');
-                const store = transaction.objectStore(CONFIG.UNDO_STORE);
-
-                // Create a new entry with a fresh ID but same action data
                 const undoEntry = {
                     type: action.type,
                     entity: action.entity,
@@ -3383,13 +3801,14 @@
                     after: action.after,
                     timestamp: Date.now()
                 };
-                await store.add(undoEntry);
+                await DB.add(CONFIG.UNDO_STORE, undoEntry);
 
                 await renderTable();
                 showStatus('Action redone', 'success');
                 updateUndoRedoButtons();
             } catch (err) {
                 showStatus('Error redoing action: ' + err.message, 'error');
+                Debug.error('Redo failed:', err);
             }
         }
 
@@ -3428,7 +3847,7 @@
             if (typeof val === 'number') {
                 if (!isFinite(val)) return NaN;
                 if (validate && (val < CONFIG.CURRENCY_MIN || val > CONFIG.CURRENCY_MAX)) {
-                    console.warn('Currency value out of range:', val);
+                    Debug.warn('Currency value out of range:', val);
                     return NaN;
                 }
                 return val;
@@ -3440,7 +3859,7 @@
                 const num = parseFloat(cleaned);
                 if (!isFinite(num)) return NaN;
                 if (validate && (num < CONFIG.CURRENCY_MIN || num > CONFIG.CURRENCY_MAX)) {
-                    console.warn('Currency value out of range:', num);
+                    Debug.warn('Currency value out of range:', num);
                     return NaN;
                 }
                 return num;
@@ -4178,7 +4597,7 @@
                 addTotalsRow(fundsWithMetrics, cutoffDate);
 
             } catch (err) {
-                console.error('Error rendering table:', err);
+                Debug.error('Error rendering table:', err);
                 showStatus('Error loading data: ' + err.message, 'error');
             }
         }
@@ -4234,45 +4653,45 @@
         }
 
         function applyCurrentFilters(funds) {
-            const fundFilter = document.getElementById('fundFilter').value;
-            const accountFilter = document.getElementById('accountFilter').value;
-            const groupFilter = document.getElementById('groupFilter').value;
-            const searchInput = document.getElementById('searchInput').value.toLowerCase().trim();
-            const vintageFilter = document.getElementById('vintageFilter').value;
+            // Get filter values once (cached for all funds)
+            const filterValues = {
+                fundFilter: document.getElementById('fundFilter').value,
+                accountFilter: document.getElementById('accountFilter').value,
+                groupFilter: document.getElementById('groupFilter').value,
+                searchInput: document.getElementById('searchInput').value.toLowerCase().trim(),
+                vintageFilter: document.getElementById('vintageFilter').value
+            };
 
             return funds.filter(fund => {
-                if (fundFilter && fund.fundName !== fundFilter) return false;
-                if (accountFilter && fund.accountNumber !== accountFilter) return false;
-                if (groupFilter) {
-                    // Check if fund's groupId matches or is descendant of selected group
-                    const groupId = parseInt(groupFilter);
+                // Apply declarative filters from FilterConfigs
+                for (const config of FilterConfigs) {
+                    const value = filterValues[config.id];
+                    if (!config.apply(fund, value)) return false;
+                }
+
+                // Group filter (special handling for hierarchical groups)
+                if (filterValues.groupFilter) {
+                    const groupId = parseInt(filterValues.groupFilter);
                     if (!fund.groupId) return false;
                     if (!currentGroupDescendants || currentGroupDescendants.groupId !== groupId) {
                         return false; // Will be set by async filter
                     }
                     if (!currentGroupDescendants.ids.includes(fund.groupId)) return false;
                 }
-                // Vintage filter
-                if (vintageFilter) {
-                    const fundVintage = getVintageYear(fund);
-                    if (!fundVintage || fundVintage !== parseInt(vintageFilter)) {
-                        return false;
-                    }
-                }
-                // Search filter: check fund name, account number, and tags
-                if (searchInput) {
-                    const fundName = (fund.fundName || '').toLowerCase();
-                    const accountNumber = (fund.accountNumber || '').toLowerCase();
-                    // Look up tags from fund name data
+
+                // Tags search (extends searchInput to include tags)
+                if (filterValues.searchInput) {
                     const fundNameObj = fundNameData.get(fund.fundName);
                     const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
                     const fundTags = tags.map(tag => tag.toLowerCase()).join(' ');
-                    if (!fundName.includes(searchInput) &&
-                        !accountNumber.includes(searchInput) &&
-                        !fundTags.includes(searchInput)) {
+                    // If search already matched via FilterConfigs, pass; otherwise check tags
+                    if (!fund.fundName.toLowerCase().includes(filterValues.searchInput) &&
+                        !(fund.accountNumber && fund.accountNumber.toLowerCase().includes(filterValues.searchInput)) &&
+                        !fundTags.includes(filterValues.searchInput)) {
                         return false;
                     }
                 }
+
                 return true;
             });
         }
@@ -4513,7 +4932,7 @@
                     // Operation was cancelled, ignore
                     return;
                 }
-                console.error('Error applying filters:', err);
+                Debug.error('Error applying filters:', err);
                 showStatus('Error applying filters: ' + err.message, 'error');
             } finally {
                 // Hide loading indicator
@@ -5316,8 +5735,8 @@
                     return;
                 }
 
-                console.log('Editing fund:', fund);
-                console.log('Fund monthlyNav:', fund.monthlyNav);
+                Debug.log('Editing fund:', fund);
+                Debug.log('Fund monthlyNav:', fund.monthlyNav);
 
                 document.getElementById('fundModalTitle').textContent = 'Edit Investment';
                 document.getElementById('fundId').value = fund.id;
@@ -5331,10 +5750,10 @@
                 document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
                 document.getElementById('monthlyNav').value = JSON.stringify(fund.monthlyNav || [], null, 2);
 
-                document.getElementById('fundModal').classList.add('show');
+                Modal.show('fundModal');
             } catch (err) {
                 showStatus('Error loading fund: ' + err.message, 'error');
-                console.error('Error in editFund:', err);
+                Debug.error('Error in editFund:', err);
             }
         }
 
@@ -5556,15 +5975,15 @@
 
             } catch (err) {
                 showStatus('Error saving fund: ' + err.message, 'error');
-                console.error(err);
+                Debug.error('Error saving fund:', err);
             }
         }
 
         async function showActionModal(id, buttonElement) {
-            console.log('showActionModal called with ID:', id, 'Type:', typeof id);
+            Debug.log('showActionModal called with ID:', id, 'Type:', typeof id);
 
             if (!id && id !== 0) {
-                console.error('Invalid fund ID provided to showActionModal:', id);
+                Debug.error('Invalid fund ID provided to showActionModal:', id);
                 showStatus('Error: Invalid fund ID provided', 'error');
                 return;
             }
@@ -5578,7 +5997,7 @@
                     return;
                 }
 
-                console.log('Action dropdown showing for fund:', fund.fundName, 'ID:', fund.id);
+                Debug.log('Action dropdown showing for fund:', fund.fundName, 'ID:', fund.id);
 
                 // Position and show the dropdown
                 const dropdown = document.getElementById('actionDropdown');
@@ -5622,7 +6041,7 @@
 
                 dropdown.classList.add('show');
             } catch (err) {
-                console.error('Error in showActionModal:', err);
+                Debug.error('Error in showActionModal:', err);
                 showStatus('Error loading fund: ' + err.message, 'error');
             }
         }
@@ -5684,9 +6103,9 @@
         function showDetailsFromAction() {
             // Capture the ID before closing the modal
             const fundId = currentActionFundId;
-            console.log('Opening details for fund ID:', fundId);
+            Debug.log('Opening details for fund ID:', fundId);
             if (fundId == null) {
-                console.error('No fund ID available');
+                Debug.error('No fund ID available');
                 showStatus('Error: No fund selected', 'error');
                 return;
             }
@@ -5695,10 +6114,10 @@
         }
 
         async function showDetailsModal(id) {
-            console.log('showDetailsModal called with ID:', id, 'Type:', typeof id);
+            Debug.log('showDetailsModal called with ID:', id, 'Type:', typeof id);
 
             if (!id && id !== 0) {
-                console.error('Invalid fund ID provided to showDetailsModal:', id);
+                Debug.error('Invalid fund ID provided to showDetailsModal:', id);
                 showStatus('Error: Invalid fund ID provided', 'error');
                 return;
             }
@@ -5706,16 +6125,16 @@
             currentDetailsFundId = id;
 
             try {
-                console.log('Loading fund details for ID:', id);
+                Debug.log('Loading fund details for ID:', id);
                 const fund = await getFundById(id);
 
                 if (!fund) {
-                    console.error('Fund not found:', id);
+                    Debug.error('Fund not found:', id);
                     showStatus('Fund not found', 'error');
                     return;
                 }
 
-                console.log('Fund loaded:', fund);
+                Debug.log('Fund loaded:', fund);
 
                 document.getElementById('detailsModalTitle').textContent =
                     `Fund Details - ${fund.fundName}`;
@@ -5740,129 +6159,75 @@
                     subtitle.textContent = '';
                 }
 
-                // Populate cash flows table
+                // Populate cash flows table using Templates
                 const cashFlowsTable = document.getElementById('cashFlowsTable');
                 if (!cashFlowsTable) {
-                    console.error('Cash flows table not found');
+                    Debug.error('Cash flows table not found');
                     showStatus('Error: Cash flows table element not found in page', 'error');
                     return;
                 }
                 const cashFlowsTableBody = cashFlowsTable.querySelector('tbody');
                 if (!cashFlowsTableBody) {
-                    console.error('Cash flows table body not found');
+                    Debug.error('Cash flows table body not found');
                     showStatus('Error: Cash flows table body element not found in page', 'error');
                     return;
                 }
-                cashFlowsTableBody.innerHTML = '';
 
-                console.log('Cash flows:', fund.cashFlows);
-                (fund.cashFlows || []).forEach((cf, index) => {
-                    try {
-                        const row = document.createElement('tr');
-                        const amountValue = parseCurrency(cf.amount);
-                        const displayAmount = isNaN(amountValue) ? '' : formatNumberWithCommas(amountValue);
+                // Build all cash flow rows using Templates
+                Debug.log('Cash flows:', fund.cashFlows);
+                const cashFlowsHtml = (fund.cashFlows || [])
+                    .map((cf, index) => Templates.cashFlowRow(cf, index))
+                    .join('');
+                cashFlowsTableBody.innerHTML = cashFlowsHtml;
 
-                        row.innerHTML = `
-                            <td><input type="date" value="${escapeHtml(cf.date || '')}" data-field="date" data-index="${index}"></td>
-                            <td class="number"><input type="text" value="${displayAmount}" data-field="amount" data-index="${index}"></td>
-                            <td class="center">
-                                <select data-field="type" data-index="${index}">
-                                    <option value="Contribution" ${cf.type === 'Contribution' ? 'selected' : ''}>Contribution</option>
-                                    <option value="Distribution" ${cf.type === 'Distribution' ? 'selected' : ''}>Distribution</option>
-                                </select>
-                            </td>
-                            <td class="center">
-                                <input type="checkbox" ${cf.affectsCommitment !== false ? 'checked' : ''} data-field="affectsCommitment" data-index="${index}">
-                            </td>
-                            <td>
-                                <button class="delete-row-btn" data-action="deleteCashFlow" title="Delete">×</button>
-                            </td>
-                        `;
-                        cashFlowsTableBody.appendChild(row);
-                    } catch (cfErr) {
-                        console.error('Error adding cash flow row:', cfErr, cf);
-                        showStatus('Error loading cash flow at index ' + index + ': ' + cfErr.message, 'error');
-                    }
-                });
-
-                // Populate NAV table
+                // Populate NAV table using Templates
                 const navTable = document.getElementById('navTable');
                 if (!navTable) {
-                    console.error('NAV table not found');
+                    Debug.error('NAV table not found');
                     showStatus('Error: NAV table element not found in page', 'error');
                     return;
                 }
                 const navTableBody = navTable.querySelector('tbody');
                 if (!navTableBody) {
-                    console.error('NAV table body not found');
+                    Debug.error('NAV table body not found');
                     showStatus('Error: NAV table body element not found in page', 'error');
                     return;
                 }
-                navTableBody.innerHTML = '';
 
-                console.log('Monthly NAV:', fund.monthlyNav);
-                (fund.monthlyNav || []).forEach((nav, index) => {
-                    try {
-                        const row = document.createElement('tr');
-                        const amountValue = parseCurrency(nav.amount);
-                        const displayAmount = isNaN(amountValue) ? '' : formatNumberWithCommas(amountValue);
+                // Build all NAV rows using Templates
+                Debug.log('Monthly NAV:', fund.monthlyNav);
+                const navHtml = (fund.monthlyNav || [])
+                    .map((nav, index) => Templates.navRow(nav, index))
+                    .join('');
+                navTableBody.innerHTML = navHtml;
 
-                        row.innerHTML = `
-                            <td><input type="date" value="${escapeHtml(nav.date || '')}" data-field="date" data-index="${index}"></td>
-                            <td><input type="text" value="${displayAmount}" data-field="amount" data-index="${index}"></td>
-                            <td>
-                                <button class="delete-row-btn" data-action="deleteNav" title="Delete">×</button>
-                            </td>
-                        `;
-                        navTableBody.appendChild(row);
-                    } catch (navErr) {
-                        console.error('Error adding NAV row:', navErr, nav);
-                        showStatus('Error loading NAV at index ' + index + ': ' + navErr.message, 'error');
-                    }
-                });
-
-                document.getElementById('detailsModal').classList.add('show');
-                hasUnsavedChanges = false; // Reset unsaved changes flag when opening modal
-                console.log('Details modal opened successfully');
+                Modal.show('detailsModal');
+                AppState.setUnsavedChanges(false);
+                Debug.log('Details modal opened successfully');
             } catch (err) {
-                console.error('Error in showDetailsModal:', err);
-                showStatus('Error loading fund details: ' + err.message + ' (Check console for details)', 'error');
+                Debug.error('Error in showDetailsModal:', err);
+                showStatus('Error loading fund details: ' + err.message, 'error');
             }
         }
 
         function closeDetailsModal() {
-            if (hasUnsavedChanges) {
-                if (!confirm('You have unsaved changes. Are you sure you want to close without saving?')) {
-                    return;
+            const closed = Modal.close('detailsModal', {
+                checkUnsaved: true,
+                onClose: () => {
+                    currentDetailsFundId = null;
+                    AppState.setUnsavedChanges(false);
                 }
-            }
-            document.getElementById('detailsModal').classList.remove('show');
-            currentDetailsFundId = null;
-            hasUnsavedChanges = false;
+            });
+            // Modal.close returns false if user canceled due to unsaved changes
+            return closed;
         }
 
         function addCashFlowRow() {
             const table = document.getElementById('cashFlowsTable').querySelector('tbody');
             const index = table.children.length;
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><input type="date" data-field="date" data-index="${index}"></td>
-                <td class="number"><input type="text" placeholder="0" data-field="amount" data-index="${index}"></td>
-                <td class="center">
-                    <select data-field="type" data-index="${index}">
-                        <option value="Contribution">Contribution</option>
-                        <option value="Distribution">Distribution</option>
-                    </select>
-                </td>
-                <td class="center">
-                    <input type="checkbox" checked data-field="affectsCommitment" data-index="${index}">
-                </td>
-                <td>
-                    <button class="delete-row-btn" data-action="deleteCashFlow" title="Delete">×</button>
-                </td>
-            `;
-            table.appendChild(row);
-            hasUnsavedChanges = true;
+            // Use Templates for consistent row creation
+            table.insertAdjacentHTML('beforeend', Templates.cashFlowRow({}, index));
+            AppState.setUnsavedChanges(true);
         }
 
         function deleteCashFlowRow(button) {
@@ -5878,7 +6243,7 @@
 
                 if (confirm(`Delete this cash flow?\n${typeText} on ${dateText}: ${amountText}`)) {
                     row.remove();
-                    hasUnsavedChanges = true;
+                    AppState.setUnsavedChanges(true);
                 }
             }
         }
@@ -5886,16 +6251,9 @@
         function addNavRow() {
             const table = document.getElementById('navTable').querySelector('tbody');
             const index = table.children.length;
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><input type="date" data-field="date" data-index="${index}"></td>
-                <td><input type="text" placeholder="0" data-field="amount" data-index="${index}"></td>
-                <td>
-                    <button class="delete-row-btn" data-action="deleteNav" title="Delete">×</button>
-                </td>
-            `;
-            table.appendChild(row);
-            hasUnsavedChanges = true;
+            // Use Templates for consistent row creation
+            table.insertAdjacentHTML('beforeend', Templates.navRow({}, index));
+            AppState.setUnsavedChanges(true);
         }
 
         function deleteNavRow(button) {
@@ -6024,7 +6382,7 @@
 
             } catch (err) {
                 showStatus('Error saving details: ' + err.message, 'error');
-                console.error(err);
+                Debug.error('Error saving details:', err);
             }
         }
 
@@ -6283,7 +6641,7 @@
                             await saveFundToDB(fund);
                         } catch (err) {
                             updateErrors.push(fund.accountNumber);
-                            console.error(`Failed to update fund ${fund.accountNumber}:`, err);
+                            Debug.error(`Failed to update fund ${fund.accountNumber}:`, err);
                         }
                     }
 
@@ -6324,7 +6682,7 @@
                 await loadFundNamesList();
             } catch (err) {
                 showStatus('Error updating fund name: ' + err.message, 'error');
-                console.error(err);
+                Debug.error('Error updating fund name:', err);
             } finally {
                 hideLoading();
             }
@@ -6439,7 +6797,7 @@
                 const tree = buildGroupsTree(groups, null);
                 addGroupOptionsToSelect(select, tree, 0, excludeIds);
             } catch (err) {
-                console.error('Error populating group parent dropdown:', err);
+                Debug.error('Error populating group parent dropdown:', err);
             }
         }
 
@@ -6626,7 +6984,7 @@
                     select.value = valueToSet;
                 }
             } catch (err) {
-                console.error('Error populating fund group dropdown:', err);
+                Debug.error('Error populating fund group dropdown:', err);
             }
         }
 
@@ -6636,7 +6994,7 @@
 
             try {
                 const names = await getAllFundNames();
-                console.log('Fund names from database:', names);
+                Debug.log('Fund names from database:', names);
                 fundNames = new Set(names);
 
                 select.innerHTML = '<option value="">Select a fund</option>';
@@ -6657,7 +7015,7 @@
                     select.value = currentValue;
                 }
 
-                console.log('Dropdown populated with', names.length, 'fund names');
+                Debug.log('Dropdown populated with', names.length, 'fund names');
 
                 // Handle new fund name creation
                 select.onchange = async function() {
@@ -6698,7 +7056,7 @@
                     }
                 };
             } catch (err) {
-                console.error('Error populating fund names:', err);
+                Debug.error('Error populating fund names:', err);
             }
         }
 
@@ -6760,7 +7118,7 @@
                 updateLastBackupTime();
             } catch (err) {
                 showStatus('Error exporting data: ' + err.message, 'error');
-                console.error(err);
+                Debug.error('Error exporting data:', err);
             }
         }
 
@@ -6851,7 +7209,7 @@
                 showStatus('CSV exported successfully');
             } catch (err) {
                 showStatus('Error exporting CSV: ' + err.message, 'error');
-                console.error(err);
+                Debug.error('Error exporting CSV:', err);
             } finally {
                 hideLoading();
             }
@@ -7087,13 +7445,13 @@
                         if (group.parentGroupId != null) {
                             // Check if parent exists in import data
                             if (!groupIds.has(group.parentGroupId)) {
-                                console.warn(`Warning: Group "${group.name}" (ID ${group.id}) references non-existent parent ${group.parentGroupId}. Setting to top-level.`);
+                                Debug.warn(`Warning: Group "${group.name}" (ID ${group.id}) references non-existent parent ${group.parentGroupId}. Setting to top-level.`);
                                 group.parentGroupId = null;
                             }
 
                             // Check for circular reference (direct self-reference)
                             if (group.id === group.parentGroupId) {
-                                console.warn(`Warning: Group "${group.name}" (ID ${group.id}) has circular reference. Setting to top-level.`);
+                                Debug.warn(`Warning: Group "${group.name}" (ID ${group.id}) has circular reference. Setting to top-level.`);
                                 group.parentGroupId = null;
                             }
                         }
@@ -7119,7 +7477,7 @@
 
                         // If no groups were added this iteration, we have circular dependencies
                         if (remainingGroups.length === initialLength) {
-                            console.warn('Warning: Circular dependencies detected in remaining groups. Setting to top-level.');
+                            Debug.warn('Warning: Circular dependencies detected in remaining groups. Setting to top-level.');
                             remainingGroups.forEach(g => {
                                 g.parentGroupId = null;
                                 sortedGroups.push(g);
@@ -7257,7 +7615,7 @@
                         await saveFundToDB(fundData);
                         imported++;
                     } catch (fundErr) {
-                        console.error(`Error importing fund at index ${i}:`, fundErr, fund);
+                        Debug.error(`Error importing fund at index ${i}:`, fundErr, fund);
                         failedImports.push({ index: i, name: fund.fundName || fund.accountNumber || 'Unknown', error: fundErr.message });
                     }
                 }
@@ -7269,11 +7627,11 @@
                     if (imported > 0) messages.push(`${imported} imported`);
                     if (skippedDuplicates.length > 0) {
                         messages.push(`${skippedDuplicates.length} duplicates skipped`);
-                        console.log('Skipped duplicates:', skippedDuplicates);
+                        Debug.log('Skipped duplicates:', skippedDuplicates);
                     }
                     if (failedImports.length > 0) {
                         messages.push(`${failedImports.length} failed`);
-                        console.error('Failed imports:', failedImports);
+                        Debug.error('Failed imports:', failedImports);
                     }
                     const status = failedImports.length > 0 ? 'error' : 'success';
                     showStatus(`Import complete: ${messages.join(', ')} (see console for details)`, status);
@@ -7286,7 +7644,7 @@
                 }
             } catch (err) {
                 showStatus('Error importing data: ' + err.message, 'error');
-                console.error(err);
+                Debug.error('Error importing data:', err);
                 // Don't clear input on error so user can retry
             } finally {
                 hideLoading();
@@ -7495,179 +7853,179 @@
         // ===========================
 
         /**
-         * Initialize all event listeners
-         * Centralized event listener setup using event delegation where appropriate
+         * Event listener setup organized by feature area
+         */
+        const EventListeners = {
+            /** Filter controls and toolbar */
+            setupFilters() {
+                document.getElementById('groupFilter').addEventListener('change', applyFilters);
+                document.getElementById('fundFilter').addEventListener('change', applyFilters);
+                document.getElementById('accountFilter').addEventListener('change', applyFilters);
+                document.getElementById('vintageFilter').addEventListener('change', applyFilters);
+                document.getElementById('searchInput').addEventListener('input', applyFiltersDebounced);
+                document.getElementById('cutoffDate').addEventListener('change', applyFilters);
+                document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+                document.getElementById('timelineHeader').addEventListener('click', toggleTimelinePanel);
+                document.getElementById('undoBtn').addEventListener('click', undoLastAction);
+                document.getElementById('redoBtn').addEventListener('click', redoLastAction);
+                document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
+            },
+
+            /** Table header sorting with column resizing awareness */
+            setupTableSorting() {
+                const thead = document.querySelector('#fundsTable thead');
+                thead.addEventListener('mousedown', (e) => {
+                    lastMousedownOnResizer = e.target.closest('.resizer') !== null;
+                });
+                thead.addEventListener('click', (e) => {
+                    if (lastMousedownOnResizer || isResizingColumn || e.target.closest('.resizer')) {
+                        lastMousedownOnResizer = false;
+                        return;
+                    }
+                    lastMousedownOnResizer = false;
+                    const th = e.target.closest('th[data-sort]');
+                    if (th) {
+                        sortTable(th.getAttribute('data-sort'));
+                    }
+                });
+            },
+
+            /** Fund add/edit modal */
+            setupFundModal() {
+                document.getElementById('closeFundModalBtn').addEventListener('click', closeFundModal);
+                document.getElementById('cancelFundModalBtn').addEventListener('click', closeFundModal);
+                document.getElementById('fundForm').addEventListener('submit', saveFund);
+            },
+
+            /** Action dropdown (edit, duplicate, details, delete) */
+            setupActionDropdown() {
+                const actions = {
+                    'actionEdit': editFundFromAction,
+                    'actionDuplicate': duplicateFundFromAction,
+                    'actionViewDetails': showDetailsFromAction,
+                    'actionDelete': deleteFundFromAction
+                };
+                Object.entries(actions).forEach(([id, handler]) => {
+                    document.getElementById(id).addEventListener('click', (e) => {
+                        e.preventDefault();
+                        handler();
+                    });
+                });
+            },
+
+            /** Fund names management modal */
+            setupFundNamesModal() {
+                document.getElementById('closeManageFundsModalBtn').addEventListener('click', closeManageFundsModal);
+                document.getElementById('closeManageFundsModal2Btn').addEventListener('click', closeManageFundsModal);
+                document.getElementById('addNewFundNameBtn').addEventListener('click', addNewFundName);
+                document.getElementById('closeEditFundNameModalBtn').addEventListener('click', closeEditFundNameModal);
+                document.getElementById('saveEditedFundNameBtn').addEventListener('click', saveEditedFundName);
+                document.getElementById('cancelEditFundNameBtn').addEventListener('click', closeEditFundNameModal);
+            },
+
+            /** Groups management modal */
+            setupGroupsModal() {
+                document.getElementById('closeManageGroupsModal2Btn').addEventListener('click', closeManageGroupsModal);
+                document.getElementById('closeManageGroupsModalBtn').addEventListener('click', closeManageGroupsModal);
+                document.getElementById('saveGroupBtn').addEventListener('click', saveGroupChanges);
+                document.getElementById('cancelEditBtn').addEventListener('click', cancelGroupEdit);
+            },
+
+            /** Details modal with cash flows and NAV tables */
+            setupDetailsModal() {
+                document.getElementById('closeDetailsModalBtn').addEventListener('click', closeDetailsModal);
+                document.getElementById('cancelDetailsModalBtn').addEventListener('click', closeDetailsModal);
+                document.getElementById('addCashFlowRowBtn').addEventListener('click', addCashFlowRow);
+                document.getElementById('addNavRowBtn').addEventListener('click', addNavRow);
+                document.getElementById('saveDetailsChangesBtn').addEventListener('click', saveDetailsChanges);
+
+                // Event delegation for dynamically created rows
+                document.getElementById('cashFlowsTable').addEventListener('click', (e) => {
+                    const btn = e.target.closest('[data-action="deleteCashFlow"]');
+                    if (btn) deleteCashFlowRow(btn);
+                });
+                document.getElementById('navTable').addEventListener('click', (e) => {
+                    const btn = e.target.closest('[data-action="deleteNav"]');
+                    if (btn) deleteNavRow(btn);
+                });
+                document.getElementById('editFundTagsContainer').addEventListener('click', (e) => {
+                    const btn = e.target.closest('[data-action="removeTag"]');
+                    if (btn) removeEditFundTag(btn);
+                });
+            },
+
+            /** Backup warning modal */
+            setupBackupWarning() {
+                document.getElementById('closeBackupWarningBtn').addEventListener('click', closeBackupWarning);
+                document.getElementById('exportNowBtn').addEventListener('click', () => {
+                    closeBackupWarning();
+                    exportDatabase();
+                    updateLastBackupTime();
+                });
+                document.getElementById('remindLaterBtn').addEventListener('click', () => {
+                    if (document.getElementById('dontShowBackupWarning').checked) {
+                        Storage.set(CONFIG.STORAGE_BACKUP_WARNING, true);
+                    }
+                    closeBackupWarning();
+                });
+            },
+
+            /** Sidebar and its menu items */
+            setupSidebar() {
+                document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+                document.getElementById('closeSidebarBtn').addEventListener('click', closeSidebar);
+                document.getElementById('sidebarShowTagsCheckbox').addEventListener('change', toggleTagsDisplay);
+                document.getElementById('sidebarDarkModeCheckbox').addEventListener('change', toggleDarkMode);
+
+                // Menu items with sidebar close behavior
+                const menuItems = {
+                    'sidebarNewInvestment': showAddFundModal,
+                    'sidebarManageFunds': showManageFundsModal,
+                    'sidebarManageGroups': showManageGroupsModal,
+                    'sidebarExportCSV': exportToCSV,
+                    'sidebarExportJSON': exportDatabase,
+                    'sidebarExportPDF': exportToPDF
+                };
+                Object.entries(menuItems).forEach(([id, handler]) => {
+                    document.getElementById(id).addEventListener('click', (e) => {
+                        e.preventDefault();
+                        closeSidebar();
+                        handler();
+                    });
+                });
+
+                document.getElementById('sidebarImportFile').addEventListener('change', (e) => {
+                    importDatabase(e);
+                    closeSidebar();
+                });
+            },
+
+            /** Keyboard shortcuts modal */
+            setupShortcutsModal() {
+                document.getElementById('closeShortcutsModalBtn').addEventListener('click', closeShortcutsModal);
+                document.getElementById('closeShortcutsModal2Btn').addEventListener('click', closeShortcutsModal);
+            },
+
+            /** Initialize all event listeners */
+            init() {
+                this.setupFilters();
+                this.setupTableSorting();
+                this.setupFundModal();
+                this.setupActionDropdown();
+                this.setupFundNamesModal();
+                this.setupGroupsModal();
+                this.setupDetailsModal();
+                this.setupBackupWarning();
+                this.setupSidebar();
+                this.setupShortcutsModal();
+            }
+        };
+
+        /**
+         * Initialize all event listeners (legacy wrapper)
          */
         function initializeEventListeners() {
-            // Filter controls
-            document.getElementById('groupFilter').addEventListener('change', applyFilters);
-            document.getElementById('fundFilter').addEventListener('change', applyFilters);
-            document.getElementById('accountFilter').addEventListener('change', applyFilters);
-            document.getElementById('vintageFilter').addEventListener('change', applyFilters);
-            document.getElementById('searchInput').addEventListener('input', applyFiltersDebounced);
-            document.getElementById('cutoffDate').addEventListener('change', applyFilters);
-            document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
-
-            // Timeline panel toggle
-            document.getElementById('timelineHeader').addEventListener('click', toggleTimelinePanel);
-
-            // Undo/Redo buttons
-            document.getElementById('undoBtn').addEventListener('click', undoLastAction);
-            document.getElementById('redoBtn').addEventListener('click', redoLastAction);
-
-            // Keyboard shortcuts modal
-            document.getElementById('closeShortcutsModalBtn').addEventListener('click', closeShortcutsModal);
-            document.getElementById('closeShortcutsModal2Btn').addEventListener('click', closeShortcutsModal);
-
-            document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
-
-            // Table header sorting - use event delegation
-            const thead = document.querySelector('#fundsTable thead');
-
-            // Track mousedown on resizer to prevent sort on click
-            thead.addEventListener('mousedown', (e) => {
-                lastMousedownOnResizer = e.target.closest('.resizer') !== null;
-            });
-
-            thead.addEventListener('click', (e) => {
-                // Skip sorting if mousedown was on resizer, currently resizing, or click target is resizer
-                if (lastMousedownOnResizer || isResizingColumn || e.target.closest('.resizer')) {
-                    lastMousedownOnResizer = false;
-                    return;
-                }
-                lastMousedownOnResizer = false;
-                const th = e.target.closest('th[data-sort]');
-                if (th) {
-                    const sortColumn = th.getAttribute('data-sort');
-                    sortTable(sortColumn);
-                }
-            });
-
-            // Fund modal
-            document.getElementById('closeFundModalBtn').addEventListener('click', closeFundModal);
-            document.getElementById('cancelFundModalBtn').addEventListener('click', closeFundModal);
-            document.getElementById('fundForm').addEventListener('submit', saveFund);
-
-            // Action dropdown
-            document.getElementById('actionEdit').addEventListener('click', (e) => {
-                e.preventDefault();
-                editFundFromAction();
-            });
-            document.getElementById('actionDuplicate').addEventListener('click', (e) => {
-                e.preventDefault();
-                duplicateFundFromAction();
-            });
-            document.getElementById('actionViewDetails').addEventListener('click', (e) => {
-                e.preventDefault();
-                showDetailsFromAction();
-            });
-            document.getElementById('actionDelete').addEventListener('click', (e) => {
-                e.preventDefault();
-                deleteFundFromAction();
-            });
-
-            // Manage funds modal
-            document.getElementById('closeManageFundsModalBtn').addEventListener('click', closeManageFundsModal);
-            document.getElementById('closeManageFundsModal2Btn').addEventListener('click', closeManageFundsModal);
-            document.getElementById('addNewFundNameBtn').addEventListener('click', addNewFundName);
-
-            // Edit fund name modal
-            document.getElementById('closeEditFundNameModalBtn').addEventListener('click', closeEditFundNameModal);
-            document.getElementById('saveEditedFundNameBtn').addEventListener('click', saveEditedFundName);
-            document.getElementById('cancelEditFundNameBtn').addEventListener('click', closeEditFundNameModal);
-
-            // Manage groups modal
-            document.getElementById('closeManageGroupsModal2Btn').addEventListener('click', closeManageGroupsModal);
-            document.getElementById('closeManageGroupsModalBtn').addEventListener('click', closeManageGroupsModal);
-            document.getElementById('saveGroupBtn').addEventListener('click', saveGroupChanges);
-            document.getElementById('cancelEditBtn').addEventListener('click', cancelGroupEdit);
-
-            // Details modal
-            document.getElementById('closeDetailsModalBtn').addEventListener('click', closeDetailsModal);
-            document.getElementById('cancelDetailsModalBtn').addEventListener('click', closeDetailsModal);
-            document.getElementById('addCashFlowRowBtn').addEventListener('click', addCashFlowRow);
-            document.getElementById('addNavRowBtn').addEventListener('click', addNavRow);
-            document.getElementById('saveDetailsChangesBtn').addEventListener('click', saveDetailsChanges);
-
-            // Event delegation for dynamically created delete buttons
-            document.getElementById('cashFlowsTable').addEventListener('click', (e) => {
-                const btn = e.target.closest('[data-action="deleteCashFlow"]');
-                if (btn) {
-                    deleteCashFlowRow(btn);
-                }
-            });
-
-            document.getElementById('navTable').addEventListener('click', (e) => {
-                const btn = e.target.closest('[data-action="deleteNav"]');
-                if (btn) {
-                    deleteNavRow(btn);
-                }
-            });
-
-            // Event delegation for tag removal
-            document.getElementById('editFundTagsContainer').addEventListener('click', (e) => {
-                const btn = e.target.closest('[data-action="removeTag"]');
-                if (btn) {
-                    removeEditFundTag(btn);
-                }
-            });
-
-            // Backup warning modal
-            document.getElementById('closeBackupWarningBtn').addEventListener('click', closeBackupWarning);
-            document.getElementById('exportNowBtn').addEventListener('click', () => {
-                closeBackupWarning();
-                exportDatabase();
-                updateLastBackupTime();
-            });
-            document.getElementById('remindLaterBtn').addEventListener('click', () => {
-                const dontShow = document.getElementById('dontShowBackupWarning').checked;
-                if (dontShow) {
-                    Storage.set(CONFIG.STORAGE_BACKUP_WARNING, true);
-                }
-                closeBackupWarning();
-            });
-
-            // Sidebar
-            document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
-            document.getElementById('closeSidebarBtn').addEventListener('click', closeSidebar);
-            document.getElementById('sidebarShowTagsCheckbox').addEventListener('change', toggleTagsDisplay);
-            document.getElementById('sidebarDarkModeCheckbox').addEventListener('change', toggleDarkMode);
-
-            // Sidebar menu items
-            document.getElementById('sidebarNewInvestment').addEventListener('click', (e) => {
-                e.preventDefault();
-                closeSidebar();
-                showAddFundModal();
-            });
-            document.getElementById('sidebarManageFunds').addEventListener('click', (e) => {
-                e.preventDefault();
-                closeSidebar();
-                showManageFundsModal();
-            });
-            document.getElementById('sidebarManageGroups').addEventListener('click', (e) => {
-                e.preventDefault();
-                closeSidebar();
-                showManageGroupsModal();
-            });
-            document.getElementById('sidebarExportCSV').addEventListener('click', (e) => {
-                e.preventDefault();
-                closeSidebar();
-                exportToCSV();
-            });
-            document.getElementById('sidebarExportJSON').addEventListener('click', (e) => {
-                e.preventDefault();
-                closeSidebar();
-                exportDatabase();
-            });
-            document.getElementById('sidebarExportPDF').addEventListener('click', (e) => {
-                e.preventDefault();
-                closeSidebar();
-                exportToPDF();
-            });
-            document.getElementById('sidebarImportFile').addEventListener('change', (e) => {
-                importDatabase(e);
-                closeSidebar();
-            });
+            EventListeners.init();
         }
 
         function setControlsEnabled(enabled) {
@@ -7730,10 +8088,10 @@
                     }
                 }, 1000); // Delay to not interfere with initial load
 
-                console.log('PE Fund Manager initialized successfully');
+                Debug.log('PE Fund Manager initialized successfully');
             } catch (err) {
                 showStatus('Error initializing application: ' + err.message, 'error');
-                console.error(err);
+                Debug.error('Error initializing application:', err);
             } finally {
                 hideLoading();
             }
