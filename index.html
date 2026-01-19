@@ -6806,7 +6806,14 @@
         }
 
         async function removeFundName(name) {
-            if (!confirm(`Are you sure you want to delete "${name}"? This will not delete funds using this name.`)) {
+            // Check if any investments are using this fund name
+            const fundsUsingName = currentFunds.filter(f => f.fundName === name);
+            if (fundsUsingName.length > 0) {
+                showStatus(`Cannot delete "${name}" - ${fundsUsingName.length} investment(s) are using this fund name`, 'error');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete "${name}"?`)) {
                 return;
             }
 
