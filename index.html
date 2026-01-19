@@ -6392,16 +6392,17 @@
                         if (!confirmed) return;
                     }
 
-                    commitment = commitment * multiplier;
+                    // Round to nearest penny after applying multiplier
+                    commitment = Math.round(commitment * multiplier * 100) / 100;
 
                     cashFlows = cashFlows.map(cf => ({
                         ...cf,
-                        amount: parseCurrency(cf.amount) * multiplier
+                        amount: Math.round(parseCurrency(cf.amount) * multiplier * 100) / 100
                     }));
 
                     monthlyNav = monthlyNav.map(nav => ({
                         ...nav,
-                        amount: parseCurrency(nav.amount) * multiplier
+                        amount: Math.round(parseCurrency(nav.amount) * multiplier * 100) / 100
                     }));
                 }
 
