@@ -4012,6 +4012,11 @@
                     if (cf.type === 'Contribution') {
                         const amount = parseCurrency(cf.amount) || 0;
                         outstanding -= Math.abs(amount);
+                    } else if (cf.type === 'Adjustment') {
+                        // Adjustments directly modify outstanding commitment
+                        // Positive = increase remaining, Negative = decrease remaining
+                        const amount = parseCurrency(cf.amount) || 0;
+                        outstanding += amount;
                     }
                 });
 
@@ -6425,8 +6430,11 @@
                         }
                     } else if (type === 'Distribution') {
                         totalDistributions += Math.abs(amount);
+                    } else if (type === 'Adjustment' && affectsCommitment) {
+                        // Adjustments directly modify outstanding commitment
+                        // Positive = increase remaining, Negative = decrease remaining
+                        outstandingCommitment += amount;
                     }
-                    // Adjustment type doesn't affect contributions/distributions totals
                 });
 
                 // Get latest NAV value from table
