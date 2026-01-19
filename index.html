@@ -2379,6 +2379,34 @@
             <h2 id="detailsModalTitle">Fund Details</h2>
             <p id="detailsModalSubtitle" style="margin: 5px 0 0 0; color: #95A5A6; font-size: 0.9em;"></p>
 
+            <!-- Investment Summary Section -->
+            <div id="detailsSummary" class="portfolio-summary" style="margin-top: 20px;">
+                <div class="summary-stat">
+                    <span class="summary-label">Total Commitment</span>
+                    <span class="summary-value" id="detailsSummaryCommitment">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Contributions</span>
+                    <span class="summary-value" id="detailsSummaryContributions">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Distributions</span>
+                    <span class="summary-value" id="detailsSummaryDistributions">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Current Value</span>
+                    <span class="summary-value" id="detailsSummaryValue">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Investment Return</span>
+                    <span class="summary-value" id="detailsSummaryReturn">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Outstanding Commitment</span>
+                    <span class="summary-value" id="detailsSummaryOutstanding">$0</span>
+                </div>
+            </div>
+
             <h3 style="margin-top: 20px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Cash Flows</h3>
             <div class="details-table-wrapper">
                 <table class="details-table" id="cashFlowsTable">
@@ -6331,6 +6359,9 @@
                     .join('');
                 navTableBody.innerHTML = navHtml;
 
+                // Update investment summary section
+                await updateDetailsSummary();
+
                 Modal.show('detailsModal');
                 AppState.setUnsavedChanges(false);
                 Debug.log('Details modal opened successfully');
@@ -6350,6 +6381,82 @@
             });
             // Modal.close returns false if user canceled due to unsaved changes
             return closed;
+        }
+
+        async function updateDetailsSummary() {
+            if (!currentDetailsFundId) return;
+
+            try {
+                const fund = await getFundById(currentDetailsFundId);
+                if (!fund) return;
+
+                const commitment = parseCurrency(fund.commitment) || 0;
+
+                // Read current cash flows from table
+                const cashFlowsTable = document.getElementById('cashFlowsTable').querySelector('tbody');
+                let totalContributions = 0;
+                let totalDistributions = 0;
+                let outstandingCommitment = commitment;
+
+                Array.from(cashFlowsTable.children).forEach(row => {
+                    const amount = parseCurrency(row.querySelector('[data-field="amount"]').value) || 0;
+                    const type = row.querySelector('[data-field="type"]').value;
+                    const affectsCommitment = row.querySelector('[data-field="affectsCommitment"]').checked;
+
+                    if (type === 'Contribution') {
+                        totalContributions += Math.abs(amount);
+                        if (affectsCommitment) {
+                            outstandingCommitment -= Math.abs(amount);
+                        }
+                    } else if (type === 'Distribution') {
+                        totalDistributions += Math.abs(amount);
+                    }
+                    // Adjustment type doesn't affect contributions/distributions totals
+                });
+
+                // Get latest NAV value from table
+                const navTable = document.getElementById('navTable').querySelector('tbody');
+                let latestNav = 0;
+                let latestNavDate = null;
+
+                Array.from(navTable.children).forEach(row => {
+                    const dateValue = row.querySelector('[data-field="date"]').value;
+                    const amount = parseCurrency(row.querySelector('[data-field="amount"]').value) || 0;
+
+                    if (dateValue && isValidDate(dateValue)) {
+                        const date = new Date(dateValue);
+                        if (!latestNavDate || date > latestNavDate) {
+                            latestNavDate = date;
+                            latestNav = amount;
+                        }
+                    }
+                });
+
+                // Calculate investment return
+                const investmentReturn = totalDistributions + latestNav - totalContributions;
+
+                // Ensure outstanding commitment is not negative
+                outstandingCommitment = Math.max(0, outstandingCommitment);
+
+                // Update summary display
+                document.getElementById('detailsSummaryCommitment').textContent = formatCurrency(commitment);
+                document.getElementById('detailsSummaryContributions').textContent = formatCurrency(totalContributions);
+                document.getElementById('detailsSummaryDistributions').textContent = formatCurrency(totalDistributions);
+                document.getElementById('detailsSummaryValue').textContent = formatCurrency(latestNav);
+
+                const returnElement = document.getElementById('detailsSummaryReturn');
+                returnElement.textContent = formatCurrency(investmentReturn);
+                returnElement.classList.remove('positive', 'negative');
+                if (investmentReturn > 0) {
+                    returnElement.classList.add('positive');
+                } else if (investmentReturn < 0) {
+                    returnElement.classList.add('negative');
+                }
+
+                document.getElementById('detailsSummaryOutstanding').textContent = formatCurrency(outstandingCommitment);
+            } catch (err) {
+                Debug.error('Error updating details summary:', err);
+            }
         }
 
         function addCashFlowRow() {
@@ -6374,6 +6481,7 @@
                 if (confirm(`Delete this cash flow?\n${typeText} on ${dateText}: ${amountText}`)) {
                     row.remove();
                     AppState.setUnsavedChanges(true);
+                    updateDetailsSummary();
                 }
             }
         }
@@ -6398,6 +6506,7 @@
                 if (confirm(`Delete this NAV entry?\n${dateText}: ${amountText}`)) {
                     row.remove();
                     AppState.setUnsavedChanges(true);
+                    updateDetailsSummary();
                 }
             }
         }
@@ -8131,6 +8240,12 @@
                     const btn = e.target.closest('[data-action="deleteNav"]');
                     if (btn) deleteNavRow(btn);
                 });
+
+                // Update summary when cash flows or NAV values change
+                document.getElementById('cashFlowsTable').addEventListener('input', updateDetailsSummary);
+                document.getElementById('cashFlowsTable').addEventListener('change', updateDetailsSummary);
+                document.getElementById('navTable').addEventListener('input', updateDetailsSummary);
+                document.getElementById('navTable').addEventListener('change', updateDetailsSummary);
                 document.getElementById('editFundTagsContainer').addEventListener('click', (e) => {
                     const btn = e.target.closest('[data-action="removeTag"]');
                     if (btn) removeEditFundTag(btn);
