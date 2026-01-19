@@ -38,6 +38,18 @@ This is a Private Equity fund management application that:
 - Use `escapeCSV()` for CSV exports to prevent injection
 - Validate all user input before processing
 
+### IIFE and Global Function Exposure
+The JavaScript code is wrapped in an IIFE (Immediately Invoked Function Expression), so all functions are private by default. When adding functions that need to be called from dynamically generated HTML (e.g., `onclick` handlers in innerHTML), you must expose them on `window`:
+
+```javascript
+// At the end of the IIFE, before init():
+window.myNewFunction = myNewFunction;
+```
+
+Look for the existing list near `window.showAddFundModal = showAddFundModal;` and add new functions there.
+
+**Common mistake**: Adding `onclick="myFunction()"` in dynamic HTML without exposing `myFunction` to `window` - the click will silently fail.
+
 ### CSS
 - Use CSS variables defined in `:root` for colors, spacing, shadows
 - Dark mode support via `[data-theme="dark"]` selectors
