@@ -162,9 +162,9 @@ export function getOutstandingCommitment(fund, cutoffDate) {
                 outstanding -= Math.abs(amount);
             } else if (cf.type === 'Adjustment') {
                 // Adjustments directly modify outstanding commitment
-                // Positive = decrease remaining, Negative = increase remaining
+                // Positive = increase remaining, Negative = decrease remaining
                 const amount = parseCurrency(cf.amount) || 0;
-                outstanding -= amount;
+                outstanding += amount;
             }
         });
 
