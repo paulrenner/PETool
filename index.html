@@ -5630,7 +5630,9 @@
                 } else if (isProjected) {
                     cellClass += ' year-projected';
                 }
-                html += `<td class="${cellClass}">${value > 0 ? formatCurrency(value) : '-'}</td>`;
+                // Show capital calls as negative (cash outflow)
+                const displayValue = value > 0 ? (type === 'calls' ? formatCurrency(-value) : formatCurrency(value)) : '-';
+                html += `<td class="${cellClass}">${displayValue}</td>`;
             });
 
             html += '</tr>';
@@ -5663,7 +5665,9 @@
                         } else if (isProjected) {
                             cellClass += ' year-projected';
                         }
-                        html += `<td class="${cellClass}">${value > 0 ? formatCurrency(value) : '-'}</td>`;
+                        // Show capital calls as negative (cash outflow)
+                        const fundDisplayValue = value > 0 ? (type === 'calls' ? formatCurrency(-value) : formatCurrency(value)) : '-';
+                        html += `<td class="${cellClass}">${fundDisplayValue}</td>`;
                     });
 
                     html += '</tr>';
