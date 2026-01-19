@@ -22,6 +22,8 @@
             --color-success-hover: #229954;
             --color-danger: #E74C3C;
             --color-danger-hover: #C0392B;
+            --color-warning: #F39C12;
+            --color-warning-bg: #FEF9E7;
             --color-secondary: #95A5A6;
             --color-secondary-hover: #7F8C8D;
 
@@ -67,6 +69,8 @@
             --color-success-hover: #48BB78;
             --color-danger: #FC8181;
             --color-danger-hover: #F56565;
+            --color-warning: #F6E05E;
+            --color-warning-bg: #744210;
             --color-secondary: #A0AEC0;
             --color-secondary-hover: #CBD5E0;
 
@@ -227,6 +231,21 @@
             color: var(--color-danger);
         }
 
+        /* Details Modal Summary - smaller to fit all metrics in one row */
+        #detailsSummary {
+            gap: 10px;
+        }
+        #detailsSummary .summary-value {
+            font-size: 13px;
+        }
+        #detailsSummary .summary-label {
+            font-size: 9px;
+        }
+        #detailsSummary .summary-stat {
+            min-width: 70px;
+            padding: 8px 10px;
+        }
+
         /* Metric Info Tooltips */
         .summary-label-container {
             display: flex;
@@ -370,6 +389,12 @@
             white-space: nowrap;
         }
 
+        .timeline-table th:not(:first-child),
+        .timeline-table td:not(:first-child) {
+            min-width: 90px;
+            width: 90px;
+        }
+
         .timeline-table th {
             background: var(--color-alt-bg);
             font-weight: 600;
@@ -400,6 +425,25 @@
 
         [data-theme="dark"] .timeline-table .year-projected th {
             background: #2C4A5E;
+        }
+
+        /* Estimated projections (funds missing term start date) */
+        .timeline-table .year-estimated {
+            background: var(--color-warning-bg);
+            font-style: italic;
+        }
+
+        .timeline-table .year-estimated th {
+            background: var(--color-warning-bg);
+        }
+
+        .timeline-estimated-indicator {
+            display: inline-block;
+            font-size: 10px;
+            color: var(--color-warning);
+            margin-left: 4px;
+            vertical-align: super;
+            cursor: help;
         }
 
         .timeline-table .row-calls td {
@@ -770,19 +814,6 @@
 
         .skip-link:focus {
             top: 0;
-        }
-
-        /* Screen reader only text */
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
         }
 
         /* Announce live regions for screen readers */
@@ -1163,6 +1194,36 @@
             color: var(--color-primary);
         }
 
+        /* Custom Confirm/Alert Modal */
+        .confirm-modal {
+            z-index: 2000;
+        }
+
+        .confirm-modal-content {
+            max-width: 450px;
+            text-align: center;
+        }
+
+        .confirm-modal-content h2 {
+            margin-bottom: 16px;
+        }
+
+        .confirm-modal-message {
+            color: var(--color-text);
+            line-height: 1.6;
+            margin-bottom: 8px;
+            white-space: pre-wrap;
+        }
+
+        .confirm-modal-content .form-actions {
+            justify-content: center;
+        }
+
+        .confirm-modal-content .form-actions button {
+            flex: 0 1 auto;
+            min-width: 100px;
+        }
+
         .form-group {
             margin-bottom: 20px;
         }
@@ -1478,29 +1539,29 @@
 
         #cashFlowsTable th:nth-child(1),
         #cashFlowsTable td:nth-child(1) {
-            width: 20%;
+            width: 150px;
         }
 
         #cashFlowsTable th:nth-child(2),
         #cashFlowsTable td:nth-child(2) {
-            width: 20%;
+            width: 140px;
         }
 
         #cashFlowsTable th:nth-child(3),
         #cashFlowsTable td:nth-child(3) {
-            width: 25%;
+            width: 130px;
         }
 
         #cashFlowsTable th:nth-child(4),
         #cashFlowsTable td:nth-child(4) {
-            width: 25%;
+            width: 160px;
             text-align: center;
         }
 
         #cashFlowsTable th:nth-child(5),
         #cashFlowsTable td:nth-child(5) {
-            width: 10%;
-            text-align: center;
+            width: auto;
+            text-align: right;
         }
 
         /* NAV Table Column Widths */
@@ -1510,18 +1571,18 @@
 
         #navTable th:nth-child(1),
         #navTable td:nth-child(1) {
-            width: 40%;
+            width: 150px;
         }
 
         #navTable th:nth-child(2),
         #navTable td:nth-child(2) {
-            width: 45%;
+            width: 140px;
         }
 
         #navTable th:nth-child(3),
         #navTable td:nth-child(3) {
-            width: 15%;
-            text-align: center;
+            width: auto;
+            text-align: right;
         }
 
         .delete-row-btn {
@@ -1860,6 +1921,11 @@
                 size: landscape;
                 margin: 0.5in;
             }
+
+            /* Hide minimized timeline in print view */
+            #timelinePanel:not(.expanded) {
+                display: none !important;
+            }
         }
 
         /* Sidebar Styles */
@@ -2064,18 +2130,13 @@
                 <label for="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date">Cutoff Date</label>
                 <input type="date" id="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date" aria-label="Cutoff date for calculating metrics">
             </div>
-            <div class="control-group" style="position: relative;">
-                <button class="btn-icon" id="resetFiltersBtn" title="Reset Filters" aria-label="Reset all filters" style="font-size: 20px; margin-top: auto;">↻</button>
-                <span id="activeFiltersIndicator" class="filter-badge" style="display: none;" aria-live="polite"></span>
-            </div>
+            <span id="activeFiltersIndicator" class="filter-badge" style="display: none;" aria-live="polite"></span>
             <!-- Filter loading indicator -->
             <div id="filterLoading" class="filter-loading" aria-live="polite">
                 <div class="filter-loading-spinner" aria-hidden="true"></div>
                 <span>Filtering...</span>
             </div>
-            <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
-                <button class="btn-icon" id="undoBtn" title="Undo last action" aria-label="Undo last action" style="font-size: 20px;" disabled>↶</button>
-                <button class="btn-icon" id="redoBtn" title="Redo last undone action" aria-label="Redo last undone action" style="font-size: 20px;" disabled>↷</button>
+            <div style="margin-left: auto;">
                 <button class="btn-icon" id="toggleSidebarBtn" title="Settings and Actions" aria-label="Open settings sidebar" style="font-size: 20px;">☰</button>
             </div>
         </div>
@@ -2223,12 +2284,12 @@
                         <button type="button" class="btn-link" onclick="fillCashFlowsExample()" style="font-size: 12px;">View Example</button>
                     </div>
                     <textarea id="cashFlows" placeholder='[{"date":"2024-01-15","amount":-1000000,"type":"Contribution","affectsCommitment":true}]'></textarea>
-                    <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number,"type":"Contribution|Distribution","affectsCommitment":true}]</div>
+                    <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number,"type":"Contribution|Distribution|Adjustment","affectsCommitment":true}]</div>
                 </div>
 
                 <div class="form-group">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <label for="monthlyNav">Monthly NAV (JSON)</label>
+                        <label for="monthlyNav">Values (JSON)</label>
                         <button type="button" class="btn-link" onclick="fillNavExample()" style="font-size: 12px;">View Example</button>
                     </div>
                     <textarea id="monthlyNav" placeholder='[{"date":"2024-01-31","amount":950000}]'></textarea>
@@ -2265,15 +2326,9 @@
             <details id="newFundTermsDetails" style="margin-bottom: 15px;">
                 <summary style="cursor: pointer; color: var(--color-action); font-size: 13px; margin-bottom: 10px;">+ Add Fund Terms (optional)</summary>
                 <div style="padding: 10px; background: var(--color-alt-bg); border-radius: var(--radius-sm); margin-top: 10px;">
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label for="newFundFirstClose" style="font-size: 12px;">First Close Date</label>
-                            <input type="date" id="newFundFirstClose">
-                        </div>
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label for="newFundFinalClose" style="font-size: 12px;">Final Close Date</label>
-                            <input type="date" id="newFundFinalClose">
-                        </div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label for="newFundTermStartDate" style="font-size: 12px;">Investment Term Start Date</label>
+                        <input type="date" id="newFundTermStartDate">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <label for="newFundInvestmentTerm" style="font-size: 12px;">Investment Term (years)</label>
@@ -2318,21 +2373,15 @@
 
             <h3 style="margin: 20px 0 15px 0; color: var(--color-text); font-weight: 600; font-size: 1em; border-top: 1px solid var(--color-border); padding-top: 20px;">Fund Terms (for capital call projections)</h3>
 
-            <div class="form-row" style="display: flex; gap: 15px;">
-                <div class="form-group" style="flex: 1;">
-                    <label for="editFundFirstClose">First Close Date</label>
-                    <input type="date" id="editFundFirstClose">
-                </div>
-                <div class="form-group" style="flex: 1;">
-                    <label for="editFundFinalClose">Final Close Date</label>
-                    <input type="date" id="editFundFinalClose">
-                </div>
+            <div class="form-group">
+                <label for="editFundTermStartDate">Investment Term Start Date</label>
+                <input type="date" id="editFundTermStartDate">
             </div>
 
             <div class="form-group">
                 <label for="editFundInvestmentTerm">Investment Term (years)</label>
                 <input type="number" id="editFundInvestmentTerm" min="1" max="15" step="1" placeholder="e.g., 5">
-                <div class="hint">Number of years from final close during which capital can be called (typically 3-5 years)</div>
+                <div class="hint">Number of years from term start during which capital can be called (typically 3-5 years)</div>
             </div>
 
             <div class="form-actions">
@@ -2392,6 +2441,34 @@
             <h2 id="detailsModalTitle">Fund Details</h2>
             <p id="detailsModalSubtitle" style="margin: 5px 0 0 0; color: #95A5A6; font-size: 0.9em;"></p>
 
+            <!-- Investment Summary Section -->
+            <div id="detailsSummary" class="portfolio-summary" style="margin-top: 20px;">
+                <div class="summary-stat">
+                    <span class="summary-label">Total Commitment</span>
+                    <span class="summary-value" id="detailsSummaryCommitment">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Contributions</span>
+                    <span class="summary-value" id="detailsSummaryContributions">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Distributions</span>
+                    <span class="summary-value" id="detailsSummaryDistributions">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Current Value</span>
+                    <span class="summary-value" id="detailsSummaryValue">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Investment Return</span>
+                    <span class="summary-value" id="detailsSummaryReturn">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Outstanding Commitment</span>
+                    <span class="summary-value" id="detailsSummaryOutstanding">$0</span>
+                </div>
+            </div>
+
             <h3 style="margin-top: 20px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Cash Flows</h3>
             <div class="details-table-wrapper">
                 <table class="details-table" id="cashFlowsTable">
@@ -2409,7 +2486,7 @@
             </div>
             <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" id="addCashFlowRowBtn">Add Cash Flow</button>
 
-            <h3 style="margin-top: 30px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Monthly NAV</h3>
+            <h3 style="margin-top: 30px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Values</h3>
             <div class="details-table-wrapper">
                 <table class="details-table" id="navTable">
                     <thead>
@@ -2422,7 +2499,7 @@
                     <tbody></tbody>
                 </table>
             </div>
-            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" id="addNavRowBtn">Add NAV</button>
+            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" id="addNavRowBtn">Add Value</button>
 
             <div class="form-actions">
                 <button class="btn-primary" id="saveDetailsChangesBtn">Save Changes</button>
@@ -2480,12 +2557,6 @@
                 <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>E</kbd></div>
                 <div class="shortcut-desc">Export to JSON</div>
 
-                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>Z</kbd></div>
-                <div class="shortcut-desc">Undo last action</div>
-
-                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></div>
-                <div class="shortcut-desc">Redo last action</div>
-
                 <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>S</kbd></div>
                 <div class="shortcut-desc">Save (in details modal)</div>
 
@@ -2506,6 +2577,18 @@
             </p>
             <div class="form-actions">
                 <button class="btn-secondary" id="closeShortcutsModal2Btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirm/Alert Modal -->
+    <div id="confirmModal" class="modal confirm-modal">
+        <div class="modal-content confirm-modal-content">
+            <h2 id="confirmModalTitle">Confirm</h2>
+            <p id="confirmModalMessage" class="confirm-modal-message"></p>
+            <div class="form-actions">
+                <button class="btn-secondary" id="confirmModalCancelBtn">Cancel</button>
+                <button class="btn-danger" id="confirmModalConfirmBtn">Confirm</button>
             </div>
         </div>
     </div>
@@ -2580,6 +2663,16 @@
                     <input type="file" id="sidebarImportFile" accept=".json" style="display: none;">
                 </div>
             </div>
+
+            <!-- Temporary Section -->
+            <div class="sidebar-section">
+                <h4 class="sidebar-section-title">Temporary</h4>
+                <div class="sidebar-item">
+                    <a href="#" id="sidebarLoadSampleData">
+                        Load Sample Data
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -2594,7 +2687,6 @@
          * - Fund portfolio management with cash flows and NAV tracking
          * - IRR and MOIC calculations using Newton-Raphson method
          * - Hierarchical account grouping with cycle detection
-         * - Undo/redo functionality with persistent history
          * - CSV/JSON import/export with formula injection protection
          * - Mobile-responsive design with accessibility features
          * - Performance optimizations: metrics caching, debouncing, race condition handling
@@ -2603,7 +2695,7 @@
          *
          * Architecture:
          * - State Management: Centralized AppState object with caching
-         * - Database: IndexedDB with 4 stores (funds, fundNames, groups, undoHistory)
+         * - Database: IndexedDB with 3 stores (funds, fundNames, groups)
          * - UI: Event-driven with delegation patterns and keyboard shortcuts
          * - Performance: Debounced filters, cached metrics, abort controllers for cancellation
          *
@@ -2628,8 +2720,7 @@
             FUNDS_STORE: 'funds',
             FUNDNAMES_STORE: 'fundNames',
             GROUPS_STORE: 'groups',
-            UNDO_STORE: 'undoHistory',
-            DB_VERSION: 8, // Bumped for migration support
+            DB_VERSION: 10,
 
             // Currency formatting
             CURRENCY_FORMAT: 'en-US',
@@ -2655,15 +2746,11 @@
             // UI constraints
             MIN_COLUMN_WIDTH: 50,
             MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB
-            DUPLICATE_MULTIPLIER_MAX: 1000,
-            DUPLICATE_MULTIPLIER_MIN: 0.001,
             FUND_NAME_MIN_LENGTH: 2,
             FUND_NAME_MAX_LENGTH: 100,
 
             // Performance
             METRICS_CACHE_TTL: 5000, // 5 seconds
-            PAGINATION_SIZE: 50,
-            VIRTUAL_SCROLL_BUFFER: 10,
             LAZY_RENDER_TIMELINE: true, // Only render timeline when expanded
 
             // Validation & Security
@@ -2679,10 +2766,6 @@
             STORAGE_SHOW_TAGS: 'showTags',
             STORAGE_BACKUP_WARNING: 'backupWarningShown',
             STORAGE_LAST_BACKUP: 'lastBackupDate',
-
-            // Undo
-            MAX_UNDO_HISTORY: 50,
-            UNDO_RETENTION_DAYS: 7,
 
             // Backup reminder
             BACKUP_REMINDER_DAYS: 30
@@ -2931,15 +3014,20 @@
              * Close a modal by ID
              * @param {string} modalId - The modal element ID
              * @param {Object} options - Optional callbacks and settings
-             * @returns {boolean} Whether the modal was closed
+             * @returns {Promise<boolean>} Whether the modal was closed
              */
-            close(modalId, options = {}) {
+            async close(modalId, options = {}) {
                 const modal = document.getElementById(modalId);
                 if (!modal) return false;
 
                 // Check for unsaved changes if specified
                 if (options.checkUnsaved && AppState.hasUnsavedChanges) {
-                    if (!confirm('You have unsaved changes. Are you sure you want to close without saving?')) {
+                    const confirmed = await showConfirm('You have unsaved changes. Are you sure you want to close without saving?', {
+                        title: 'Unsaved Changes',
+                        confirmText: 'Discard',
+                        cancelText: 'Keep Editing'
+                    });
+                    if (!confirmed) {
                         return false;
                     }
                 }
@@ -3061,6 +3149,7 @@
                             <select data-field="type" data-index="${index}">
                                 <option value="Contribution" ${typeValue === 'Contribution' ? 'selected' : ''}>Contribution</option>
                                 <option value="Distribution" ${typeValue === 'Distribution' ? 'selected' : ''}>Distribution</option>
+                                <option value="Adjustment" ${typeValue === 'Adjustment' ? 'selected' : ''}>Adjustment</option>
                             </select>
                         </td>
                         <td class="center">
@@ -3234,11 +3323,6 @@
 
             // Cache
             metricsCache: new Map(), // fundId -> { metrics, timestamp }
-            filterCache: null,
-
-            // Undo/Redo
-            undoStack: [],
-            redoStack: [],
 
             // Performance
             abortController: null, // For canceling in-flight requests
@@ -3307,6 +3391,26 @@
             setUnsavedChanges(value) {
                 this.hasUnsavedChanges = value;
                 hasUnsavedChanges = value; // Sync legacy alias
+            },
+
+            setFundNames(names) {
+                this.fundNames = names;
+                fundNames = names; // Sync legacy alias
+            },
+
+            setFundNameData(data) {
+                this.fundNameData = data;
+                fundNameData = data; // Sync legacy alias
+            },
+
+            setSortColumns(columns) {
+                this.sortColumns = columns;
+                sortColumns = columns; // Sync legacy alias
+            },
+
+            setCurrentGroupDescendants(descendants) {
+                this.currentGroupDescendants = descendants;
+                currentGroupDescendants = descendants; // Sync legacy alias
             }
         };
 
@@ -3369,16 +3473,6 @@
                         groupsStore.createIndex('name', 'name', { unique: false });
                     }
 
-                    // Undo history store
-                    if (!db.objectStoreNames.contains(CONFIG.UNDO_STORE)) {
-                        const undoStore = db.createObjectStore(CONFIG.UNDO_STORE, {
-                            keyPath: 'id',
-                            autoIncrement: true
-                        });
-                        undoStore.createIndex('timestamp', 'timestamp', { unique: false });
-                        undoStore.createIndex('type', 'type', { unique: false });
-                    }
-
                     // Log migration info
                     Debug.log(`Database upgrade from v${oldVersion} to v${DB_VERSION}`);
 
@@ -3432,6 +3526,54 @@
                     // if (oldVersion < 8) {
                     //     // Migration code
                     // }
+
+                    // Migration v9 to v10: Fix store names if they were renamed to investments/investmentNames
+                    if (oldVersion === 9) {
+                        // Check if stores were renamed during failed migration
+                        if (db.objectStoreNames.contains('investments') && !db.objectStoreNames.contains('funds')) {
+                            // Create funds store
+                            const fundsStore = db.createObjectStore('funds', {
+                                keyPath: 'id',
+                                autoIncrement: true
+                            });
+                            fundsStore.createIndex('fundName', 'fundName', { unique: false });
+                            fundsStore.createIndex('accountNumber', 'accountNumber', { unique: false });
+
+                            // Copy data from investments to funds
+                            const investmentsStore = transaction.objectStore('investments');
+                            investmentsStore.openCursor().onsuccess = function(event) {
+                                const cursor = event.target.result;
+                                if (cursor) {
+                                    fundsStore.put(cursor.value);
+                                    cursor.continue();
+                                }
+                            };
+                        }
+
+                        if (db.objectStoreNames.contains('investmentNames') && !db.objectStoreNames.contains('fundNames')) {
+                            // Create fundNames store
+                            db.createObjectStore('fundNames', { keyPath: 'name' });
+
+                            // Copy data from investmentNames to fundNames
+                            const investmentNamesStore = transaction.objectStore('investmentNames');
+                            const fundNamesStore = transaction.objectStore('fundNames');
+                            investmentNamesStore.openCursor().onsuccess = function(event) {
+                                const cursor = event.target.result;
+                                if (cursor) {
+                                    fundNamesStore.put(cursor.value);
+                                    cursor.continue();
+                                }
+                            };
+                        }
+
+                        // Delete old stores after data is copied
+                        if (db.objectStoreNames.contains('investments')) {
+                            db.deleteObjectStore('investments');
+                        }
+                        if (db.objectStoreNames.contains('investmentNames')) {
+                            db.deleteObjectStore('investmentNames');
+                        }
+                    }
                 };
             });
         }
@@ -3523,47 +3665,6 @@
             }
         };
 
-        // ===========================
-        // Entity Actions for Undo/Redo
-        // ===========================
-
-        /**
-         * Entity action handlers for undo/redo operations
-         * Maps entity types to their CRUD operations
-         */
-        const EntityActions = {
-            fund: {
-                create: async (data) => saveFundToDB(data),
-                update: async (data) => saveFundToDB(data),
-                delete: async (data) => deleteFundFromDB(data.id)
-            },
-            group: {
-                create: async (data) => saveGroup(data),
-                update: async (data) => saveGroup(data),
-                delete: async (data) => deleteGroup(data.id)
-            },
-            fundName: {
-                create: async (data) => saveFundName(data),
-                update: async (data) => saveFundName(data),
-                delete: async (data) => deleteFundName(data.name)
-            }
-        };
-
-        /**
-         * Execute an entity action
-         * @param {string} entity - Entity type ('fund', 'group', 'fundName')
-         * @param {string} actionType - Action type ('create', 'update', 'delete')
-         * @param {Object} data - Data for the action
-         * @returns {Promise}
-         */
-        async function executeEntityAction(entity, actionType, data) {
-            const handler = EntityActions[entity]?.[actionType];
-            if (!handler) {
-                throw new Error(`Unknown entity action: ${entity}.${actionType}`);
-            }
-            return handler(data);
-        }
-
         function saveFundToDB(fundData) {
             return new Promise((resolve, reject) => {
                 if (!db) {
@@ -3649,11 +3750,11 @@
 
                 request.onsuccess = () => {
                     // Ensure all objects have required fields with defaults
+                    // Support backward compatibility: finalCloseDate -> investmentTermStartDate
                     const objects = request.result.map(item => ({
                         name: item.name,
                         tags: item.tags || [],
-                        firstCloseDate: item.firstCloseDate || null,
-                        finalCloseDate: item.finalCloseDate || null,
+                        investmentTermStartDate: item.investmentTermStartDate || item.finalCloseDate || null,
                         investmentTermYears: item.investmentTermYears || null
                     }));
                     resolve(objects);
@@ -3684,8 +3785,7 @@
                     : {
                         name: nameOrObject.name,
                         tags: nameOrObject.tags || [],
-                        firstCloseDate: nameOrObject.firstCloseDate || null,
-                        finalCloseDate: nameOrObject.finalCloseDate || null,
+                        investmentTermStartDate: nameOrObject.investmentTermStartDate || null,
                         investmentTermYears: nameOrObject.investmentTermYears || null
                     };
 
@@ -3869,163 +3969,6 @@
         }
 
         // ===========================
-        // Undo/Redo Operations
-        // ===========================
-
-        /**
-         * Save an action to undo history
-         * @param {string} type - Action type (create, update, delete)
-         * @param {string} entity - Entity type (fund, group, fundName)
-         * @param {Object} before - State before action
-         * @param {Object} after - State after action
-         */
-        async function saveUndoAction(type, entity, before, after) {
-            try {
-                const undoAction = {
-                    type,
-                    entity,
-                    before,
-                    after,
-                    timestamp: new Date().toISOString()
-                };
-
-                const transaction = db.transaction([CONFIG.UNDO_STORE], 'readwrite');
-                const store = transaction.objectStore(CONFIG.UNDO_STORE);
-                await store.add(undoAction);
-
-                // Limit undo history
-                const allActions = await getUndoHistory();
-                if (allActions.length > CONFIG.MAX_UNDO_HISTORY) {
-                    const toDelete = allActions.slice(0, allActions.length - CONFIG.MAX_UNDO_HISTORY);
-                    for (const action of toDelete) {
-                        await store.delete(action.id);
-                    }
-                }
-
-                // Clear redo stack when new action is performed
-                AppState.redoStack = [];
-
-                // Update undo button state
-                updateUndoRedoButtons();
-            } catch (err) {
-                Debug.error('Error saving undo action:', err);
-            }
-        }
-
-        /**
-         * Get undo history
-         */
-        function getUndoHistory() {
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([CONFIG.UNDO_STORE], 'readonly');
-                const store = transaction.objectStore(CONFIG.UNDO_STORE);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        /**
-         * Undo last action - uses EntityActions for cleaner code
-         */
-        async function undoLastAction() {
-            const history = await getUndoHistory();
-            if (history.length === 0) {
-                showStatus('Nothing to undo', 'warning');
-                return;
-            }
-
-            const lastAction = history[history.length - 1];
-
-            try {
-                // Determine the reverse action and data
-                // For undo: delete->create(before), create->delete(after), update->update(before)
-                const reverseActionMap = {
-                    'delete': { action: 'create', data: lastAction.before },
-                    'create': { action: 'delete', data: lastAction.after },
-                    'update': { action: 'update', data: lastAction.before }
-                };
-
-                const reverse = reverseActionMap[lastAction.type];
-                await executeEntityAction(lastAction.entity, reverse.action, reverse.data);
-
-                // Move action to redo stack
-                AppState.redoStack.push(lastAction);
-
-                // Remove from undo history
-                await DB.delete(CONFIG.UNDO_STORE, lastAction.id);
-
-                await renderTable();
-                showStatus('Action undone', 'success');
-                updateUndoRedoButtons();
-            } catch (err) {
-                showStatus('Error undoing action: ' + err.message, 'error');
-                Debug.error('Undo failed:', err);
-            }
-        }
-
-        /**
-         * Redo last undone action - uses EntityActions for cleaner code
-         */
-        async function redoLastAction() {
-            if (AppState.redoStack.length === 0) {
-                showStatus('Nothing to redo', 'warning');
-                return;
-            }
-
-            const action = AppState.redoStack.pop();
-
-            try {
-                // Determine the action and data to reapply
-                // For redo: delete->delete(after), create->create(after), update->update(after)
-                const redoActionMap = {
-                    'delete': { actionType: 'delete', data: action.after },
-                    'create': { actionType: 'create', data: action.after },
-                    'update': { actionType: 'update', data: action.after }
-                };
-
-                const redo = redoActionMap[action.type];
-                await executeEntityAction(action.entity, redo.actionType, redo.data);
-
-                // Add back to undo history directly (not via saveUndoAction to preserve action structure)
-                const undoEntry = {
-                    type: action.type,
-                    entity: action.entity,
-                    before: action.before,
-                    after: action.after,
-                    timestamp: Date.now()
-                };
-                await DB.add(CONFIG.UNDO_STORE, undoEntry);
-
-                await renderTable();
-                showStatus('Action redone', 'success');
-                updateUndoRedoButtons();
-            } catch (err) {
-                showStatus('Error redoing action: ' + err.message, 'error');
-                Debug.error('Redo failed:', err);
-            }
-        }
-
-        /**
-         * Update undo/redo button states
-         */
-        async function updateUndoRedoButtons() {
-            const undoBtn = document.getElementById('undoBtn');
-            const redoBtn = document.getElementById('redoBtn');
-
-            if (undoBtn) {
-                const history = await getUndoHistory();
-                undoBtn.disabled = history.length === 0;
-                undoBtn.title = history.length > 0 ? `Undo (${history.length} actions available)` : 'Nothing to undo';
-            }
-
-            if (redoBtn) {
-                redoBtn.disabled = AppState.redoStack.length === 0;
-                redoBtn.title = AppState.redoStack.length > 0 ? `Redo (${AppState.redoStack.length} actions available)` : 'Nothing to redo';
-            }
-        }
-
-        // ===========================
         // Calculation Functions
         // ===========================
 
@@ -4129,19 +4072,6 @@
             return new Date(Date.UTC(year, month - 1, day));
         }
 
-        /**
-         * Compare two date strings
-         * @param {string} date1 - First date string
-         * @param {string} date2 - Second date string
-         * @returns {number} -1 if date1 < date2, 0 if equal, 1 if date1 > date2
-         */
-        function compareDates(date1, date2) {
-            const d1 = parseDate(date1);
-            const d2 = parseDate(date2);
-            if (!d1 || !d2) return 0;
-            return d1 < d2 ? -1 : (d1 > d2 ? 1 : 0);
-        }
-
         function getVintageYear(fund) {
             const contributions = (fund.cashFlows || [])
                 .filter(cf => cf.type === 'Contribution' && isValidDate(cf.date))
@@ -4203,6 +4133,11 @@
                     if (cf.type === 'Contribution') {
                         const amount = parseCurrency(cf.amount) || 0;
                         outstanding -= Math.abs(amount);
+                    } else if (cf.type === 'Adjustment') {
+                        // Adjustments directly modify outstanding commitment
+                        // Positive = increase remaining, Negative = decrease remaining
+                        const amount = parseCurrency(cf.amount) || 0;
+                        outstanding += amount;
                     }
                 });
 
@@ -4212,6 +4147,7 @@
         function parseCashFlowsForIRR(fund, cutoffDate) {
             const flows = (fund.cashFlows || [])
                 .filter(cf => isValidDate(cf.date) && (!cutoffDate || new Date(cf.date) <= cutoffDate))
+                .filter(cf => cf.type !== 'Adjustment') // Adjustments don't affect IRR/MOIC
                 .map(cf => {
                     const amount = parseCurrency(cf.amount) || 0;
                     return {
@@ -4692,7 +4628,7 @@
         async function renderTable() {
             try {
                 const funds = await getAllFunds();
-                currentFunds = funds;
+                AppState.setFunds(funds);
 
                 // Apply filters
                 let filtered = applyCurrentFilters(funds);
@@ -4705,9 +4641,6 @@
                 // Update filter dropdowns bidirectionally
                 // Each dropdown shows only options compatible with other selected filters
                 updateFilterDropdowns(funds);
-
-                // Update vintage filter
-                updateVintageFilter(funds);
 
                 // Update active filters indicator
                 updateActiveFiltersIndicator();
@@ -4921,10 +4854,12 @@
             const groupFilter = document.getElementById('groupFilter');
             const fundFilter = document.getElementById('fundFilter');
             const accountFilter = document.getElementById('accountFilter');
+            const vintageFilter = document.getElementById('vintageFilter');
 
             const currentGroupValue = groupFilter.value;
             const currentFundValue = fundFilter.value;
             const currentAccountValue = accountFilter.value;
+            const currentVintageValue = vintageFilter.value;
 
             // Helper function to filter funds by group
             const filterByGroup = (funds, groupId) => {
@@ -4941,14 +4876,23 @@
                 });
             };
 
-            // 1. Update FUND dropdown (filter by group and account)
-            // Group filter always takes priority - fund dropdown only shows funds from selected group
+            // Helper function to filter funds by vintage
+            const filterByVintage = (funds, vintage) => {
+                if (!vintage) return funds;
+                const vintageYear = parseInt(vintage);
+                return funds.filter(fund => getVintageYear(fund) === vintageYear);
+            };
+
+            // 1. Update FUND dropdown (filter by group, account, and vintage)
             let fundsForFundDropdown = allFunds;
             if (currentGroupValue) {
                 fundsForFundDropdown = filterByGroup(fundsForFundDropdown, currentGroupValue);
             }
             if (currentAccountValue) {
                 fundsForFundDropdown = fundsForFundDropdown.filter(f => f.accountNumber === currentAccountValue);
+            }
+            if (currentVintageValue) {
+                fundsForFundDropdown = filterByVintage(fundsForFundDropdown, currentVintageValue);
             }
             const uniqueFunds = [...new Set(fundsForFundDropdown.map(f => f.fundName))].sort();
             fundFilter.innerHTML = '<option value="">All Funds</option>';
@@ -4964,13 +4908,16 @@
                 fundFilter.value = '';
             }
 
-            // 2. Update ACCOUNT dropdown (filter by group and fund)
+            // 2. Update ACCOUNT dropdown (filter by group, fund, and vintage)
             let fundsForAccountDropdown = allFunds;
             if (currentGroupValue) {
                 fundsForAccountDropdown = filterByGroup(fundsForAccountDropdown, currentGroupValue);
             }
             if (currentFundValue) {
                 fundsForAccountDropdown = fundsForAccountDropdown.filter(f => f.fundName === currentFundValue);
+            }
+            if (currentVintageValue) {
+                fundsForAccountDropdown = filterByVintage(fundsForAccountDropdown, currentVintageValue);
             }
             const uniqueAccounts = [...new Set(fundsForAccountDropdown.map(f => f.accountNumber))].sort();
             accountFilter.innerHTML = '<option value="">All Accounts</option>';
@@ -4996,15 +4943,18 @@
                 if (currentGroupValue) {
                     addGroupOptionsToSelect(groupFilter, tree, 0);
                     groupFilter.value = currentGroupValue;
-                } else if (currentFundValue || currentAccountValue) {
-                    // Only filter groups when NO group is selected but fund/account IS selected
-                    // This helps users see which groups contain the selected fund/account
+                } else if (currentFundValue || currentAccountValue || currentVintageValue) {
+                    // Only filter groups when NO group is selected but fund/account/vintage IS selected
+                    // This helps users see which groups contain the selected fund/account/vintage
                     let fundsForGroupDropdown = allFunds;
                     if (currentFundValue) {
                         fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.fundName === currentFundValue);
                     }
                     if (currentAccountValue) {
                         fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.accountNumber === currentAccountValue);
+                    }
+                    if (currentVintageValue) {
+                        fundsForGroupDropdown = filterByVintage(fundsForGroupDropdown, currentVintageValue);
                     }
 
                     // Collect all group IDs including ancestors
@@ -5022,6 +4972,44 @@
                     // No filters active - show all groups
                     addGroupOptionsToSelect(groupFilter, tree, 0);
                 }
+            }
+
+            // 4. Update VINTAGE dropdown (filter by group, fund, and account)
+            let fundsForVintageDropdown = allFunds;
+            if (currentGroupValue) {
+                fundsForVintageDropdown = filterByGroup(fundsForVintageDropdown, currentGroupValue);
+            }
+            if (currentFundValue) {
+                fundsForVintageDropdown = fundsForVintageDropdown.filter(f => f.fundName === currentFundValue);
+            }
+            if (currentAccountValue) {
+                fundsForVintageDropdown = fundsForVintageDropdown.filter(f => f.accountNumber === currentAccountValue);
+            }
+
+            // Get unique vintage years from filtered funds
+            const vintages = new Set();
+            fundsForVintageDropdown.forEach(fund => {
+                const vintage = getVintageYear(fund);
+                if (vintage) {
+                    vintages.add(vintage);
+                }
+            });
+            const sortedVintages = Array.from(vintages).sort((a, b) => b - a);
+
+            vintageFilter.innerHTML = '<option value="">All Vintages</option>';
+            sortedVintages.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                vintageFilter.appendChild(option);
+            });
+
+            // Restore selection if still valid
+            if (currentVintageValue && sortedVintages.includes(parseInt(currentVintageValue))) {
+                vintageFilter.value = currentVintageValue;
+            } else if (currentVintageValue) {
+                // Selection no longer valid, clear it
+                vintageFilter.value = '';
             }
         }
 
@@ -5117,12 +5105,12 @@
                         AppState.groupDescendantsCache.set(groupId, descendants);
                     }
 
-                    currentGroupDescendants = {
+                    AppState.setCurrentGroupDescendants({
                         groupId,
                         ids: AppState.groupDescendantsCache.get(groupId)
-                    };
+                    });
                 } else {
-                    currentGroupDescendants = null;
+                    AppState.setCurrentGroupDescendants(null);
                 }
 
                 if (signal.aborted) return;
@@ -5193,23 +5181,7 @@
             }
         }
 
-        function resetFilters() {
-            // Check if there are active filters
-            const hasActiveFilters =
-                document.getElementById('fundFilter').value ||
-                document.getElementById('accountFilter').value ||
-                document.getElementById('groupFilter').value ||
-                document.getElementById('searchInput').value ||
-                document.getElementById('vintageFilter').value ||
-                sortColumns.length > 0;
-
-            // Confirm reset if there are active filters
-            if (hasActiveFilters) {
-                if (!confirm('Are you sure you want to reset all filters and sort settings?')) {
-                    return;
-                }
-            }
-
+        async function resetFilters() {
             document.getElementById('fundFilter').value = '';
             document.getElementById('accountFilter').value = '';
             document.getElementById('groupFilter').value = '';
@@ -5221,13 +5193,13 @@
             document.getElementById('cutoffDate').value = quarterEnd.toISOString().split('T')[0];
 
             // Clear all sort columns
-            sortColumns = [];
+            AppState.setSortColumns([]);
             updateSortHeaders();
 
-            currentGroupDescendants = null;
+            AppState.setCurrentGroupDescendants(null);
             updateHeader();
             updateActiveFiltersIndicator();
-            renderTable();
+            await renderTable();
 
             announceToScreenReader('All filters have been reset.');
         }
@@ -5255,7 +5227,15 @@
             if (indicator) {
                 if (filterCount > 0) {
                     indicator.style.display = 'inline-flex';
-                    indicator.innerHTML = `${filterCount} filter${filterCount > 1 ? 's' : ''} <button class="clear-filters" onclick="resetFilters(); event.stopPropagation();" title="Clear all filters" aria-label="Clear all filters">&times;</button>`;
+                    indicator.innerHTML = `${filterCount} filter${filterCount > 1 ? 's' : ''} <button class="clear-filters" title="Clear all filters" aria-label="Clear all filters">&times;</button>`;
+                    // Attach event listener to the clear button
+                    const clearBtn = indicator.querySelector('.clear-filters');
+                    if (clearBtn) {
+                        clearBtn.onclick = function(e) {
+                            e.stopPropagation();
+                            resetFilters();
+                        };
+                    }
                 } else {
                     indicator.style.display = 'none';
                     indicator.innerHTML = '';
@@ -5370,6 +5350,9 @@
                 }
 
                 fund.cashFlows.forEach(cf => {
+                    // Skip adjustments - they don't affect the cash flow timeline
+                    if (cf.type === 'Adjustment') return;
+
                     const cfDate = new Date(cf.date);
                     const year = cfDate.getFullYear();
 
@@ -5404,25 +5387,61 @@
         function calculateProjectedCalls(funds, fundNameData, cutoffDate) {
             const result = {
                 projectedCalls: {},
-                byFund: {}
+                byFund: {},
+                // Estimated projections for funds missing term start date
+                estimatedCalls: {},
+                estimatedByFund: {},
+                // Track which years have estimated data
+                estimatedYears: new Set()
             };
 
             // Use cutoff date if provided, otherwise use current date
             const referenceDate = cutoffDate || new Date();
             const referenceYear = referenceDate.getFullYear();
+            const DEFAULT_ESTIMATION_YEARS = 4; // Spread across 4 years when term start date is missing
 
             funds.forEach(fund => {
                 const fundNameObj = fundNameData.get(fund.fundName);
                 if (!fundNameObj) return;
 
-                const { finalCloseDate, investmentTermYears } = fundNameObj;
+                const { investmentTermStartDate, investmentTermYears } = fundNameObj;
 
-                // Skip if missing required fund terms
-                if (!finalCloseDate || !investmentTermYears) return;
+                // Handle funds missing term start date or investment term
+                if (!investmentTermStartDate || !investmentTermYears) {
+                    // Calculate remaining uncalled capital
+                    const commitment = fund.commitment || 0;
+                    const totalCalled = (fund.cashFlows || [])
+                        .filter(cf => {
+                            if (cf.type === 'Adjustment') return false; // Adjustments don't count as capital calls
+                            if (cutoffDate && new Date(cf.date) > cutoffDate) return false;
+                            return cf.amount < 0 || cf.type === 'Contribution';
+                        })
+                        .reduce((sum, cf) => sum + Math.abs(cf.amount), 0);
+                    const uncalledCapital = Math.max(0, commitment - totalCalled);
+
+                    if (uncalledCapital > 0) {
+                        // Spread remaining commitment across DEFAULT_ESTIMATION_YEARS starting next year
+                        const startYear = referenceYear + 1;
+                        const annualCall = uncalledCapital / DEFAULT_ESTIMATION_YEARS;
+                        const fundKey = fund.fundName;
+
+                        if (!result.estimatedByFund[fundKey]) {
+                            result.estimatedByFund[fundKey] = {};
+                        }
+
+                        for (let i = 0; i < DEFAULT_ESTIMATION_YEARS; i++) {
+                            const year = startYear + i;
+                            result.estimatedCalls[year] = (result.estimatedCalls[year] || 0) + annualCall;
+                            result.estimatedByFund[fundKey][year] = (result.estimatedByFund[fundKey][year] || 0) + annualCall;
+                            result.estimatedYears.add(year);
+                        }
+                    }
+                    return;
+                }
 
                 // Calculate investment period end
-                const finalClose = new Date(finalCloseDate);
-                const investmentEndDate = new Date(finalClose);
+                const termStart = new Date(investmentTermStartDate);
+                const investmentEndDate = new Date(termStart);
                 investmentEndDate.setFullYear(investmentEndDate.getFullYear() + investmentTermYears);
 
                 // Skip if investment period has ended relative to cutoff date
@@ -5432,6 +5451,8 @@
                 const commitment = fund.commitment || 0;
                 const totalCalled = (fund.cashFlows || [])
                     .filter(cf => {
+                        // Adjustments don't count as capital calls
+                        if (cf.type === 'Adjustment') return false;
                         // Only count contributions on or before cutoff date
                         if (cutoffDate && new Date(cf.date) > cutoffDate) return false;
                         return cf.amount < 0 || cf.type === 'Contribution';
@@ -5442,7 +5463,7 @@
                 if (uncalledCapital <= 0) return;
 
                 // Calculate years remaining in investment period (starting after cutoff year)
-                const startYear = Math.max(referenceYear + 1, finalClose.getFullYear());
+                const startYear = Math.max(referenceYear + 1, termStart.getFullYear());
                 const endYear = investmentEndDate.getFullYear();
                 const yearsRemaining = [];
 
@@ -5485,6 +5506,8 @@
             Object.keys(historical.calls).forEach(y => dataYears.add(parseInt(y)));
             Object.keys(historical.distributions).forEach(y => dataYears.add(parseInt(y)));
             Object.keys(projected.projectedCalls).forEach(y => dataYears.add(parseInt(y)));
+            // Include estimated years (from funds missing term start date)
+            Object.keys(projected.estimatedCalls || {}).forEach(y => dataYears.add(parseInt(y)));
 
             // Find the min and max years with data
             const yearsWithData = Array.from(dataYears);
@@ -5522,7 +5545,8 @@
             return {
                 years: [...displayHistorical, ...displayProjected],
                 cutoffYear: dividerYear,
-                firstProjectedYear: displayProjected.length > 0 ? displayProjected[0] : null
+                firstProjectedYear: displayProjected.length > 0 ? displayProjected[0] : null,
+                estimatedYears: projected.estimatedYears || new Set()
             };
         }
 
@@ -5564,12 +5588,23 @@
             // Build table HTML
             let html = '<table class="timeline-table">';
 
+            // Check if there are any estimated years
+            const hasEstimatedData = yearRange.estimatedYears && yearRange.estimatedYears.size > 0;
+
             // Header row
             html += '<thead><tr><th></th>';
             yearRange.years.forEach(year => {
                 const isProjected = yearRange.firstProjectedYear && year >= yearRange.firstProjectedYear;
                 const isDivider = year === yearRange.firstProjectedYear;
-                html += `<th class="${isProjected ? 'year-projected' : ''} ${isDivider ? 'timeline-divider' : ''}">${year}${isProjected ? '*' : ''}</th>`;
+                const isEstimated = yearRange.estimatedYears && yearRange.estimatedYears.has(year);
+                const cellClass = `${isProjected && !isEstimated ? 'year-projected' : ''} ${isEstimated ? 'year-estimated' : ''} ${isDivider ? 'timeline-divider' : ''}`;
+                let indicator = '';
+                if (isEstimated) {
+                    indicator = '<span class="timeline-estimated-indicator" title="Estimated: fund(s) missing term start date">&#8224;</span>';
+                } else if (isProjected) {
+                    indicator = '*';
+                }
+                html += `<th class="${cellClass}">${year}${indicator}</th>`;
             });
             html += '</tr></thead>';
 
@@ -5579,23 +5614,36 @@
             // Get unique fund names for expandable rows
             const fundNames = [...new Set(funds.map(f => f.fundName))].sort();
 
-            // Capital Calls row (expandable)
-            html += buildTimelineRow('Capital Calls', 'calls', yearRange, historical.calls, projected.projectedCalls, true, fundNames, historical.byFund, projected.byFund, 'calls');
+            // Capital Calls row (expandable) - include estimated data
+            html += buildTimelineRow('Capital Calls', 'calls', yearRange, historical.calls, projected.projectedCalls, true, fundNames, historical.byFund, projected.byFund, 'calls', projected.estimatedCalls, projected.estimatedByFund);
 
             // Distributions row (expandable)
-            html += buildTimelineRow('Distributions', 'distributions', yearRange, historical.distributions, {}, true, fundNames, historical.byFund, {}, 'distributions');
+            html += buildTimelineRow('Distributions', 'distributions', yearRange, historical.distributions, {}, true, fundNames, historical.byFund, {}, 'distributions', {}, {});
 
             // Net Cash Flow row
             html += buildNetCashFlowRow(yearRange, historical, projected);
 
             html += '</tbody></table>';
 
-            // Add footnote for projected
-            if (yearRange.firstProjectedYear) {
-                const footnoteText = cutoffDate
-                    ? `* Projected values (after ${cutoffDateValue}) based on remaining uncalled capital distributed linearly across investment period`
-                    : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
-                html += `<p style="margin-top: 10px; font-size: 11px; color: var(--color-text-light); font-style: italic;">${footnoteText}</p>`;
+            // Add footnotes for projected and estimated
+            if (yearRange.firstProjectedYear || hasEstimatedData) {
+                let footnoteHtml = '<div style="margin-top: 10px; font-size: 11px; color: var(--color-text-light); font-style: italic;">';
+                if (yearRange.firstProjectedYear && !hasEstimatedData) {
+                    const footnoteText = cutoffDate
+                        ? `* Projected values (after ${cutoffDateValue}) based on remaining uncalled capital distributed linearly across investment period`
+                        : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
+                    footnoteHtml += `<p style="margin: 0;">${footnoteText}</p>`;
+                } else if (hasEstimatedData && !yearRange.firstProjectedYear) {
+                    footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing term start date (spread over 4 years). <a href="#" onclick="showManageFundsModal(); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
+                } else if (yearRange.firstProjectedYear && hasEstimatedData) {
+                    const footnoteText = cutoffDate
+                        ? `* Projected values (after ${cutoffDateValue}) based on remaining uncalled capital distributed linearly across investment period`
+                        : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
+                    footnoteHtml += `<p style="margin: 0 0 4px 0;">${footnoteText}</p>`;
+                    footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing term start date (spread over 4 years). <a href="#" onclick="showManageFundsModal(); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
+                }
+                footnoteHtml += '</div>';
+                html += footnoteHtml;
             }
 
             container.innerHTML = html;
@@ -5619,7 +5667,7 @@
         /**
          * Build a timeline row with expandable fund breakdown
          */
-        function buildTimelineRow(label, type, yearRange, historicalData, projectedData, expandable, fundNames, historicalByFund, projectedByFund, dataType) {
+        function buildTimelineRow(label, type, yearRange, historicalData, projectedData, expandable, fundNames, historicalByFund, projectedByFund, dataType, estimatedData = {}, estimatedByFund = {}) {
             let html = '';
 
             // Main row - escape label and type for XSS protection
@@ -5632,16 +5680,29 @@
             yearRange.years.forEach(year => {
                 const isProjected = yearRange.firstProjectedYear && year >= yearRange.firstProjectedYear;
                 const isDivider = year === yearRange.firstProjectedYear;
+                const isEstimated = yearRange.estimatedYears && yearRange.estimatedYears.has(year);
 
                 let value = 0;
-                if (isProjected && projectedData[year]) {
-                    value = projectedData[year];
-                } else if (!isProjected && historicalData[year]) {
+                let hasEstimatedValue = false;
+                if (isProjected) {
+                    // Combine projected and estimated values
+                    const projectedValue = projectedData[year] || 0;
+                    const estimatedValue = estimatedData[year] || 0;
+                    value = projectedValue + estimatedValue;
+                    hasEstimatedValue = estimatedValue > 0;
+                } else if (historicalData[year]) {
                     value = historicalData[year];
                 }
 
-                const cellClass = `${isProjected ? 'year-projected' : ''} ${isDivider ? 'timeline-divider' : ''}`;
-                html += `<td class="${cellClass}">${value > 0 ? formatCurrency(value) : '-'}</td>`;
+                let cellClass = isDivider ? 'timeline-divider' : '';
+                if (isEstimated && hasEstimatedValue) {
+                    cellClass += ' year-estimated';
+                } else if (isProjected) {
+                    cellClass += ' year-projected';
+                }
+                // Show capital calls as negative (cash outflow)
+                const displayValue = value > 0 ? (type === 'calls' ? formatCurrency(-value) : formatCurrency(value)) : '-';
+                html += `<td class="${cellClass}">${displayValue}</td>`;
             });
 
             html += '</tr>';
@@ -5655,16 +5716,28 @@
                     yearRange.years.forEach(year => {
                         const isProjected = yearRange.firstProjectedYear && year >= yearRange.firstProjectedYear;
                         const isDivider = year === yearRange.firstProjectedYear;
+                        const isEstimated = yearRange.estimatedYears && yearRange.estimatedYears.has(year);
 
                         let value = 0;
-                        if (isProjected && projectedByFund[fundName] && projectedByFund[fundName][year]) {
-                            value = projectedByFund[fundName][year];
-                        } else if (!isProjected && historicalByFund[fundName] && historicalByFund[fundName][dataType] && historicalByFund[fundName][dataType][year]) {
+                        let hasEstimatedValue = false;
+                        if (isProjected) {
+                            const projectedValue = (projectedByFund[fundName] && projectedByFund[fundName][year]) || 0;
+                            const estimatedValue = (estimatedByFund[fundName] && estimatedByFund[fundName][year]) || 0;
+                            value = projectedValue + estimatedValue;
+                            hasEstimatedValue = estimatedValue > 0;
+                        } else if (historicalByFund[fundName] && historicalByFund[fundName][dataType] && historicalByFund[fundName][dataType][year]) {
                             value = historicalByFund[fundName][dataType][year];
                         }
 
-                        const cellClass = `${isProjected ? 'year-projected' : ''} ${isDivider ? 'timeline-divider' : ''}`;
-                        html += `<td class="${cellClass}">${value > 0 ? formatCurrency(value) : '-'}</td>`;
+                        let cellClass = isDivider ? 'timeline-divider' : '';
+                        if (isEstimated && hasEstimatedValue) {
+                            cellClass += ' year-estimated';
+                        } else if (isProjected) {
+                            cellClass += ' year-projected';
+                        }
+                        // Show capital calls as negative (cash outflow)
+                        const fundDisplayValue = value > 0 ? (type === 'calls' ? formatCurrency(-value) : formatCurrency(value)) : '-';
+                        html += `<td class="${cellClass}">${fundDisplayValue}</td>`;
                     });
 
                     html += '</tr>';
@@ -5684,12 +5757,18 @@
             yearRange.years.forEach(year => {
                 const isProjected = yearRange.firstProjectedYear && year >= yearRange.firstProjectedYear;
                 const isDivider = year === yearRange.firstProjectedYear;
+                const isEstimated = yearRange.estimatedYears && yearRange.estimatedYears.has(year);
 
                 let calls = 0;
                 let distributions = 0;
+                let hasEstimatedValue = false;
 
                 if (isProjected) {
-                    calls = projected.projectedCalls[year] || 0;
+                    // Combine projected and estimated calls
+                    const projectedCalls = projected.projectedCalls[year] || 0;
+                    const estimatedCalls = projected.estimatedCalls ? (projected.estimatedCalls[year] || 0) : 0;
+                    calls = projectedCalls + estimatedCalls;
+                    hasEstimatedValue = estimatedCalls > 0;
                     // No projected distributions
                 } else {
                     calls = historical.calls[year] || 0;
@@ -5697,7 +5776,13 @@
                 }
 
                 const net = distributions - calls;
-                const cellClass = `${isProjected ? 'year-projected' : ''} ${isDivider ? 'timeline-divider' : ''} ${net >= 0 ? 'positive' : 'negative'}`;
+                let cellClass = isDivider ? 'timeline-divider' : '';
+                if (isEstimated && hasEstimatedValue) {
+                    cellClass += ' year-estimated';
+                } else if (isProjected) {
+                    cellClass += ' year-projected';
+                }
+                cellClass += ` ${net >= 0 ? 'positive' : 'negative'}`;
 
                 let displayValue = '-';
                 if (calls > 0 || distributions > 0) {
@@ -5752,37 +5837,133 @@
         }
 
         /**
-         * Update vintage year filter dropdown
-         * @param {Array} funds - All funds
+         * Show a custom confirmation modal
+         * @param {string} message - The message to display
+         * @param {Object} options - Optional configuration
+         * @param {string} options.title - Modal title (default: 'Confirm')
+         * @param {string} options.confirmText - Confirm button text (default: 'Confirm')
+         * @param {string} options.cancelText - Cancel button text (default: 'Cancel')
+         * @param {string} options.confirmClass - CSS class for confirm button (default: 'btn-danger')
+         * @returns {Promise<boolean>} - Resolves true if confirmed, false if cancelled
          */
-        function updateVintageFilter(funds) {
-            const vintageFilter = document.getElementById('vintageFilter');
-            const currentValue = vintageFilter.value;
+        function showConfirm(message, options = {}) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirmModal');
+                const titleEl = document.getElementById('confirmModalTitle');
+                const messageEl = document.getElementById('confirmModalMessage');
+                const confirmBtn = document.getElementById('confirmModalConfirmBtn');
+                const cancelBtn = document.getElementById('confirmModalCancelBtn');
 
-            // Get unique vintage years
-            const vintages = new Set();
-            funds.forEach(fund => {
-                const vintage = getVintageYear(fund);
-                if (vintage) {
-                    vintages.add(vintage);
-                }
+                // Set content
+                titleEl.textContent = options.title || 'Confirm';
+                messageEl.textContent = message;
+                confirmBtn.textContent = options.confirmText || 'Confirm';
+                cancelBtn.textContent = options.cancelText || 'Cancel';
+
+                // Set confirm button style
+                confirmBtn.className = options.confirmClass || 'btn-danger';
+
+                // Cleanup function
+                const cleanup = () => {
+                    modal.classList.remove('show');
+                    confirmBtn.removeEventListener('click', handleConfirm);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                    document.removeEventListener('keydown', handleKeydown);
+                };
+
+                const handleConfirm = () => {
+                    cleanup();
+                    resolve(true);
+                };
+
+                const handleCancel = () => {
+                    cleanup();
+                    resolve(false);
+                };
+
+                const handleKeydown = (e) => {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleCancel();
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleConfirm();
+                    }
+                };
+
+                // Attach listeners
+                confirmBtn.addEventListener('click', handleConfirm);
+                cancelBtn.addEventListener('click', handleCancel);
+
+                // Show modal first, then attach keydown listener after a tick
+                // to avoid catching the keypress that triggered the confirm dialog
+                modal.classList.add('show');
+                confirmBtn.focus();
+                setTimeout(() => {
+                    document.addEventListener('keydown', handleKeydown);
+                }, 0);
             });
+        }
 
-            // Sort vintages in descending order
-            const sortedVintages = Array.from(vintages).sort((a, b) => b - a);
+        /**
+         * Show a custom alert modal (single button)
+         * @param {string} message - The message to display
+         * @param {Object} options - Optional configuration
+         * @param {string} options.title - Modal title (default: 'Alert')
+         * @param {string} options.buttonText - Button text (default: 'OK')
+         * @returns {Promise<void>} - Resolves when acknowledged
+         */
+        function showAlert(message, options = {}) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirmModal');
+                const titleEl = document.getElementById('confirmModalTitle');
+                const messageEl = document.getElementById('confirmModalMessage');
+                const confirmBtn = document.getElementById('confirmModalConfirmBtn');
+                const cancelBtn = document.getElementById('confirmModalCancelBtn');
 
-            vintageFilter.innerHTML = '<option value="">All Vintages</option>';
-            sortedVintages.forEach(year => {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                vintageFilter.appendChild(option);
+                // Set content
+                titleEl.textContent = options.title || 'Alert';
+                messageEl.textContent = message;
+                confirmBtn.textContent = options.buttonText || 'OK';
+                confirmBtn.className = 'btn-secondary';
+
+                // Hide cancel button for alerts
+                cancelBtn.style.display = 'none';
+
+                // Cleanup function
+                const cleanup = () => {
+                    modal.classList.remove('show');
+                    cancelBtn.style.display = '';
+                    confirmBtn.removeEventListener('click', handleConfirm);
+                    document.removeEventListener('keydown', handleKeydown);
+                };
+
+                const handleConfirm = () => {
+                    cleanup();
+                    resolve();
+                };
+
+                const handleKeydown = (e) => {
+                    if (e.key === 'Escape' || e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleConfirm();
+                    }
+                };
+
+                // Attach listeners
+                confirmBtn.addEventListener('click', handleConfirm);
+
+                // Show modal first, then attach keydown listener after a tick
+                // to avoid catching the keypress that triggered the alert dialog
+                modal.classList.add('show');
+                confirmBtn.focus();
+                setTimeout(() => {
+                    document.addEventListener('keydown', handleKeydown);
+                }, 0);
             });
-
-            // Restore selection if still valid
-            if (currentValue && sortedVintages.includes(parseInt(currentValue))) {
-                vintageFilter.value = currentValue;
-            }
         }
 
         /**
@@ -5815,16 +5996,16 @@
             document.body.classList.remove('sidebar-open');
         }
 
-        function toggleTagsDisplay() {
+        async function toggleTagsDisplay() {
             const checkbox = document.getElementById('sidebarShowTagsCheckbox');
             // Save preference to localStorage
             Storage.set('showTags', checkbox.checked);
             // Re-render table to show/hide tags
-            renderTable();
+            await renderTable();
             // Also refresh Manage Funds list if it's open
             const manageFundsModal = document.getElementById('manageFundNamesModal');
             if (manageFundsModal && manageFundsModal.classList.contains('show')) {
-                loadFundNamesList();
+                await loadFundNamesList();
             }
         }
 
@@ -5882,23 +6063,25 @@
             });
         }
 
-        function sortTable(column) {
+        async function sortTable(column) {
             const existingIndex = sortColumns.findIndex(s => s.column === column);
 
             if (existingIndex === -1) {
                 // Column not in sort list - add as ascending
-                sortColumns.push({ column, direction: 'asc' });
+                AppState.setSortColumns([...sortColumns, { column, direction: 'asc' }]);
             } else if (sortColumns[existingIndex].direction === 'asc') {
                 // Currently ascending - change to descending
-                sortColumns[existingIndex].direction = 'desc';
+                const newColumns = [...sortColumns];
+                newColumns[existingIndex] = { ...newColumns[existingIndex], direction: 'desc' };
+                AppState.setSortColumns(newColumns);
             } else {
                 // Currently descending - remove from sort list
-                sortColumns.splice(existingIndex, 1);
+                AppState.setSortColumns(sortColumns.filter((_, i) => i !== existingIndex));
             }
 
             // Update header classes
             updateSortHeaders();
-            renderTable();
+            await renderTable();
         }
 
         function updateSortHeaders() {
@@ -5962,26 +6145,31 @@
         // ===========================
 
         async function showAddFundModal() {
-            document.getElementById('fundModalTitle').textContent = 'Add New Investment';
-            document.getElementById('fundId').value = '';
-            document.getElementById('isDuplicate').value = '';
-            document.getElementById('duplicateMultiplierContainer').style.display = 'none';
+            try {
+                document.getElementById('fundModalTitle').textContent = 'Add New Investment';
+                document.getElementById('fundId').value = '';
+                document.getElementById('isDuplicate').value = '';
+                document.getElementById('duplicateMultiplierContainer').style.display = 'none';
 
-            // Reset inline fund name input state
-            document.getElementById('newFundNameContainer').style.display = 'none';
-            document.getElementById('fundName').style.display = '';
-            clearFieldErrors();
+                // Reset inline fund name input state
+                document.getElementById('newFundNameContainer').style.display = 'none';
+                document.getElementById('fundName').style.display = '';
+                clearFieldErrors();
 
-            await populateFundNamesDropdown();
-            await populateFundGroupDropdown();
+                await populateFundNamesDropdown();
+                await populateFundGroupDropdown();
 
-            // Reset other form fields (not the fund name dropdown which we just populated)
-            document.getElementById('accountNumber').value = '';
-            document.getElementById('commitment').value = '';
-            document.getElementById('cashFlows').value = '';
-            document.getElementById('monthlyNav').value = '';
+                // Reset other form fields (not the fund name dropdown which we just populated)
+                document.getElementById('accountNumber').value = '';
+                document.getElementById('commitment').value = '';
+                document.getElementById('cashFlows').value = '';
+                document.getElementById('monthlyNav').value = '';
 
-            document.getElementById('fundModal').classList.add('show');
+                document.getElementById('fundModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error opening add investment modal: ' + err.message, 'error');
+                Debug.error('Error in showAddFundModal:', err);
+            }
         }
 
         async function editFund(id) {
@@ -6090,7 +6278,45 @@
             try {
                 const fundId = document.getElementById('fundId').value;
                 const isDuplicate = document.getElementById('isDuplicate').value;
-                const fundName = document.getElementById('fundName').value.trim();
+                let fundName = document.getElementById('fundName').value.trim();
+
+                // Handle inline fund name creation - if dropdown is "__new__", use the inline input
+                if (fundName === '__new__') {
+                    const inlineInput = document.getElementById('newFundNameInline');
+                    const inlineName = inlineInput.value.trim();
+
+                    if (!inlineName) {
+                        highlightFieldError('fundName');
+                        showStatus('Please enter a fund name or click Cancel to select an existing one', 'error');
+                        inlineInput.focus();
+                        return;
+                    }
+
+                    // Validate the inline fund name
+                    if (inlineName.length < 2) {
+                        highlightFieldError('fundName');
+                        showStatus('Fund name too short (min 2 characters)', 'error');
+                        inlineInput.focus();
+                        return;
+                    }
+
+                    if (inlineName.length > 100) {
+                        highlightFieldError('fundName');
+                        showStatus('Fund name too long (max 100 characters)', 'error');
+                        inlineInput.focus();
+                        return;
+                    }
+
+                    // Save the new fund name if it doesn't exist
+                    if (!fundNames.has(inlineName)) {
+                        await saveFundName(inlineName);
+                        fundNames.add(inlineName);
+                        fundNameData.set(inlineName, { name: inlineName, tags: [] });
+                    }
+
+                    fundName = inlineName;
+                }
+
                 const accountNumber = document.getElementById('accountNumber').value.trim();
                 const groupId = document.getElementById('fundGroup').value;
                 const commitmentText = document.getElementById('commitment').value.trim();
@@ -6190,9 +6416,9 @@
                 );
 
                 if (existingFunds.length > 0) {
-                    const proceed = confirm(
-                        `A fund with the same name "${fundName}" and account number "${accountNumber}" already exists.\n\n` +
-                        `Are you sure you want to create another one?`
+                    const proceed = await showConfirm(
+                        `A fund with the same name "${fundName}" and account number "${accountNumber}" already exists.\n\nAre you sure you want to create another one?`,
+                        { title: 'Duplicate Fund', confirmText: 'Create Anyway', cancelText: 'Cancel', confirmClass: 'btn-secondary' }
                     );
                     if (!proceed) {
                         highlightFieldError('accountNumber');
@@ -6210,27 +6436,34 @@
                     }
 
                     if (multiplier > 1000) {
-                        if (!confirm(`Warning: Multiplier of ${multiplier} is very large. This will create extremely large amounts. Continue?`)) {
-                            return;
-                        }
+                        const confirmed = await showConfirm(`Warning: Multiplier of ${multiplier} is very large. This will create extremely large amounts. Continue?`, {
+                            title: 'Large Multiplier',
+                            confirmText: 'Continue',
+                            cancelText: 'Cancel'
+                        });
+                        if (!confirmed) return;
                     }
 
                     if (multiplier < 0.001) {
-                        if (!confirm(`Warning: Multiplier of ${multiplier} is very small. This may result in rounding to zero. Continue?`)) {
-                            return;
-                        }
+                        const confirmed = await showConfirm(`Warning: Multiplier of ${multiplier} is very small. This may result in rounding to zero. Continue?`, {
+                            title: 'Small Multiplier',
+                            confirmText: 'Continue',
+                            cancelText: 'Cancel'
+                        });
+                        if (!confirmed) return;
                     }
 
-                    commitment = commitment * multiplier;
+                    // Round to nearest penny after applying multiplier
+                    commitment = Math.round(commitment * multiplier * 100) / 100;
 
                     cashFlows = cashFlows.map(cf => ({
                         ...cf,
-                        amount: parseCurrency(cf.amount) * multiplier
+                        amount: Math.round(parseCurrency(cf.amount) * multiplier * 100) / 100
                     }));
 
                     monthlyNav = monthlyNav.map(nav => ({
                         ...nav,
-                        amount: parseCurrency(nav.amount) * multiplier
+                        amount: Math.round(parseCurrency(nav.amount) * multiplier * 100) / 100
                     }));
                 }
 
@@ -6250,21 +6483,11 @@
                 saveBtn.textContent = 'Saving...';
                 saveBtn.disabled = true;
 
-                // Save undo history for updates
-                let beforeState = null;
                 if (fundId) {
                     fundData.id = parseInt(fundId);
-                    beforeState = await getFundById(parseInt(fundId));
                 }
 
-                const savedId = await saveFundToDB(fundData);
-
-                // Save undo action
-                if (fundId) {
-                    await saveUndoAction('update', 'fund', beforeState, fundData);
-                } else {
-                    await saveUndoAction('create', 'fund', null, { ...fundData, id: savedId });
-                }
+                await saveFundToDB(fundData);
 
                 // Save fund name if new
                 if (!fundNames.has(fundName)) {
@@ -6275,6 +6498,10 @@
 
                 // Clear metrics cache since data changed
                 AppState.clearMetricsCache();
+
+                // Reset button state before closing modal
+                saveBtn.textContent = 'Save';
+                saveBtn.disabled = false;
 
                 closeFundModal();
                 await renderTable();
@@ -6398,10 +6625,12 @@
                     return;
                 }
 
-                if (confirm(`Are you sure you want to delete "${fund.fundName} - ${fund.accountNumber}"?`)) {
-                    // Save undo action before deleting
-                    await saveUndoAction('delete', 'fund', fund, null);
-
+                const confirmed = await showConfirm(`Are you sure you want to delete "${fund.fundName} - ${fund.accountNumber}"?`, {
+                    title: 'Delete Fund',
+                    confirmText: 'Delete',
+                    cancelText: 'Cancel'
+                });
+                if (confirmed) {
                     await deleteFundFromDB(currentActionFundId);
 
                     // Clear metrics cache
@@ -6409,7 +6638,7 @@
 
                     closeActionModal();
                     await renderTable();
-                    showStatus('Fund deleted successfully (Undo available)', 'success');
+                    showStatus('Fund deleted successfully', 'success');
                 }
             } catch (err) {
                 showStatus('Error deleting fund: ' + err.message, 'error');
@@ -6489,9 +6718,10 @@
                     return;
                 }
 
-                // Build all cash flow rows using Templates
+                // Build all cash flow rows using Templates (sorted oldest to newest)
                 Debug.log('Cash flows:', fund.cashFlows);
-                const cashFlowsHtml = (fund.cashFlows || [])
+                const cashFlowsHtml = [...(fund.cashFlows || [])]
+                    .sort((a, b) => new Date(a.date) - new Date(b.date))
                     .map((cf, index) => Templates.cashFlowRow(cf, index))
                     .join('');
                 cashFlowsTableBody.innerHTML = cashFlowsHtml;
@@ -6510,12 +6740,16 @@
                     return;
                 }
 
-                // Build all NAV rows using Templates
+                // Build all NAV rows using Templates (sorted oldest to newest)
                 Debug.log('Monthly NAV:', fund.monthlyNav);
-                const navHtml = (fund.monthlyNav || [])
+                const navHtml = [...(fund.monthlyNav || [])]
+                    .sort((a, b) => new Date(a.date) - new Date(b.date))
                     .map((nav, index) => Templates.navRow(nav, index))
                     .join('');
                 navTableBody.innerHTML = navHtml;
+
+                // Update investment summary section
+                await updateDetailsSummary();
 
                 Modal.show('detailsModal');
                 AppState.setUnsavedChanges(false);
@@ -6526,8 +6760,8 @@
             }
         }
 
-        function closeDetailsModal() {
-            const closed = Modal.close('detailsModal', {
+        async function closeDetailsModal() {
+            const closed = await Modal.close('detailsModal', {
                 checkUnsaved: true,
                 onClose: () => {
                     currentDetailsFundId = null;
@@ -6538,6 +6772,85 @@
             return closed;
         }
 
+        async function updateDetailsSummary() {
+            if (!currentDetailsFundId) return;
+
+            try {
+                const fund = await getFundById(currentDetailsFundId);
+                if (!fund) return;
+
+                const commitment = parseCurrency(fund.commitment) || 0;
+
+                // Read current cash flows from table
+                const cashFlowsTable = document.getElementById('cashFlowsTable').querySelector('tbody');
+                let totalContributions = 0;
+                let totalDistributions = 0;
+                let outstandingCommitment = commitment;
+
+                Array.from(cashFlowsTable.children).forEach(row => {
+                    const amount = parseCurrency(row.querySelector('[data-field="amount"]').value) || 0;
+                    const type = row.querySelector('[data-field="type"]').value;
+                    const affectsCommitment = row.querySelector('[data-field="affectsCommitment"]').checked;
+
+                    if (type === 'Contribution') {
+                        totalContributions += Math.abs(amount);
+                        if (affectsCommitment) {
+                            outstandingCommitment -= Math.abs(amount);
+                        }
+                    } else if (type === 'Distribution') {
+                        totalDistributions += Math.abs(amount);
+                    } else if (type === 'Adjustment' && affectsCommitment) {
+                        // Adjustments directly modify outstanding commitment
+                        // Positive = increase remaining, Negative = decrease remaining
+                        outstandingCommitment += amount;
+                    }
+                });
+
+                // Get latest NAV value from table
+                const navTable = document.getElementById('navTable').querySelector('tbody');
+                let latestNav = 0;
+                let latestNavDate = null;
+
+                Array.from(navTable.children).forEach(row => {
+                    const dateValue = row.querySelector('[data-field="date"]').value;
+                    const amount = parseCurrency(row.querySelector('[data-field="amount"]').value) || 0;
+
+                    if (dateValue && isValidDate(dateValue)) {
+                        const date = new Date(dateValue);
+                        if (!latestNavDate || date > latestNavDate) {
+                            latestNavDate = date;
+                            latestNav = amount;
+                        }
+                    }
+                });
+
+                // Calculate investment return
+                const investmentReturn = totalDistributions + latestNav - totalContributions;
+
+                // Ensure outstanding commitment is not negative
+                outstandingCommitment = Math.max(0, outstandingCommitment);
+
+                // Update summary display
+                document.getElementById('detailsSummaryCommitment').textContent = formatCurrency(commitment);
+                document.getElementById('detailsSummaryContributions').textContent = formatCurrency(totalContributions);
+                document.getElementById('detailsSummaryDistributions').textContent = formatCurrency(totalDistributions);
+                document.getElementById('detailsSummaryValue').textContent = formatCurrency(latestNav);
+
+                const returnElement = document.getElementById('detailsSummaryReturn');
+                returnElement.textContent = formatCurrency(investmentReturn);
+                returnElement.classList.remove('positive', 'negative');
+                if (investmentReturn > 0) {
+                    returnElement.classList.add('positive');
+                } else if (investmentReturn < 0) {
+                    returnElement.classList.add('negative');
+                }
+
+                document.getElementById('detailsSummaryOutstanding').textContent = formatCurrency(outstandingCommitment);
+            } catch (err) {
+                Debug.error('Error updating details summary:', err);
+            }
+        }
+
         function addCashFlowRow() {
             const table = document.getElementById('cashFlowsTable').querySelector('tbody');
             const index = table.children.length;
@@ -6546,7 +6859,7 @@
             AppState.setUnsavedChanges(true);
         }
 
-        function deleteCashFlowRow(button) {
+        async function deleteCashFlowRow(button) {
             const row = button.closest('tr');
             if (row) {
                 const date = row.querySelector('[data-field="date"]').value;
@@ -6557,9 +6870,15 @@
                 const amountText = amount || '$0';
                 const typeText = type || 'contribution';
 
-                if (confirm(`Delete this cash flow?\n${typeText} on ${dateText}: ${amountText}`)) {
+                const confirmed = await showConfirm(`Delete this cash flow?\n${typeText} on ${dateText}: ${amountText}`, {
+                    title: 'Delete Cash Flow',
+                    confirmText: 'Delete',
+                    cancelText: 'Cancel'
+                });
+                if (confirmed) {
                     row.remove();
                     AppState.setUnsavedChanges(true);
+                    updateDetailsSummary();
                 }
             }
         }
@@ -6572,7 +6891,7 @@
             AppState.setUnsavedChanges(true);
         }
 
-        function deleteNavRow(button) {
+        async function deleteNavRow(button) {
             const row = button.closest('tr');
             if (row) {
                 const date = row.querySelector('[data-field="date"]').value;
@@ -6581,9 +6900,15 @@
                 const dateText = date || 'no date';
                 const amountText = amount || '$0';
 
-                if (confirm(`Delete this NAV entry?\n${dateText}: ${amountText}`)) {
+                const confirmed = await showConfirm(`Delete this NAV entry?\n${dateText}: ${amountText}`, {
+                    title: 'Delete NAV Entry',
+                    confirmText: 'Delete',
+                    cancelText: 'Cancel'
+                });
+                if (confirmed) {
                     row.remove();
-                    hasUnsavedChanges = true;
+                    AppState.setUnsavedChanges(true);
+                    updateDetailsSummary();
                 }
             }
         }
@@ -6674,15 +6999,21 @@
 
                 // Warn if significant data is being deleted
                 if (originalCashFlowCount > 0 && cashFlows.length < originalCashFlowCount / 2) {
-                    if (!confirm(`Warning: You are deleting ${originalCashFlowCount - cashFlows.length} cash flow(s). Continue?`)) {
-                        return;
-                    }
+                    const confirmed = await showConfirm(`Warning: You are deleting ${originalCashFlowCount - cashFlows.length} cash flow(s). Continue?`, {
+                        title: 'Confirm Deletion',
+                        confirmText: 'Continue',
+                        cancelText: 'Cancel'
+                    });
+                    if (!confirmed) return;
                 }
 
                 if (originalNavCount > 0 && monthlyNav.length < originalNavCount / 2) {
-                    if (!confirm(`Warning: You are deleting ${originalNavCount - monthlyNav.length} NAV entr(ies). Continue?`)) {
-                        return;
-                    }
+                    const confirmed = await showConfirm(`Warning: You are deleting ${originalNavCount - monthlyNav.length} NAV entry(s). Continue?`, {
+                        title: 'Confirm Deletion',
+                        confirmText: 'Continue',
+                        cancelText: 'Cancel'
+                    });
+                    if (!confirmed) return;
                 }
 
                 // Update fund
@@ -6691,7 +7022,7 @@
                 fund.timestamp = new Date().toISOString();
 
                 await saveFundToDB(fund);
-                hasUnsavedChanges = false; // Mark as saved before closing
+                AppState.setUnsavedChanges(false); // Mark as saved before closing
                 closeDetailsModal();
                 await renderTable();
                 showStatus('Details updated successfully');
@@ -6703,20 +7034,57 @@
         }
 
         async function showManageFundsModal() {
-            await loadFundNamesList();
-            await populateFundNamesDropdown();
-            document.getElementById('manageFundNamesModal').classList.add('show');
+            try {
+                await loadFundNamesList();
+                await populateFundNamesDropdown();
+
+                // Clear the Add Fund form when opening
+                clearAddFundForm();
+
+                document.getElementById('manageFundNamesModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error opening manage funds modal: ' + err.message, 'error');
+                Debug.error('Error in showManageFundsModal:', err);
+            }
         }
 
-        function closeManageFundsModal() {
+        function clearAddFundForm() {
+            document.getElementById('newFundNameInput').value = '';
+            document.getElementById('newFundTermStartDate').value = '';
+            document.getElementById('newFundInvestmentTerm').value = '';
+            const fundTermsDetails = document.getElementById('newFundTermsDetails');
+            if (fundTermsDetails) {
+                fundTermsDetails.removeAttribute('open');
+            }
+        }
+
+        function hasUnsavedAddFundData() {
+            const name = document.getElementById('newFundNameInput').value.trim();
+            const termStartDate = document.getElementById('newFundTermStartDate').value;
+            const investmentTerm = document.getElementById('newFundInvestmentTerm').value;
+            return name !== '' || termStartDate !== '' || investmentTerm !== '';
+        }
+
+        async function closeManageFundsModal() {
+            if (hasUnsavedAddFundData()) {
+                const confirmed = await showConfirm('You have unsaved data in the Add Fund form. Are you sure you want to close?', {
+                    title: 'Unsaved Changes',
+                    confirmText: 'Close Anyway',
+                    cancelText: 'Go Back'
+                });
+                if (!confirmed) {
+                    return;
+                }
+            }
+            clearAddFundForm();
             document.getElementById('manageFundNamesModal').classList.remove('show');
         }
 
         async function loadFundNamesList() {
             try {
                 const fundNameObjects = await getAllFundNameObjects();
-                fundNames = new Set(fundNameObjects.map(obj => obj.name));
-                fundNameData = new Map(fundNameObjects.map(obj => [obj.name, obj]));
+                AppState.setFundNames(new Set(fundNameObjects.map(obj => obj.name)));
+                AppState.setFundNameData(new Map(fundNameObjects.map(obj => [obj.name, obj])));
 
                 const container = document.getElementById('fundNamesList');
                 container.innerHTML = '';
@@ -6795,8 +7163,7 @@
             }
 
             // Get optional fund term fields
-            const firstCloseDate = document.getElementById('newFundFirstClose').value || null;
-            const finalCloseDate = document.getElementById('newFundFinalClose').value || null;
+            const investmentTermStartDate = document.getElementById('newFundTermStartDate').value || null;
             const investmentTermYears = document.getElementById('newFundInvestmentTerm').value
                 ? parseInt(document.getElementById('newFundInvestmentTerm').value)
                 : null;
@@ -6805,22 +7172,17 @@
                 const fundNameObj = {
                     name,
                     tags: [],
-                    firstCloseDate,
-                    finalCloseDate,
+                    investmentTermStartDate,
                     investmentTermYears
                 };
                 await saveFundName(fundNameObj);
-
-                // Save undo action
-                await saveUndoAction('create', 'fundName', null, fundNameObj);
 
                 fundNames.add(name);
                 fundNameData.set(name, fundNameObj);
 
                 // Reset form fields
                 input.value = '';
-                document.getElementById('newFundFirstClose').value = '';
-                document.getElementById('newFundFinalClose').value = '';
+                document.getElementById('newFundTermStartDate').value = '';
                 document.getElementById('newFundInvestmentTerm').value = '';
                 document.getElementById('newFundTermsDetails').removeAttribute('open');
 
@@ -6847,8 +7209,7 @@
             setEditFundTags(fundNameObj.tags || []);
 
             // Populate fund terms
-            document.getElementById('editFundFirstClose').value = fundNameObj.firstCloseDate || '';
-            document.getElementById('editFundFinalClose').value = fundNameObj.finalCloseDate || '';
+            document.getElementById('editFundTermStartDate').value = fundNameObj.investmentTermStartDate || '';
             document.getElementById('editFundInvestmentTerm').value = fundNameObj.investmentTermYears || '';
 
             document.getElementById('editFundNameModal').classList.add('show');
@@ -6878,6 +7239,19 @@
         }
 
         function getEditFundTags() {
+            // Add any pending text in the input field as a tag before collecting
+            const input = document.getElementById('editFundTagsInput');
+            const pendingTag = input.value.trim();
+            if (pendingTag) {
+                // Check if this tag doesn't already exist
+                const existingTags = Array.from(document.getElementById('editFundTagsContainer').querySelectorAll('.tag'))
+                    .map(tag => tag.getAttribute('data-tag').toLowerCase());
+                if (!existingTags.includes(pendingTag.toLowerCase())) {
+                    addEditFundTag(pendingTag);
+                }
+                input.value = '';
+            }
+
             const container = document.getElementById('editFundTagsContainer');
             const tagElements = container.querySelectorAll('.tag');
             return Array.from(tagElements).map(tag => tag.getAttribute('data-tag'));
@@ -6917,8 +7291,7 @@
             const tags = getEditFundTags();
 
             // Get fund term fields
-            const firstCloseDate = document.getElementById('editFundFirstClose').value || null;
-            const finalCloseDate = document.getElementById('editFundFinalClose').value || null;
+            const investmentTermStartDate = document.getElementById('editFundTermStartDate').value || null;
             const investmentTermYears = document.getElementById('editFundInvestmentTerm').value
                 ? parseInt(document.getElementById('editFundInvestmentTerm').value)
                 : null;
@@ -6940,8 +7313,7 @@
                 const newFundNameObj = {
                     name: newName,
                     tags,
-                    firstCloseDate,
-                    finalCloseDate,
+                    investmentTermStartDate,
                     investmentTermYears
                 };
 
@@ -6969,9 +7341,6 @@
                     await deleteFundName(oldName);
                     await saveFundName(newFundNameObj);
 
-                    // Save undo action (store the rename operation)
-                    await saveUndoAction('update', 'fundName', oldFundNameObj, newFundNameObj);
-
                     fundNames.delete(oldName);
                     fundNames.add(newName);
                     fundNameData.delete(oldName);
@@ -6985,9 +7354,6 @@
                 } else {
                     // Just update tags
                     await saveFundName(newFundNameObj);
-
-                    // Save undo action
-                    await saveUndoAction('update', 'fundName', oldFundNameObj, newFundNameObj);
 
                     fundNameData.set(newName, newFundNameObj);
                     await renderTable();
@@ -7005,21 +7371,26 @@
         }
 
         async function removeFundName(name) {
-            if (!confirm(`Are you sure you want to delete "${name}"? This will not delete funds using this name.`)) {
+            // Check if any investments are using this fund name
+            const fundsUsingName = currentFunds.filter(f => f.fundName === name);
+            if (fundsUsingName.length > 0) {
+                showStatus(`Cannot delete "${name}" - ${fundsUsingName.length} investment(s) are using this fund name`, 'error');
                 return;
             }
 
+            const confirmed = await showConfirm(`Are you sure you want to delete "${name}"?`, {
+                title: 'Delete Fund Name',
+                confirmText: 'Delete',
+                cancelText: 'Cancel'
+            });
+            if (!confirmed) return;
+
             try {
-                const fundNameObj = fundNameData.get(name);
-
-                // Save undo action before deleting
-                await saveUndoAction('delete', 'fundName', fundNameObj, null);
-
                 await deleteFundName(name);
                 fundNames.delete(name);
                 fundNameData.delete(name);
                 await loadFundNamesList();
-                showStatus('Fund name deleted successfully (Undo available)', 'success');
+                showStatus('Fund name deleted successfully', 'success');
             } catch (err) {
                 showStatus('Error deleting fund name: ' + err.message, 'error');
             }
@@ -7030,9 +7401,14 @@
         // ===========================
 
         async function showManageGroupsModal() {
-            await loadGroupsList();
-            await populateGroupParentDropdown();
-            document.getElementById('manageGroupsModal').classList.add('show');
+            try {
+                await loadGroupsList();
+                await populateGroupParentDropdown();
+                document.getElementById('manageGroupsModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error opening manage groups modal: ' + err.message, 'error');
+                Debug.error('Error in showManageGroupsModal:', err);
+            }
         }
 
         function closeManageGroupsModal() {
@@ -7168,21 +7544,11 @@
                     type: type || null
                 };
 
-                // Save undo history for updates
-                let beforeState = null;
                 if (editId) {
                     groupData.id = parseInt(editId);
-                    beforeState = await getGroupById(parseInt(editId));
                 }
 
-                const savedId = await saveGroup(groupData);
-
-                // Save undo action
-                if (editId) {
-                    await saveUndoAction('update', 'group', beforeState, groupData);
-                } else {
-                    await saveUndoAction('create', 'group', null, { ...groupData, id: savedId });
-                }
+                await saveGroup(groupData);
 
                 // Clear group descendants cache since hierarchy changed
                 AppState.groupDescendantsCache.clear();
@@ -7254,9 +7620,12 @@
             const funds = await getAllFunds();
             const fundsInGroup = funds.filter(f => f.groupId === id);
             if (fundsInGroup.length > 0) {
-                if (!confirm(`This group contains ${fundsInGroup.length} fund(s). Deleting the group will remove the group assignment from these funds. Continue?`)) {
-                    return;
-                }
+                const confirmed = await showConfirm(`This group contains ${fundsInGroup.length} fund(s). Deleting the group will remove the group assignment from these funds. Continue?`, {
+                    title: 'Delete Group',
+                    confirmText: 'Delete',
+                    cancelText: 'Cancel'
+                });
+                if (!confirmed) return;
 
                 // Remove groupId from affected funds
                 for (const fund of fundsInGroup) {
@@ -7266,9 +7635,6 @@
             }
 
             try {
-                // Save undo action before deleting
-                await saveUndoAction('delete', 'group', group, null);
-
                 await deleteGroup(id);
 
                 // Clear cache
@@ -7277,7 +7643,7 @@
                 await loadGroupsList();
                 await populateGroupParentDropdown();
                 await renderTable();
-                showStatus('Group deleted successfully (Undo available)', 'success');
+                showStatus('Group deleted successfully', 'success');
             } catch (err) {
                 showStatus('Error deleting group: ' + err.message, 'error');
             }
@@ -7311,7 +7677,7 @@
             try {
                 const names = await getAllFundNames();
                 Debug.log('Fund names from database:', names);
-                fundNames = new Set(names);
+                AppState.setFundNames(new Set(names));
 
                 select.innerHTML = '<option value="">Select a fund</option>';
                 names.forEach(name => {
@@ -7569,12 +7935,12 @@
         }
 
         // Event delegation for dynamically created buttons and dropdown handling
-        document.addEventListener('click', function(event) {
+        document.addEventListener('click', async function(event) {
             // Handle fund actions button
             if (event.target.classList.contains('fund-actions-btn')) {
                 event.stopPropagation(); // Prevent immediate close
                 const fundId = parseInt(event.target.getAttribute('data-fund-id'));
-                showActionModal(fundId, event.target);
+                await showActionModal(fundId, event.target);
                 return;
             }
 
@@ -7589,14 +7955,14 @@
             // Handle group edit button
             if (event.target.classList.contains('group-edit-btn')) {
                 const groupId = parseInt(event.target.getAttribute('data-group-id'));
-                editGroup(groupId);
+                await editGroup(groupId);
                 return;
             }
 
             // Handle group delete button
             if (event.target.classList.contains('group-delete-btn')) {
                 const groupId = parseInt(event.target.getAttribute('data-group-id'));
-                removeGroup(groupId);
+                await removeGroup(groupId);
                 return;
             }
 
@@ -7617,13 +7983,13 @@
             const detailsModal = document.getElementById('detailsModal');
             if (detailsModal && detailsModal.classList.contains('show')) {
                 if (detailsModal.contains(event.target)) {
-                    hasUnsavedChanges = true;
+                    AppState.setUnsavedChanges(true);
                 }
             }
         });
 
         // Keyboard shortcuts
-        document.addEventListener('keydown', function(event) {
+        document.addEventListener('keydown', async function(event) {
             // Check if user is typing in an input field
             const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName);
 
@@ -7638,12 +8004,18 @@
             if (event.key === 'Escape') {
                 const sidebar = document.getElementById('sidebar');
                 const shortcutsModal = document.getElementById('shortcutsModal');
+                const confirmModal = document.getElementById('confirmModal');
                 const detailsModal = document.getElementById('detailsModal');
                 const actionDropdown = document.getElementById('actionDropdown');
                 const fundModal = document.getElementById('fundModal');
                 const manageFundsModal = document.getElementById('manageFundNamesModal');
                 const editFundNameModal = document.getElementById('editFundNameModal');
                 const manageGroupsModal = document.getElementById('manageGroupsModal');
+
+                // Let the confirm modal handle its own Escape key
+                if (confirmModal && confirmModal.classList.contains('show')) {
+                    return;
+                }
 
                 if (shortcutsModal && shortcutsModal.classList.contains('show')) {
                     closeShortcutsModal();
@@ -7681,36 +8053,22 @@
                 event.preventDefault();
                 const detailsModal = document.getElementById('detailsModal');
                 if (detailsModal && detailsModal.classList.contains('show')) {
-                    saveDetailsChanges();
+                    await saveDetailsChanges();
                 }
-                return;
-            }
-
-            // Ctrl/Cmd+Z: Undo
-            if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
-                event.preventDefault();
-                undoLastAction();
-                return;
-            }
-
-            // Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y: Redo
-            if ((event.ctrlKey || event.metaKey) && ((event.key === 'z' && event.shiftKey) || event.key === 'y')) {
-                event.preventDefault();
-                redoLastAction();
                 return;
             }
 
             // Ctrl/Cmd+E: Export
             if ((event.ctrlKey || event.metaKey) && event.key === 'e') {
                 event.preventDefault();
-                exportDatabase();
+                await exportDatabase();
                 return;
             }
 
             // Ctrl/Cmd+N: New investment
             if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
                 event.preventDefault();
-                showAddFundModal();
+                await showAddFundModal();
                 return;
             }
 
@@ -7751,7 +8109,7 @@
                     const actionBtn = focusedRow.querySelector('.fund-actions-btn');
                     if (actionBtn) {
                         const fundId = parseInt(focusedRow.getAttribute('data-fund-id'));
-                        showActionModal(fundId, actionBtn);
+                        await showActionModal(fundId, actionBtn);
                     }
                     return;
                 }
@@ -7907,13 +8265,13 @@
                     }
                     for (const fundNameItem of data.fundNames) {
                         // Support both old format (string) and new format (object with tags/terms)
+                        // Backward compatibility: finalCloseDate -> investmentTermStartDate
                         const fundNameObj = typeof fundNameItem === 'string'
                             ? { name: fundNameItem, tags: [] }
                             : {
                                 name: fundNameItem.name,
                                 tags: fundNameItem.tags || [],
-                                firstCloseDate: fundNameItem.firstCloseDate || null,
-                                finalCloseDate: fundNameItem.finalCloseDate || null,
+                                investmentTermStartDate: fundNameItem.investmentTermStartDate || fundNameItem.finalCloseDate || null,
                                 investmentTermYears: fundNameItem.investmentTermYears || null
                             };
 
@@ -8044,6 +8402,158 @@
             }
         }
 
+        async function loadSampleData() {
+            if (!confirm('This will add sample data to your database. Existing data will not be deleted. Continue?')) {
+                return;
+            }
+
+            showLoading('Loading sample data...');
+
+            try {
+                // Sample groups
+                const sampleGroups = [
+                    { name: 'Buyout Funds', parentGroupId: null, description: 'Large-cap buyout strategies' },
+                    { name: 'Venture Capital', parentGroupId: null, description: 'Early and growth stage investments' },
+                    { name: 'Real Estate', parentGroupId: null, description: 'Property and REIT investments' }
+                ];
+
+                // Save groups and track IDs
+                const groupIdMap = {};
+                for (const group of sampleGroups) {
+                    const newId = await saveGroup(group);
+                    groupIdMap[group.name] = newId;
+                }
+                AppState.setGroups(await getAllGroups());
+
+                // Sample fund names with tags
+                const sampleFundNames = [
+                    { name: 'Apex Capital Partners', tags: ['Buyout', 'North America'], investmentTermStartDate: '2020-06-15', investmentTermYears: 10 },
+                    { name: 'Summit Growth Fund', tags: ['Growth', 'Technology'], investmentTermStartDate: '2021-03-01', investmentTermYears: 10 },
+                    { name: 'Horizon Ventures', tags: ['Venture', 'Early Stage'], investmentTermStartDate: '2022-01-10', investmentTermYears: 12 },
+                    { name: 'Metro Real Estate Partners', tags: ['Real Estate', 'Commercial'], investmentTermStartDate: '2019-09-01', investmentTermYears: 8 },
+                    { name: 'Blue Ocean Capital', tags: ['Buyout', 'Europe'], investmentTermStartDate: '2021-07-20', investmentTermYears: 10 }
+                ];
+
+                for (const fundNameObj of sampleFundNames) {
+                    await saveFundName(fundNameObj);
+                    fundNames.add(fundNameObj.name);
+                    fundNameData.set(fundNameObj.name, fundNameObj);
+                }
+
+                // Sample funds with cash flows and NAVs
+                const sampleFunds = [
+                    {
+                        fundName: 'Apex Capital Partners',
+                        accountNumber: 'APEX-001',
+                        groupId: groupIdMap['Buyout Funds'],
+                        commitment: 5000000,
+                        cashFlows: [
+                            { date: '2020-07-01', amount: -1250000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2020-12-15', amount: -1000000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2021-06-30', amount: -750000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2022-03-15', amount: -500000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2023-01-20', amount: 800000, type: 'Distribution', affectsCommitment: true },
+                            { date: '2023-09-10', amount: 1200000, type: 'Distribution', affectsCommitment: true }
+                        ],
+                        monthlyNav: [
+                            { date: '2021-12-31', amount: 3200000 },
+                            { date: '2022-12-31', amount: 3800000 },
+                            { date: '2023-12-31', amount: 4500000 }
+                        ],
+                        timestamp: new Date().toISOString()
+                    },
+                    {
+                        fundName: 'Summit Growth Fund',
+                        accountNumber: 'SGF-2021-A',
+                        groupId: groupIdMap['Buyout Funds'],
+                        commitment: 2500000,
+                        cashFlows: [
+                            { date: '2021-04-01', amount: -625000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2021-10-01', amount: -500000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2022-04-01', amount: -375000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2023-06-15', amount: 450000, type: 'Distribution', affectsCommitment: true }
+                        ],
+                        monthlyNav: [
+                            { date: '2022-12-31', amount: 1650000 },
+                            { date: '2023-12-31', amount: 2100000 }
+                        ],
+                        timestamp: new Date().toISOString()
+                    },
+                    {
+                        fundName: 'Horizon Ventures',
+                        accountNumber: 'HV-III-LP',
+                        groupId: groupIdMap['Venture Capital'],
+                        commitment: 1000000,
+                        cashFlows: [
+                            { date: '2022-02-15', amount: -300000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2022-08-01', amount: -200000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2023-02-01', amount: -150000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2023-11-01', amount: -100000, type: 'Contribution', affectsCommitment: true }
+                        ],
+                        monthlyNav: [
+                            { date: '2022-12-31', amount: 520000 },
+                            { date: '2023-12-31', amount: 890000 }
+                        ],
+                        timestamp: new Date().toISOString()
+                    },
+                    {
+                        fundName: 'Metro Real Estate Partners',
+                        accountNumber: 'MREP-IV',
+                        groupId: groupIdMap['Real Estate'],
+                        commitment: 3000000,
+                        cashFlows: [
+                            { date: '2019-10-01', amount: -900000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2020-04-01', amount: -600000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2020-10-01', amount: -450000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2021-04-01', amount: -300000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2022-06-01', amount: 500000, type: 'Distribution', affectsCommitment: true },
+                            { date: '2023-06-01', amount: 750000, type: 'Distribution', affectsCommitment: true },
+                            { date: '2023-12-01', amount: 400000, type: 'Distribution', affectsCommitment: true }
+                        ],
+                        monthlyNav: [
+                            { date: '2020-12-31', amount: 1850000 },
+                            { date: '2021-12-31', amount: 2200000 },
+                            { date: '2022-12-31', amount: 2450000 },
+                            { date: '2023-12-31', amount: 2100000 }
+                        ],
+                        timestamp: new Date().toISOString()
+                    },
+                    {
+                        fundName: 'Blue Ocean Capital',
+                        accountNumber: 'BOC-EUR-II',
+                        groupId: groupIdMap['Buyout Funds'],
+                        commitment: 4000000,
+                        cashFlows: [
+                            { date: '2021-08-15', amount: -1000000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2022-02-15', amount: -800000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2022-08-15', amount: -600000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2023-02-15', amount: -400000, type: 'Contribution', affectsCommitment: true }
+                        ],
+                        monthlyNav: [
+                            { date: '2022-12-31', amount: 2600000 },
+                            { date: '2023-12-31', amount: 3200000 }
+                        ],
+                        timestamp: new Date().toISOString()
+                    }
+                ];
+
+                // Import funds
+                let imported = 0;
+                for (const fund of sampleFunds) {
+                    await saveFundToDB(fund);
+                    imported++;
+                }
+
+                await renderTable();
+                showStatus(`Successfully loaded ${imported} sample fund(s), ${sampleGroups.length} group(s), and ${sampleFundNames.length} fund name(s)`);
+            } catch (err) {
+                showStatus('Error loading sample data: ' + err.message, 'error');
+                Debug.error('Error loading sample data:', err);
+            } finally {
+                hideLoading();
+            }
+        }
+
         // ===========================
         // Column Resizing
         // ===========================
@@ -8103,18 +8613,21 @@
                             saveColumnWidth(columnIndex, newWidth);
                         };
 
+                        // Declare cleanup early so onMouseUp can reference it
+                        let cleanup;
+
                         const onMouseUp = () => {
                             th.classList.remove('resizing');
                             document.body.style.cursor = '';
                             document.body.style.userSelect = '';
                             document.removeEventListener('mousemove', onMouseMove);
                             document.removeEventListener('mouseup', onMouseUp);
-                            document.removeEventListener('blur', onMouseUp); // Clean up blur listener
+                            window.removeEventListener('blur', cleanup); // Clean up blur listener
                             // Reset flag after a short delay so click handler can check it
                             setTimeout(() => { isResizingColumn = false; }, 50);
                         };
 
-                        const cleanup = () => {
+                        cleanup = () => {
                             // Ensure cleanup happens even if mouse leaves window
                             if (th.classList.contains('resizing')) {
                                 onMouseUp();
@@ -8257,10 +8770,7 @@
                 document.getElementById('vintageFilter').addEventListener('change', applyFilters);
                 document.getElementById('searchInput').addEventListener('input', applyFiltersDebounced);
                 document.getElementById('cutoffDate').addEventListener('change', applyFilters);
-                document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
                 document.getElementById('timelineHeader').addEventListener('click', toggleTimelinePanel);
-                document.getElementById('undoBtn').addEventListener('click', undoLastAction);
-                document.getElementById('redoBtn').addEventListener('click', redoLastAction);
                 document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
             },
 
@@ -8341,6 +8851,12 @@
                     const btn = e.target.closest('[data-action="deleteNav"]');
                     if (btn) deleteNavRow(btn);
                 });
+
+                // Update summary when cash flows or NAV values change
+                document.getElementById('cashFlowsTable').addEventListener('input', updateDetailsSummary);
+                document.getElementById('cashFlowsTable').addEventListener('change', updateDetailsSummary);
+                document.getElementById('navTable').addEventListener('input', updateDetailsSummary);
+                document.getElementById('navTable').addEventListener('change', updateDetailsSummary);
                 document.getElementById('editFundTagsContainer').addEventListener('click', (e) => {
                     const btn = e.target.closest('[data-action="removeTag"]');
                     if (btn) removeEditFundTag(btn);
@@ -8350,9 +8866,9 @@
             /** Backup warning modal */
             setupBackupWarning() {
                 document.getElementById('closeBackupWarningBtn').addEventListener('click', closeBackupWarning);
-                document.getElementById('exportNowBtn').addEventListener('click', () => {
+                document.getElementById('exportNowBtn').addEventListener('click', async () => {
                     closeBackupWarning();
-                    exportDatabase();
+                    await exportDatabase();
                     updateLastBackupTime();
                 });
                 document.getElementById('remindLaterBtn').addEventListener('click', () => {
@@ -8377,7 +8893,8 @@
                     'sidebarManageGroups': showManageGroupsModal,
                     'sidebarExportCSV': exportToCSV,
                     'sidebarExportJSON': exportDatabase,
-                    'sidebarExportPDF': exportToPDF
+                    'sidebarExportPDF': exportToPDF,
+                    'sidebarLoadSampleData': loadSampleData
                 };
                 Object.entries(menuItems).forEach(([id, handler]) => {
                     document.getElementById(id).addEventListener('click', (e) => {
@@ -8387,8 +8904,8 @@
                     });
                 });
 
-                document.getElementById('sidebarImportFile').addEventListener('change', (e) => {
-                    importDatabase(e);
+                document.getElementById('sidebarImportFile').addEventListener('change', async (e) => {
+                    await importDatabase(e);
                     closeSidebar();
                 });
             },
@@ -8438,8 +8955,8 @@
 
                 // Load fund name objects (with tags)
                 const fundNameObjects = await getAllFundNameObjects();
-                fundNames = new Set(fundNameObjects.map(obj => obj.name));
-                fundNameData = new Map(fundNameObjects.map(obj => [obj.name, obj]));
+                AppState.setFundNames(new Set(fundNameObjects.map(obj => obj.name)));
+                AppState.setFundNameData(new Map(fundNameObjects.map(obj => [obj.name, obj])));
 
                 // Load groups
                 AppState.setGroups(await getAllGroups());
@@ -8469,9 +8986,6 @@
                 // Initialize event listeners
                 initializeEventListeners();
 
-                // Update undo/redo button states
-                await updateUndoRedoButtons();
-
                 setControlsEnabled(true);
 
                 // Show backup warning if needed
@@ -8489,6 +9003,13 @@
                 hideLoading();
             }
         }
+
+            // Expose functions needed by inline onclick handlers in dynamic HTML
+            window.showAddFundModal = showAddFundModal;
+            window.showManageFundsModal = showManageFundsModal;
+            window.resetFilters = resetFilters;
+            window.fillCashFlowsExample = fillCashFlowsExample;
+            window.fillNavExample = fillNavExample;
 
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', init);

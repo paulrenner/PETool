@@ -3656,8 +3656,7 @@
         "Early Stage",
         "North America"
       ],
-      "firstCloseDate": "2019-09-15",
-      "finalCloseDate": "2020-03-01",
+      "investmentTermStartDate": "2020-03-01",
       "investmentTermYears": 5
     },
     {
@@ -3668,8 +3667,7 @@
         "Growth",
         "North America"
       ],
-      "firstCloseDate": "2019-06-01",
-      "finalCloseDate": "2020-01-15",
+      "investmentTermStartDate": "2020-01-15",
       "investmentTermYears": 5
     },
     {
@@ -3679,8 +3677,7 @@
         "Value-Add",
         "Global"
       ],
-      "firstCloseDate": "2019-03-01",
-      "finalCloseDate": "2019-12-15",
+      "investmentTermStartDate": "2019-12-15",
       "investmentTermYears": 4
     },
     {
@@ -3690,8 +3687,7 @@
         "Large Cap",
         "North America"
       ],
-      "firstCloseDate": "2020-01-15",
-      "finalCloseDate": "2020-09-30",
+      "investmentTermStartDate": "2020-09-30",
       "investmentTermYears": 5
     },
     {
@@ -3701,8 +3697,7 @@
         "Mid Cap",
         "North America"
       ],
-      "firstCloseDate": "2020-06-01",
-      "finalCloseDate": "2021-03-15",
+      "investmentTermStartDate": "2021-03-15",
       "investmentTermYears": 5
     },
     {
@@ -3712,8 +3707,7 @@
         "Technology",
         "Early Stage"
       ],
-      "firstCloseDate": "2021-01-15",
-      "finalCloseDate": "2021-09-01",
+      "investmentTermStartDate": "2021-09-01",
       "investmentTermYears": 5
     },
     {
@@ -3723,8 +3717,7 @@
         "Core-Plus",
         "Global"
       ],
-      "firstCloseDate": "2020-03-01",
-      "finalCloseDate": "2021-01-15",
+      "investmentTermStartDate": "2021-01-15",
       "investmentTermYears": 6
     },
     {
@@ -3734,8 +3727,7 @@
         "Mid Cap",
         "Europe"
       ],
-      "firstCloseDate": "2021-06-01",
-      "finalCloseDate": "2022-03-15",
+      "investmentTermStartDate": "2022-03-15",
       "investmentTermYears": 5
     },
     {
@@ -3745,8 +3737,7 @@
         "Large Cap",
         "Europe"
       ],
-      "firstCloseDate": "2020-09-01",
-      "finalCloseDate": "2021-06-30",
+      "investmentTermStartDate": "2021-06-30",
       "investmentTermYears": 5
     },
     {
@@ -3756,8 +3747,7 @@
         "Technology",
         "Global"
       ],
-      "firstCloseDate": "2021-03-15",
-      "finalCloseDate": "2022-01-01",
+      "investmentTermStartDate": "2022-01-01",
       "investmentTermYears": 5
     },
     {
@@ -3767,8 +3757,7 @@
         "Large Cap",
         "North America"
       ],
-      "firstCloseDate": "2021-09-01",
-      "finalCloseDate": "2022-06-15",
+      "investmentTermStartDate": "2022-06-15",
       "investmentTermYears": 5
     },
     {
@@ -3778,8 +3767,7 @@
         "Growth Equity",
         "North America"
       ],
-      "firstCloseDate": "2020-12-01",
-      "finalCloseDate": "2021-09-15",
+      "investmentTermStartDate": "2021-09-15",
       "investmentTermYears": 5
     },
     {
@@ -3789,8 +3777,7 @@
         "Core",
         "Global"
       ],
-      "firstCloseDate": "2019-06-01",
-      "finalCloseDate": "2020-06-30",
+      "investmentTermStartDate": "2020-06-30",
       "investmentTermYears": 4
     },
     {
@@ -3800,8 +3787,7 @@
         "Technology",
         "Global"
       ],
-      "firstCloseDate": "2022-01-15",
-      "finalCloseDate": "2022-12-01",
+      "investmentTermStartDate": "2022-12-01",
       "investmentTermYears": 5
     },
     {
@@ -3811,8 +3797,7 @@
         "Technology",
         "North America"
       ],
-      "firstCloseDate": "2021-06-15",
-      "finalCloseDate": "2022-04-01",
+      "investmentTermStartDate": "2022-04-01",
       "investmentTermYears": 5
     },
     {
@@ -3822,8 +3807,7 @@
         "Value-Add",
         "North America"
       ],
-      "firstCloseDate": "2022-03-01",
-      "finalCloseDate": "2023-01-15",
+      "investmentTermStartDate": "2023-01-15",
       "investmentTermYears": 6
     },
     {
@@ -3833,8 +3817,7 @@
         "Mid Cap",
         "Europe"
       ],
-      "firstCloseDate": "2022-06-01",
-      "finalCloseDate": "2023-03-15",
+      "investmentTermStartDate": "2023-03-15",
       "investmentTermYears": 5
     },
     {
@@ -3844,8 +3827,7 @@
         "Opportunistic",
         "North America"
       ],
-      "firstCloseDate": "2021-12-01",
-      "finalCloseDate": "2022-09-30",
+      "investmentTermStartDate": "2022-09-30",
       "investmentTermYears": 4
     },
     {
@@ -3855,8 +3837,7 @@
         "Technology",
         "Asia"
       ],
-      "firstCloseDate": "2022-09-01",
-      "finalCloseDate": "2023-06-15",
+      "investmentTermStartDate": "2023-06-15",
       "investmentTermYears": 5
     },
     {
@@ -3866,8 +3847,7 @@
         "Core",
         "Asia-Pacific"
       ],
-      "firstCloseDate": "2020-06-01",
-      "finalCloseDate": "2021-03-30",
+      "investmentTermStartDate": "2021-03-30",
       "investmentTermYears": 4
     },
     {
@@ -3877,8 +3857,7 @@
         "Multi-Sector",
         "Asia"
       ],
-      "firstCloseDate": "2023-01-15",
-      "finalCloseDate": "2023-12-01",
+      "investmentTermStartDate": "2023-12-01",
       "investmentTermYears": 5
     },
     {
@@ -3888,8 +3867,7 @@
         "Mid Cap",
         "Latin America"
       ],
-      "firstCloseDate": "2022-12-01",
-      "finalCloseDate": "2023-09-15",
+      "investmentTermStartDate": "2023-09-15",
       "investmentTermYears": 5
     },
     {
@@ -3899,8 +3877,7 @@
         "Mid Cap",
         "Latin America"
       ],
-      "firstCloseDate": "2023-03-01",
-      "finalCloseDate": "2024-01-15",
+      "investmentTermStartDate": "2024-01-15",
       "investmentTermYears": 5
     },
     {
@@ -3910,8 +3887,7 @@
         "Diversified",
         "Global"
       ],
-      "firstCloseDate": "2021-09-15",
-      "finalCloseDate": "2022-06-30",
+      "investmentTermStartDate": "2022-06-30",
       "investmentTermYears": 4
     },
     {
@@ -3921,8 +3897,7 @@
         "Diversified",
         "Global"
       ],
-      "firstCloseDate": "2022-01-15",
-      "finalCloseDate": "2022-09-30",
+      "investmentTermStartDate": "2022-09-30",
       "investmentTermYears": 4
     },
     {
@@ -3932,8 +3907,7 @@
         "Growth",
         "Europe"
       ],
-      "firstCloseDate": "2021-03-01",
-      "finalCloseDate": "2021-12-15",
+      "investmentTermStartDate": "2021-12-15",
       "investmentTermYears": 5
     },
     {
@@ -3943,8 +3917,7 @@
         "Technology",
         "North America"
       ],
-      "firstCloseDate": "2023-06-01",
-      "finalCloseDate": "2024-03-15",
+      "investmentTermStartDate": "2024-03-15",
       "investmentTermYears": 5
     },
     {
@@ -3954,8 +3927,7 @@
         "Industrial",
         "Europe"
       ],
-      "firstCloseDate": "2020-09-01",
-      "finalCloseDate": "2021-06-30",
+      "investmentTermStartDate": "2021-06-30",
       "investmentTermYears": 4
     },
     {
@@ -3965,8 +3937,7 @@
         "Large Cap",
         "Europe"
       ],
-      "firstCloseDate": "2023-09-01",
-      "finalCloseDate": "2024-06-15",
+      "investmentTermStartDate": "2024-06-15",
       "investmentTermYears": 5
     },
     {
@@ -3976,8 +3947,7 @@
         "Large Cap",
         "North America"
       ],
-      "firstCloseDate": "2022-06-01",
-      "finalCloseDate": "2023-03-30",
+      "investmentTermStartDate": "2023-03-30",
       "investmentTermYears": 5
     }
   ],

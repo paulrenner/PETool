@@ -160,6 +160,11 @@ export function getOutstandingCommitment(fund, cutoffDate) {
             if (cf.type === 'Contribution') {
                 const amount = parseCurrency(cf.amount) || 0;
                 outstanding -= Math.abs(amount);
+            } else if (cf.type === 'Adjustment') {
+                // Adjustments directly modify outstanding commitment
+                // Positive = increase remaining, Negative = decrease remaining
+                const amount = parseCurrency(cf.amount) || 0;
+                outstanding += amount;
             }
         });
 
@@ -175,6 +180,7 @@ export function getOutstandingCommitment(fund, cutoffDate) {
 export function parseCashFlowsForIRR(fund, cutoffDate) {
     const flows = (fund.cashFlows || [])
         .filter(cf => isValidDate(cf.date) && (!cutoffDate || new Date(cf.date) <= cutoffDate))
+        .filter(cf => cf.type !== 'Adjustment') // Adjustments don't affect IRR/MOIC
         .map(cf => {
             const amount = parseCurrency(cf.amount) || 0;
             return {
