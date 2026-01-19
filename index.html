@@ -8211,6 +8211,10 @@
             }
         }
 
+            // Expose functions needed by inline onclick handlers in dynamic HTML
+            window.showAddFundModal = showAddFundModal;
+            window.resetFilters = resetFilters;
+
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', init);
             } else {
