@@ -1984,6 +1984,7 @@
         let currentGroupDescendants = null;
         let sortColumn = null;
         let sortDirection = 'asc';
+        let isResizingColumn = false;
         let currentActionFundId = null;
         let currentDetailsFundId = null;
         let hasUnsavedChanges = false;
@@ -5581,9 +5582,11 @@
 
                     resizer.addEventListener('mousedown', (e) => {
                         e.stopPropagation(); // Prevent sort trigger
+                        e.preventDefault(); // Prevent text selection
                         startX = e.pageX;
                         startWidth = th.offsetWidth;
 
+                        isResizingColumn = true;
                         th.classList.add('resizing');
                         document.body.style.cursor = 'col-resize';
                         document.body.style.userSelect = 'none';
@@ -5615,6 +5618,8 @@
                             document.removeEventListener('mousemove', onMouseMove);
                             document.removeEventListener('mouseup', onMouseUp);
                             document.removeEventListener('blur', onMouseUp); // Clean up blur listener
+                            // Reset flag after a short delay so click handler can check it
+                            setTimeout(() => { isResizingColumn = false; }, 50);
                         };
 
                         const cleanup = () => {
@@ -5770,6 +5775,8 @@
             // Table header sorting - use event delegation
             const thead = document.querySelector('#fundsTable thead');
             thead.addEventListener('click', (e) => {
+                // Skip sorting if we just finished resizing a column
+                if (isResizingColumn) return;
                 const th = e.target.closest('th[data-sort]');
                 if (th) {
                     const sortColumn = th.getAttribute('data-sort');
