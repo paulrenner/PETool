@@ -5577,13 +5577,13 @@
                         : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
                     footnoteHtml += `<p style="margin: 0;">${footnoteText}</p>`;
                 } else if (hasEstimatedData && !yearRange.firstProjectedYear) {
-                    footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing final close date (spread over 4 years). <a href="#" onclick="showManageFundsModal(); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
+                    footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing final close date (spread over 4 years). <a href="#" onclick="showManageFundsModal({ expandFundTerms: true }); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
                 } else if (yearRange.firstProjectedYear && hasEstimatedData) {
                     const footnoteText = cutoffDate
                         ? `* Projected values (after ${cutoffDateValue}) based on remaining uncalled capital distributed linearly across investment period`
                         : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
                     footnoteHtml += `<p style="margin: 0 0 4px 0;">${footnoteText}</p>`;
-                    footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing final close date (spread over 4 years). <a href="#" onclick="showManageFundsModal(); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
+                    footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing final close date (spread over 4 years). <a href="#" onclick="showManageFundsModal({ expandFundTerms: true }); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
                 }
                 footnoteHtml += '</div>';
                 html += footnoteHtml;
@@ -6972,10 +6972,17 @@
             }
         }
 
-        async function showManageFundsModal() {
+        async function showManageFundsModal(options = {}) {
             try {
                 await loadFundNamesList();
                 await populateFundNamesDropdown();
+
+                // Expand fund terms section if requested (e.g., from timeline "Add fund terms" link)
+                const fundTermsDetails = document.getElementById('newFundTermsDetails');
+                if (fundTermsDetails) {
+                    fundTermsDetails.open = !!options.expandFundTerms;
+                }
+
                 document.getElementById('manageFundNamesModal').classList.add('show');
             } catch (err) {
                 showStatus('Error opening manage funds modal: ' + err.message, 'error');
