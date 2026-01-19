@@ -6682,13 +6682,19 @@
                     groups = await getAllGroups();
                 }
 
-                // Import fund names (now with tags)
+                // Import fund names (now with tags and fund terms)
                 if (data.fundNames && Array.isArray(data.fundNames)) {
                     for (const fundNameItem of data.fundNames) {
-                        // Support both old format (string) and new format (object with tags)
+                        // Support both old format (string) and new format (object with tags/terms)
                         const fundNameObj = typeof fundNameItem === 'string'
                             ? { name: fundNameItem, tags: [] }
-                            : { name: fundNameItem.name, tags: fundNameItem.tags || [] };
+                            : {
+                                name: fundNameItem.name,
+                                tags: fundNameItem.tags || [],
+                                firstCloseDate: fundNameItem.firstCloseDate || null,
+                                finalCloseDate: fundNameItem.finalCloseDate || null,
+                                investmentTermYears: fundNameItem.investmentTermYears || null
+                            };
 
                         await saveFundName(fundNameObj);
                         fundNames.add(fundNameObj.name);
