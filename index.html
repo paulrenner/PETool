@@ -3291,6 +3291,16 @@
             setUnsavedChanges(value) {
                 this.hasUnsavedChanges = value;
                 hasUnsavedChanges = value; // Sync legacy alias
+            },
+
+            setFundNames(names) {
+                this.fundNames = names;
+                fundNames = names; // Sync legacy alias
+            },
+
+            setFundNameData(data) {
+                this.fundNameData = data;
+                fundNameData = data; // Sync legacy alias
             }
         };
 
@@ -4468,7 +4478,7 @@
         async function renderTable() {
             try {
                 const funds = await getAllFunds();
-                currentFunds = funds;
+                AppState.setFunds(funds);
 
                 // Apply filters
                 let filtered = applyCurrentFilters(funds);
@@ -6398,7 +6408,7 @@
 
                 if (confirm(`Delete this NAV entry?\n${dateText}: ${amountText}`)) {
                     row.remove();
-                    hasUnsavedChanges = true;
+                    AppState.setUnsavedChanges(true);
                 }
             }
         }
@@ -6530,8 +6540,8 @@
         async function loadFundNamesList() {
             try {
                 const fundNameObjects = await getAllFundNameObjects();
-                fundNames = new Set(fundNameObjects.map(obj => obj.name));
-                fundNameData = new Map(fundNameObjects.map(obj => [obj.name, obj]));
+                AppState.setFundNames(new Set(fundNameObjects.map(obj => obj.name)));
+                AppState.setFundNameData(new Map(fundNameObjects.map(obj => [obj.name, obj])));
 
                 const container = document.getElementById('fundNamesList');
                 container.innerHTML = '';
@@ -7106,7 +7116,7 @@
             try {
                 const names = await getAllFundNames();
                 Debug.log('Fund names from database:', names);
-                fundNames = new Set(names);
+                AppState.setFundNames(new Set(names));
 
                 select.innerHTML = '<option value="">Select a fund</option>';
                 names.forEach(name => {
@@ -7412,7 +7422,7 @@
             const detailsModal = document.getElementById('detailsModal');
             if (detailsModal && detailsModal.classList.contains('show')) {
                 if (detailsModal.contains(event.target)) {
-                    hasUnsavedChanges = true;
+                    AppState.setUnsavedChanges(true);
                 }
             }
         });
@@ -8216,8 +8226,8 @@
 
                 // Load fund name objects (with tags)
                 const fundNameObjects = await getAllFundNameObjects();
-                fundNames = new Set(fundNameObjects.map(obj => obj.name));
-                fundNameData = new Map(fundNameObjects.map(obj => [obj.name, obj]));
+                AppState.setFundNames(new Set(fundNameObjects.map(obj => obj.name)));
+                AppState.setFundNameData(new Map(fundNameObjects.map(obj => [obj.name, obj])));
 
                 // Load groups
                 AppState.setGroups(await getAllGroups());
