@@ -2070,9 +2070,7 @@
                 <div class="filter-loading-spinner" aria-hidden="true"></div>
                 <span>Filtering...</span>
             </div>
-            <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
-                <button class="btn-icon" id="undoBtn" title="Undo last action" aria-label="Undo last action" style="font-size: 20px;" disabled>↶</button>
-                <button class="btn-icon" id="redoBtn" title="Redo last undone action" aria-label="Redo last undone action" style="font-size: 20px;" disabled>↷</button>
+            <div style="margin-left: auto;">
                 <button class="btn-icon" id="toggleSidebarBtn" title="Settings and Actions" aria-label="Open settings sidebar" style="font-size: 20px;">☰</button>
             </div>
         </div>
@@ -2477,12 +2475,6 @@
                 <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>E</kbd></div>
                 <div class="shortcut-desc">Export to JSON</div>
 
-                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>Z</kbd></div>
-                <div class="shortcut-desc">Undo last action</div>
-
-                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></div>
-                <div class="shortcut-desc">Redo last action</div>
-
                 <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>S</kbd></div>
                 <div class="shortcut-desc">Save (in details modal)</div>
 
@@ -2591,7 +2583,6 @@
          * - Fund portfolio management with cash flows and NAV tracking
          * - IRR and MOIC calculations using Newton-Raphson method
          * - Hierarchical account grouping with cycle detection
-         * - Undo/redo functionality with persistent history
          * - CSV/JSON import/export with formula injection protection
          * - Mobile-responsive design with accessibility features
          * - Performance optimizations: metrics caching, debouncing, race condition handling
@@ -2600,7 +2591,7 @@
          *
          * Architecture:
          * - State Management: Centralized AppState object with caching
-         * - Database: IndexedDB with 4 stores (funds, fundNames, groups, undoHistory)
+         * - Database: IndexedDB with 3 stores (funds, fundNames, groups)
          * - UI: Event-driven with delegation patterns and keyboard shortcuts
          * - Performance: Debounced filters, cached metrics, abort controllers for cancellation
          *
@@ -2625,8 +2616,7 @@
             FUNDS_STORE: 'funds',
             FUNDNAMES_STORE: 'fundNames',
             GROUPS_STORE: 'groups',
-            UNDO_STORE: 'undoHistory',
-            DB_VERSION: 8, // Bumped for migration support
+            DB_VERSION: 8,
 
             // Currency formatting
             CURRENCY_FORMAT: 'en-US',
@@ -2676,10 +2666,6 @@
             STORAGE_SHOW_TAGS: 'showTags',
             STORAGE_BACKUP_WARNING: 'backupWarningShown',
             STORAGE_LAST_BACKUP: 'lastBackupDate',
-
-            // Undo
-            MAX_UNDO_HISTORY: 50,
-            UNDO_RETENTION_DAYS: 7,
 
             // Backup reminder
             BACKUP_REMINDER_DAYS: 30
@@ -3233,10 +3219,6 @@
             metricsCache: new Map(), // fundId -> { metrics, timestamp }
             filterCache: null,
 
-            // Undo/Redo
-            undoStack: [],
-            redoStack: [],
-
             // Performance
             abortController: null, // For canceling in-flight requests
 
@@ -3364,16 +3346,6 @@
                         });
                         groupsStore.createIndex('parentGroupId', 'parentGroupId', { unique: false });
                         groupsStore.createIndex('name', 'name', { unique: false });
-                    }
-
-                    // Undo history store
-                    if (!db.objectStoreNames.contains(CONFIG.UNDO_STORE)) {
-                        const undoStore = db.createObjectStore(CONFIG.UNDO_STORE, {
-                            keyPath: 'id',
-                            autoIncrement: true
-                        });
-                        undoStore.createIndex('timestamp', 'timestamp', { unique: false });
-                        undoStore.createIndex('type', 'type', { unique: false });
                     }
 
                     // Log migration info
@@ -3519,47 +3491,6 @@
                 return this.transaction(storeName, 'readwrite', store => store.delete(key));
             }
         };
-
-        // ===========================
-        // Entity Actions for Undo/Redo
-        // ===========================
-
-        /**
-         * Entity action handlers for undo/redo operations
-         * Maps entity types to their CRUD operations
-         */
-        const EntityActions = {
-            fund: {
-                create: async (data) => saveFundToDB(data),
-                update: async (data) => saveFundToDB(data),
-                delete: async (data) => deleteFundFromDB(data.id)
-            },
-            group: {
-                create: async (data) => saveGroup(data),
-                update: async (data) => saveGroup(data),
-                delete: async (data) => deleteGroup(data.id)
-            },
-            fundName: {
-                create: async (data) => saveFundName(data),
-                update: async (data) => saveFundName(data),
-                delete: async (data) => deleteFundName(data.name)
-            }
-        };
-
-        /**
-         * Execute an entity action
-         * @param {string} entity - Entity type ('fund', 'group', 'fundName')
-         * @param {string} actionType - Action type ('create', 'update', 'delete')
-         * @param {Object} data - Data for the action
-         * @returns {Promise}
-         */
-        async function executeEntityAction(entity, actionType, data) {
-            const handler = EntityActions[entity]?.[actionType];
-            if (!handler) {
-                throw new Error(`Unknown entity action: ${entity}.${actionType}`);
-            }
-            return handler(data);
-        }
 
         function saveFundToDB(fundData) {
             return new Promise((resolve, reject) => {
@@ -3863,163 +3794,6 @@
             }
 
             return false;
-        }
-
-        // ===========================
-        // Undo/Redo Operations
-        // ===========================
-
-        /**
-         * Save an action to undo history
-         * @param {string} type - Action type (create, update, delete)
-         * @param {string} entity - Entity type (fund, group, fundName)
-         * @param {Object} before - State before action
-         * @param {Object} after - State after action
-         */
-        async function saveUndoAction(type, entity, before, after) {
-            try {
-                const undoAction = {
-                    type,
-                    entity,
-                    before,
-                    after,
-                    timestamp: new Date().toISOString()
-                };
-
-                const transaction = db.transaction([CONFIG.UNDO_STORE], 'readwrite');
-                const store = transaction.objectStore(CONFIG.UNDO_STORE);
-                await store.add(undoAction);
-
-                // Limit undo history
-                const allActions = await getUndoHistory();
-                if (allActions.length > CONFIG.MAX_UNDO_HISTORY) {
-                    const toDelete = allActions.slice(0, allActions.length - CONFIG.MAX_UNDO_HISTORY);
-                    for (const action of toDelete) {
-                        await store.delete(action.id);
-                    }
-                }
-
-                // Clear redo stack when new action is performed
-                AppState.redoStack = [];
-
-                // Update undo button state
-                updateUndoRedoButtons();
-            } catch (err) {
-                Debug.error('Error saving undo action:', err);
-            }
-        }
-
-        /**
-         * Get undo history
-         */
-        function getUndoHistory() {
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([CONFIG.UNDO_STORE], 'readonly');
-                const store = transaction.objectStore(CONFIG.UNDO_STORE);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        /**
-         * Undo last action - uses EntityActions for cleaner code
-         */
-        async function undoLastAction() {
-            const history = await getUndoHistory();
-            if (history.length === 0) {
-                showStatus('Nothing to undo', 'warning');
-                return;
-            }
-
-            const lastAction = history[history.length - 1];
-
-            try {
-                // Determine the reverse action and data
-                // For undo: delete->create(before), create->delete(after), update->update(before)
-                const reverseActionMap = {
-                    'delete': { action: 'create', data: lastAction.before },
-                    'create': { action: 'delete', data: lastAction.after },
-                    'update': { action: 'update', data: lastAction.before }
-                };
-
-                const reverse = reverseActionMap[lastAction.type];
-                await executeEntityAction(lastAction.entity, reverse.action, reverse.data);
-
-                // Move action to redo stack
-                AppState.redoStack.push(lastAction);
-
-                // Remove from undo history
-                await DB.delete(CONFIG.UNDO_STORE, lastAction.id);
-
-                await renderTable();
-                showStatus('Action undone', 'success');
-                updateUndoRedoButtons();
-            } catch (err) {
-                showStatus('Error undoing action: ' + err.message, 'error');
-                Debug.error('Undo failed:', err);
-            }
-        }
-
-        /**
-         * Redo last undone action - uses EntityActions for cleaner code
-         */
-        async function redoLastAction() {
-            if (AppState.redoStack.length === 0) {
-                showStatus('Nothing to redo', 'warning');
-                return;
-            }
-
-            const action = AppState.redoStack.pop();
-
-            try {
-                // Determine the action and data to reapply
-                // For redo: delete->delete(after), create->create(after), update->update(after)
-                const redoActionMap = {
-                    'delete': { actionType: 'delete', data: action.after },
-                    'create': { actionType: 'create', data: action.after },
-                    'update': { actionType: 'update', data: action.after }
-                };
-
-                const redo = redoActionMap[action.type];
-                await executeEntityAction(action.entity, redo.actionType, redo.data);
-
-                // Add back to undo history directly (not via saveUndoAction to preserve action structure)
-                const undoEntry = {
-                    type: action.type,
-                    entity: action.entity,
-                    before: action.before,
-                    after: action.after,
-                    timestamp: Date.now()
-                };
-                await DB.add(CONFIG.UNDO_STORE, undoEntry);
-
-                await renderTable();
-                showStatus('Action redone', 'success');
-                updateUndoRedoButtons();
-            } catch (err) {
-                showStatus('Error redoing action: ' + err.message, 'error');
-                Debug.error('Redo failed:', err);
-            }
-        }
-
-        /**
-         * Update undo/redo button states
-         */
-        async function updateUndoRedoButtons() {
-            const undoBtn = document.getElementById('undoBtn');
-            const redoBtn = document.getElementById('redoBtn');
-
-            if (undoBtn) {
-                const history = await getUndoHistory();
-                undoBtn.disabled = history.length === 0;
-                undoBtn.title = history.length > 0 ? `Undo (${history.length} actions available)` : 'Nothing to undo';
-            }
-
-            if (redoBtn) {
-                redoBtn.disabled = AppState.redoStack.length === 0;
-                redoBtn.title = AppState.redoStack.length > 0 ? `Redo (${AppState.redoStack.length} actions available)` : 'Nothing to redo';
-            }
         }
 
         // ===========================
@@ -6255,21 +6029,11 @@
                 saveBtn.textContent = 'Saving...';
                 saveBtn.disabled = true;
 
-                // Save undo history for updates
-                let beforeState = null;
                 if (fundId) {
                     fundData.id = parseInt(fundId);
-                    beforeState = await getFundById(parseInt(fundId));
                 }
 
-                const savedId = await saveFundToDB(fundData);
-
-                // Save undo action
-                if (fundId) {
-                    await saveUndoAction('update', 'fund', beforeState, fundData);
-                } else {
-                    await saveUndoAction('create', 'fund', null, { ...fundData, id: savedId });
-                }
+                await saveFundToDB(fundData);
 
                 // Save fund name if new
                 if (!fundNames.has(fundName)) {
@@ -6404,9 +6168,6 @@
                 }
 
                 if (confirm(`Are you sure you want to delete "${fund.fundName} - ${fund.accountNumber}"?`)) {
-                    // Save undo action before deleting
-                    await saveUndoAction('delete', 'fund', fund, null);
-
                     await deleteFundFromDB(currentActionFundId);
 
                     // Clear metrics cache
@@ -6414,7 +6175,7 @@
 
                     closeActionModal();
                     await renderTable();
-                    showStatus('Fund deleted successfully (Undo available)', 'success');
+                    showStatus('Fund deleted successfully', 'success');
                 }
             } catch (err) {
                 showStatus('Error deleting fund: ' + err.message, 'error');
@@ -6816,9 +6577,6 @@
                 };
                 await saveFundName(fundNameObj);
 
-                // Save undo action
-                await saveUndoAction('create', 'fundName', null, fundNameObj);
-
                 fundNames.add(name);
                 fundNameData.set(name, fundNameObj);
 
@@ -6974,9 +6732,6 @@
                     await deleteFundName(oldName);
                     await saveFundName(newFundNameObj);
 
-                    // Save undo action (store the rename operation)
-                    await saveUndoAction('update', 'fundName', oldFundNameObj, newFundNameObj);
-
                     fundNames.delete(oldName);
                     fundNames.add(newName);
                     fundNameData.delete(oldName);
@@ -6990,9 +6745,6 @@
                 } else {
                     // Just update tags
                     await saveFundName(newFundNameObj);
-
-                    // Save undo action
-                    await saveUndoAction('update', 'fundName', oldFundNameObj, newFundNameObj);
 
                     fundNameData.set(newName, newFundNameObj);
                     await renderTable();
@@ -7015,16 +6767,11 @@
             }
 
             try {
-                const fundNameObj = fundNameData.get(name);
-
-                // Save undo action before deleting
-                await saveUndoAction('delete', 'fundName', fundNameObj, null);
-
                 await deleteFundName(name);
                 fundNames.delete(name);
                 fundNameData.delete(name);
                 await loadFundNamesList();
-                showStatus('Fund name deleted successfully (Undo available)', 'success');
+                showStatus('Fund name deleted successfully', 'success');
             } catch (err) {
                 showStatus('Error deleting fund name: ' + err.message, 'error');
             }
@@ -7173,21 +6920,11 @@
                     type: type || null
                 };
 
-                // Save undo history for updates
-                let beforeState = null;
                 if (editId) {
                     groupData.id = parseInt(editId);
-                    beforeState = await getGroupById(parseInt(editId));
                 }
 
-                const savedId = await saveGroup(groupData);
-
-                // Save undo action
-                if (editId) {
-                    await saveUndoAction('update', 'group', beforeState, groupData);
-                } else {
-                    await saveUndoAction('create', 'group', null, { ...groupData, id: savedId });
-                }
+                await saveGroup(groupData);
 
                 // Clear group descendants cache since hierarchy changed
                 AppState.groupDescendantsCache.clear();
@@ -7271,9 +7008,6 @@
             }
 
             try {
-                // Save undo action before deleting
-                await saveUndoAction('delete', 'group', group, null);
-
                 await deleteGroup(id);
 
                 // Clear cache
@@ -7282,7 +7016,7 @@
                 await loadGroupsList();
                 await populateGroupParentDropdown();
                 await renderTable();
-                showStatus('Group deleted successfully (Undo available)', 'success');
+                showStatus('Group deleted successfully', 'success');
             } catch (err) {
                 showStatus('Error deleting group: ' + err.message, 'error');
             }
@@ -7688,20 +7422,6 @@
                 if (detailsModal && detailsModal.classList.contains('show')) {
                     saveDetailsChanges();
                 }
-                return;
-            }
-
-            // Ctrl/Cmd+Z: Undo
-            if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
-                event.preventDefault();
-                undoLastAction();
-                return;
-            }
-
-            // Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y: Redo
-            if ((event.ctrlKey || event.metaKey) && ((event.key === 'z' && event.shiftKey) || event.key === 'y')) {
-                event.preventDefault();
-                redoLastAction();
                 return;
             }
 
@@ -8263,8 +7983,6 @@
                 document.getElementById('searchInput').addEventListener('input', applyFiltersDebounced);
                 document.getElementById('cutoffDate').addEventListener('change', applyFilters);
                 document.getElementById('timelineHeader').addEventListener('click', toggleTimelinePanel);
-                document.getElementById('undoBtn').addEventListener('click', undoLastAction);
-                document.getElementById('redoBtn').addEventListener('click', redoLastAction);
                 document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
             },
 
@@ -8472,9 +8190,6 @@
 
                 // Initialize event listeners
                 initializeEventListeners();
-
-                // Update undo/redo button states
-                await updateUndoRedoButtons();
 
                 setControlsEnabled(true);
 
