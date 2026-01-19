@@ -4477,9 +4477,6 @@
                 // Each dropdown shows only options compatible with other selected filters
                 updateFilterDropdowns(funds);
 
-                // Update vintage filter
-                updateVintageFilter(funds);
-
                 // Update active filters indicator
                 updateActiveFiltersIndicator();
 
@@ -4692,10 +4689,12 @@
             const groupFilter = document.getElementById('groupFilter');
             const fundFilter = document.getElementById('fundFilter');
             const accountFilter = document.getElementById('accountFilter');
+            const vintageFilter = document.getElementById('vintageFilter');
 
             const currentGroupValue = groupFilter.value;
             const currentFundValue = fundFilter.value;
             const currentAccountValue = accountFilter.value;
+            const currentVintageValue = vintageFilter.value;
 
             // Helper function to filter funds by group
             const filterByGroup = (funds, groupId) => {
@@ -4712,14 +4711,23 @@
                 });
             };
 
-            // 1. Update FUND dropdown (filter by group and account)
-            // Group filter always takes priority - fund dropdown only shows funds from selected group
+            // Helper function to filter funds by vintage
+            const filterByVintage = (funds, vintage) => {
+                if (!vintage) return funds;
+                const vintageYear = parseInt(vintage);
+                return funds.filter(fund => getVintageYear(fund) === vintageYear);
+            };
+
+            // 1. Update FUND dropdown (filter by group, account, and vintage)
             let fundsForFundDropdown = allFunds;
             if (currentGroupValue) {
                 fundsForFundDropdown = filterByGroup(fundsForFundDropdown, currentGroupValue);
             }
             if (currentAccountValue) {
                 fundsForFundDropdown = fundsForFundDropdown.filter(f => f.accountNumber === currentAccountValue);
+            }
+            if (currentVintageValue) {
+                fundsForFundDropdown = filterByVintage(fundsForFundDropdown, currentVintageValue);
             }
             const uniqueFunds = [...new Set(fundsForFundDropdown.map(f => f.fundName))].sort();
             fundFilter.innerHTML = '<option value="">All Funds</option>';
@@ -4735,13 +4743,16 @@
                 fundFilter.value = '';
             }
 
-            // 2. Update ACCOUNT dropdown (filter by group and fund)
+            // 2. Update ACCOUNT dropdown (filter by group, fund, and vintage)
             let fundsForAccountDropdown = allFunds;
             if (currentGroupValue) {
                 fundsForAccountDropdown = filterByGroup(fundsForAccountDropdown, currentGroupValue);
             }
             if (currentFundValue) {
                 fundsForAccountDropdown = fundsForAccountDropdown.filter(f => f.fundName === currentFundValue);
+            }
+            if (currentVintageValue) {
+                fundsForAccountDropdown = filterByVintage(fundsForAccountDropdown, currentVintageValue);
             }
             const uniqueAccounts = [...new Set(fundsForAccountDropdown.map(f => f.accountNumber))].sort();
             accountFilter.innerHTML = '<option value="">All Accounts</option>';
@@ -4767,15 +4778,18 @@
                 if (currentGroupValue) {
                     addGroupOptionsToSelect(groupFilter, tree, 0);
                     groupFilter.value = currentGroupValue;
-                } else if (currentFundValue || currentAccountValue) {
-                    // Only filter groups when NO group is selected but fund/account IS selected
-                    // This helps users see which groups contain the selected fund/account
+                } else if (currentFundValue || currentAccountValue || currentVintageValue) {
+                    // Only filter groups when NO group is selected but fund/account/vintage IS selected
+                    // This helps users see which groups contain the selected fund/account/vintage
                     let fundsForGroupDropdown = allFunds;
                     if (currentFundValue) {
                         fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.fundName === currentFundValue);
                     }
                     if (currentAccountValue) {
                         fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.accountNumber === currentAccountValue);
+                    }
+                    if (currentVintageValue) {
+                        fundsForGroupDropdown = filterByVintage(fundsForGroupDropdown, currentVintageValue);
                     }
 
                     // Collect all group IDs including ancestors
@@ -4793,6 +4807,44 @@
                     // No filters active - show all groups
                     addGroupOptionsToSelect(groupFilter, tree, 0);
                 }
+            }
+
+            // 4. Update VINTAGE dropdown (filter by group, fund, and account)
+            let fundsForVintageDropdown = allFunds;
+            if (currentGroupValue) {
+                fundsForVintageDropdown = filterByGroup(fundsForVintageDropdown, currentGroupValue);
+            }
+            if (currentFundValue) {
+                fundsForVintageDropdown = fundsForVintageDropdown.filter(f => f.fundName === currentFundValue);
+            }
+            if (currentAccountValue) {
+                fundsForVintageDropdown = fundsForVintageDropdown.filter(f => f.accountNumber === currentAccountValue);
+            }
+
+            // Get unique vintage years from filtered funds
+            const vintages = new Set();
+            fundsForVintageDropdown.forEach(fund => {
+                const vintage = getVintageYear(fund);
+                if (vintage) {
+                    vintages.add(vintage);
+                }
+            });
+            const sortedVintages = Array.from(vintages).sort((a, b) => b - a);
+
+            vintageFilter.innerHTML = '<option value="">All Vintages</option>';
+            sortedVintages.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                vintageFilter.appendChild(option);
+            });
+
+            // Restore selection if still valid
+            if (currentVintageValue && sortedVintages.includes(parseInt(currentVintageValue))) {
+                vintageFilter.value = currentVintageValue;
+            } else if (currentVintageValue) {
+                // Selection no longer valid, clear it
+                vintageFilter.value = '';
             }
         }
 
@@ -5527,40 +5579,6 @@
             if (savedDarkMode) {
                 document.documentElement.setAttribute('data-theme', 'dark');
                 document.getElementById('sidebarDarkModeCheckbox').checked = true;
-            }
-        }
-
-        /**
-         * Update vintage year filter dropdown
-         * @param {Array} funds - All funds
-         */
-        function updateVintageFilter(funds) {
-            const vintageFilter = document.getElementById('vintageFilter');
-            const currentValue = vintageFilter.value;
-
-            // Get unique vintage years
-            const vintages = new Set();
-            funds.forEach(fund => {
-                const vintage = getVintageYear(fund);
-                if (vintage) {
-                    vintages.add(vintage);
-                }
-            });
-
-            // Sort vintages in descending order
-            const sortedVintages = Array.from(vintages).sort((a, b) => b - a);
-
-            vintageFilter.innerHTML = '<option value="">All Vintages</option>';
-            sortedVintages.forEach(year => {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                vintageFilter.appendChild(option);
-            });
-
-            // Restore selection if still valid
-            if (currentValue && sortedVintages.includes(parseInt(currentValue))) {
-                vintageFilter.value = currentValue;
             }
         }
 
