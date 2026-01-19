@@ -3054,7 +3054,9 @@
             fundNames: new Set(),
             fundNameData: new Map(),
             groups: [],
+            groupsMap: new Map(), // O(1) lookup map: groupId -> group
             groupDescendantsCache: new Map(), // groupId -> array of descendant IDs
+            ancestorCache: new Map(), // groupId -> array of ancestor IDs (memoization)
 
             // UI state
             currentGroupDescendants: null,
@@ -3108,6 +3110,33 @@
             setGroups(groupList) {
                 this.groups = groupList;
                 groups = groupList; // Sync legacy alias
+                // Update O(1) lookup map
+                this.groupsMap.clear();
+                groupList.forEach(g => this.groupsMap.set(g.id, g));
+                // Clear ancestor cache since groups changed
+                this.ancestorCache.clear();
+            },
+
+            // O(1) group lookup by ID (synchronous)
+            getGroupByIdSync(groupId) {
+                return this.groupsMap.get(groupId);
+            },
+
+            // Get ancestor group IDs with memoization
+            getAncestorIds(groupId) {
+                if (this.ancestorCache.has(groupId)) {
+                    return this.ancestorCache.get(groupId);
+                }
+                const ancestors = [];
+                let currentId = groupId;
+                while (currentId != null) {
+                    const group = this.groupsMap.get(currentId);
+                    if (!group) break;
+                    ancestors.push(group.id);
+                    currentId = group.parentId;
+                }
+                this.ancestorCache.set(groupId, ancestors);
+                return ancestors;
             },
 
             setUnsavedChanges(value) {
@@ -4805,25 +4834,15 @@
             }
         }
 
-        // Helper function to get all ancestor group IDs for a given group ID
+        // Helper function to get all ancestor group IDs (uses memoized AppState version)
         function getAncestorGroupIds(groupId) {
-            const ancestors = [];
-            let currentId = groupId;
-
-            while (currentId != null) {
-                const group = groups.find(g => g.id === currentId);
-                if (!group) break;
-                ancestors.push(group.id);
-                currentId = group.parentId;
-            }
-
-            return ancestors;
+            return AppState.getAncestorIds(groupId);
         }
 
-        // Helper function to get immediate parent group name for a fund
+        // Helper function to get immediate parent group name for a fund (O(1) lookup)
         function getImmediateParentName(fund) {
             if (!fund.groupId) return '';
-            const group = groups.find(g => g.id === fund.groupId);
+            const group = AppState.getGroupByIdSync(fund.groupId);
             return group ? group.name : '';
         }
 
@@ -4957,7 +4976,7 @@
 
             if (groupFilterValue) {
                 const groupId = parseInt(groupFilterValue);
-                const group = groups.find(g => g.id === groupId);
+                const group = AppState.getGroupByIdSync(groupId);
 
                 if (group) {
                     // Set main title to group name
@@ -4965,7 +4984,7 @@
 
                     // Set subtitle to parent group name if exists, otherwise hide subtitle for top-level groups
                     if (group.parentGroupId) {
-                        const parentGroup = groups.find(g => g.id === group.parentGroupId);
+                        const parentGroup = AppState.getGroupByIdSync(group.parentGroupId);
                         if (parentGroup) {
                             headerSubtitle.textContent = parentGroup.name;
                         } else {
@@ -6887,7 +6906,7 @@
         }
 
         async function editGroup(id) {
-            const group = groups.find(g => g.id === id);
+            const group = AppState.getGroupByIdSync(id);
             if (!group) return;
 
             // Set edit ID first
@@ -6924,7 +6943,7 @@
         }
 
         async function removeGroup(id) {
-            const group = groups.find(g => g.id === id);
+            const group = AppState.getGroupByIdSync(id);
             if (!group) return;
 
             // Check if group has children
