@@ -2064,10 +2064,7 @@
                 <label for="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date">Cutoff Date</label>
                 <input type="date" id="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date" aria-label="Cutoff date for calculating metrics">
             </div>
-            <div class="control-group" style="position: relative;">
-                <button class="btn-icon" id="resetFiltersBtn" title="Reset Filters" aria-label="Reset all filters" style="font-size: 20px; margin-top: auto;">↻</button>
-                <span id="activeFiltersIndicator" class="filter-badge" style="display: none;" aria-live="polite"></span>
-            </div>
+            <span id="activeFiltersIndicator" class="filter-badge" style="display: none;" aria-live="polite"></span>
             <!-- Filter loading indicator -->
             <div id="filterLoading" class="filter-loading" aria-live="polite">
                 <div class="filter-loading-spinner" aria-hidden="true"></div>
@@ -5255,7 +5252,15 @@
             if (indicator) {
                 if (filterCount > 0) {
                     indicator.style.display = 'inline-flex';
-                    indicator.innerHTML = `${filterCount} filter${filterCount > 1 ? 's' : ''} <button class="clear-filters" onclick="resetFilters(); event.stopPropagation();" title="Clear all filters" aria-label="Clear all filters">&times;</button>`;
+                    indicator.innerHTML = `${filterCount} filter${filterCount > 1 ? 's' : ''} <button class="clear-filters" title="Clear all filters" aria-label="Clear all filters">&times;</button>`;
+                    // Attach event listener to the clear button
+                    const clearBtn = indicator.querySelector('.clear-filters');
+                    if (clearBtn) {
+                        clearBtn.onclick = function(e) {
+                            e.stopPropagation();
+                            resetFilters();
+                        };
+                    }
                 } else {
                     indicator.style.display = 'none';
                     indicator.innerHTML = '';
@@ -8257,7 +8262,6 @@
                 document.getElementById('vintageFilter').addEventListener('change', applyFilters);
                 document.getElementById('searchInput').addEventListener('input', applyFiltersDebounced);
                 document.getElementById('cutoffDate').addEventListener('change', applyFilters);
-                document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
                 document.getElementById('timelineHeader').addEventListener('click', toggleTimelinePanel);
                 document.getElementById('undoBtn').addEventListener('click', undoLastAction);
                 document.getElementById('redoBtn').addEventListener('click', redoLastAction);
