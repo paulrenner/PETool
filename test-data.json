@@ -3655,7 +3655,10 @@
         "Technology",
         "Early Stage",
         "North America"
-      ]
+      ],
+      "firstCloseDate": "2019-09-15",
+      "finalCloseDate": "2020-03-01",
+      "investmentTermYears": 5
     },
     {
       "name": "Andreessen Horowitz Fund VII",
@@ -3664,7 +3667,10 @@
         "Technology",
         "Growth",
         "North America"
-      ]
+      ],
+      "firstCloseDate": "2019-06-01",
+      "finalCloseDate": "2020-01-15",
+      "investmentTermYears": 5
     },
     {
       "name": "Blackstone Real Estate Partners X",
@@ -3672,7 +3678,10 @@
         "Real Estate",
         "Value-Add",
         "Global"
-      ]
+      ],
+      "firstCloseDate": "2019-03-01",
+      "finalCloseDate": "2019-12-15",
+      "investmentTermYears": 4
     },
     {
       "name": "KKR Americas Fund XIII",
@@ -3680,7 +3689,10 @@
         "Buyout",
         "Large Cap",
         "North America"
-      ]
+      ],
+      "firstCloseDate": "2020-01-15",
+      "finalCloseDate": "2020-09-30",
+      "investmentTermYears": 5
     },
     {
       "name": "Carlyle Partners VIII",
@@ -3688,7 +3700,10 @@
         "Buyout",
         "Mid Cap",
         "North America"
-      ]
+      ],
+      "firstCloseDate": "2020-06-01",
+      "finalCloseDate": "2021-03-15",
+      "investmentTermYears": 5
     },
     {
       "name": "Lightspeed Venture Partners XV",
@@ -3696,7 +3711,10 @@
         "Venture Capital",
         "Technology",
         "Early Stage"
-      ]
+      ],
+      "firstCloseDate": "2021-01-15",
+      "finalCloseDate": "2021-09-01",
+      "investmentTermYears": 5
     },
     {
       "name": "Brookfield Infrastructure Fund V",
@@ -3704,7 +3722,10 @@
         "Infrastructure",
         "Core-Plus",
         "Global"
-      ]
+      ],
+      "firstCloseDate": "2020-03-01",
+      "finalCloseDate": "2021-01-15",
+      "investmentTermYears": 6
     },
     {
       "name": "EQT X",
@@ -3712,7 +3733,10 @@
         "Buyout",
         "Mid Cap",
         "Europe"
-      ]
+      ],
+      "firstCloseDate": "2021-06-01",
+      "finalCloseDate": "2022-03-15",
+      "investmentTermYears": 5
     },
     {
       "name": "Permira VIII",
@@ -3720,7 +3744,10 @@
         "Buyout",
         "Large Cap",
         "Europe"
-      ]
+      ],
+      "firstCloseDate": "2020-09-01",
+      "finalCloseDate": "2021-06-30",
+      "investmentTermYears": 5
     },
     {
       "name": "Warburg Pincus Global Growth XV",
@@ -3728,7 +3755,10 @@
         "Growth Equity",
         "Technology",
         "Global"
-      ]
+      ],
+      "firstCloseDate": "2021-03-15",
+      "finalCloseDate": "2022-01-01",
+      "investmentTermYears": 5
     },
     {
       "name": "TPG Capital IX",
@@ -3736,7 +3766,10 @@
         "Buyout",
         "Large Cap",
         "North America"
-      ]
+      ],
+      "firstCloseDate": "2021-09-01",
+      "finalCloseDate": "2022-06-15",
+      "investmentTermYears": 5
     },
     {
       "name": "Silver Lake Partners VII",
@@ -3744,7 +3777,10 @@
         "Technology",
         "Growth Equity",
         "North America"
-      ]
+      ],
+      "firstCloseDate": "2020-12-01",
+      "finalCloseDate": "2021-09-15",
+      "investmentTermYears": 5
     },
     {
       "name": "Hines Global Real Estate Fund",
@@ -3752,7 +3788,10 @@
         "Real Estate",
         "Core",
         "Global"
-      ]
+      ],
+      "firstCloseDate": "2019-06-01",
+      "finalCloseDate": "2020-06-30",
+      "investmentTermYears": 4
     },
     {
       "name": "General Atlantic Partners",
@@ -3760,7 +3799,10 @@
         "Growth Equity",
         "Technology",
         "Global"
-      ]
+      ],
+      "firstCloseDate": "2022-01-15",
+      "finalCloseDate": "2022-12-01",
+      "investmentTermYears": 5
     },
     {
       "name": "Vista Equity Partners Fund VIII",
@@ -3768,7 +3810,10 @@
         "Buyout",
         "Technology",
         "North America"
-      ]
+      ],
+      "firstCloseDate": "2021-06-15",
+      "finalCloseDate": "2022-04-01",
+      "investmentTermYears": 5
     },
     {
       "name": "Macquarie Infrastructure Partners VI",
@@ -3776,7 +3821,10 @@
         "Infrastructure",
         "Value-Add",
         "North America"
-      ]
+      ],
+      "firstCloseDate": "2022-03-01",
+      "finalCloseDate": "2023-01-15",
+      "investmentTermYears": 6
     },
     {
       "name": "Apax Partners XI",
@@ -3784,7 +3832,10 @@
         "Buyout",
         "Mid Cap",
         "Europe"
-      ]
+      ],
+      "firstCloseDate": "2022-06-01",
+      "finalCloseDate": "2023-03-15",
+      "investmentTermYears": 5
     },
     {
       "name": "Greystar Real Estate Partners",
@@ -3792,7 +3843,10 @@
         "Real Estate",
         "Opportunistic",
         "North America"
-      ]
+      ],
+      "firstCloseDate": "2021-12-01",
+      "finalCloseDate": "2022-09-30",
+      "investmentTermYears": 4
     },
     {
       "name": "Hillhouse Capital Fund VI",
@@ -3800,7 +3854,10 @@
         "Growth Equity",
         "Technology",
         "Asia"
-      ]
+      ],
+      "firstCloseDate": "2022-09-01",
+      "finalCloseDate": "2023-06-15",
+      "investmentTermYears": 5
     },
     {
       "name": "GIC Real Estate Partners",
@@ -3808,7 +3865,10 @@
         "Real Estate",
         "Core",
         "Asia-Pacific"
-      ]
+      ],
+      "firstCloseDate": "2020-06-01",
+      "finalCloseDate": "2021-03-30",
+      "investmentTermYears": 4
     },
     {
       "name": "Temasek Holdings Growth Fund",
@@ -3816,7 +3876,10 @@
         "Growth Equity",
         "Multi-Sector",
         "Asia"
-      ]
+      ],
+      "firstCloseDate": "2023-01-15",
+      "finalCloseDate": "2023-12-01",
+      "investmentTermYears": 5
     },
     {
       "name": "Advent International GPE X",
@@ -3824,7 +3887,10 @@
         "Buyout",
         "Mid Cap",
         "Latin America"
-      ]
+      ],
+      "firstCloseDate": "2022-12-01",
+      "finalCloseDate": "2023-09-15",
+      "investmentTermYears": 5
     },
     {
       "name": "Patria Investments Fund VI",
@@ -3832,7 +3898,10 @@
         "Buyout",
         "Mid Cap",
         "Latin America"
-      ]
+      ],
+      "firstCloseDate": "2023-03-01",
+      "finalCloseDate": "2024-01-15",
+      "investmentTermYears": 5
     },
     {
       "name": "Coller Capital VIII",
@@ -3840,7 +3909,10 @@
         "Secondaries",
         "Diversified",
         "Global"
-      ]
+      ],
+      "firstCloseDate": "2021-09-15",
+      "finalCloseDate": "2022-06-30",
+      "investmentTermYears": 4
     },
     {
       "name": "Lexington Capital Partners X",
@@ -3848,7 +3920,10 @@
         "Secondaries",
         "Diversified",
         "Global"
-      ]
+      ],
+      "firstCloseDate": "2022-01-15",
+      "finalCloseDate": "2022-09-30",
+      "investmentTermYears": 4
     },
     {
       "name": "Index Ventures Growth VI",
@@ -3856,7 +3931,10 @@
         "Venture Capital",
         "Growth",
         "Europe"
-      ]
+      ],
+      "firstCloseDate": "2021-03-01",
+      "finalCloseDate": "2021-12-15",
+      "investmentTermYears": 5
     },
     {
       "name": "Accel Partners XVII",
@@ -3864,7 +3942,10 @@
         "Venture Capital",
         "Technology",
         "North America"
-      ]
+      ],
+      "firstCloseDate": "2023-06-01",
+      "finalCloseDate": "2024-03-15",
+      "investmentTermYears": 5
     },
     {
       "name": "Prologis European Logistics Fund",
@@ -3872,7 +3953,10 @@
         "Real Estate",
         "Industrial",
         "Europe"
-      ]
+      ],
+      "firstCloseDate": "2020-09-01",
+      "finalCloseDate": "2021-06-30",
+      "investmentTermYears": 4
     },
     {
       "name": "CVC Capital Partners IX",
@@ -3880,7 +3964,10 @@
         "Buyout",
         "Large Cap",
         "Europe"
-      ]
+      ],
+      "firstCloseDate": "2023-09-01",
+      "finalCloseDate": "2024-06-15",
+      "investmentTermYears": 5
     },
     {
       "name": "Bain Capital Fund XIV",
@@ -3888,7 +3975,10 @@
         "Buyout",
         "Large Cap",
         "North America"
-      ]
+      ],
+      "firstCloseDate": "2022-06-01",
+      "finalCloseDate": "2023-03-30",
+      "investmentTermYears": 5
     }
   ],
   "groups": [
