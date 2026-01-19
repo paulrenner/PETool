@@ -5017,22 +5017,6 @@
         }
 
         function resetFilters() {
-            // Check if there are active filters
-            const hasActiveFilters =
-                document.getElementById('fundFilter').value ||
-                document.getElementById('accountFilter').value ||
-                document.getElementById('groupFilter').value ||
-                document.getElementById('searchInput').value ||
-                document.getElementById('vintageFilter').value ||
-                sortColumns.length > 0;
-
-            // Confirm reset if there are active filters
-            if (hasActiveFilters) {
-                if (!confirm('Are you sure you want to reset all filters and sort settings?')) {
-                    return;
-                }
-            }
-
             document.getElementById('fundFilter').value = '';
             document.getElementById('accountFilter').value = '';
             document.getElementById('groupFilter').value = '';
