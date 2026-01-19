@@ -375,16 +375,18 @@
         th .resizer {
             position: absolute;
             top: 0;
-            right: 0;
-            width: 5px;
+            right: -8px;
+            width: 16px;
             height: 100%;
             cursor: col-resize;
             user-select: none;
-            z-index: 1;
+            z-index: 10;
         }
 
         th .resizer:hover {
             background-color: var(--color-action);
+            width: 4px;
+            right: 0;
         }
 
         th.resizing {
