@@ -6047,6 +6047,10 @@
                 // Clear metrics cache since data changed
                 AppState.clearMetricsCache();
 
+                // Reset button state before closing modal
+                saveBtn.textContent = 'Save';
+                saveBtn.disabled = false;
+
                 closeFundModal();
                 await renderTable();
                 showStatus(fundId ? 'Fund updated successfully' : 'Fund added successfully');
