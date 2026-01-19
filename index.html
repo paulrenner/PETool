@@ -3755,8 +3755,9 @@
                 // Update O(1) lookup map
                 this.groupsMap.clear();
                 groupList.forEach(g => this.groupsMap.set(g.id, g));
-                // Clear ancestor cache since groups changed
+                // Clear caches since groups changed
                 this.ancestorCache.clear();
+                this.groupDescendantsCache.clear();
             },
 
             // O(1) group lookup by ID (synchronous)
@@ -3779,6 +3780,30 @@
                 }
                 this.ancestorCache.set(groupId, ancestors);
                 return ancestors;
+            },
+
+            // Get descendant group IDs with memoization (synchronous)
+            getDescendantIds(groupId) {
+                if (this.groupDescendantsCache.has(groupId)) {
+                    return this.groupDescendantsCache.get(groupId);
+                }
+                const descendants = [groupId];
+                // Find all groups that have this groupId as ancestor
+                for (const [id, group] of this.groupsMap) {
+                    if (group.parentGroupId === groupId) {
+                        // Recursively get descendants of this child
+                        const childDescendants = this.getDescendantIds(id);
+                        descendants.push(...childDescendants.slice(1)); // Skip first (the child itself is already in childDescendants)
+                        descendants.push(id);
+                    }
+                }
+                this.groupDescendantsCache.set(groupId, descendants);
+                return descendants;
+            },
+
+            // Clear descendant cache (call when groups change)
+            clearDescendantCache() {
+                this.groupDescendantsCache.clear();
             },
 
             setUnsavedChanges(value) {
