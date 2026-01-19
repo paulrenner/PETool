@@ -1,0 +1,65 @@
+JSON Import Schema for PE Fund Manager
+The JSON file should have this top-level structure:
+
+{
+  "funds": [...],
+  "fundNames": [...],
+  "groups": [...]
+}
+
+1. funds (array of fund objects) - Required
+Each fund object:
+
+Field	Type	Required	Description
+fundName	string	Yes	Name of the fund (2-100 chars)
+accountNumber	string	Yes	Account/investment identifier
+commitment	number	Yes	Total commitment amount (non-negative)
+cashFlows	array	No	Array of cash flow objects
+monthlyNav	array	No	Array of NAV objects
+groupId	number	No	ID of group this fund belongs to
+2. cashFlows (array of cash flow objects)
+Field	Type	Required	Values
+date	string	Yes	"YYYY-MM-DD" format
+amount	number	Yes	Positive number
+type	string	Yes	"Contribution", "Distribution", or "Adjustment"
+3. monthlyNav (array of NAV objects)
+Field	Type	Required	Description
+date	string	Yes	"YYYY-MM-DD" format
+amount	number	Yes	NAV value at that date
+4. fundNames (array) - Optional
+Can be simple strings or objects with metadata:
+
+"fundNames": [
+  { "name": "Fund A", "tags": ["Growth", "2024"], "investmentTermStartDate": "2024-01-15", "investmentTermYears": 5 },
+  { "name": "Fund B", "tags": [] }
+]
+
+5. groups (array) - Optional
+For organizing funds into folders/groups:
+
+Field	Type	Description
+id	number	Unique group ID (for referencing in parentGroupId and fund groupId)
+name	string	Group name
+parentGroupId	number/null	Parent group ID for nesting, or null for top-level
+Example JSON
+{
+  "funds": [
+    {
+      "fundName": "Acme Growth Fund III",
+      "accountNumber": "ACC-001",
+      "commitment": 1000000,
+      "cashFlows": [
+        { "date": "2023-03-15", "amount": 250000, "type": "Contribution" },
+        { "date": "2023-09-30", "amount": 100000, "type": "Contribution" },
+        { "date": "2024-06-15", "amount": 50000, "type": "Distribution" }
+      ],
+      "monthlyNav": [
+        { "date": "2023-03-31", "amount": 245000 },
+        { "date": "2023-12-31", "amount": 380000 }
+      ]
+    }
+  ],
+  "fundNames": [
+    { "name": "Acme Growth Fund III", "tags": ["Growth", "Venture"] }
+  ]
+}
