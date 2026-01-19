@@ -209,6 +209,18 @@
             border-top-color: #4A5568;
         }
 
+        [data-theme="dark"] .multi-select-option.group-top-level {
+            background: #374151;
+        }
+
+        [data-theme="dark"] .multi-select-option.group-separator {
+            border-top-color: #4A5568;
+        }
+
+        [data-theme="dark"] .multi-select-option.group-child {
+            border-left-color: #63B3ED;
+        }
+
         /* Portfolio Summary Stats */
         .portfolio-summary {
             display: flex;
@@ -839,6 +851,30 @@
 
         .multi-select-option.group-option {
             padding-left: calc(12px + var(--indent-level, 0) * 16px);
+        }
+
+        /* Top-level group styling */
+        .multi-select-option.group-top-level {
+            background: var(--color-alt-bg);
+            font-weight: 600;
+        }
+
+        .multi-select-option.group-top-level label {
+            font-weight: 600;
+        }
+
+        /* Separator between top-level groups */
+        .multi-select-option.group-separator {
+            margin-top: 6px;
+            border-top: 1px solid var(--color-border);
+            padding-top: 10px;
+        }
+
+        /* Left border accent for child items */
+        .multi-select-option.group-child {
+            border-left: 3px solid var(--color-primary-light, #85c1e9);
+            margin-left: 8px;
+            padding-left: calc(12px + var(--indent-level, 0) * 16px - 11px);
         }
 
         .multi-select-actions {
@@ -3501,12 +3537,30 @@
             const dropdown = container.querySelector('.multi-select-dropdown');
             if (!dropdown) return;
 
+            let seenTopLevelGroup = false;
             dropdown.innerHTML = options.map(opt => {
                 const isSelected = preserveValues.includes(opt.value);
                 const indentStyle = opt.indent ? `style="--indent-level: ${opt.indent}"` : '';
-                const groupClass = opt.indent ? ' group-option' : '';
+
+                // Build CSS classes based on hierarchy level
+                let classes = ['multi-select-option'];
+                if (opt.indent !== undefined) {
+                    if (opt.indent === 0) {
+                        // Top-level group
+                        classes.push('group-top-level');
+                        if (seenTopLevelGroup) {
+                            classes.push('group-separator');
+                        }
+                        seenTopLevelGroup = true;
+                    } else {
+                        // Child group
+                        classes.push('group-option', 'group-child');
+                    }
+                }
+                if (isSelected) classes.push('selected');
+
                 return `
-                    <div class="multi-select-option${groupClass}${isSelected ? ' selected' : ''}"
+                    <div class="${classes.join(' ')}"
                          data-value="${escapeHtml(opt.value)}"
                          role="option"
                          aria-selected="${isSelected}"
