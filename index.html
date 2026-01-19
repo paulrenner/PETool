@@ -5521,7 +5521,7 @@
                 const container = document.getElementById('timelineTableContainer');
                 // Check if we need to render (empty or placeholder content)
                 if (!container.querySelector('.timeline-table')) {
-                    renderTimelineTable(currentFunds.filter(fund => applyCurrentFilters(fund)));
+                    renderTimelineTable(applyCurrentFilters(currentFunds));
                 }
             }
 
