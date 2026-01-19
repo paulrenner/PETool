@@ -7165,6 +7165,19 @@
         }
 
         function getEditFundTags() {
+            // Add any pending text in the input field as a tag before collecting
+            const input = document.getElementById('editFundTagsInput');
+            const pendingTag = input.value.trim();
+            if (pendingTag) {
+                // Check if this tag doesn't already exist
+                const existingTags = Array.from(document.getElementById('editFundTagsContainer').querySelectorAll('.tag'))
+                    .map(tag => tag.getAttribute('data-tag').toLowerCase());
+                if (!existingTags.includes(pendingTag.toLowerCase())) {
+                    addEditFundTag(pendingTag);
+                }
+                input.value = '';
+            }
+
             const container = document.getElementById('editFundTagsContainer');
             const tagElements = container.querySelectorAll('.tag');
             return Array.from(tagElements).map(tag => tag.getAttribute('data-tag'));
