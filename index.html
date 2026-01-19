@@ -2663,6 +2663,16 @@
                     <input type="file" id="sidebarImportFile" accept=".json" style="display: none;">
                 </div>
             </div>
+
+            <!-- Temporary Section -->
+            <div class="sidebar-section">
+                <h4 class="sidebar-section-title">Temporary</h4>
+                <div class="sidebar-item">
+                    <a href="#" id="sidebarLoadSampleData">
+                        Load Sample Data
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -8392,6 +8402,158 @@
             }
         }
 
+        async function loadSampleData() {
+            if (!confirm('This will add sample data to your database. Existing data will not be deleted. Continue?')) {
+                return;
+            }
+
+            showLoading('Loading sample data...');
+
+            try {
+                // Sample groups
+                const sampleGroups = [
+                    { name: 'Buyout Funds', parentGroupId: null, description: 'Large-cap buyout strategies' },
+                    { name: 'Venture Capital', parentGroupId: null, description: 'Early and growth stage investments' },
+                    { name: 'Real Estate', parentGroupId: null, description: 'Property and REIT investments' }
+                ];
+
+                // Save groups and track IDs
+                const groupIdMap = {};
+                for (const group of sampleGroups) {
+                    const newId = await saveGroup(group);
+                    groupIdMap[group.name] = newId;
+                }
+                AppState.setGroups(await getAllGroups());
+
+                // Sample fund names with tags
+                const sampleFundNames = [
+                    { name: 'Apex Capital Partners', tags: ['Buyout', 'North America'], investmentTermStartDate: '2020-06-15', investmentTermYears: 10 },
+                    { name: 'Summit Growth Fund', tags: ['Growth', 'Technology'], investmentTermStartDate: '2021-03-01', investmentTermYears: 10 },
+                    { name: 'Horizon Ventures', tags: ['Venture', 'Early Stage'], investmentTermStartDate: '2022-01-10', investmentTermYears: 12 },
+                    { name: 'Metro Real Estate Partners', tags: ['Real Estate', 'Commercial'], investmentTermStartDate: '2019-09-01', investmentTermYears: 8 },
+                    { name: 'Blue Ocean Capital', tags: ['Buyout', 'Europe'], investmentTermStartDate: '2021-07-20', investmentTermYears: 10 }
+                ];
+
+                for (const fundNameObj of sampleFundNames) {
+                    await saveFundName(fundNameObj);
+                    fundNames.add(fundNameObj.name);
+                    fundNameData.set(fundNameObj.name, fundNameObj);
+                }
+
+                // Sample funds with cash flows and NAVs
+                const sampleFunds = [
+                    {
+                        fundName: 'Apex Capital Partners',
+                        accountNumber: 'APEX-001',
+                        groupId: groupIdMap['Buyout Funds'],
+                        commitment: 5000000,
+                        cashFlows: [
+                            { date: '2020-07-01', amount: -1250000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2020-12-15', amount: -1000000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2021-06-30', amount: -750000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2022-03-15', amount: -500000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2023-01-20', amount: 800000, type: 'Distribution', affectsCommitment: true },
+                            { date: '2023-09-10', amount: 1200000, type: 'Distribution', affectsCommitment: true }
+                        ],
+                        monthlyNav: [
+                            { date: '2021-12-31', amount: 3200000 },
+                            { date: '2022-12-31', amount: 3800000 },
+                            { date: '2023-12-31', amount: 4500000 }
+                        ],
+                        timestamp: new Date().toISOString()
+                    },
+                    {
+                        fundName: 'Summit Growth Fund',
+                        accountNumber: 'SGF-2021-A',
+                        groupId: groupIdMap['Buyout Funds'],
+                        commitment: 2500000,
+                        cashFlows: [
+                            { date: '2021-04-01', amount: -625000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2021-10-01', amount: -500000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2022-04-01', amount: -375000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2023-06-15', amount: 450000, type: 'Distribution', affectsCommitment: true }
+                        ],
+                        monthlyNav: [
+                            { date: '2022-12-31', amount: 1650000 },
+                            { date: '2023-12-31', amount: 2100000 }
+                        ],
+                        timestamp: new Date().toISOString()
+                    },
+                    {
+                        fundName: 'Horizon Ventures',
+                        accountNumber: 'HV-III-LP',
+                        groupId: groupIdMap['Venture Capital'],
+                        commitment: 1000000,
+                        cashFlows: [
+                            { date: '2022-02-15', amount: -300000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2022-08-01', amount: -200000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2023-02-01', amount: -150000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2023-11-01', amount: -100000, type: 'Contribution', affectsCommitment: true }
+                        ],
+                        monthlyNav: [
+                            { date: '2022-12-31', amount: 520000 },
+                            { date: '2023-12-31', amount: 890000 }
+                        ],
+                        timestamp: new Date().toISOString()
+                    },
+                    {
+                        fundName: 'Metro Real Estate Partners',
+                        accountNumber: 'MREP-IV',
+                        groupId: groupIdMap['Real Estate'],
+                        commitment: 3000000,
+                        cashFlows: [
+                            { date: '2019-10-01', amount: -900000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2020-04-01', amount: -600000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2020-10-01', amount: -450000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2021-04-01', amount: -300000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2022-06-01', amount: 500000, type: 'Distribution', affectsCommitment: true },
+                            { date: '2023-06-01', amount: 750000, type: 'Distribution', affectsCommitment: true },
+                            { date: '2023-12-01', amount: 400000, type: 'Distribution', affectsCommitment: true }
+                        ],
+                        monthlyNav: [
+                            { date: '2020-12-31', amount: 1850000 },
+                            { date: '2021-12-31', amount: 2200000 },
+                            { date: '2022-12-31', amount: 2450000 },
+                            { date: '2023-12-31', amount: 2100000 }
+                        ],
+                        timestamp: new Date().toISOString()
+                    },
+                    {
+                        fundName: 'Blue Ocean Capital',
+                        accountNumber: 'BOC-EUR-II',
+                        groupId: groupIdMap['Buyout Funds'],
+                        commitment: 4000000,
+                        cashFlows: [
+                            { date: '2021-08-15', amount: -1000000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2022-02-15', amount: -800000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2022-08-15', amount: -600000, type: 'Contribution', affectsCommitment: true },
+                            { date: '2023-02-15', amount: -400000, type: 'Contribution', affectsCommitment: true }
+                        ],
+                        monthlyNav: [
+                            { date: '2022-12-31', amount: 2600000 },
+                            { date: '2023-12-31', amount: 3200000 }
+                        ],
+                        timestamp: new Date().toISOString()
+                    }
+                ];
+
+                // Import funds
+                let imported = 0;
+                for (const fund of sampleFunds) {
+                    await saveFundToDB(fund);
+                    imported++;
+                }
+
+                await renderTable();
+                showStatus(`Successfully loaded ${imported} sample fund(s), ${sampleGroups.length} group(s), and ${sampleFundNames.length} fund name(s)`);
+            } catch (err) {
+                showStatus('Error loading sample data: ' + err.message, 'error');
+                Debug.error('Error loading sample data:', err);
+            } finally {
+                hideLoading();
+            }
+        }
+
         // ===========================
         // Column Resizing
         // ===========================
@@ -8731,7 +8893,8 @@
                     'sidebarManageGroups': showManageGroupsModal,
                     'sidebarExportCSV': exportToCSV,
                     'sidebarExportJSON': exportDatabase,
-                    'sidebarExportPDF': exportToPDF
+                    'sidebarExportPDF': exportToPDF,
+                    'sidebarLoadSampleData': loadSampleData
                 };
                 Object.entries(menuItems).forEach(([id, handler]) => {
                     document.getElementById(id).addEventListener('click', (e) => {
