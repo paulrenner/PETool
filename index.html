@@ -1860,6 +1860,11 @@
                 size: landscape;
                 margin: 0.5in;
             }
+
+            /* Hide minimized timeline in print view */
+            #timelinePanel:not(.expanded) {
+                display: none !important;
+            }
         }
 
         /* Sidebar Styles */
