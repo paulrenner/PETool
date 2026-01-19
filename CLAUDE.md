@@ -54,6 +54,21 @@ npm test
 - Tests are in `__tests__/` directory
 - Testable logic is extracted to `src/` modules (calculations, validation, formatting)
 
+### Critical: Duplicated Logic in `src/` and `index.html`
+
+**Warning**: The `src/` modules contain logic that is **duplicated** from `index.html` for unit testing purposes. These are NOT shared—they are separate copies of the same functions.
+
+When modifying calculation, validation, or formatting logic, you **must update both places**:
+1. `index.html` - the actual application code
+2. `src/*.js` - the testable copy used by Jest
+
+Functions that exist in both places include:
+- `src/calculations.js`: `calculateIRR`, `calculateMOIC`, `getOutstandingCommitment`, `parseCashFlowsForIRR`, `getTotalByType`, `getLatestNav`, `getVintageYear`, `calculateMetrics`
+- `src/validation.js`: `isValidDate`, `validateFundData`, `validateCashFlow`, `validateNav`
+- `src/formatting.js`: `formatCurrency`, `formatDate`, `parseCurrency`, `escapeHtml`, `escapeCSV`
+
+**Always check both files when making changes to shared logic.**
+
 ## Common Tasks
 
 ### Adding a new feature
@@ -61,10 +76,12 @@ npm test
 2. Add UI elements directly in the HTML
 3. Add CSS in the `<style>` section
 4. Add JavaScript in the main `<script>` section
-5. Run tests to ensure nothing is broken
+5. **If adding/modifying calculation, validation, or formatting logic**: Update both `index.html` AND the corresponding `src/*.js` file
+6. Run tests to ensure nothing is broken
 
 ### Fixing a bug
 1. Identify the root cause
 2. Check if AppState setters are being used correctly
 3. Check for proper `await` on async calls
-4. Test the fix manually and run `npm test`
+4. **If fixing calculation, validation, or formatting logic**: Update both `index.html` AND the corresponding `src/*.js` file
+5. Test the fix manually and run `npm test`
