@@ -1300,6 +1300,19 @@
             border-bottom: none;
         }
 
+        /* Preview tables don't have summary rows */
+        table.no-summary-row tbody tr:last-child {
+            border-top: none;
+            border-bottom: 1px solid var(--color-border);
+            font-weight: normal;
+            background: transparent;
+        }
+
+        [data-theme="dark"] table.no-summary-row tbody tr:last-child {
+            border-color: var(--color-border);
+            background: transparent;
+        }
+
         td.number {
             text-align: right;
             font-variant-numeric: tabular-nums;
@@ -8454,7 +8467,7 @@
                 // Build preview HTML
                 let previewHtml = `
                     <p style="margin-bottom: 10px; color: var(--color-text);"><strong>${matchingFunds.length}</strong> investor position(s) will be permanently removed:</p>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
+                    <table class="no-summary-row" style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
                         <thead>
                             <tr style="border-bottom: 1px solid var(--color-border);">
                                 <th style="text-align: left; padding: 5px;">Account</th>
@@ -8627,7 +8640,7 @@
                 // Build preview HTML
                 let previewHtml = `
                     <p style="margin-bottom: 10px; color: var(--color-text);"><strong>${matchingFunds.length}</strong> investment(s) will be assigned to <strong>${escapeHtml(targetGroupName)}</strong>:</p>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
+                    <table class="no-summary-row" style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
                         <thead>
                             <tr style="border-bottom: 1px solid var(--color-border);">
                                 <th style="text-align: left; padding: 5px;">Fund Name</th>
