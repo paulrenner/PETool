@@ -2886,6 +2886,42 @@
         </div>
     </div>
 
+    <!-- Bulk Assign Group Modal -->
+    <div id="bulkAssignGroupModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" id="closeBulkAssignGroupModalBtn">&times;</span>
+            <h2>Bulk Assign Group</h2>
+            <p style="color: var(--color-text-light); margin-bottom: 20px; font-size: 14px;">
+                Assign all investments with a specific account number to a group.
+            </p>
+
+            <div class="form-group">
+                <label for="bulkAssignGroupAccount">Account Number *</label>
+                <select id="bulkAssignGroupAccount" required>
+                    <option value="">Select an account</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="bulkAssignGroupTarget">Target Group *</label>
+                <select id="bulkAssignGroupTarget" required>
+                    <option value="">No Group</option>
+                </select>
+            </div>
+
+            <div id="bulkAssignGroupPreview" style="display: none; margin: 20px 0; padding: 15px; background: var(--color-alt-bg); border-radius: var(--radius-sm); max-height: 300px; overflow-y: auto;">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px;">The following investments will be updated:</h4>
+                <div id="bulkAssignGroupPreviewContent"></div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" id="previewBulkAssignGroupBtn">Preview</button>
+                <button type="button" class="btn-primary" id="applyBulkAssignGroupBtn" disabled>Apply</button>
+                <button type="button" class="btn-secondary" id="cancelBulkAssignGroupBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar Panel -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div id="sidebar" class="sidebar">
@@ -2932,6 +2968,11 @@
                 <div class="sidebar-item">
                     <a href="#" id="sidebarBulkCashFlow">
                         Bulk Cash Flow
+                    </a>
+                </div>
+                <div class="sidebar-item">
+                    <a href="#" id="sidebarBulkAssignGroup">
+                        Bulk Assign Group
                     </a>
                 </div>
             </div>
@@ -8560,6 +8601,180 @@
 
         // ==================== End Bulk Remove Fund Functions ====================
 
+        // ==================== Bulk Assign Group Functions ====================
+
+        async function showBulkAssignGroupModal() {
+            try {
+                // Populate account number dropdown
+                const accountSelect = document.getElementById('bulkAssignGroupAccount');
+                const allFunds = await getAllFunds();
+                const uniqueAccounts = [...new Set(allFunds.map(f => f.accountNumber))].sort();
+
+                accountSelect.innerHTML = '<option value="">Select an account</option>';
+                uniqueAccounts.forEach(account => {
+                    const option = document.createElement('option');
+                    option.value = account;
+                    option.textContent = account;
+                    accountSelect.appendChild(option);
+                });
+
+                // Populate group dropdown
+                const groupSelect = document.getElementById('bulkAssignGroupTarget');
+                AppState.setGroups(await getAllGroups());
+
+                groupSelect.innerHTML = '<option value="">No Group</option>';
+                const tree = buildGroupsTree(groups, null);
+                addGroupOptionsToSelect(groupSelect, tree, 0);
+
+                // Hide preview and disable apply button
+                document.getElementById('bulkAssignGroupPreview').style.display = 'none';
+                document.getElementById('applyBulkAssignGroupBtn').disabled = true;
+
+                document.getElementById('bulkAssignGroupModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error opening bulk assign group modal: ' + err.message, 'error');
+                Debug.error('Error in showBulkAssignGroupModal:', err);
+            }
+        }
+
+        function closeBulkAssignGroupModal() {
+            document.getElementById('bulkAssignGroupModal').classList.remove('show');
+        }
+
+        async function previewBulkAssignGroup() {
+            const accountNumber = document.getElementById('bulkAssignGroupAccount').value;
+            const targetGroupId = document.getElementById('bulkAssignGroupTarget').value;
+
+            if (!accountNumber) {
+                showStatus('Please select an account number', 'error');
+                return;
+            }
+
+            try {
+                // Get all funds with this account number
+                const allFunds = await getAllFunds();
+                const matchingFunds = allFunds.filter(f => f.accountNumber === accountNumber);
+
+                if (matchingFunds.length === 0) {
+                    showStatus(`No investments found for account "${accountNumber}"`, 'error');
+                    return;
+                }
+
+                // Get target group name
+                const targetGroupName = targetGroupId
+                    ? (AppState.getGroupByIdSync(parseInt(targetGroupId))?.name || 'Unknown Group')
+                    : 'No Group';
+
+                // Store fund IDs for update
+                const fundIds = matchingFunds.map(f => f.id);
+                document.getElementById('bulkAssignGroupModal').dataset.fundIds = JSON.stringify(fundIds);
+
+                // Build preview HTML
+                let previewHtml = `
+                    <p style="margin-bottom: 10px;"><strong>${matchingFunds.length}</strong> investment(s) will be assigned to <strong>${escapeHtml(targetGroupName)}</strong>:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--color-border);">
+                                <th style="text-align: left; padding: 5px;">Fund Name</th>
+                                <th style="text-align: left; padding: 5px;">Current Group</th>
+                                <th style="text-align: right; padding: 5px;">Commitment</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                matchingFunds.forEach(fund => {
+                    const currentGroup = fund.groupId
+                        ? (AppState.getGroupByIdSync(fund.groupId)?.name || 'Unknown')
+                        : 'No Group';
+                    previewHtml += `
+                        <tr style="border-bottom: 1px solid var(--color-border);">
+                            <td style="padding: 5px;">${escapeHtml(fund.fundName)}</td>
+                            <td style="padding: 5px;">${escapeHtml(currentGroup)}</td>
+                            <td style="text-align: right; padding: 5px;">${formatCurrency(fund.commitment)}</td>
+                        </tr>
+                    `;
+                });
+
+                previewHtml += `
+                        </tbody>
+                    </table>
+                `;
+
+                document.getElementById('bulkAssignGroupPreviewContent').innerHTML = previewHtml;
+                document.getElementById('bulkAssignGroupPreview').style.display = 'block';
+                document.getElementById('applyBulkAssignGroupBtn').disabled = false;
+
+            } catch (err) {
+                showStatus('Error generating preview: ' + err.message, 'error');
+                Debug.error('Error in previewBulkAssignGroup:', err);
+            }
+        }
+
+        async function applyBulkAssignGroup() {
+            const accountNumber = document.getElementById('bulkAssignGroupAccount').value;
+            const targetGroupId = document.getElementById('bulkAssignGroupTarget').value;
+            const fundIdsJson = document.getElementById('bulkAssignGroupModal').dataset.fundIds;
+
+            if (!fundIdsJson) {
+                showStatus('Please preview first', 'error');
+                return;
+            }
+
+            const fundIds = JSON.parse(fundIdsJson);
+            const targetGroupName = targetGroupId
+                ? (AppState.getGroupByIdSync(parseInt(targetGroupId))?.name || 'Unknown Group')
+                : 'No Group';
+
+            const confirmed = await showConfirmDialog(
+                `Are you sure you want to assign all ${fundIds.length} investment(s) for account "${accountNumber}" to "${targetGroupName}"?`,
+                {
+                    title: 'Confirm Bulk Group Assignment',
+                    confirmText: 'Assign',
+                    cancelText: 'Cancel'
+                }
+            );
+
+            if (!confirmed) return;
+
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const fundId of fundIds) {
+                    try {
+                        const fund = await getFundById(fundId);
+                        if (fund) {
+                            fund.groupId = targetGroupId ? parseInt(targetGroupId) : null;
+                            await saveFund(fund);
+                            successCount++;
+                        }
+                    } catch (err) {
+                        Debug.error('Error updating fund:', fundId, err);
+                        errorCount++;
+                    }
+                }
+
+                // Clear metrics cache and refresh the table
+                AppState.clearMetricsCache();
+                await renderTable();
+
+                closeBulkAssignGroupModal();
+
+                if (errorCount === 0) {
+                    showStatus(`Successfully assigned ${successCount} investment(s) to "${targetGroupName}"`, 'success');
+                } else {
+                    showStatus(`Assigned ${successCount} investment(s), ${errorCount} failed`, 'warning');
+                }
+
+            } catch (err) {
+                showStatus('Error assigning groups: ' + err.message, 'error');
+                Debug.error('Error in applyBulkAssignGroup:', err);
+            }
+        }
+
+        // ==================== End Bulk Assign Group Functions ====================
+
         async function populateFundNamesDropdown(valueToSet = null) {
             const select = document.getElementById('fundName');
             const currentValue = valueToSet !== null ? valueToSet : select.value;
@@ -9811,6 +10026,14 @@
                 document.getElementById('applyBulkRemoveFundBtn').addEventListener('click', applyBulkRemoveFund);
             },
 
+            /** Bulk assign group modal */
+            setupBulkAssignGroupModal() {
+                document.getElementById('closeBulkAssignGroupModalBtn').addEventListener('click', closeBulkAssignGroupModal);
+                document.getElementById('cancelBulkAssignGroupBtn').addEventListener('click', closeBulkAssignGroupModal);
+                document.getElementById('previewBulkAssignGroupBtn').addEventListener('click', previewBulkAssignGroup);
+                document.getElementById('applyBulkAssignGroupBtn').addEventListener('click', applyBulkAssignGroup);
+            },
+
             /** Details modal with cash flows and NAV tables */
             setupDetailsModal() {
                 document.getElementById('closeDetailsModalBtn').addEventListener('click', closeDetailsModal);
@@ -9869,6 +10092,7 @@
                     'sidebarManageFunds': showManageFundsModal,
                     'sidebarManageGroups': showManageGroupsModal,
                     'sidebarBulkCashFlow': showBulkCashFlowModal,
+                    'sidebarBulkAssignGroup': showBulkAssignGroupModal,
                     'sidebarExportCSV': exportToCSV,
                     'sidebarExportJSON': exportDatabase,
                     'sidebarExportPDF': exportToPDF,
@@ -9906,6 +10130,7 @@
                 this.setupGroupsModal();
                 this.setupBulkCashFlowModal();
                 this.setupBulkRemoveFundModal();
+                this.setupBulkAssignGroupModal();
                 this.setupDetailsModal();
                 this.setupBackupWarning();
                 this.setupSidebar();
