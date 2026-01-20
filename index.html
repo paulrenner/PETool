@@ -2327,7 +2327,7 @@
             </div>
             <div class="control-group">
                 <label for="searchInput">Search</label>
-                <input type="text" id="searchInput" placeholder="Search funds..." title="Search by fund name or account number" aria-label="Search funds by name or account number">
+                <input type="text" id="searchInput" placeholder="Search funds..." title="Search by fund name, account number, or tag" aria-label="Search funds by name, account number, or tag">
             </div>
             <div class="control-group">
                 <label for="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date">Cutoff Date</label>
@@ -3767,19 +3767,8 @@
                     const vintage = getVintageYear(fund);
                     return vintage && values.includes(vintage.toString());
                 }
-            },
-            {
-                id: 'searchInput',
-                isMultiSelect: false,
-                apply: (fund, value) => {
-                    if (!value) return true;
-                    const searchLower = value.toLowerCase();
-                    return (
-                        fund.fundName.toLowerCase().includes(searchLower) ||
-                        (fund.accountNumber && fund.accountNumber.toLowerCase().includes(searchLower))
-                    );
-                }
             }
+            // Note: searchInput is handled separately in applyCurrentFilters to include tag matching
         ];
 
         // ===========================
@@ -5367,12 +5356,11 @@
                     if (!matchesGroup) return false;
                 }
 
-                // Tags search (extends searchInput to include tags)
+                // Search filter: matches fund name, account number, or tags
                 if (filterValues.searchInput) {
                     const fundNameObj = fundNameData.get(fund.fundName);
                     const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
                     const fundTags = tags.map(tag => tag.toLowerCase()).join(' ');
-                    // If search already matched via FilterConfigs, pass; otherwise check tags
                     if (!fund.fundName.toLowerCase().includes(filterValues.searchInput) &&
                         !(fund.accountNumber && fund.accountNumber.toLowerCase().includes(filterValues.searchInput)) &&
                         !fundTags.includes(filterValues.searchInput)) {
