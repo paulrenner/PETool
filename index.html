@@ -8931,7 +8931,14 @@
                         }
                     }
 
-                    // Import sorted groups
+                    // Get existing groups to check for duplicates by name
+                    const existingGroups = await getAllGroups();
+                    const existingGroupsByName = {};
+                    existingGroups.forEach(g => {
+                        existingGroupsByName[g.name.toLowerCase()] = g;
+                    });
+
+                    // Import sorted groups (merge with existing if name matches)
                     for (const group of sortedGroups) {
                         const oldId = group.id;
                         const { id, ...groupData } = group;
@@ -8941,10 +8948,22 @@
                             groupData.parentGroupId = oldGroupIdToNew[groupData.parentGroupId];
                         }
 
-                        // Save group and get new ID
-                        const newId = await saveGroup(groupData);
-                        if (oldId != null && newId) {
-                            oldGroupIdToNew[oldId] = newId;
+                        // Check if group with same name already exists
+                        const existingGroup = existingGroupsByName[groupData.name.toLowerCase()];
+                        if (existingGroup) {
+                            // Use existing group's ID instead of creating duplicate
+                            if (oldId != null) {
+                                oldGroupIdToNew[oldId] = existingGroup.id;
+                            }
+                            Debug.log(`Group "${groupData.name}" already exists, using existing group ID ${existingGroup.id}`);
+                        } else {
+                            // Save new group and get new ID
+                            const newId = await saveGroup(groupData);
+                            if (oldId != null && newId) {
+                                oldGroupIdToNew[oldId] = newId;
+                            }
+                            // Add to existing map for subsequent imports in same batch
+                            existingGroupsByName[groupData.name.toLowerCase()] = { ...groupData, id: newId };
                         }
                     }
                     // Reload groups cache
