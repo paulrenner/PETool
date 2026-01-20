@@ -149,6 +149,22 @@
             background: #1F2937;
         }
 
+        [data-theme="dark"] input,
+        [data-theme="dark"] textarea,
+        [data-theme="dark"] select,
+        [data-theme="dark"] select option,
+        [data-theme="dark"] .form-group input,
+        [data-theme="dark"] .form-group textarea,
+        [data-theme="dark"] .form-group select {
+            background: #2D3748 !important;
+            color: #F7FAFC !important;
+        }
+
+        [data-theme="dark"] input::placeholder,
+        [data-theme="dark"] textarea::placeholder {
+            color: #A0AEC0;
+        }
+
         [data-theme="dark"] .details-table th {
             background-color: #374151;
             border-color: #4A5568;
@@ -166,6 +182,7 @@
         [data-theme="dark"] .fund-name-item {
             background: #1F2937;
             border-color: #4A5568;
+            color: #F7FAFC;
         }
 
         [data-theme="dark"] .action-dropdown {
@@ -2485,24 +2502,6 @@
                     <input type="number" id="duplicateMultiplier" step="any" value="1">
                 </div>
 
-                <div class="form-group">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <label for="cashFlows">Cash Flows (JSON)</label>
-                        <button type="button" class="btn-link" onclick="fillCashFlowsExample()" style="font-size: 12px;">View Example</button>
-                    </div>
-                    <textarea id="cashFlows" placeholder='[{"date":"2024-01-15","amount":-1000000,"type":"Contribution","affectsCommitment":true}]'></textarea>
-                    <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number,"type":"Contribution|Distribution|Adjustment","affectsCommitment":true}]</div>
-                </div>
-
-                <div class="form-group">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <label for="monthlyNav">Values (JSON)</label>
-                        <button type="button" class="btn-link" onclick="fillNavExample()" style="font-size: 12px;">View Example</button>
-                    </div>
-                    <textarea id="monthlyNav" placeholder='[{"date":"2024-01-31","amount":950000}]'></textarea>
-                    <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number}]</div>
-                </div>
-
                 <div class="form-actions">
                     <button type="submit" class="btn-primary" id="saveFundBtn">Save</button>
                     <button type="button" class="btn-secondary" id="cancelFundModalBtn">Cancel</button>
@@ -2548,7 +2547,7 @@
 
             <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--color-border);">
 
-            <h3 style="margin-bottom: 15px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Existing Fund Names</h3>
+            <h3 style="margin-bottom: 15px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Existing Fund Names</h3>
             <div id="fundNamesList"></div>
 
             <div class="form-actions">
@@ -2605,12 +2604,12 @@
             <h2>Manage Account Groups</h2>
 
             <input type="hidden" id="editGroupId" value="">
-            <h3 id="groupFormTitle" style="margin-bottom: 15px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Add New Group</h3>
+            <h3 id="groupFormTitle" style="margin-bottom: 15px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Add New Group</h3>
 
             <div class="form-group">
                 <label for="newGroupName">Group Name</label>
                 <input type="text" id="newGroupName" placeholder="e.g., John Smith, Smith Family Trust">
-                <small style="color: #7f8c8d; font-size: 0.85em; margin-top: 4px; display: block;">Use groups to organize by account holder or entity (e.g., individuals, trusts, IRAs)</small>
+                <small style="color: var(--color-text-light); font-size: 0.85em; margin-top: 4px; display: block;">Use groups to organize by account holder or entity (e.g., individuals, trusts, IRAs)</small>
             </div>
 
             <div class="form-group">
@@ -2630,9 +2629,9 @@
                 <button id="cancelEditBtn" class="btn-secondary" style="display: none;">Cancel</button>
             </div>
 
-            <hr style="margin: 20px 0; border: none; border-top: 1px solid #E0E0E0;">
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--color-border);">
 
-            <h3 style="margin-bottom: 15px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Existing Groups</h3>
+            <h3 style="margin-bottom: 15px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Existing Groups</h3>
             <div id="groupsList" style="max-height: 400px; overflow-y: auto;"></div>
 
             <div class="form-actions">
@@ -2646,7 +2645,7 @@
         <div class="modal-content" style="max-width: 900px;">
             <span class="close" id="closeDetailsModalBtn">&times;</span>
             <h2 id="detailsModalTitle">Fund Details</h2>
-            <p id="detailsModalSubtitle" style="margin: 5px 0 0 0; color: #95A5A6; font-size: 0.9em;"></p>
+            <p id="detailsModalSubtitle" style="margin: 5px 0 0 0; color: var(--color-text-light); font-size: 0.9em;"></p>
 
             <!-- Investment Summary Section -->
             <div id="detailsSummary" class="portfolio-summary" style="margin-top: 20px;">
@@ -2676,7 +2675,7 @@
                 </div>
             </div>
 
-            <h3 style="margin-top: 20px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Cash Flows</h3>
+            <h3 style="margin-top: 20px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Cash Flows</h3>
             <div class="details-table-wrapper">
                 <table class="details-table" id="cashFlowsTable">
                     <thead>
@@ -2693,7 +2692,7 @@
             </div>
             <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" id="addCashFlowRowBtn">Add Cash Flow</button>
 
-            <h3 style="margin-top: 30px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Values</h3>
+            <h3 style="margin-top: 30px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Values</h3>
             <div class="details-table-wrapper">
                 <table class="details-table" id="navTable">
                     <thead>
@@ -2719,7 +2718,7 @@
     <div id="backupWarningModal" class="modal">
         <div class="modal-content" style="max-width: 500px;">
             <span class="close" id="closeBackupWarningBtn">&times;</span>
-            <h2 style="color: #E67E22; margin-bottom: 15px;">⚠️ Important: Backup Your Data</h2>
+            <h2 style="color: var(--color-warning); margin-bottom: 15px;">⚠️ Important: Backup Your Data</h2>
             <p style="line-height: 1.6; margin-bottom: 15px;">
                 Your PE Fund Manager data is stored <strong>locally in your browser</strong>.
                 This means your data could be lost if:
@@ -2730,7 +2729,7 @@
                 <li>Your computer crashes or is reset</li>
                 <li>You switch to a different device</li>
             </ul>
-            <p style="line-height: 1.6; margin-bottom: 20px; font-weight: 600; color: #E74C3C;">
+            <p style="line-height: 1.6; margin-bottom: 20px; font-weight: 600; color: var(--color-danger);">
                 Please export your data regularly to avoid data loss!
             </p>
             <div class="form-group">
@@ -5582,7 +5581,7 @@
         function getInvestorCellHtml(fund) {
             const groupName = getImmediateParentName(fund);
             if (groupName) {
-                return `<div>${escapeHtml(groupName)}</div><div style="font-size: 0.85em; color: #7f8c8d;">${escapeHtml(fund.accountNumber)}</div>`;
+                return `<div>${escapeHtml(groupName)}</div><div style="font-size: 0.85em; color: var(--color-text-light);">${escapeHtml(fund.accountNumber)}</div>`;
             }
             return escapeHtml(fund.accountNumber);
         }
@@ -6512,7 +6511,7 @@
          * Show keyboard shortcuts modal
          */
         function showShortcutsModal() {
-            document.getElementById('shortcutsModal').classList.add('show');
+            Modal.show('shortcutsModal');
         }
 
         /**
@@ -6653,36 +6652,6 @@
         }
 
         // ===========================
-        // JSON Example Functions
-        // ===========================
-
-        function fillCashFlowsExample() {
-            const textarea = document.getElementById('cashFlows');
-            const currentYear = new Date().getFullYear();
-            const example = [
-                { date: `${currentYear}-01-15`, amount: -500000, type: "Contribution", affectsCommitment: true },
-                { date: `${currentYear}-04-15`, amount: -300000, type: "Contribution", affectsCommitment: true },
-                { date: `${currentYear}-07-20`, amount: 150000, type: "Distribution", affectsCommitment: false }
-            ];
-            textarea.value = JSON.stringify(example, null, 2);
-            textarea.focus();
-            showStatus('Example cash flows added. Modify the dates and amounts as needed.', 'success');
-        }
-
-        function fillNavExample() {
-            const textarea = document.getElementById('monthlyNav');
-            const currentYear = new Date().getFullYear();
-            const example = [
-                { date: `${currentYear}-01-31`, amount: 480000 },
-                { date: `${currentYear}-02-28`, amount: 495000 },
-                { date: `${currentYear}-03-31`, amount: 510000 }
-            ];
-            textarea.value = JSON.stringify(example, null, 2);
-            textarea.focus();
-            showStatus('Example NAV entries added. Modify the dates and amounts as needed.', 'success');
-        }
-
-        // ===========================
         // Modal Functions
         // ===========================
 
@@ -6704,10 +6673,8 @@
                 // Reset other form fields (not the fund name dropdown which we just populated)
                 document.getElementById('accountNumber').value = '';
                 document.getElementById('commitment').value = '';
-                document.getElementById('cashFlows').value = '';
-                document.getElementById('monthlyNav').value = '';
 
-                document.getElementById('fundModal').classList.add('show');
+                Modal.show('fundModal');
             } catch (err) {
                 showStatus('Error opening add investment modal: ' + err.message, 'error');
                 Debug.error('Error in showAddFundModal:', err);
@@ -6734,8 +6701,6 @@
                 await populateFundGroupDropdown(fund.groupId);
                 document.getElementById('accountNumber').value = fund.accountNumber;
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
-                document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
-                document.getElementById('monthlyNav').value = JSON.stringify(fund.monthlyNav || [], null, 2);
 
                 Modal.show('fundModal');
             } catch (err) {
@@ -6762,10 +6727,8 @@
                 await populateFundGroupDropdown(fund.groupId);
                 document.getElementById('accountNumber').value = fund.accountNumber + ' (Copy)';
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
-                document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
-                document.getElementById('monthlyNav').value = JSON.stringify(fund.monthlyNav || [], null, 2);
 
-                document.getElementById('fundModal').classList.add('show');
+                Modal.show('fundModal');
             } catch (err) {
                 showStatus('Error loading fund: ' + err.message, 'error');
             }
@@ -6862,8 +6825,6 @@
                 const accountNumber = document.getElementById('accountNumber').value.trim();
                 const groupId = document.getElementById('fundGroup').value;
                 const commitmentText = document.getElementById('commitment').value.trim();
-                const cashFlowsText = document.getElementById('cashFlows').value.trim();
-                const monthlyNavText = document.getElementById('monthlyNav').value.trim();
 
                 // Validate fund name
                 const fundNameValidation = validateFundName(fundName);
@@ -6901,53 +6862,24 @@
                     return;
                 }
 
-                // Parse and validate JSON
-                let cashFlows, monthlyNav;
+                // Get cash flows and NAV from existing fund (when editing/duplicating) or start empty (new)
+                let cashFlows = [];
+                let monthlyNav = [];
 
-                // Parse cash flows (optional)
-                if (cashFlowsText) {
-                    try {
-                        cashFlows = JSON.parse(cashFlowsText);
-                        if (!Array.isArray(cashFlows)) throw new Error('Cash flows must be an array');
-                    } catch (err) {
-                        highlightFieldError('cashFlows');
-                        showStatus('Invalid cash flows JSON: ' + err.message, 'error');
-                        return;
+                if (fundId) {
+                    // Editing: preserve existing data
+                    const existingFund = await getFundById(parseInt(fundId));
+                    if (existingFund) {
+                        cashFlows = existingFund.cashFlows || [];
+                        monthlyNav = existingFund.monthlyNav || [];
                     }
-
-                    // Validate cash flows using validation function
-                    const cashFlowValidation = validateCashFlows(cashFlows);
-                    if (!cashFlowValidation.valid) {
-                        highlightFieldError('cashFlows');
-                        const errorMsg = cashFlowValidation.index !== null
-                            ? `Cash flow #${cashFlowValidation.index + 1}: ${cashFlowValidation.error}`
-                            : cashFlowValidation.error;
-                        showStatus(errorMsg, 'error');
-                        return;
+                } else if (isDuplicate) {
+                    // Duplicating: copy from source fund
+                    const sourceFund = await getFundById(parseInt(isDuplicate));
+                    if (sourceFund) {
+                        cashFlows = sourceFund.cashFlows || [];
+                        monthlyNav = sourceFund.monthlyNav || [];
                     }
-                } else {
-                    cashFlows = [];
-                }
-
-                // Parse monthly NAV
-                try {
-                    monthlyNav = monthlyNavText ? JSON.parse(monthlyNavText) : [];
-                    if (!Array.isArray(monthlyNav)) throw new Error('Monthly NAV must be an array');
-                } catch (err) {
-                    highlightFieldError('monthlyNav');
-                    showStatus('Invalid monthly NAV JSON: ' + err.message, 'error');
-                    return;
-                }
-
-                // Validate monthly NAV using validation function
-                const navValidation = validateMonthlyNav(monthlyNav);
-                if (!navValidation.valid) {
-                    highlightFieldError('monthlyNav');
-                    const errorMsg = navValidation.index !== null
-                        ? `NAV entry #${navValidation.index + 1}: ${navValidation.error}`
-                        : navValidation.error;
-                    showStatus(errorMsg, 'error');
-                    return;
                 }
 
                 // Check for duplicate fund (same fund name + account number)
@@ -7424,7 +7356,7 @@
                 if (confirmed) {
                     row.remove();
                     AppState.setUnsavedChanges(true);
-                    updateDetailsSummary();
+                    await updateDetailsSummary();
                 }
             }
         }
@@ -7454,7 +7386,7 @@
                 if (confirmed) {
                     row.remove();
                     AppState.setUnsavedChanges(true);
-                    updateDetailsSummary();
+                    await updateDetailsSummary();
                 }
             }
         }
@@ -7587,7 +7519,7 @@
                 // Clear the Add Fund form when opening
                 clearAddFundForm();
 
-                document.getElementById('manageFundNamesModal').classList.add('show');
+                Modal.show('manageFundNamesModal');
             } catch (err) {
                 showStatus('Error opening manage funds modal: ' + err.message, 'error');
                 Debug.error('Error in showManageFundsModal:', err);
@@ -7636,7 +7568,7 @@
                 container.innerHTML = '';
 
                 if (fundNameObjects.length === 0) {
-                    container.innerHTML = '<p style="color: #95A5A6;">No fund names yet</p>';
+                    container.innerHTML = '<p style="color: var(--color-text-light);">No fund names yet</p>';
                     return;
                 }
 
@@ -7680,7 +7612,7 @@
                     deleteBtn.className = 'btn-icon';
                     deleteBtn.textContent = '×';
                     deleteBtn.title = 'Delete';
-                    deleteBtn.style.color = '#E74C3C';
+                    deleteBtn.style.color = 'var(--color-danger)';
                     deleteBtn.setAttribute('data-fund-name', fundNameObj.name);
                     deleteBtn.onclick = function() { removeFundName(this.getAttribute('data-fund-name')); };
 
@@ -7758,7 +7690,7 @@
             document.getElementById('editFundTermStartDate').value = fundNameObj.investmentTermStartDate || '';
             document.getElementById('editFundInvestmentTerm').value = fundNameObj.investmentTermYears || '';
 
-            document.getElementById('editFundNameModal').classList.add('show');
+            Modal.show('editFundNameModal');
         }
 
         function closeEditFundNameModal() {
@@ -7950,7 +7882,7 @@
             try {
                 await loadGroupsList();
                 await populateGroupParentDropdown();
-                document.getElementById('manageGroupsModal').classList.add('show');
+                Modal.show('manageGroupsModal');
             } catch (err) {
                 showStatus('Error opening manage groups modal: ' + err.message, 'error');
                 Debug.error('Error in showManageGroupsModal:', err);
@@ -7968,7 +7900,7 @@
                 container.innerHTML = '';
 
                 if (groups.length === 0) {
-                    container.innerHTML = '<p style="color: #95A5A6;">No groups yet</p>';
+                    container.innerHTML = '<p style="color: var(--color-text-light);">No groups yet</p>';
                     return;
                 }
 
@@ -8004,7 +7936,7 @@
                     </div>
                     <div class="group-item-actions">
                         <button class="btn-icon group-edit-btn" data-group-id="${group.id}" title="Edit">✎</button>
-                        <button class="btn-icon group-delete-btn" data-group-id="${group.id}" title="Delete" style="color: #E74C3C;">×</button>
+                        <button class="btn-icon group-delete-btn" data-group-id="${group.id}" title="Delete" style="color: var(--color-danger);">×</button>
                     </div>
                 `;
                 container.appendChild(div);
@@ -8245,7 +8177,7 @@
                 document.getElementById('bulkCashFlowPreview').style.display = 'none';
                 document.getElementById('applyBulkCashFlowBtn').disabled = true;
 
-                document.getElementById('bulkCashFlowModal').classList.add('show');
+                Modal.show('bulkCashFlowModal');
             } catch (err) {
                 showStatus('Error opening bulk cash flow modal: ' + err.message, 'error');
                 Debug.error('Error in showBulkCashFlowModal:', err);
@@ -8312,8 +8244,8 @@
 
                 // Build preview HTML
                 let previewHtml = `
-                    <p style="margin-bottom: 10px;"><strong>${matchingFunds.length}</strong> investor(s) will receive a ${type.toLowerCase()} on ${dateValue}:</p>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <p style="margin-bottom: 10px; color: var(--color-text);"><strong>${matchingFunds.length}</strong> investor(s) will receive a ${type.toLowerCase()} on ${dateValue}:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
                         <thead>
                             <tr style="border-bottom: 1px solid var(--color-border);">
                                 <th style="text-align: left; padding: 5px;">Account</th>
@@ -8329,9 +8261,9 @@
                     totalAmount += item.calculatedAmount;
                     previewHtml += `
                         <tr style="border-bottom: 1px solid var(--color-border);">
-                            <td style="padding: 5px;">${escapeHtml(item.accountNumber)}</td>
-                            <td style="text-align: right; padding: 5px;">${formatCurrency(item.commitment)}</td>
-                            <td style="text-align: right; padding: 5px;">${formatCurrency(item.calculatedAmount)}</td>
+                            <td style="padding: 5px; color: var(--color-text);">${escapeHtml(item.accountNumber)}</td>
+                            <td style="text-align: right; padding: 5px; color: var(--color-text);">${formatCurrency(item.commitment)}</td>
+                            <td style="text-align: right; padding: 5px; color: var(--color-text);">${formatCurrency(item.calculatedAmount)}</td>
                         </tr>
                     `;
                 });
@@ -8340,9 +8272,9 @@
                         </tbody>
                         <tfoot>
                             <tr style="font-weight: bold;">
-                                <td style="padding: 5px;">Total</td>
+                                <td style="padding: 5px; color: var(--color-text);">Total</td>
                                 <td style="text-align: right; padding: 5px;"></td>
-                                <td style="text-align: right; padding: 5px;">${formatCurrency(totalAmount)}</td>
+                                <td style="text-align: right; padding: 5px; color: var(--color-text);">${formatCurrency(totalAmount)}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -8463,7 +8395,7 @@
                 document.getElementById('bulkRemoveFundPreview').style.display = 'none';
                 document.getElementById('applyBulkRemoveFundBtn').disabled = true;
 
-                document.getElementById('bulkRemoveFundModal').classList.add('show');
+                Modal.show('bulkRemoveFundModal');
             } catch (err) {
                 showStatus('Error opening bulk remove fund modal: ' + err.message, 'error');
                 Debug.error('Error in showBulkRemoveFundModal:', err);
@@ -8498,8 +8430,8 @@
 
                 // Build preview HTML
                 let previewHtml = `
-                    <p style="margin-bottom: 10px;"><strong>${matchingFunds.length}</strong> investor position(s) will be permanently removed:</p>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <p style="margin-bottom: 10px; color: var(--color-text);"><strong>${matchingFunds.length}</strong> investor position(s) will be permanently removed:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
                         <thead>
                             <tr style="border-bottom: 1px solid var(--color-border);">
                                 <th style="text-align: left; padding: 5px;">Account</th>
@@ -8514,9 +8446,9 @@
                     const cashFlowCount = (fund.cashFlows || []).length;
                     previewHtml += `
                         <tr style="border-bottom: 1px solid var(--color-border);">
-                            <td style="padding: 5px;">${escapeHtml(fund.accountNumber)}</td>
-                            <td style="text-align: right; padding: 5px;">${formatCurrency(fund.commitment)}</td>
-                            <td style="text-align: right; padding: 5px;">${cashFlowCount}</td>
+                            <td style="padding: 5px; color: var(--color-text);">${escapeHtml(fund.accountNumber)}</td>
+                            <td style="text-align: right; padding: 5px; color: var(--color-text);">${formatCurrency(fund.commitment)}</td>
+                            <td style="text-align: right; padding: 5px; color: var(--color-text);">${cashFlowCount}</td>
                         </tr>
                     `;
                 });
@@ -8630,7 +8562,7 @@
                 document.getElementById('bulkAssignGroupPreview').style.display = 'none';
                 document.getElementById('applyBulkAssignGroupBtn').disabled = true;
 
-                document.getElementById('bulkAssignGroupModal').classList.add('show');
+                Modal.show('bulkAssignGroupModal');
             } catch (err) {
                 showStatus('Error opening bulk assign group modal: ' + err.message, 'error');
                 Debug.error('Error in showBulkAssignGroupModal:', err);
@@ -8671,8 +8603,8 @@
 
                 // Build preview HTML
                 let previewHtml = `
-                    <p style="margin-bottom: 10px;"><strong>${matchingFunds.length}</strong> investment(s) will be assigned to <strong>${escapeHtml(targetGroupName)}</strong>:</p>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <p style="margin-bottom: 10px; color: var(--color-text);"><strong>${matchingFunds.length}</strong> investment(s) will be assigned to <strong>${escapeHtml(targetGroupName)}</strong>:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
                         <thead>
                             <tr style="border-bottom: 1px solid var(--color-border);">
                                 <th style="text-align: left; padding: 5px;">Fund Name</th>
@@ -8689,9 +8621,9 @@
                         : 'No Group';
                     previewHtml += `
                         <tr style="border-bottom: 1px solid var(--color-border);">
-                            <td style="padding: 5px;">${escapeHtml(fund.fundName)}</td>
-                            <td style="padding: 5px;">${escapeHtml(currentGroup)}</td>
-                            <td style="text-align: right; padding: 5px;">${formatCurrency(fund.commitment)}</td>
+                            <td style="padding: 5px; color: var(--color-text);">${escapeHtml(fund.fundName)}</td>
+                            <td style="padding: 5px; color: var(--color-text);">${escapeHtml(currentGroup)}</td>
+                            <td style="text-align: right; padding: 5px; color: var(--color-text);">${formatCurrency(fund.commitment)}</td>
                         </tr>
                     `;
                 });
@@ -9259,7 +9191,20 @@
                     event.preventDefault();
                     const fundId = parseInt(focusedRow.getAttribute('data-fund-id'));
                     if (fundId != null) {
-                        deleteFund(fundId);
+                        const fund = await getFundById(fundId);
+                        if (fund) {
+                            const confirmed = await showConfirm(`Are you sure you want to delete "${fund.fundName} - ${fund.accountNumber}"?`, {
+                                title: 'Delete Fund',
+                                confirmText: 'Delete',
+                                cancelText: 'Cancel'
+                            });
+                            if (confirmed) {
+                                await deleteFundFromDB(fundId);
+                                AppState.clearMetricsCache();
+                                await renderTable();
+                                showStatus('Fund deleted successfully', 'success');
+                            }
+                        }
                     }
                     return;
                 }
@@ -9994,69 +9939,91 @@
 
             /** Fund names management modal */
             setupFundNamesModal() {
-                document.getElementById('closeManageFundsModalBtn').addEventListener('click', closeManageFundsModal);
-                document.getElementById('closeManageFundsModal2Btn').addEventListener('click', closeManageFundsModal);
-                document.getElementById('addNewFundNameBtn').addEventListener('click', addNewFundName);
+                const wrapAsync = (fn) => async (e) => {
+                    try { await fn(e); } catch (err) { Debug.error('Fund names modal error:', err); showStatus('An error occurred', 'error'); }
+                };
+                document.getElementById('closeManageFundsModalBtn').addEventListener('click', wrapAsync(closeManageFundsModal));
+                document.getElementById('closeManageFundsModal2Btn').addEventListener('click', wrapAsync(closeManageFundsModal));
+                document.getElementById('addNewFundNameBtn').addEventListener('click', wrapAsync(addNewFundName));
                 document.getElementById('closeEditFundNameModalBtn').addEventListener('click', closeEditFundNameModal);
-                document.getElementById('saveEditedFundNameBtn').addEventListener('click', saveEditedFundName);
+                document.getElementById('saveEditedFundNameBtn').addEventListener('click', wrapAsync(saveEditedFundName));
                 document.getElementById('cancelEditFundNameBtn').addEventListener('click', closeEditFundNameModal);
             },
 
             /** Groups management modal */
             setupGroupsModal() {
+                const wrapAsync = (fn) => async (e) => {
+                    try { await fn(e); } catch (err) { Debug.error('Groups modal error:', err); showStatus('An error occurred', 'error'); }
+                };
                 document.getElementById('closeManageGroupsModal2Btn').addEventListener('click', closeManageGroupsModal);
                 document.getElementById('closeManageGroupsModalBtn').addEventListener('click', closeManageGroupsModal);
-                document.getElementById('saveGroupBtn').addEventListener('click', saveGroupChanges);
+                document.getElementById('saveGroupBtn').addEventListener('click', wrapAsync(saveGroupChanges));
                 document.getElementById('cancelEditBtn').addEventListener('click', cancelGroupEdit);
             },
 
             /** Bulk cash flow modal */
             setupBulkCashFlowModal() {
+                const wrapAsync = (fn) => async (e) => {
+                    try { await fn(e); } catch (err) { Debug.error('Bulk cash flow modal error:', err); showStatus('An error occurred', 'error'); }
+                };
                 document.getElementById('closeBulkCashFlowModalBtn').addEventListener('click', closeBulkCashFlowModal);
                 document.getElementById('cancelBulkCashFlowBtn').addEventListener('click', closeBulkCashFlowModal);
-                document.getElementById('previewBulkCashFlowBtn').addEventListener('click', previewBulkCashFlow);
-                document.getElementById('applyBulkCashFlowBtn').addEventListener('click', applyBulkCashFlow);
+                document.getElementById('previewBulkCashFlowBtn').addEventListener('click', wrapAsync(previewBulkCashFlow));
+                document.getElementById('applyBulkCashFlowBtn').addEventListener('click', wrapAsync(applyBulkCashFlow));
             },
 
             /** Bulk remove fund modal */
             setupBulkRemoveFundModal() {
+                const wrapAsync = (fn) => async (e) => {
+                    try { await fn(e); } catch (err) { Debug.error('Bulk remove fund modal error:', err); showStatus('An error occurred', 'error'); }
+                };
                 document.getElementById('closeBulkRemoveFundModalBtn').addEventListener('click', closeBulkRemoveFundModal);
                 document.getElementById('cancelBulkRemoveFundBtn').addEventListener('click', closeBulkRemoveFundModal);
-                document.getElementById('previewBulkRemoveFundBtn').addEventListener('click', previewBulkRemoveFund);
-                document.getElementById('applyBulkRemoveFundBtn').addEventListener('click', applyBulkRemoveFund);
+                document.getElementById('previewBulkRemoveFundBtn').addEventListener('click', wrapAsync(previewBulkRemoveFund));
+                document.getElementById('applyBulkRemoveFundBtn').addEventListener('click', wrapAsync(applyBulkRemoveFund));
             },
 
             /** Bulk assign group modal */
             setupBulkAssignGroupModal() {
+                const wrapAsync = (fn) => async (e) => {
+                    try { await fn(e); } catch (err) { Debug.error('Bulk assign group modal error:', err); showStatus('An error occurred', 'error'); }
+                };
                 document.getElementById('closeBulkAssignGroupModalBtn').addEventListener('click', closeBulkAssignGroupModal);
                 document.getElementById('cancelBulkAssignGroupBtn').addEventListener('click', closeBulkAssignGroupModal);
-                document.getElementById('previewBulkAssignGroupBtn').addEventListener('click', previewBulkAssignGroup);
-                document.getElementById('applyBulkAssignGroupBtn').addEventListener('click', applyBulkAssignGroup);
+                document.getElementById('previewBulkAssignGroupBtn').addEventListener('click', wrapAsync(previewBulkAssignGroup));
+                document.getElementById('applyBulkAssignGroupBtn').addEventListener('click', wrapAsync(applyBulkAssignGroup));
             },
 
             /** Details modal with cash flows and NAV tables */
             setupDetailsModal() {
-                document.getElementById('closeDetailsModalBtn').addEventListener('click', closeDetailsModal);
-                document.getElementById('cancelDetailsModalBtn').addEventListener('click', closeDetailsModal);
+                const wrapAsync = (fn) => async (e) => {
+                    try { await fn(e); } catch (err) { Debug.error('Details modal error:', err); showStatus('An error occurred', 'error'); }
+                };
+                document.getElementById('closeDetailsModalBtn').addEventListener('click', wrapAsync(closeDetailsModal));
+                document.getElementById('cancelDetailsModalBtn').addEventListener('click', wrapAsync(closeDetailsModal));
                 document.getElementById('addCashFlowRowBtn').addEventListener('click', addCashFlowRow);
                 document.getElementById('addNavRowBtn').addEventListener('click', addNavRow);
-                document.getElementById('saveDetailsChangesBtn').addEventListener('click', saveDetailsChanges);
+                document.getElementById('saveDetailsChangesBtn').addEventListener('click', wrapAsync(saveDetailsChanges));
 
                 // Event delegation for dynamically created rows
-                document.getElementById('cashFlowsTable').addEventListener('click', (e) => {
-                    const btn = e.target.closest('[data-action="deleteCashFlow"]');
-                    if (btn) deleteCashFlowRow(btn);
+                document.getElementById('cashFlowsTable').addEventListener('click', async (e) => {
+                    try {
+                        const btn = e.target.closest('[data-action="deleteCashFlow"]');
+                        if (btn) await deleteCashFlowRow(btn);
+                    } catch (err) { Debug.error('Delete cash flow error:', err); showStatus('An error occurred', 'error'); }
                 });
-                document.getElementById('navTable').addEventListener('click', (e) => {
-                    const btn = e.target.closest('[data-action="deleteNav"]');
-                    if (btn) deleteNavRow(btn);
+                document.getElementById('navTable').addEventListener('click', async (e) => {
+                    try {
+                        const btn = e.target.closest('[data-action="deleteNav"]');
+                        if (btn) await deleteNavRow(btn);
+                    } catch (err) { Debug.error('Delete NAV error:', err); showStatus('An error occurred', 'error'); }
                 });
 
                 // Update summary when cash flows or NAV values change
-                document.getElementById('cashFlowsTable').addEventListener('input', updateDetailsSummary);
-                document.getElementById('cashFlowsTable').addEventListener('change', updateDetailsSummary);
-                document.getElementById('navTable').addEventListener('input', updateDetailsSummary);
-                document.getElementById('navTable').addEventListener('change', updateDetailsSummary);
+                document.getElementById('cashFlowsTable').addEventListener('input', () => updateDetailsSummary());
+                document.getElementById('cashFlowsTable').addEventListener('change', () => updateDetailsSummary());
+                document.getElementById('navTable').addEventListener('input', () => updateDetailsSummary());
+                document.getElementById('navTable').addEventListener('change', () => updateDetailsSummary());
                 document.getElementById('editFundTagsContainer').addEventListener('click', (e) => {
                     const btn = e.target.closest('[data-action="removeTag"]');
                     if (btn) removeEditFundTag(btn);
@@ -10067,9 +10034,11 @@
             setupBackupWarning() {
                 document.getElementById('closeBackupWarningBtn').addEventListener('click', closeBackupWarning);
                 document.getElementById('exportNowBtn').addEventListener('click', async () => {
-                    closeBackupWarning();
-                    await exportDatabase();
-                    updateLastBackupTime();
+                    try {
+                        closeBackupWarning();
+                        await exportDatabase();
+                        updateLastBackupTime();
+                    } catch (err) { Debug.error('Export database error:', err); showStatus('Export failed', 'error'); }
                 });
                 document.getElementById('remindLaterBtn').addEventListener('click', () => {
                     if (document.getElementById('dontShowBackupWarning').checked) {
@@ -10101,10 +10070,15 @@
                     'sidebarClearDatabase': clearDatabase
                 };
                 Object.entries(menuItems).forEach(([id, handler]) => {
-                    document.getElementById(id).addEventListener('click', (e) => {
+                    document.getElementById(id).addEventListener('click', async (e) => {
                         e.preventDefault();
                         closeSidebar();
-                        handler();
+                        try {
+                            await handler();
+                        } catch (err) {
+                            Debug.error(`Error in sidebar handler ${id}:`, err);
+                            showStatus('An error occurred: ' + err.message, 'error');
+                        }
                     });
                 });
 
@@ -10215,8 +10189,6 @@
             window.showAddFundModal = showAddFundModal;
             window.showManageFundsModal = showManageFundsModal;
             window.resetFilters = resetFilters;
-            window.fillCashFlowsExample = fillCashFlowsExample;
-            window.fillNavExample = fillNavExample;
 
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', init);
