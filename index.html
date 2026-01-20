@@ -8244,8 +8244,8 @@
 
                 // Build preview HTML
                 let previewHtml = `
-                    <p style="margin-bottom: 10px;"><strong>${matchingFunds.length}</strong> investor(s) will receive a ${type.toLowerCase()} on ${dateValue}:</p>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <p style="margin-bottom: 10px; color: var(--color-text);"><strong>${matchingFunds.length}</strong> investor(s) will receive a ${type.toLowerCase()} on ${dateValue}:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
                         <thead>
                             <tr style="border-bottom: 1px solid var(--color-border);">
                                 <th style="text-align: left; padding: 5px;">Account</th>
@@ -8261,9 +8261,9 @@
                     totalAmount += item.calculatedAmount;
                     previewHtml += `
                         <tr style="border-bottom: 1px solid var(--color-border);">
-                            <td style="padding: 5px;">${escapeHtml(item.accountNumber)}</td>
-                            <td style="text-align: right; padding: 5px;">${formatCurrency(item.commitment)}</td>
-                            <td style="text-align: right; padding: 5px;">${formatCurrency(item.calculatedAmount)}</td>
+                            <td style="padding: 5px; color: var(--color-text);">${escapeHtml(item.accountNumber)}</td>
+                            <td style="text-align: right; padding: 5px; color: var(--color-text);">${formatCurrency(item.commitment)}</td>
+                            <td style="text-align: right; padding: 5px; color: var(--color-text);">${formatCurrency(item.calculatedAmount)}</td>
                         </tr>
                     `;
                 });
@@ -8272,9 +8272,9 @@
                         </tbody>
                         <tfoot>
                             <tr style="font-weight: bold;">
-                                <td style="padding: 5px;">Total</td>
+                                <td style="padding: 5px; color: var(--color-text);">Total</td>
                                 <td style="text-align: right; padding: 5px;"></td>
-                                <td style="text-align: right; padding: 5px;">${formatCurrency(totalAmount)}</td>
+                                <td style="text-align: right; padding: 5px; color: var(--color-text);">${formatCurrency(totalAmount)}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -8430,8 +8430,8 @@
 
                 // Build preview HTML
                 let previewHtml = `
-                    <p style="margin-bottom: 10px;"><strong>${matchingFunds.length}</strong> investor position(s) will be permanently removed:</p>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <p style="margin-bottom: 10px; color: var(--color-text);"><strong>${matchingFunds.length}</strong> investor position(s) will be permanently removed:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
                         <thead>
                             <tr style="border-bottom: 1px solid var(--color-border);">
                                 <th style="text-align: left; padding: 5px;">Account</th>
@@ -8446,9 +8446,9 @@
                     const cashFlowCount = (fund.cashFlows || []).length;
                     previewHtml += `
                         <tr style="border-bottom: 1px solid var(--color-border);">
-                            <td style="padding: 5px;">${escapeHtml(fund.accountNumber)}</td>
-                            <td style="text-align: right; padding: 5px;">${formatCurrency(fund.commitment)}</td>
-                            <td style="text-align: right; padding: 5px;">${cashFlowCount}</td>
+                            <td style="padding: 5px; color: var(--color-text);">${escapeHtml(fund.accountNumber)}</td>
+                            <td style="text-align: right; padding: 5px; color: var(--color-text);">${formatCurrency(fund.commitment)}</td>
+                            <td style="text-align: right; padding: 5px; color: var(--color-text);">${cashFlowCount}</td>
                         </tr>
                     `;
                 });
@@ -8603,8 +8603,8 @@
 
                 // Build preview HTML
                 let previewHtml = `
-                    <p style="margin-bottom: 10px;"><strong>${matchingFunds.length}</strong> investment(s) will be assigned to <strong>${escapeHtml(targetGroupName)}</strong>:</p>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <p style="margin-bottom: 10px; color: var(--color-text);"><strong>${matchingFunds.length}</strong> investment(s) will be assigned to <strong>${escapeHtml(targetGroupName)}</strong>:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
                         <thead>
                             <tr style="border-bottom: 1px solid var(--color-border);">
                                 <th style="text-align: left; padding: 5px;">Fund Name</th>
@@ -8621,9 +8621,9 @@
                         : 'No Group';
                     previewHtml += `
                         <tr style="border-bottom: 1px solid var(--color-border);">
-                            <td style="padding: 5px;">${escapeHtml(fund.fundName)}</td>
-                            <td style="padding: 5px;">${escapeHtml(currentGroup)}</td>
-                            <td style="text-align: right; padding: 5px;">${formatCurrency(fund.commitment)}</td>
+                            <td style="padding: 5px; color: var(--color-text);">${escapeHtml(fund.fundName)}</td>
+                            <td style="padding: 5px; color: var(--color-text);">${escapeHtml(currentGroup)}</td>
+                            <td style="text-align: right; padding: 5px; color: var(--color-text);">${formatCurrency(fund.commitment)}</td>
                         </tr>
                     `;
                 });
