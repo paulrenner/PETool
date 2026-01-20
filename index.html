@@ -2548,7 +2548,7 @@
 
             <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--color-border);">
 
-            <h3 style="margin-bottom: 15px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Existing Fund Names</h3>
+            <h3 style="margin-bottom: 15px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Existing Fund Names</h3>
             <div id="fundNamesList"></div>
 
             <div class="form-actions">
@@ -2605,12 +2605,12 @@
             <h2>Manage Account Groups</h2>
 
             <input type="hidden" id="editGroupId" value="">
-            <h3 id="groupFormTitle" style="margin-bottom: 15px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Add New Group</h3>
+            <h3 id="groupFormTitle" style="margin-bottom: 15px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Add New Group</h3>
 
             <div class="form-group">
                 <label for="newGroupName">Group Name</label>
                 <input type="text" id="newGroupName" placeholder="e.g., John Smith, Smith Family Trust">
-                <small style="color: #7f8c8d; font-size: 0.85em; margin-top: 4px; display: block;">Use groups to organize by account holder or entity (e.g., individuals, trusts, IRAs)</small>
+                <small style="color: var(--color-text-light); font-size: 0.85em; margin-top: 4px; display: block;">Use groups to organize by account holder or entity (e.g., individuals, trusts, IRAs)</small>
             </div>
 
             <div class="form-group">
@@ -2630,9 +2630,9 @@
                 <button id="cancelEditBtn" class="btn-secondary" style="display: none;">Cancel</button>
             </div>
 
-            <hr style="margin: 20px 0; border: none; border-top: 1px solid #E0E0E0;">
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--color-border);">
 
-            <h3 style="margin-bottom: 15px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Existing Groups</h3>
+            <h3 style="margin-bottom: 15px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Existing Groups</h3>
             <div id="groupsList" style="max-height: 400px; overflow-y: auto;"></div>
 
             <div class="form-actions">
@@ -2646,7 +2646,7 @@
         <div class="modal-content" style="max-width: 900px;">
             <span class="close" id="closeDetailsModalBtn">&times;</span>
             <h2 id="detailsModalTitle">Fund Details</h2>
-            <p id="detailsModalSubtitle" style="margin: 5px 0 0 0; color: #95A5A6; font-size: 0.9em;"></p>
+            <p id="detailsModalSubtitle" style="margin: 5px 0 0 0; color: var(--color-text-light); font-size: 0.9em;"></p>
 
             <!-- Investment Summary Section -->
             <div id="detailsSummary" class="portfolio-summary" style="margin-top: 20px;">
@@ -2676,7 +2676,7 @@
                 </div>
             </div>
 
-            <h3 style="margin-top: 20px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Cash Flows</h3>
+            <h3 style="margin-top: 20px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Cash Flows</h3>
             <div class="details-table-wrapper">
                 <table class="details-table" id="cashFlowsTable">
                     <thead>
@@ -2693,7 +2693,7 @@
             </div>
             <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" id="addCashFlowRowBtn">Add Cash Flow</button>
 
-            <h3 style="margin-top: 30px; color: #2C3E50; font-weight: 600; font-size: 1.1em;">Values</h3>
+            <h3 style="margin-top: 30px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Values</h3>
             <div class="details-table-wrapper">
                 <table class="details-table" id="navTable">
                     <thead>
@@ -2719,7 +2719,7 @@
     <div id="backupWarningModal" class="modal">
         <div class="modal-content" style="max-width: 500px;">
             <span class="close" id="closeBackupWarningBtn">&times;</span>
-            <h2 style="color: #E67E22; margin-bottom: 15px;">⚠️ Important: Backup Your Data</h2>
+            <h2 style="color: var(--color-warning); margin-bottom: 15px;">⚠️ Important: Backup Your Data</h2>
             <p style="line-height: 1.6; margin-bottom: 15px;">
                 Your PE Fund Manager data is stored <strong>locally in your browser</strong>.
                 This means your data could be lost if:
@@ -2730,7 +2730,7 @@
                 <li>Your computer crashes or is reset</li>
                 <li>You switch to a different device</li>
             </ul>
-            <p style="line-height: 1.6; margin-bottom: 20px; font-weight: 600; color: #E74C3C;">
+            <p style="line-height: 1.6; margin-bottom: 20px; font-weight: 600; color: var(--color-danger);">
                 Please export your data regularly to avoid data loss!
             </p>
             <div class="form-group">
@@ -5582,7 +5582,7 @@
         function getInvestorCellHtml(fund) {
             const groupName = getImmediateParentName(fund);
             if (groupName) {
-                return `<div>${escapeHtml(groupName)}</div><div style="font-size: 0.85em; color: #7f8c8d;">${escapeHtml(fund.accountNumber)}</div>`;
+                return `<div>${escapeHtml(groupName)}</div><div style="font-size: 0.85em; color: var(--color-text-light);">${escapeHtml(fund.accountNumber)}</div>`;
             }
             return escapeHtml(fund.accountNumber);
         }
@@ -7636,7 +7636,7 @@
                 container.innerHTML = '';
 
                 if (fundNameObjects.length === 0) {
-                    container.innerHTML = '<p style="color: #95A5A6;">No fund names yet</p>';
+                    container.innerHTML = '<p style="color: var(--color-text-light);">No fund names yet</p>';
                     return;
                 }
 
@@ -7968,7 +7968,7 @@
                 container.innerHTML = '';
 
                 if (groups.length === 0) {
-                    container.innerHTML = '<p style="color: #95A5A6;">No groups yet</p>';
+                    container.innerHTML = '<p style="color: var(--color-text-light);">No groups yet</p>';
                     return;
                 }
 
@@ -8004,7 +8004,7 @@
                     </div>
                     <div class="group-item-actions">
                         <button class="btn-icon group-edit-btn" data-group-id="${group.id}" title="Edit">✎</button>
-                        <button class="btn-icon group-delete-btn" data-group-id="${group.id}" title="Delete" style="color: #E74C3C;">×</button>
+                        <button class="btn-icon group-delete-btn" data-group-id="${group.id}" title="Delete" style="color: var(--color-danger);">×</button>
                     </div>
                 `;
                 container.appendChild(div);
