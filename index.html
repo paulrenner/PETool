@@ -8694,7 +8694,7 @@
                 ? (AppState.getGroupByIdSync(parseInt(targetGroupId))?.name || 'Unknown Group')
                 : 'No Group';
 
-            const confirmed = await showConfirmDialog(
+            const confirmed = await showConfirm(
                 `Are you sure you want to assign all ${fundIds.length} investment(s) for account "${accountNumber}" to "${targetGroupName}"?`,
                 {
                     title: 'Confirm Bulk Group Assignment',
@@ -9026,7 +9026,7 @@
                 return;
             }
 
-            const confirmed = await showConfirmDialog(
+            const confirmed = await showConfirm(
                 'Are you sure you want to import this data? Existing data will not be overwritten, but new data will be added.',
                 {
                     title: 'Confirm Import',
