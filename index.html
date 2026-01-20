@@ -2853,6 +2853,35 @@
         </div>
     </div>
 
+    <!-- Bulk Remove Fund Modal -->
+    <div id="bulkRemoveFundModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" id="closeBulkRemoveFundModalBtn">&times;</span>
+            <h2>Bulk Remove Fund</h2>
+            <p style="color: var(--color-text-light); margin-bottom: 20px; font-size: 14px;">
+                Remove all investor positions for a selected fund. This action cannot be undone.
+            </p>
+
+            <div class="form-group">
+                <label for="bulkRemoveFundName">Fund Name *</label>
+                <select id="bulkRemoveFundName" required>
+                    <option value="">Select a fund</option>
+                </select>
+            </div>
+
+            <div id="bulkRemoveFundPreview" style="display: none; margin: 20px 0; padding: 15px; background: var(--color-alt-bg); border-radius: var(--radius-sm); max-height: 300px; overflow-y: auto;">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: var(--color-danger);">The following investors will be removed:</h4>
+                <div id="bulkRemoveFundPreviewContent"></div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" id="previewBulkRemoveFundBtn">Preview</button>
+                <button type="button" class="btn-danger" id="applyBulkRemoveFundBtn" disabled>Remove All</button>
+                <button type="button" class="btn-secondary" id="cancelBulkRemoveFundBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar Panel -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div id="sidebar" class="sidebar">
@@ -2935,6 +2964,11 @@
                 <div class="sidebar-item">
                     <a href="#" id="sidebarLoadSampleData">
                         Load Sample Data
+                    </a>
+                </div>
+                <div class="sidebar-item">
+                    <a href="#" id="sidebarBulkRemoveFund" style="color: var(--color-danger);">
+                        Bulk Remove Fund
                     </a>
                 </div>
                 <div class="sidebar-item">
@@ -8364,6 +8398,155 @@
 
         // ==================== End Bulk Cash Flow Functions ====================
 
+        // ==================== Bulk Remove Fund Functions ====================
+
+        async function showBulkRemoveFundModal() {
+            try {
+                // Populate fund name dropdown
+                const select = document.getElementById('bulkRemoveFundName');
+                const names = await getAllFundNames();
+
+                select.innerHTML = '<option value="">Select a fund</option>';
+                names.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    select.appendChild(option);
+                });
+
+                // Hide preview and disable apply button
+                document.getElementById('bulkRemoveFundPreview').style.display = 'none';
+                document.getElementById('applyBulkRemoveFundBtn').disabled = true;
+
+                document.getElementById('bulkRemoveFundModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error opening bulk remove fund modal: ' + err.message, 'error');
+                Debug.error('Error in showBulkRemoveFundModal:', err);
+            }
+        }
+
+        function closeBulkRemoveFundModal() {
+            document.getElementById('bulkRemoveFundModal').classList.remove('show');
+        }
+
+        async function previewBulkRemoveFund() {
+            const fundName = document.getElementById('bulkRemoveFundName').value;
+
+            if (!fundName) {
+                showStatus('Please select a fund', 'error');
+                return;
+            }
+
+            try {
+                // Get all funds with this fund name
+                const allFunds = await getAllFunds();
+                const matchingFunds = allFunds.filter(f => f.fundName === fundName);
+
+                if (matchingFunds.length === 0) {
+                    showStatus(`No investors found for fund "${fundName}"`, 'error');
+                    return;
+                }
+
+                // Store fund IDs for removal
+                const fundIds = matchingFunds.map(f => f.id);
+                document.getElementById('bulkRemoveFundModal').dataset.fundIds = JSON.stringify(fundIds);
+
+                // Build preview HTML
+                let previewHtml = `
+                    <p style="margin-bottom: 10px;"><strong>${matchingFunds.length}</strong> investor position(s) will be permanently removed:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--color-border);">
+                                <th style="text-align: left; padding: 5px;">Account</th>
+                                <th style="text-align: right; padding: 5px;">Commitment</th>
+                                <th style="text-align: right; padding: 5px;">Cash Flows</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                matchingFunds.forEach(fund => {
+                    const cashFlowCount = (fund.cashFlows || []).length;
+                    previewHtml += `
+                        <tr style="border-bottom: 1px solid var(--color-border);">
+                            <td style="padding: 5px;">${escapeHtml(fund.accountNumber)}</td>
+                            <td style="text-align: right; padding: 5px;">${formatCurrency(fund.commitment)}</td>
+                            <td style="text-align: right; padding: 5px;">${cashFlowCount}</td>
+                        </tr>
+                    `;
+                });
+
+                previewHtml += `
+                        </tbody>
+                    </table>
+                `;
+
+                document.getElementById('bulkRemoveFundPreviewContent').innerHTML = previewHtml;
+                document.getElementById('bulkRemoveFundPreview').style.display = 'block';
+                document.getElementById('applyBulkRemoveFundBtn').disabled = false;
+
+            } catch (err) {
+                showStatus('Error generating preview: ' + err.message, 'error');
+                Debug.error('Error in previewBulkRemoveFund:', err);
+            }
+        }
+
+        async function applyBulkRemoveFund() {
+            const fundIdsStr = document.getElementById('bulkRemoveFundModal').dataset.fundIds;
+            if (!fundIdsStr) {
+                showStatus('Please preview the funds first', 'error');
+                return;
+            }
+
+            const fundName = document.getElementById('bulkRemoveFundName').value;
+            const fundIds = JSON.parse(fundIdsStr);
+
+            const confirmed = await showConfirm(
+                `Are you sure you want to permanently remove all ${fundIds.length} investor position(s) for "${fundName}"? This cannot be undone.`,
+                {
+                    title: 'Confirm Bulk Removal',
+                    confirmText: 'Remove All',
+                    cancelText: 'Cancel',
+                    confirmClass: 'btn-danger'
+                }
+            );
+
+            if (!confirmed) return;
+
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const fundId of fundIds) {
+                    try {
+                        await deleteFundFromDB(fundId);
+                        successCount++;
+                    } catch (err) {
+                        Debug.error('Error removing fund:', fundId, err);
+                        errorCount++;
+                    }
+                }
+
+                // Clear metrics cache and refresh the table
+                AppState.clearMetricsCache();
+                await renderTable();
+
+                closeBulkRemoveFundModal();
+
+                if (errorCount === 0) {
+                    showStatus(`Successfully removed ${successCount} investor position(s) for "${fundName}"`, 'success');
+                } else {
+                    showStatus(`Removed ${successCount} position(s), ${errorCount} failed`, 'warning');
+                }
+
+            } catch (err) {
+                showStatus('Error removing funds: ' + err.message, 'error');
+                Debug.error('Error in applyBulkRemoveFund:', err);
+            }
+        }
+
+        // ==================== End Bulk Remove Fund Functions ====================
+
         async function populateFundNamesDropdown(valueToSet = null) {
             const select = document.getElementById('fundName');
             const currentValue = valueToSet !== null ? valueToSet : select.value;
@@ -9607,6 +9790,14 @@
                 document.getElementById('applyBulkCashFlowBtn').addEventListener('click', applyBulkCashFlow);
             },
 
+            /** Bulk remove fund modal */
+            setupBulkRemoveFundModal() {
+                document.getElementById('closeBulkRemoveFundModalBtn').addEventListener('click', closeBulkRemoveFundModal);
+                document.getElementById('cancelBulkRemoveFundBtn').addEventListener('click', closeBulkRemoveFundModal);
+                document.getElementById('previewBulkRemoveFundBtn').addEventListener('click', previewBulkRemoveFund);
+                document.getElementById('applyBulkRemoveFundBtn').addEventListener('click', applyBulkRemoveFund);
+            },
+
             /** Details modal with cash flows and NAV tables */
             setupDetailsModal() {
                 document.getElementById('closeDetailsModalBtn').addEventListener('click', closeDetailsModal);
@@ -9669,6 +9860,7 @@
                     'sidebarExportJSON': exportDatabase,
                     'sidebarExportPDF': exportToPDF,
                     'sidebarLoadSampleData': loadSampleData,
+                    'sidebarBulkRemoveFund': showBulkRemoveFundModal,
                     'sidebarClearDatabase': clearDatabase
                 };
                 Object.entries(menuItems).forEach(([id, handler]) => {
@@ -9700,6 +9892,7 @@
                 this.setupFundNamesModal();
                 this.setupGroupsModal();
                 this.setupBulkCashFlowModal();
+                this.setupBulkRemoveFundModal();
                 this.setupDetailsModal();
                 this.setupBackupWarning();
                 this.setupSidebar();
