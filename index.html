@@ -2593,6 +2593,63 @@
         </div>
     </div>
 
+    <!-- Bulk Cash Flow Modal -->
+    <div id="bulkCashFlowModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" id="closeBulkCashFlowModalBtn">&times;</span>
+            <h2>Bulk Cash Flow</h2>
+            <p style="color: var(--color-text-light); margin-bottom: 20px; font-size: 14px;">
+                Add a cash flow to all investors in a fund based on a percentage of their commitment.
+            </p>
+
+            <div class="form-group">
+                <label for="bulkCashFlowFundName">Fund Name *</label>
+                <select id="bulkCashFlowFundName" required>
+                    <option value="">Select a fund</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="bulkCashFlowDate">Date *</label>
+                <input type="date" id="bulkCashFlowDate" required>
+            </div>
+
+            <div class="form-group">
+                <label for="bulkCashFlowType">Type *</label>
+                <select id="bulkCashFlowType" required>
+                    <option value="Contribution">Contribution (Capital Call)</option>
+                    <option value="Distribution">Distribution</option>
+                    <option value="Adjustment">Adjustment</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="bulkCashFlowPercentage">Percentage of Commitment *</label>
+                <input type="number" id="bulkCashFlowPercentage" step="0.01" min="0.01" max="100" placeholder="e.g., 4.5" required>
+                <div class="hint">Enter percentage (e.g., 4.5 for 4.5% of commitment)</div>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="bulkCashFlowAffectsCommitment" checked>
+                    Affects unfunded commitment
+                </label>
+                <div class="hint">When checked, contributions will reduce unfunded commitment</div>
+            </div>
+
+            <div id="bulkCashFlowPreview" style="display: none; margin: 20px 0; padding: 15px; background: var(--color-alt-bg); border-radius: var(--radius-sm); max-height: 300px; overflow-y: auto;">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px;">Preview</h4>
+                <div id="bulkCashFlowPreviewContent"></div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" id="previewBulkCashFlowBtn">Preview</button>
+                <button type="button" class="btn-primary" id="applyBulkCashFlowBtn" disabled>Apply</button>
+                <button type="button" class="btn-secondary" id="cancelBulkCashFlowBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar Panel -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div id="sidebar" class="sidebar">
@@ -2634,6 +2691,11 @@
                 <div class="sidebar-item">
                     <a href="#" id="sidebarManageGroups">
                         Manage Groups
+                    </a>
+                </div>
+                <div class="sidebar-item">
+                    <a href="#" id="sidebarBulkCashFlow">
+                        Bulk Cash Flow
                     </a>
                 </div>
             </div>
@@ -7670,6 +7732,233 @@
             }
         }
 
+        // ==================== Bulk Cash Flow Functions ====================
+
+        async function showBulkCashFlowModal() {
+            try {
+                // Populate fund name dropdown
+                const select = document.getElementById('bulkCashFlowFundName');
+                const names = await getAllFundNames();
+
+                select.innerHTML = '<option value="">Select a fund</option>';
+                names.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    select.appendChild(option);
+                });
+
+                // Set default date to today
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('bulkCashFlowDate').value = today;
+
+                // Reset other fields
+                document.getElementById('bulkCashFlowType').value = 'Contribution';
+                document.getElementById('bulkCashFlowPercentage').value = '';
+                document.getElementById('bulkCashFlowAffectsCommitment').checked = true;
+
+                // Hide preview and disable apply button
+                document.getElementById('bulkCashFlowPreview').style.display = 'none';
+                document.getElementById('applyBulkCashFlowBtn').disabled = true;
+
+                document.getElementById('bulkCashFlowModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error opening bulk cash flow modal: ' + err.message, 'error');
+                Debug.error('Error in showBulkCashFlowModal:', err);
+            }
+        }
+
+        function closeBulkCashFlowModal() {
+            document.getElementById('bulkCashFlowModal').classList.remove('show');
+        }
+
+        async function previewBulkCashFlow() {
+            const fundName = document.getElementById('bulkCashFlowFundName').value;
+            const dateValue = document.getElementById('bulkCashFlowDate').value;
+            const type = document.getElementById('bulkCashFlowType').value;
+            const percentageValue = document.getElementById('bulkCashFlowPercentage').value;
+
+            // Validate inputs
+            if (!fundName) {
+                showStatus('Please select a fund', 'error');
+                return;
+            }
+
+            if (!dateValue) {
+                showStatus('Please enter a date', 'error');
+                return;
+            }
+
+            if (!isValidDate(dateValue)) {
+                showStatus('Please enter a valid date', 'error');
+                return;
+            }
+
+            const percentage = parseFloat(percentageValue);
+            if (isNaN(percentage) || percentage <= 0 || percentage > 100) {
+                showStatus('Please enter a valid percentage between 0 and 100', 'error');
+                return;
+            }
+
+            try {
+                // Get all funds with this fund name
+                const allFunds = await getAllFunds();
+                const matchingFunds = allFunds.filter(f => f.fundName === fundName);
+
+                if (matchingFunds.length === 0) {
+                    showStatus(`No investors found for fund "${fundName}"`, 'error');
+                    return;
+                }
+
+                // Calculate amounts for each investor
+                const previewData = matchingFunds.map(fund => {
+                    const amount = fund.commitment * (percentage / 100);
+                    // Contributions are negative (outflow), distributions are positive (inflow)
+                    const signedAmount = type === 'Contribution' ? -amount : amount;
+                    return {
+                        fundId: fund.id,
+                        accountNumber: fund.accountNumber,
+                        commitment: fund.commitment,
+                        calculatedAmount: signedAmount
+                    };
+                });
+
+                // Store preview data for apply
+                document.getElementById('bulkCashFlowModal').dataset.previewData = JSON.stringify(previewData);
+
+                // Build preview HTML
+                let previewHtml = `
+                    <p style="margin-bottom: 10px;"><strong>${matchingFunds.length}</strong> investor(s) will receive a ${type.toLowerCase()} on ${formatDate(dateValue)}:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--color-border);">
+                                <th style="text-align: left; padding: 5px;">Account</th>
+                                <th style="text-align: right; padding: 5px;">Commitment</th>
+                                <th style="text-align: right; padding: 5px;">Amount (${percentage}%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                let totalAmount = 0;
+                previewData.forEach(item => {
+                    totalAmount += item.calculatedAmount;
+                    previewHtml += `
+                        <tr style="border-bottom: 1px solid var(--color-border);">
+                            <td style="padding: 5px;">${escapeHtml(item.accountNumber)}</td>
+                            <td style="text-align: right; padding: 5px;">${formatCurrency(item.commitment)}</td>
+                            <td style="text-align: right; padding: 5px;">${formatCurrency(item.calculatedAmount)}</td>
+                        </tr>
+                    `;
+                });
+
+                previewHtml += `
+                        </tbody>
+                        <tfoot>
+                            <tr style="font-weight: bold;">
+                                <td style="padding: 5px;">Total</td>
+                                <td style="text-align: right; padding: 5px;"></td>
+                                <td style="text-align: right; padding: 5px;">${formatCurrency(totalAmount)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                `;
+
+                document.getElementById('bulkCashFlowPreviewContent').innerHTML = previewHtml;
+                document.getElementById('bulkCashFlowPreview').style.display = 'block';
+                document.getElementById('applyBulkCashFlowBtn').disabled = false;
+
+            } catch (err) {
+                showStatus('Error generating preview: ' + err.message, 'error');
+                Debug.error('Error in previewBulkCashFlow:', err);
+            }
+        }
+
+        async function applyBulkCashFlow() {
+            const previewDataStr = document.getElementById('bulkCashFlowModal').dataset.previewData;
+            if (!previewDataStr) {
+                showStatus('Please preview the cash flow first', 'error');
+                return;
+            }
+
+            const dateValue = document.getElementById('bulkCashFlowDate').value;
+            const type = document.getElementById('bulkCashFlowType').value;
+            const affectsCommitment = document.getElementById('bulkCashFlowAffectsCommitment').checked;
+            const fundName = document.getElementById('bulkCashFlowFundName').value;
+
+            const previewData = JSON.parse(previewDataStr);
+
+            const confirmed = await showConfirm(
+                `Are you sure you want to add this ${type.toLowerCase()} to ${previewData.length} investor(s)?`,
+                {
+                    title: 'Confirm Bulk Cash Flow',
+                    confirmText: 'Apply',
+                    cancelText: 'Cancel',
+                    confirmClass: 'btn-primary'
+                }
+            );
+
+            if (!confirmed) return;
+
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const item of previewData) {
+                    try {
+                        // Get the current fund data
+                        const fund = await getFundById(item.fundId);
+                        if (!fund) {
+                            errorCount++;
+                            continue;
+                        }
+
+                        // Create the new cash flow entry
+                        const newCashFlow = {
+                            date: dateValue,
+                            amount: item.calculatedAmount,
+                            type: type,
+                            affectsCommitment: affectsCommitment
+                        };
+
+                        // Add to fund's cash flows
+                        if (!fund.cashFlows) {
+                            fund.cashFlows = [];
+                        }
+                        fund.cashFlows.push(newCashFlow);
+
+                        // Sort cash flows by date
+                        fund.cashFlows.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                        // Save the updated fund
+                        await saveFundToDB(fund);
+                        successCount++;
+                    } catch (err) {
+                        Debug.error('Error applying cash flow to fund:', item.fundId, err);
+                        errorCount++;
+                    }
+                }
+
+                // Clear metrics cache and refresh the table
+                AppState.clearMetricsCache();
+                await renderTable();
+
+                closeBulkCashFlowModal();
+
+                if (errorCount === 0) {
+                    showStatus(`Successfully added ${type.toLowerCase()} to ${successCount} investor(s)`, 'success');
+                } else {
+                    showStatus(`Added ${type.toLowerCase()} to ${successCount} investor(s), ${errorCount} failed`, 'warning');
+                }
+
+            } catch (err) {
+                showStatus('Error applying bulk cash flow: ' + err.message, 'error');
+                Debug.error('Error in applyBulkCashFlow:', err);
+            }
+        }
+
+        // ==================== End Bulk Cash Flow Functions ====================
+
         async function populateFundNamesDropdown(valueToSet = null) {
             const select = document.getElementById('fundName');
             const currentValue = valueToSet !== null ? valueToSet : select.value;
@@ -8834,6 +9123,14 @@
                 document.getElementById('cancelEditBtn').addEventListener('click', cancelGroupEdit);
             },
 
+            /** Bulk cash flow modal */
+            setupBulkCashFlowModal() {
+                document.getElementById('closeBulkCashFlowModalBtn').addEventListener('click', closeBulkCashFlowModal);
+                document.getElementById('cancelBulkCashFlowBtn').addEventListener('click', closeBulkCashFlowModal);
+                document.getElementById('previewBulkCashFlowBtn').addEventListener('click', previewBulkCashFlow);
+                document.getElementById('applyBulkCashFlowBtn').addEventListener('click', applyBulkCashFlow);
+            },
+
             /** Details modal with cash flows and NAV tables */
             setupDetailsModal() {
                 document.getElementById('closeDetailsModalBtn').addEventListener('click', closeDetailsModal);
@@ -8891,6 +9188,7 @@
                     'sidebarNewInvestment': showAddFundModal,
                     'sidebarManageFunds': showManageFundsModal,
                     'sidebarManageGroups': showManageGroupsModal,
+                    'sidebarBulkCashFlow': showBulkCashFlowModal,
                     'sidebarExportCSV': exportToCSV,
                     'sidebarExportJSON': exportDatabase,
                     'sidebarExportPDF': exportToPDF,
@@ -8924,6 +9222,7 @@
                 this.setupActionDropdown();
                 this.setupFundNamesModal();
                 this.setupGroupsModal();
+                this.setupBulkCashFlowModal();
                 this.setupDetailsModal();
                 this.setupBackupWarning();
                 this.setupSidebar();
