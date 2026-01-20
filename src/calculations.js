@@ -160,6 +160,10 @@ export function getOutstandingCommitment(fund, cutoffDate) {
             if (cf.type === 'Contribution') {
                 const amount = parseCurrency(cf.amount) || 0;
                 outstanding -= Math.abs(amount);
+            } else if (cf.type === 'Distribution') {
+                // Recallable distribution - adds back to remaining commitment
+                const amount = parseCurrency(cf.amount) || 0;
+                outstanding += Math.abs(amount);
             } else if (cf.type === 'Adjustment') {
                 // Adjustments directly modify outstanding commitment
                 // Positive = increase remaining, Negative = decrease remaining

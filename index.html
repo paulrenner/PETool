@@ -185,6 +185,42 @@
             background: #2D3748;
         }
 
+        [data-theme="dark"] .multi-select-trigger {
+            background: #2D3748;
+            border-color: #4A5568;
+            color: #F7FAFC;
+        }
+
+        [data-theme="dark"] .multi-select-dropdown {
+            background: #2D3748;
+            border-color: #4A5568;
+        }
+
+        [data-theme="dark"] .multi-select-option:hover {
+            background: #374151;
+        }
+
+        [data-theme="dark"] .multi-select-option.selected {
+            background: rgba(99, 179, 237, 0.2);
+        }
+
+        [data-theme="dark"] .multi-select-actions {
+            background: #1F2937;
+            border-top-color: #4A5568;
+        }
+
+        [data-theme="dark"] .multi-select-option.group-top-level {
+            background: #374151;
+        }
+
+        [data-theme="dark"] .multi-select-option.group-separator {
+            border-top-color: #4A5568;
+        }
+
+        [data-theme="dark"] .multi-select-option.group-child {
+            border-left-color: #63B3ED;
+        }
+
         /* Portfolio Summary Stats */
         .portfolio-summary {
             display: flex;
@@ -702,6 +738,157 @@
 
         .filter-badge .clear-filters:hover {
             background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Multi-select dropdown */
+        .multi-select {
+            position: relative;
+            min-width: 150px;
+        }
+
+        .multi-select-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--color-border-input);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            background: var(--color-white);
+            color: var(--color-text);
+            cursor: pointer;
+            min-height: 36px;
+            gap: 8px;
+        }
+
+        .multi-select-trigger:hover {
+            border-color: var(--color-action);
+        }
+
+        .multi-select.open .multi-select-trigger {
+            border-color: var(--color-action);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .multi-select-display {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .multi-select-display .placeholder {
+            color: var(--color-muted);
+        }
+
+        .multi-select-count {
+            background: var(--color-action);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+
+        .multi-select-arrow {
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+
+        .multi-select.open .multi-select-arrow {
+            transform: rotate(180deg);
+        }
+
+        .multi-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 220px;
+            margin-top: 4px;
+            background: var(--color-white);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .multi-select.open .multi-select-dropdown {
+            display: block;
+        }
+
+        .multi-select-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .multi-select-option:hover {
+            background: var(--color-alt-bg);
+        }
+
+        .multi-select-option.selected {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .multi-select-option input[type="checkbox"] {
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .multi-select-option label {
+            flex: 1;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .multi-select-option.group-option {
+            padding-left: calc(12px + var(--indent-level, 0) * 16px);
+        }
+
+        /* Top-level group styling */
+        .multi-select-option.group-top-level {
+            background: var(--color-alt-bg);
+            font-weight: 600;
+        }
+
+        .multi-select-option.group-top-level label {
+            font-weight: 600;
+        }
+
+        /* Separator between top-level groups */
+        .multi-select-option.group-separator {
+            margin-top: 6px;
+            border-top: 1px solid var(--color-border);
+            padding-top: 10px;
+        }
+
+        /* Left border accent for child items */
+        .multi-select-option.group-child {
+            border-left: 3px solid var(--color-primary-light, #85c1e9);
+            margin-left: 8px;
+            padding-left: calc(12px + var(--indent-level, 0) * 16px - 11px);
+        }
+
+        .multi-select-actions {
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            border-top: 1px solid var(--color-border);
+            background: var(--color-alt-bg);
+        }
+
+        .multi-select-actions button {
+            flex: 1;
+            padding: 4px 8px;
+            font-size: 12px;
         }
 
         button {
@@ -2099,32 +2286,48 @@
 
         <div class="controls-bar" role="search" aria-label="Filter and search controls">
             <div class="control-group">
-                <label for="groupFilter">Filter by Group</label>
-                <select id="groupFilter">
-                    <option value="">All Groups</option>
-                </select>
+                <label>Filter by Group</label>
+                <div class="multi-select" id="groupFilter" data-placeholder="All Groups">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Groups</span></span>
+                        <span class="multi-select-arrow">▾</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
             </div>
             <div class="control-group">
-                <label for="fundFilter">Filter by Fund</label>
-                <select id="fundFilter">
-                    <option value="">All Funds</option>
-                </select>
+                <label>Filter by Fund</label>
+                <div class="multi-select" id="fundFilter" data-placeholder="All Funds">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Funds</span></span>
+                        <span class="multi-select-arrow">▾</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
             </div>
             <div class="control-group">
-                <label for="accountFilter">Filter by Account</label>
-                <select id="accountFilter">
-                    <option value="">All Accounts</option>
-                </select>
+                <label>Filter by Account</label>
+                <div class="multi-select" id="accountFilter" data-placeholder="All Accounts">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Accounts</span></span>
+                        <span class="multi-select-arrow">▾</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
             </div>
             <div class="control-group">
-                <label for="vintageFilter">Filter by Vintage</label>
-                <select id="vintageFilter">
-                    <option value="">All Vintages</option>
-                </select>
+                <label>Filter by Vintage</label>
+                <div class="multi-select" id="vintageFilter" data-placeholder="All Vintages">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Vintages</span></span>
+                        <span class="multi-select-arrow">▾</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
             </div>
             <div class="control-group">
                 <label for="searchInput">Search</label>
-                <input type="text" id="searchInput" placeholder="Search funds..." title="Search by fund name or account number" aria-label="Search funds by name or account number">
+                <input type="text" id="searchInput" placeholder="Search funds..." title="Search by fund name, account number, or tag" aria-label="Search funds by name, account number, or tag">
             </div>
             <div class="control-group">
                 <label for="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date">Cutoff Date</label>
@@ -2144,6 +2347,10 @@
         <div class="content" id="mainContent">
             <!-- Portfolio Summary Stats -->
             <div id="portfolioSummary" class="portfolio-summary">
+                <div class="summary-stat">
+                    <span class="summary-label">Investments</span>
+                    <span class="summary-value" id="summaryInvestmentCount">0</span>
+                </div>
                 <div class="summary-stat">
                     <span class="summary-label">Funds</span>
                     <span class="summary-value" id="summaryFundCount">0</span>
@@ -2593,6 +2800,128 @@
         </div>
     </div>
 
+    <!-- Bulk Cash Flow Modal -->
+    <div id="bulkCashFlowModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" id="closeBulkCashFlowModalBtn">&times;</span>
+            <h2>Bulk Cash Flow</h2>
+            <p style="color: var(--color-text-light); margin-bottom: 20px; font-size: 14px;">
+                Add a cash flow to all investors in a fund based on a percentage of their commitment.
+            </p>
+
+            <div class="form-group">
+                <label for="bulkCashFlowFundName">Fund Name *</label>
+                <select id="bulkCashFlowFundName" required>
+                    <option value="">Select a fund</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="bulkCashFlowDate">Date *</label>
+                <input type="date" id="bulkCashFlowDate" required>
+            </div>
+
+            <div class="form-group">
+                <label for="bulkCashFlowType">Type *</label>
+                <select id="bulkCashFlowType" required>
+                    <option value="Contribution">Contribution (Capital Call)</option>
+                    <option value="Distribution">Distribution</option>
+                    <option value="Adjustment">Adjustment</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="bulkCashFlowPercentage">Percentage of Commitment *</label>
+                <input type="number" id="bulkCashFlowPercentage" step="0.01" min="0.01" max="100" placeholder="e.g., 4.5" required>
+                <div class="hint">Enter percentage (e.g., 4.5 for 4.5% of commitment)</div>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="bulkCashFlowAffectsCommitment" checked>
+                    Affects unfunded commitment
+                </label>
+                <div class="hint">When checked, contributions will reduce unfunded commitment</div>
+            </div>
+
+            <div id="bulkCashFlowPreview" style="display: none; margin: 20px 0; padding: 15px; background: var(--color-alt-bg); border-radius: var(--radius-sm); max-height: 300px; overflow-y: auto;">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px;">Preview</h4>
+                <div id="bulkCashFlowPreviewContent"></div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" id="previewBulkCashFlowBtn">Preview</button>
+                <button type="button" class="btn-primary" id="applyBulkCashFlowBtn" disabled>Apply</button>
+                <button type="button" class="btn-secondary" id="cancelBulkCashFlowBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Remove Fund Modal -->
+    <div id="bulkRemoveFundModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" id="closeBulkRemoveFundModalBtn">&times;</span>
+            <h2>Bulk Remove Fund</h2>
+            <p style="color: var(--color-text-light); margin-bottom: 20px; font-size: 14px;">
+                Remove all investor positions for a selected fund. This action cannot be undone.
+            </p>
+
+            <div class="form-group">
+                <label for="bulkRemoveFundName">Fund Name *</label>
+                <select id="bulkRemoveFundName" required>
+                    <option value="">Select a fund</option>
+                </select>
+            </div>
+
+            <div id="bulkRemoveFundPreview" style="display: none; margin: 20px 0; padding: 15px; background: var(--color-alt-bg); border-radius: var(--radius-sm); max-height: 300px; overflow-y: auto;">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: var(--color-danger);">The following investors will be removed:</h4>
+                <div id="bulkRemoveFundPreviewContent"></div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" id="previewBulkRemoveFundBtn">Preview</button>
+                <button type="button" class="btn-danger" id="applyBulkRemoveFundBtn" disabled>Remove All</button>
+                <button type="button" class="btn-secondary" id="cancelBulkRemoveFundBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Assign Group Modal -->
+    <div id="bulkAssignGroupModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" id="closeBulkAssignGroupModalBtn">&times;</span>
+            <h2>Bulk Assign Group</h2>
+            <p style="color: var(--color-text-light); margin-bottom: 20px; font-size: 14px;">
+                Assign all investments with a specific account number to a group.
+            </p>
+
+            <div class="form-group">
+                <label for="bulkAssignGroupAccount">Account Number *</label>
+                <select id="bulkAssignGroupAccount" required>
+                    <option value="">Select an account</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="bulkAssignGroupTarget">Target Group *</label>
+                <select id="bulkAssignGroupTarget" required>
+                    <option value="">No Group</option>
+                </select>
+            </div>
+
+            <div id="bulkAssignGroupPreview" style="display: none; margin: 20px 0; padding: 15px; background: var(--color-alt-bg); border-radius: var(--radius-sm); max-height: 300px; overflow-y: auto;">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px;">The following investments will be updated:</h4>
+                <div id="bulkAssignGroupPreviewContent"></div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" id="previewBulkAssignGroupBtn">Preview</button>
+                <button type="button" class="btn-primary" id="applyBulkAssignGroupBtn" disabled>Apply</button>
+                <button type="button" class="btn-secondary" id="cancelBulkAssignGroupBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar Panel -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div id="sidebar" class="sidebar">
@@ -2636,6 +2965,16 @@
                         Manage Groups
                     </a>
                 </div>
+                <div class="sidebar-item">
+                    <a href="#" id="sidebarBulkCashFlow">
+                        Bulk Cash Flow
+                    </a>
+                </div>
+                <div class="sidebar-item">
+                    <a href="#" id="sidebarBulkAssignGroup">
+                        Bulk Assign Group
+                    </a>
+                </div>
             </div>
 
             <!-- Data Section -->
@@ -2670,6 +3009,16 @@
                 <div class="sidebar-item">
                     <a href="#" id="sidebarLoadSampleData">
                         Load Sample Data
+                    </a>
+                </div>
+                <div class="sidebar-item">
+                    <a href="#" id="sidebarBulkRemoveFund" style="color: var(--color-danger);">
+                        Bulk Remove Fund
+                    </a>
+                </div>
+                <div class="sidebar-item">
+                    <a href="#" id="sidebarClearDatabase" style="color: var(--color-danger);">
+                        Clear Database
                     </a>
                 </div>
             </div>
@@ -3252,40 +3601,219 @@
         }
 
         // ===========================
+        // Multi-Select Dropdown Component
+        // ===========================
+
+        /**
+         * Get selected values from a multi-select dropdown
+         * @param {string} id - The multi-select element ID
+         * @returns {Array<string>} Array of selected values
+         */
+        function getMultiSelectValues(id) {
+            const container = document.getElementById(id);
+            if (!container) return [];
+            const selected = container.querySelectorAll('.multi-select-option.selected');
+            return Array.from(selected).map(opt => opt.dataset.value);
+        }
+
+        /**
+         * Set selected values for a multi-select dropdown
+         * @param {string} id - The multi-select element ID
+         * @param {Array<string>} values - Array of values to select
+         */
+        function setMultiSelectValues(id, values) {
+            const container = document.getElementById(id);
+            if (!container) return;
+            const options = container.querySelectorAll('.multi-select-option');
+            options.forEach(opt => {
+                if (values.includes(opt.dataset.value)) {
+                    opt.classList.add('selected');
+                    const checkbox = opt.querySelector('input[type="checkbox"]');
+                    if (checkbox) checkbox.checked = true;
+                } else {
+                    opt.classList.remove('selected');
+                    const checkbox = opt.querySelector('input[type="checkbox"]');
+                    if (checkbox) checkbox.checked = false;
+                }
+            });
+            updateMultiSelectDisplay(id);
+        }
+
+        /**
+         * Clear all selections in a multi-select dropdown
+         * @param {string} id - The multi-select element ID
+         */
+        function clearMultiSelect(id) {
+            setMultiSelectValues(id, []);
+        }
+
+        /**
+         * Update the display text of a multi-select dropdown
+         * @param {string} id - The multi-select element ID
+         */
+        function updateMultiSelectDisplay(id) {
+            const container = document.getElementById(id);
+            if (!container) return;
+            const display = container.querySelector('.multi-select-display');
+            const placeholder = container.dataset.placeholder || 'Select...';
+            const selected = getMultiSelectValues(id);
+
+            if (selected.length === 0) {
+                display.innerHTML = `<span class="placeholder">${escapeHtml(placeholder)}</span>`;
+            } else if (selected.length === 1) {
+                // Show the single selected value
+                const option = container.querySelector(`.multi-select-option[data-value="${CSS.escape(selected[0])}"]`);
+                const label = option ? option.querySelector('label').textContent : selected[0];
+                display.innerHTML = escapeHtml(label);
+            } else {
+                // Show count badge
+                display.innerHTML = `<span class="multi-select-count">${selected.length} selected</span>`;
+            }
+        }
+
+        /**
+         * Populate options in a multi-select dropdown
+         * @param {string} id - The multi-select element ID
+         * @param {Array<{value: string, label: string, indent?: number}>} options - Array of option objects
+         * @param {Array<string>} preserveValues - Values to preserve selection for
+         */
+        function populateMultiSelect(id, options, preserveValues = []) {
+            const container = document.getElementById(id);
+            if (!container) return;
+            const dropdown = container.querySelector('.multi-select-dropdown');
+            if (!dropdown) return;
+
+            let seenTopLevelGroup = false;
+            dropdown.innerHTML = options.map(opt => {
+                const isSelected = preserveValues.includes(opt.value);
+                const indentStyle = opt.indent ? `style="--indent-level: ${opt.indent}"` : '';
+
+                // Build CSS classes based on hierarchy level
+                let classes = ['multi-select-option'];
+                if (opt.indent !== undefined) {
+                    if (opt.indent === 0) {
+                        // Top-level group
+                        classes.push('group-top-level');
+                        if (seenTopLevelGroup) {
+                            classes.push('group-separator');
+                        }
+                        seenTopLevelGroup = true;
+                    } else {
+                        // Child group
+                        classes.push('group-option', 'group-child');
+                    }
+                }
+                if (isSelected) classes.push('selected');
+
+                return `
+                    <div class="${classes.join(' ')}"
+                         data-value="${escapeHtml(opt.value)}"
+                         role="option"
+                         aria-selected="${isSelected}"
+                         ${indentStyle}>
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} tabindex="-1">
+                        <label>${escapeHtml(opt.label)}</label>
+                    </div>
+                `;
+            }).join('');
+
+            updateMultiSelectDisplay(id);
+        }
+
+        /**
+         * Initialize multi-select dropdown event handlers
+         */
+        function initMultiSelectDropdowns() {
+            const multiSelects = document.querySelectorAll('.multi-select');
+
+            multiSelects.forEach(container => {
+                const trigger = container.querySelector('.multi-select-trigger');
+                const dropdown = container.querySelector('.multi-select-dropdown');
+
+                // Toggle dropdown on trigger click
+                trigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const wasOpen = container.classList.contains('open');
+
+                    // Close all other multi-selects
+                    document.querySelectorAll('.multi-select.open').forEach(ms => {
+                        ms.classList.remove('open');
+                        ms.querySelector('.multi-select-trigger').setAttribute('aria-expanded', 'false');
+                    });
+
+                    // Toggle this one
+                    if (!wasOpen) {
+                        container.classList.add('open');
+                        trigger.setAttribute('aria-expanded', 'true');
+                    }
+                });
+
+                // Keyboard navigation
+                trigger.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        trigger.click();
+                    } else if (e.key === 'Escape') {
+                        container.classList.remove('open');
+                        trigger.setAttribute('aria-expanded', 'false');
+                    }
+                });
+
+                // Handle option clicks (using event delegation)
+                dropdown.addEventListener('click', (e) => {
+                    const option = e.target.closest('.multi-select-option');
+                    if (option) {
+                        e.stopPropagation();
+                        option.classList.toggle('selected');
+                        const checkbox = option.querySelector('input[type="checkbox"]');
+                        if (checkbox) checkbox.checked = option.classList.contains('selected');
+                        option.setAttribute('aria-selected', option.classList.contains('selected'));
+                        updateMultiSelectDisplay(container.id);
+                        applyFilters();
+                    }
+                });
+            });
+
+            // Close all dropdowns when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.multi-select')) {
+                    document.querySelectorAll('.multi-select.open').forEach(ms => {
+                        ms.classList.remove('open');
+                        ms.querySelector('.multi-select-trigger').setAttribute('aria-expanded', 'false');
+                    });
+                }
+            });
+        }
+
+        // ===========================
         // Filter Configuration
         // ===========================
 
         /**
          * Filter configurations for declarative filtering
+         * Now handles arrays of values for multi-select filters
          */
         const FilterConfigs = [
             {
                 id: 'fundFilter',
-                apply: (fund, value) => !value || fund.fundName === value
+                isMultiSelect: true,
+                apply: (fund, values) => values.length === 0 || values.includes(fund.fundName)
             },
             {
                 id: 'accountFilter',
-                apply: (fund, value) => !value || fund.accountNumber === value
+                isMultiSelect: true,
+                apply: (fund, values) => values.length === 0 || values.includes(fund.accountNumber)
             },
             {
                 id: 'vintageFilter',
-                apply: (fund, value) => {
-                    if (!value) return true;
+                isMultiSelect: true,
+                apply: (fund, values) => {
+                    if (values.length === 0) return true;
                     const vintage = getVintageYear(fund);
-                    return vintage && vintage.toString() === value;
-                }
-            },
-            {
-                id: 'searchInput',
-                apply: (fund, value) => {
-                    if (!value) return true;
-                    const searchLower = value.toLowerCase();
-                    return (
-                        fund.fundName.toLowerCase().includes(searchLower) ||
-                        (fund.accountNumber && fund.accountNumber.toLowerCase().includes(searchLower))
-                    );
+                    return vintage && values.includes(vintage.toString());
                 }
             }
+            // Note: searchInput is handled separately in applyCurrentFilters to include tag matching
         ];
 
         // ===========================
@@ -3362,8 +3890,9 @@
                 // Update O(1) lookup map
                 this.groupsMap.clear();
                 groupList.forEach(g => this.groupsMap.set(g.id, g));
-                // Clear ancestor cache since groups changed
+                // Clear caches since groups changed
                 this.ancestorCache.clear();
+                this.groupDescendantsCache.clear();
             },
 
             // O(1) group lookup by ID (synchronous)
@@ -3386,6 +3915,30 @@
                 }
                 this.ancestorCache.set(groupId, ancestors);
                 return ancestors;
+            },
+
+            // Get descendant group IDs with memoization (synchronous)
+            getDescendantIds(groupId) {
+                if (this.groupDescendantsCache.has(groupId)) {
+                    return this.groupDescendantsCache.get(groupId);
+                }
+                const descendants = [groupId];
+                // Find all groups that have this groupId as ancestor
+                for (const [id, group] of this.groupsMap) {
+                    if (group.parentGroupId === groupId) {
+                        // Recursively get descendants of this child
+                        const childDescendants = this.getDescendantIds(id);
+                        descendants.push(...childDescendants.slice(1)); // Skip first (the child itself is already in childDescendants)
+                        descendants.push(id);
+                    }
+                }
+                this.groupDescendantsCache.set(groupId, descendants);
+                return descendants;
+            },
+
+            // Clear descendant cache (call when groups change)
+            clearDescendantCache() {
+                this.groupDescendantsCache.clear();
             },
 
             setUnsavedChanges(value) {
@@ -4133,6 +4686,10 @@
                     if (cf.type === 'Contribution') {
                         const amount = parseCurrency(cf.amount) || 0;
                         outstanding -= Math.abs(amount);
+                    } else if (cf.type === 'Distribution') {
+                        // Recallable distribution - adds back to remaining commitment
+                        const amount = parseCurrency(cf.amount) || 0;
+                        outstanding += Math.abs(amount);
                     } else if (cf.type === 'Adjustment') {
                         // Adjustments directly modify outstanding commitment
                         // Positive = increase remaining, Negative = decrease remaining
@@ -4536,8 +5093,8 @@
                     return { valid: false, error: 'Invalid amount', index: i };
                 }
 
-                if (!['Contribution', 'Distribution'].includes(cf.type)) {
-                    return { valid: false, error: 'Invalid cash flow type (must be Contribution or Distribution)', index: i };
+                if (!['Contribution', 'Distribution', 'Adjustment'].includes(cf.type)) {
+                    return { valid: false, error: 'Invalid cash flow type (must be Contribution, Distribution, or Adjustment)', index: i };
                 }
             }
 
@@ -4667,11 +5224,11 @@
 
                 if (fundsWithMetrics.length === 0) {
                     // Check if this is due to filters or no data at all
-                    const hasFilters = document.getElementById('fundFilter').value ||
-                        document.getElementById('accountFilter').value ||
-                        document.getElementById('groupFilter').value ||
+                    const hasFilters = getMultiSelectValues('fundFilter').length > 0 ||
+                        getMultiSelectValues('accountFilter').length > 0 ||
+                        getMultiSelectValues('groupFilter').length > 0 ||
                         document.getElementById('searchInput').value ||
-                        document.getElementById('vintageFilter').value;
+                        getMultiSelectValues('vintageFilter').length > 0;
 
                     const hasAnyFunds = currentFunds.length > 0;
 
@@ -4807,12 +5364,13 @@
 
         function applyCurrentFilters(funds) {
             // Get filter values once (cached for all funds)
+            // Multi-select filters return arrays, regular inputs return strings
             const filterValues = {
-                fundFilter: document.getElementById('fundFilter').value,
-                accountFilter: document.getElementById('accountFilter').value,
-                groupFilter: document.getElementById('groupFilter').value,
+                fundFilter: getMultiSelectValues('fundFilter'),
+                accountFilter: getMultiSelectValues('accountFilter'),
+                groupFilter: getMultiSelectValues('groupFilter'),
                 searchInput: document.getElementById('searchInput').value.toLowerCase().trim(),
-                vintageFilter: document.getElementById('vintageFilter').value
+                vintageFilter: getMultiSelectValues('vintageFilter')
             };
 
             return funds.filter(fund => {
@@ -4823,21 +5381,31 @@
                 }
 
                 // Group filter (special handling for hierarchical groups)
-                if (filterValues.groupFilter) {
-                    const groupId = parseInt(filterValues.groupFilter);
+                if (filterValues.groupFilter.length > 0) {
                     if (!fund.groupId) return false;
-                    if (!currentGroupDescendants || currentGroupDescendants.groupId !== groupId) {
-                        return false; // Will be set by async filter
+                    // Check if fund belongs to any of the selected groups or their descendants
+                    let matchesGroup = false;
+                    for (const groupIdStr of filterValues.groupFilter) {
+                        const groupId = parseInt(groupIdStr);
+                        if (fund.groupId === groupId) {
+                            matchesGroup = true;
+                            break;
+                        }
+                        // Check descendants of this group
+                        const descendants = AppState.getDescendantIds(groupId);
+                        if (descendants.includes(fund.groupId)) {
+                            matchesGroup = true;
+                            break;
+                        }
                     }
-                    if (!currentGroupDescendants.ids.includes(fund.groupId)) return false;
+                    if (!matchesGroup) return false;
                 }
 
-                // Tags search (extends searchInput to include tags)
+                // Search filter: matches fund name, account number, or tags
                 if (filterValues.searchInput) {
                     const fundNameObj = fundNameData.get(fund.fundName);
                     const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
                     const fundTags = tags.map(tag => tag.toLowerCase()).join(' ');
-                    // If search already matched via FilterConfigs, pass; otherwise check tags
                     if (!fund.fundName.toLowerCase().includes(filterValues.searchInput) &&
                         !(fund.accountNumber && fund.accountNumber.toLowerCase().includes(filterValues.searchInput)) &&
                         !fundTags.includes(filterValues.searchInput)) {
@@ -4850,143 +5418,130 @@
         }
 
         function updateFilterDropdowns(allFunds) {
-            // Get current filter values
-            const groupFilter = document.getElementById('groupFilter');
-            const fundFilter = document.getElementById('fundFilter');
-            const accountFilter = document.getElementById('accountFilter');
-            const vintageFilter = document.getElementById('vintageFilter');
+            // Get current multi-select values (arrays)
+            const currentGroupValues = getMultiSelectValues('groupFilter');
+            const currentFundValues = getMultiSelectValues('fundFilter');
+            const currentAccountValues = getMultiSelectValues('accountFilter');
+            const currentVintageValues = getMultiSelectValues('vintageFilter');
 
-            const currentGroupValue = groupFilter.value;
-            const currentFundValue = fundFilter.value;
-            const currentAccountValue = accountFilter.value;
-            const currentVintageValue = vintageFilter.value;
-
-            // Helper function to filter funds by group
-            const filterByGroup = (funds, groupId) => {
-                if (!groupId) return funds;
-                const gId = parseInt(groupId);
+            // Helper function to filter funds by multiple groups
+            const filterByGroups = (funds, groupIds) => {
+                if (groupIds.length === 0) return funds;
                 return funds.filter(fund => {
                     if (!fund.groupId) return false;
-                    if (fund.groupId === gId) return true;
-                    // Check if fund's group is descendant of selected group
-                    if (currentGroupDescendants && currentGroupDescendants.groupId === gId) {
-                        return currentGroupDescendants.ids.includes(fund.groupId);
+                    for (const groupIdStr of groupIds) {
+                        const gId = parseInt(groupIdStr);
+                        if (fund.groupId === gId) return true;
+                        // Check if fund's group is descendant of selected group
+                        const descendants = AppState.getDescendantIds(gId);
+                        if (descendants.includes(fund.groupId)) return true;
                     }
                     return false;
                 });
             };
 
-            // Helper function to filter funds by vintage
-            const filterByVintage = (funds, vintage) => {
-                if (!vintage) return funds;
-                const vintageYear = parseInt(vintage);
-                return funds.filter(fund => getVintageYear(fund) === vintageYear);
+            // Helper function to filter funds by multiple vintages
+            const filterByVintages = (funds, vintages) => {
+                if (vintages.length === 0) return funds;
+                return funds.filter(fund => {
+                    const vintage = getVintageYear(fund);
+                    return vintage && vintages.includes(vintage.toString());
+                });
+            };
+
+            // Helper function to filter funds by multiple fund names
+            const filterByFunds = (funds, fundNames) => {
+                if (fundNames.length === 0) return funds;
+                return funds.filter(f => fundNames.includes(f.fundName));
+            };
+
+            // Helper function to filter funds by multiple accounts
+            const filterByAccounts = (funds, accounts) => {
+                if (accounts.length === 0) return funds;
+                return funds.filter(f => accounts.includes(f.accountNumber));
             };
 
             // 1. Update FUND dropdown (filter by group, account, and vintage)
             let fundsForFundDropdown = allFunds;
-            if (currentGroupValue) {
-                fundsForFundDropdown = filterByGroup(fundsForFundDropdown, currentGroupValue);
-            }
-            if (currentAccountValue) {
-                fundsForFundDropdown = fundsForFundDropdown.filter(f => f.accountNumber === currentAccountValue);
-            }
-            if (currentVintageValue) {
-                fundsForFundDropdown = filterByVintage(fundsForFundDropdown, currentVintageValue);
-            }
+            fundsForFundDropdown = filterByGroups(fundsForFundDropdown, currentGroupValues);
+            fundsForFundDropdown = filterByAccounts(fundsForFundDropdown, currentAccountValues);
+            fundsForFundDropdown = filterByVintages(fundsForFundDropdown, currentVintageValues);
+
             const uniqueFunds = [...new Set(fundsForFundDropdown.map(f => f.fundName))].sort();
-            fundFilter.innerHTML = '<option value="">All Funds</option>';
-            uniqueFunds.forEach(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                fundFilter.appendChild(option);
-            });
-            if (currentFundValue && uniqueFunds.includes(currentFundValue)) {
-                fundFilter.value = currentFundValue;
-            } else {
-                fundFilter.value = '';
-            }
+            const fundOptions = uniqueFunds.map(name => ({ value: name, label: name }));
+            // Preserve selections that are still valid
+            const validFundValues = currentFundValues.filter(v => uniqueFunds.includes(v));
+            populateMultiSelect('fundFilter', fundOptions, validFundValues);
 
             // 2. Update ACCOUNT dropdown (filter by group, fund, and vintage)
             let fundsForAccountDropdown = allFunds;
-            if (currentGroupValue) {
-                fundsForAccountDropdown = filterByGroup(fundsForAccountDropdown, currentGroupValue);
-            }
-            if (currentFundValue) {
-                fundsForAccountDropdown = fundsForAccountDropdown.filter(f => f.fundName === currentFundValue);
-            }
-            if (currentVintageValue) {
-                fundsForAccountDropdown = filterByVintage(fundsForAccountDropdown, currentVintageValue);
-            }
+            fundsForAccountDropdown = filterByGroups(fundsForAccountDropdown, currentGroupValues);
+            fundsForAccountDropdown = filterByFunds(fundsForAccountDropdown, currentFundValues);
+            fundsForAccountDropdown = filterByVintages(fundsForAccountDropdown, currentVintageValues);
+
             const uniqueAccounts = [...new Set(fundsForAccountDropdown.map(f => f.accountNumber))].sort();
-            accountFilter.innerHTML = '<option value="">All Accounts</option>';
-            uniqueAccounts.forEach(account => {
-                const option = document.createElement('option');
-                option.value = account;
-                option.textContent = account;
-                accountFilter.appendChild(option);
-            });
-            if (currentAccountValue && uniqueAccounts.includes(currentAccountValue)) {
-                accountFilter.value = currentAccountValue;
-            } else {
-                accountFilter.value = '';
-            }
+            const accountOptions = uniqueAccounts.map(account => ({ value: account, label: account }));
+            const validAccountValues = currentAccountValues.filter(v => uniqueAccounts.includes(v));
+            populateMultiSelect('accountFilter', accountOptions, validAccountValues);
 
             // 3. Update GROUP dropdown
-            groupFilter.innerHTML = '<option value="">All Groups</option>';
+            const groupOptions = [];
             if (groups.length > 0) {
                 const tree = buildGroupsTree(groups, null);
 
-                // If a group is already selected, keep it selected and show all groups
-                // Group filter takes priority and should not be auto-cleared
-                if (currentGroupValue) {
-                    addGroupOptionsToSelect(groupFilter, tree, 0);
-                    groupFilter.value = currentGroupValue;
-                } else if (currentFundValue || currentAccountValue || currentVintageValue) {
-                    // Only filter groups when NO group is selected but fund/account/vintage IS selected
-                    // This helps users see which groups contain the selected fund/account/vintage
-                    let fundsForGroupDropdown = allFunds;
-                    if (currentFundValue) {
-                        fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.fundName === currentFundValue);
-                    }
-                    if (currentAccountValue) {
-                        fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.accountNumber === currentAccountValue);
-                    }
-                    if (currentVintageValue) {
-                        fundsForGroupDropdown = filterByVintage(fundsForGroupDropdown, currentVintageValue);
-                    }
+                // Helper to flatten tree into options with indentation
+                const flattenGroupTree = (nodes, level, validGroupIds = null) => {
+                    const options = [];
+                    nodes.forEach(node => {
+                        // If filtering, only include if this group or descendants have matching funds
+                        if (validGroupIds === null || validGroupIds.has(node.id)) {
+                            options.push({
+                                value: node.id.toString(),
+                                label: node.name,
+                                indent: level
+                            });
+                        }
+                        if (node.children && node.children.length > 0) {
+                            options.push(...flattenGroupTree(node.children, level + 1, validGroupIds));
+                        }
+                    });
+                    return options;
+                };
 
-                    // Collect all group IDs including ancestors
+                // If groups already selected, show all groups
+                // Otherwise, filter to groups containing matching funds
+                if (currentGroupValues.length > 0) {
+                    groupOptions.push(...flattenGroupTree(tree, 0));
+                } else if (currentFundValues.length > 0 || currentAccountValues.length > 0 || currentVintageValues.length > 0) {
+                    // Filter groups to only those containing matching funds
+                    let fundsForGroupDropdown = allFunds;
+                    fundsForGroupDropdown = filterByFunds(fundsForGroupDropdown, currentFundValues);
+                    fundsForGroupDropdown = filterByAccounts(fundsForGroupDropdown, currentAccountValues);
+                    fundsForGroupDropdown = filterByVintages(fundsForGroupDropdown, currentVintageValues);
+
                     const validGroupIds = new Set();
                     fundsForGroupDropdown.forEach(fund => {
                         if (fund.groupId != null) {
-                            // Add the fund's group and all its ancestors
                             const ancestors = getAncestorGroupIds(fund.groupId);
                             ancestors.forEach(id => validGroupIds.add(id));
                         }
                     });
-
-                    addGroupOptionsToSelectFiltered(groupFilter, tree, 0, validGroupIds);
+                    groupOptions.push(...flattenGroupTree(tree, 0, validGroupIds));
                 } else {
-                    // No filters active - show all groups
-                    addGroupOptionsToSelect(groupFilter, tree, 0);
+                    groupOptions.push(...flattenGroupTree(tree, 0));
                 }
             }
+            const validGroupValues = currentGroupValues.filter(v =>
+                groupOptions.some(opt => opt.value === v)
+            );
+            populateMultiSelect('groupFilter', groupOptions, validGroupValues);
 
             // 4. Update VINTAGE dropdown (filter by group, fund, and account)
             let fundsForVintageDropdown = allFunds;
-            if (currentGroupValue) {
-                fundsForVintageDropdown = filterByGroup(fundsForVintageDropdown, currentGroupValue);
-            }
-            if (currentFundValue) {
-                fundsForVintageDropdown = fundsForVintageDropdown.filter(f => f.fundName === currentFundValue);
-            }
-            if (currentAccountValue) {
-                fundsForVintageDropdown = fundsForVintageDropdown.filter(f => f.accountNumber === currentAccountValue);
-            }
+            fundsForVintageDropdown = filterByGroups(fundsForVintageDropdown, currentGroupValues);
+            fundsForVintageDropdown = filterByFunds(fundsForVintageDropdown, currentFundValues);
+            fundsForVintageDropdown = filterByAccounts(fundsForVintageDropdown, currentAccountValues);
 
-            // Get unique vintage years from filtered funds
             const vintages = new Set();
             fundsForVintageDropdown.forEach(fund => {
                 const vintage = getVintageYear(fund);
@@ -4995,22 +5550,14 @@
                 }
             });
             const sortedVintages = Array.from(vintages).sort((a, b) => b - a);
-
-            vintageFilter.innerHTML = '<option value="">All Vintages</option>';
-            sortedVintages.forEach(year => {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                vintageFilter.appendChild(option);
-            });
-
-            // Restore selection if still valid
-            if (currentVintageValue && sortedVintages.includes(parseInt(currentVintageValue))) {
-                vintageFilter.value = currentVintageValue;
-            } else if (currentVintageValue) {
-                // Selection no longer valid, clear it
-                vintageFilter.value = '';
-            }
+            const vintageOptions = sortedVintages.map(year => ({
+                value: year.toString(),
+                label: year.toString()
+            }));
+            const validVintageValues = currentVintageValues.filter(v =>
+                sortedVintages.includes(parseInt(v))
+            );
+            populateMultiSelect('vintageFilter', vintageOptions, validVintageValues);
         }
 
         // Helper function to get all ancestor group IDs (uses memoized AppState version)
@@ -5089,33 +5636,10 @@
             setFilterLoading(true);
 
             try {
-                const groupFilterValue = document.getElementById('groupFilter').value;
-
                 // Check if cancelled
                 if (signal.aborted) return;
 
-                // Precompute descendants if group filter is active
-                if (groupFilterValue) {
-                    const groupId = parseInt(groupFilterValue);
-
-                    // Use cached descendants if available and valid
-                    if (!AppState.groupDescendantsCache.has(groupId)) {
-                        const descendants = await getAllDescendantGroupIds(groupId);
-                        if (signal.aborted) return; // Check again after async operation
-                        AppState.groupDescendantsCache.set(groupId, descendants);
-                    }
-
-                    AppState.setCurrentGroupDescendants({
-                        groupId,
-                        ids: AppState.groupDescendantsCache.get(groupId)
-                    });
-                } else {
-                    AppState.setCurrentGroupDescendants(null);
-                }
-
-                if (signal.aborted) return;
-
-                // Update header based on selected group
+                // Update header based on selected groups
                 updateHeader();
 
                 if (signal.aborted) return;
@@ -5123,8 +5647,8 @@
                 await renderTable();
 
                 // Announce results to screen readers
-                const fundCount = document.getElementById('summaryFundCount').textContent;
-                announceToScreenReader(`Filter applied. Showing ${fundCount} funds.`);
+                const investmentCount = document.getElementById('summaryInvestmentCount').textContent;
+                announceToScreenReader(`Filter applied. Showing ${investmentCount} investments.`);
             } catch (err) {
                 if (err.name === 'AbortError') {
                     // Operation was cancelled, ignore
@@ -5149,12 +5673,13 @@
         const applyFiltersDebounced = debounce(applyFilters, CONFIG.DEBOUNCE_FILTER);
 
         function updateHeader() {
-            const groupFilterValue = document.getElementById('groupFilter').value;
+            const groupFilterValues = getMultiSelectValues('groupFilter');
             const headerTitle = document.getElementById('headerTitle');
             const headerSubtitle = document.getElementById('headerSubtitle');
 
-            if (groupFilterValue) {
-                const groupId = parseInt(groupFilterValue);
+            if (groupFilterValues.length === 1) {
+                // Single group selected - show group name
+                const groupId = parseInt(groupFilterValues[0]);
                 const group = AppState.getGroupByIdSync(groupId);
 
                 if (group) {
@@ -5174,6 +5699,10 @@
                         headerSubtitle.textContent = '';
                     }
                 }
+            } else if (groupFilterValues.length > 1) {
+                // Multiple groups selected
+                headerTitle.textContent = `${groupFilterValues.length} Groups Selected`;
+                headerSubtitle.textContent = 'Multiple investor groups';
             } else {
                 // Reset to default
                 headerTitle.textContent = 'PE Fund Manager';
@@ -5182,11 +5711,14 @@
         }
 
         async function resetFilters() {
-            document.getElementById('fundFilter').value = '';
-            document.getElementById('accountFilter').value = '';
-            document.getElementById('groupFilter').value = '';
+            // Clear multi-select filters
+            clearMultiSelect('fundFilter');
+            clearMultiSelect('accountFilter');
+            clearMultiSelect('groupFilter');
+            clearMultiSelect('vintageFilter');
+
+            // Clear search input
             document.getElementById('searchInput').value = '';
-            document.getElementById('vintageFilter').value = '';
 
             // Reset cutoff date to latest quarter end (same as page load)
             const quarterEnd = getLatestQuarterEnd();
@@ -5208,26 +5740,32 @@
          * Update the active filters indicator
          */
         function updateActiveFiltersIndicator() {
-            const fundFilter = document.getElementById('fundFilter').value;
-            const accountFilter = document.getElementById('accountFilter').value;
-            const groupFilter = document.getElementById('groupFilter').value;
+            // Get multi-select values (arrays)
+            const fundFilter = getMultiSelectValues('fundFilter');
+            const accountFilter = getMultiSelectValues('accountFilter');
+            const groupFilter = getMultiSelectValues('groupFilter');
+            const vintageFilter = getMultiSelectValues('vintageFilter');
             const searchInput = document.getElementById('searchInput').value.trim();
-            const vintageFilter = document.getElementById('vintageFilter').value;
 
-            // Count active filters
+            // Count active filters (count each multi-select with selections as 1 filter)
             let filterCount = 0;
-            if (fundFilter) filterCount++;
-            if (accountFilter) filterCount++;
-            if (groupFilter) filterCount++;
+            if (fundFilter.length > 0) filterCount++;
+            if (accountFilter.length > 0) filterCount++;
+            if (groupFilter.length > 0) filterCount++;
             if (searchInput) filterCount++;
-            if (vintageFilter) filterCount++;
+            if (vintageFilter.length > 0) filterCount++;
+
+            // Count total individual selections for display
+            const totalSelections = fundFilter.length + accountFilter.length +
+                groupFilter.length + vintageFilter.length + (searchInput ? 1 : 0);
 
             const indicator = document.getElementById('activeFiltersIndicator');
 
             if (indicator) {
                 if (filterCount > 0) {
                     indicator.style.display = 'inline-flex';
-                    indicator.innerHTML = `${filterCount} filter${filterCount > 1 ? 's' : ''} <button class="clear-filters" title="Clear all filters" aria-label="Clear all filters">&times;</button>`;
+                    const label = totalSelections === 1 ? '1 filter' : `${totalSelections} filters`;
+                    indicator.innerHTML = `${label} <button class="clear-filters" title="Clear all filters" aria-label="Clear all filters">&times;</button>`;
                     // Attach event listener to the clear button
                     const clearBtn = indicator.querySelector('.clear-filters');
                     if (clearBtn) {
@@ -5292,8 +5830,12 @@
             const portfolioRVPI = calculateRVPI(totalNav, totalContributions);
             const portfolioTVPI = calculateTVPI(totalNav, totalDistributions, totalContributions);
 
+            // Calculate unique fund count
+            const uniqueFundCount = new Set(fundsWithMetrics.map(f => f.fundName)).size;
+
             // Update DOM
-            document.getElementById('summaryFundCount').textContent = count;
+            document.getElementById('summaryInvestmentCount').textContent = count;
+            document.getElementById('summaryFundCount').textContent = uniqueFundCount;
             document.getElementById('summaryCommitment').textContent = formatCurrency(totalCommitment);
             document.getElementById('summaryNav').textContent = formatCurrency(totalNav);
 
@@ -5350,11 +5892,11 @@
                 }
 
                 fund.cashFlows.forEach(cf => {
-                    // Skip adjustments - they don't affect the cash flow timeline
-                    if (cf.type === 'Adjustment') return;
-
                     const cfDate = new Date(cf.date);
                     const year = cfDate.getFullYear();
+
+                    // Skip adjustment type cash flows - they shouldn't appear in timeline
+                    if (cf.type === 'Adjustment') return;
 
                     // Only include historical data (on or before cutoff date)
                     if (cutoffDate && cfDate > cutoffDate) return;
@@ -5524,10 +6066,10 @@
             const maxDataYear = Math.max(...yearsWithData);
 
             // Determine display range:
-            // Historical: from minDataYear to cutoffYear (at least 5 years back from cutoff if data exists)
-            // Projected: from cutoffYear+1 to at least 5 years out or maxDataYear
-            const historicalStart = Math.min(minDataYear, dividerYear - 4);
-            const projectedEnd = Math.max(maxDataYear, dividerYear + 5);
+            // Historical: from minDataYear to cutoffYear (at least 10 years back from cutoff if data exists)
+            // Projected: from cutoffYear+1 to at least 6 years out or maxDataYear
+            const historicalStart = Math.min(minDataYear, dividerYear - 9);
+            const projectedEnd = Math.max(maxDataYear, dividerYear + 6);
 
             // Build continuous year range
             const years = [];
@@ -5535,12 +6077,12 @@
                 years.push(y);
             }
 
-            // Limit to reasonable display (last 5 historical + next 5 projected = 10 years max)
+            // Limit to reasonable display (last 10 historical + next 6 projected = 16 years max)
             const historicalYears = years.filter(y => y <= dividerYear);
             const projectedYears = years.filter(y => y > dividerYear);
 
-            const displayHistorical = historicalYears.slice(-5);
-            const displayProjected = projectedYears.slice(0, 5);
+            const displayHistorical = historicalYears.slice(-10);
+            const displayProjected = projectedYears.slice(0, 6);
 
             return {
                 years: [...displayHistorical, ...displayProjected],
@@ -6799,6 +7341,10 @@
                         }
                     } else if (type === 'Distribution') {
                         totalDistributions += Math.abs(amount);
+                        if (affectsCommitment) {
+                            // Recallable distribution - adds back to remaining commitment
+                            outstandingCommitment += Math.abs(amount);
+                        }
                     } else if (type === 'Adjustment' && affectsCommitment) {
                         // Adjustments directly modify outstanding commitment
                         // Positive = increase remaining, Negative = decrease remaining
@@ -7670,6 +8216,565 @@
             }
         }
 
+        // ==================== Bulk Cash Flow Functions ====================
+
+        async function showBulkCashFlowModal() {
+            try {
+                // Populate fund name dropdown
+                const select = document.getElementById('bulkCashFlowFundName');
+                const names = await getAllFundNames();
+
+                select.innerHTML = '<option value="">Select a fund</option>';
+                names.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    select.appendChild(option);
+                });
+
+                // Set default date to today
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('bulkCashFlowDate').value = today;
+
+                // Reset other fields
+                document.getElementById('bulkCashFlowType').value = 'Contribution';
+                document.getElementById('bulkCashFlowPercentage').value = '';
+                document.getElementById('bulkCashFlowAffectsCommitment').checked = true;
+
+                // Hide preview and disable apply button
+                document.getElementById('bulkCashFlowPreview').style.display = 'none';
+                document.getElementById('applyBulkCashFlowBtn').disabled = true;
+
+                document.getElementById('bulkCashFlowModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error opening bulk cash flow modal: ' + err.message, 'error');
+                Debug.error('Error in showBulkCashFlowModal:', err);
+            }
+        }
+
+        function closeBulkCashFlowModal() {
+            document.getElementById('bulkCashFlowModal').classList.remove('show');
+        }
+
+        async function previewBulkCashFlow() {
+            const fundName = document.getElementById('bulkCashFlowFundName').value;
+            const dateValue = document.getElementById('bulkCashFlowDate').value;
+            const type = document.getElementById('bulkCashFlowType').value;
+            const percentageValue = document.getElementById('bulkCashFlowPercentage').value;
+
+            // Validate inputs
+            if (!fundName) {
+                showStatus('Please select a fund', 'error');
+                return;
+            }
+
+            if (!dateValue) {
+                showStatus('Please enter a date', 'error');
+                return;
+            }
+
+            if (!isValidDate(dateValue)) {
+                showStatus('Please enter a valid date', 'error');
+                return;
+            }
+
+            const percentage = parseFloat(percentageValue);
+            if (isNaN(percentage) || percentage <= 0 || percentage > 100) {
+                showStatus('Please enter a valid percentage between 0 and 100', 'error');
+                return;
+            }
+
+            try {
+                // Get all funds with this fund name
+                const allFunds = await getAllFunds();
+                const matchingFunds = allFunds.filter(f => f.fundName === fundName);
+
+                if (matchingFunds.length === 0) {
+                    showStatus(`No investors found for fund "${fundName}"`, 'error');
+                    return;
+                }
+
+                // Calculate amounts for each investor
+                const previewData = matchingFunds.map(fund => {
+                    const amount = fund.commitment * (percentage / 100);
+                    // Contributions are negative (outflow), distributions are positive (inflow)
+                    const signedAmount = type === 'Contribution' ? -amount : amount;
+                    return {
+                        fundId: fund.id,
+                        accountNumber: fund.accountNumber,
+                        commitment: fund.commitment,
+                        calculatedAmount: signedAmount
+                    };
+                });
+
+                // Store preview data for apply
+                document.getElementById('bulkCashFlowModal').dataset.previewData = JSON.stringify(previewData);
+
+                // Build preview HTML
+                let previewHtml = `
+                    <p style="margin-bottom: 10px;"><strong>${matchingFunds.length}</strong> investor(s) will receive a ${type.toLowerCase()} on ${dateValue}:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--color-border);">
+                                <th style="text-align: left; padding: 5px;">Account</th>
+                                <th style="text-align: right; padding: 5px;">Commitment</th>
+                                <th style="text-align: right; padding: 5px;">Amount (${percentage}%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                let totalAmount = 0;
+                previewData.forEach(item => {
+                    totalAmount += item.calculatedAmount;
+                    previewHtml += `
+                        <tr style="border-bottom: 1px solid var(--color-border);">
+                            <td style="padding: 5px;">${escapeHtml(item.accountNumber)}</td>
+                            <td style="text-align: right; padding: 5px;">${formatCurrency(item.commitment)}</td>
+                            <td style="text-align: right; padding: 5px;">${formatCurrency(item.calculatedAmount)}</td>
+                        </tr>
+                    `;
+                });
+
+                previewHtml += `
+                        </tbody>
+                        <tfoot>
+                            <tr style="font-weight: bold;">
+                                <td style="padding: 5px;">Total</td>
+                                <td style="text-align: right; padding: 5px;"></td>
+                                <td style="text-align: right; padding: 5px;">${formatCurrency(totalAmount)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                `;
+
+                document.getElementById('bulkCashFlowPreviewContent').innerHTML = previewHtml;
+                document.getElementById('bulkCashFlowPreview').style.display = 'block';
+                document.getElementById('applyBulkCashFlowBtn').disabled = false;
+
+            } catch (err) {
+                showStatus('Error generating preview: ' + err.message, 'error');
+                Debug.error('Error in previewBulkCashFlow:', err);
+            }
+        }
+
+        async function applyBulkCashFlow() {
+            const previewDataStr = document.getElementById('bulkCashFlowModal').dataset.previewData;
+            if (!previewDataStr) {
+                showStatus('Please preview the cash flow first', 'error');
+                return;
+            }
+
+            const dateValue = document.getElementById('bulkCashFlowDate').value;
+            const type = document.getElementById('bulkCashFlowType').value;
+            const affectsCommitment = document.getElementById('bulkCashFlowAffectsCommitment').checked;
+            const fundName = document.getElementById('bulkCashFlowFundName').value;
+
+            const previewData = JSON.parse(previewDataStr);
+
+            const confirmed = await showConfirm(
+                `Are you sure you want to add this ${type.toLowerCase()} to ${previewData.length} investor(s)?`,
+                {
+                    title: 'Confirm Bulk Cash Flow',
+                    confirmText: 'Apply',
+                    cancelText: 'Cancel',
+                    confirmClass: 'btn-primary'
+                }
+            );
+
+            if (!confirmed) return;
+
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const item of previewData) {
+                    try {
+                        // Get the current fund data
+                        const fund = await getFundById(item.fundId);
+                        if (!fund) {
+                            errorCount++;
+                            continue;
+                        }
+
+                        // Create the new cash flow entry
+                        const newCashFlow = {
+                            date: dateValue,
+                            amount: item.calculatedAmount,
+                            type: type,
+                            affectsCommitment: affectsCommitment
+                        };
+
+                        // Add to fund's cash flows
+                        if (!fund.cashFlows) {
+                            fund.cashFlows = [];
+                        }
+                        fund.cashFlows.push(newCashFlow);
+
+                        // Sort cash flows by date
+                        fund.cashFlows.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                        // Save the updated fund
+                        await saveFundToDB(fund);
+                        successCount++;
+                    } catch (err) {
+                        Debug.error('Error applying cash flow to fund:', item.fundId, err);
+                        errorCount++;
+                    }
+                }
+
+                // Clear metrics cache and refresh the table
+                AppState.clearMetricsCache();
+                await renderTable();
+
+                closeBulkCashFlowModal();
+
+                if (errorCount === 0) {
+                    showStatus(`Successfully added ${type.toLowerCase()} to ${successCount} investor(s)`, 'success');
+                } else {
+                    showStatus(`Added ${type.toLowerCase()} to ${successCount} investor(s), ${errorCount} failed`, 'warning');
+                }
+
+            } catch (err) {
+                showStatus('Error applying bulk cash flow: ' + err.message, 'error');
+                Debug.error('Error in applyBulkCashFlow:', err);
+            }
+        }
+
+        // ==================== End Bulk Cash Flow Functions ====================
+
+        // ==================== Bulk Remove Fund Functions ====================
+
+        async function showBulkRemoveFundModal() {
+            try {
+                // Populate fund name dropdown
+                const select = document.getElementById('bulkRemoveFundName');
+                const names = await getAllFundNames();
+
+                select.innerHTML = '<option value="">Select a fund</option>';
+                names.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    select.appendChild(option);
+                });
+
+                // Hide preview and disable apply button
+                document.getElementById('bulkRemoveFundPreview').style.display = 'none';
+                document.getElementById('applyBulkRemoveFundBtn').disabled = true;
+
+                document.getElementById('bulkRemoveFundModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error opening bulk remove fund modal: ' + err.message, 'error');
+                Debug.error('Error in showBulkRemoveFundModal:', err);
+            }
+        }
+
+        function closeBulkRemoveFundModal() {
+            document.getElementById('bulkRemoveFundModal').classList.remove('show');
+        }
+
+        async function previewBulkRemoveFund() {
+            const fundName = document.getElementById('bulkRemoveFundName').value;
+
+            if (!fundName) {
+                showStatus('Please select a fund', 'error');
+                return;
+            }
+
+            try {
+                // Get all funds with this fund name
+                const allFunds = await getAllFunds();
+                const matchingFunds = allFunds.filter(f => f.fundName === fundName);
+
+                if (matchingFunds.length === 0) {
+                    showStatus(`No investors found for fund "${fundName}"`, 'error');
+                    return;
+                }
+
+                // Store fund IDs for removal
+                const fundIds = matchingFunds.map(f => f.id);
+                document.getElementById('bulkRemoveFundModal').dataset.fundIds = JSON.stringify(fundIds);
+
+                // Build preview HTML
+                let previewHtml = `
+                    <p style="margin-bottom: 10px;"><strong>${matchingFunds.length}</strong> investor position(s) will be permanently removed:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--color-border);">
+                                <th style="text-align: left; padding: 5px;">Account</th>
+                                <th style="text-align: right; padding: 5px;">Commitment</th>
+                                <th style="text-align: right; padding: 5px;">Cash Flows</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                matchingFunds.forEach(fund => {
+                    const cashFlowCount = (fund.cashFlows || []).length;
+                    previewHtml += `
+                        <tr style="border-bottom: 1px solid var(--color-border);">
+                            <td style="padding: 5px;">${escapeHtml(fund.accountNumber)}</td>
+                            <td style="text-align: right; padding: 5px;">${formatCurrency(fund.commitment)}</td>
+                            <td style="text-align: right; padding: 5px;">${cashFlowCount}</td>
+                        </tr>
+                    `;
+                });
+
+                previewHtml += `
+                        </tbody>
+                    </table>
+                `;
+
+                document.getElementById('bulkRemoveFundPreviewContent').innerHTML = previewHtml;
+                document.getElementById('bulkRemoveFundPreview').style.display = 'block';
+                document.getElementById('applyBulkRemoveFundBtn').disabled = false;
+
+            } catch (err) {
+                showStatus('Error generating preview: ' + err.message, 'error');
+                Debug.error('Error in previewBulkRemoveFund:', err);
+            }
+        }
+
+        async function applyBulkRemoveFund() {
+            const fundIdsStr = document.getElementById('bulkRemoveFundModal').dataset.fundIds;
+            if (!fundIdsStr) {
+                showStatus('Please preview the funds first', 'error');
+                return;
+            }
+
+            const fundName = document.getElementById('bulkRemoveFundName').value;
+            const fundIds = JSON.parse(fundIdsStr);
+
+            const confirmed = await showConfirm(
+                `Are you sure you want to permanently remove all ${fundIds.length} investor position(s) for "${fundName}"? This cannot be undone.`,
+                {
+                    title: 'Confirm Bulk Removal',
+                    confirmText: 'Remove All',
+                    cancelText: 'Cancel',
+                    confirmClass: 'btn-danger'
+                }
+            );
+
+            if (!confirmed) return;
+
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const fundId of fundIds) {
+                    try {
+                        await deleteFundFromDB(fundId);
+                        successCount++;
+                    } catch (err) {
+                        Debug.error('Error removing fund:', fundId, err);
+                        errorCount++;
+                    }
+                }
+
+                // Also remove the fund name
+                try {
+                    await deleteFundName(fundName);
+                    fundNames.delete(fundName);
+                    fundNameData.delete(fundName);
+                } catch (err) {
+                    Debug.error('Error removing fund name:', fundName, err);
+                }
+
+                // Clear metrics cache and refresh the table
+                AppState.clearMetricsCache();
+                await renderTable();
+
+                closeBulkRemoveFundModal();
+
+                if (errorCount === 0) {
+                    showStatus(`Successfully removed ${successCount} investor position(s) for "${fundName}"`, 'success');
+                } else {
+                    showStatus(`Removed ${successCount} position(s), ${errorCount} failed`, 'warning');
+                }
+
+            } catch (err) {
+                showStatus('Error removing funds: ' + err.message, 'error');
+                Debug.error('Error in applyBulkRemoveFund:', err);
+            }
+        }
+
+        // ==================== End Bulk Remove Fund Functions ====================
+
+        // ==================== Bulk Assign Group Functions ====================
+
+        async function showBulkAssignGroupModal() {
+            try {
+                // Populate account number dropdown
+                const accountSelect = document.getElementById('bulkAssignGroupAccount');
+                const allFunds = await getAllFunds();
+                const uniqueAccounts = [...new Set(allFunds.map(f => f.accountNumber))].sort();
+
+                accountSelect.innerHTML = '<option value="">Select an account</option>';
+                uniqueAccounts.forEach(account => {
+                    const option = document.createElement('option');
+                    option.value = account;
+                    option.textContent = account;
+                    accountSelect.appendChild(option);
+                });
+
+                // Populate group dropdown
+                const groupSelect = document.getElementById('bulkAssignGroupTarget');
+                AppState.setGroups(await getAllGroups());
+
+                groupSelect.innerHTML = '<option value="">No Group</option>';
+                const tree = buildGroupsTree(groups, null);
+                addGroupOptionsToSelect(groupSelect, tree, 0);
+
+                // Hide preview and disable apply button
+                document.getElementById('bulkAssignGroupPreview').style.display = 'none';
+                document.getElementById('applyBulkAssignGroupBtn').disabled = true;
+
+                document.getElementById('bulkAssignGroupModal').classList.add('show');
+            } catch (err) {
+                showStatus('Error opening bulk assign group modal: ' + err.message, 'error');
+                Debug.error('Error in showBulkAssignGroupModal:', err);
+            }
+        }
+
+        function closeBulkAssignGroupModal() {
+            document.getElementById('bulkAssignGroupModal').classList.remove('show');
+        }
+
+        async function previewBulkAssignGroup() {
+            const accountNumber = document.getElementById('bulkAssignGroupAccount').value;
+            const targetGroupId = document.getElementById('bulkAssignGroupTarget').value;
+
+            if (!accountNumber) {
+                showStatus('Please select an account number', 'error');
+                return;
+            }
+
+            try {
+                // Get all funds with this account number
+                const allFunds = await getAllFunds();
+                const matchingFunds = allFunds.filter(f => f.accountNumber === accountNumber);
+
+                if (matchingFunds.length === 0) {
+                    showStatus(`No investments found for account "${accountNumber}"`, 'error');
+                    return;
+                }
+
+                // Get target group name
+                const targetGroupName = targetGroupId
+                    ? (AppState.getGroupByIdSync(parseInt(targetGroupId))?.name || 'Unknown Group')
+                    : 'No Group';
+
+                // Store fund IDs for update
+                const fundIds = matchingFunds.map(f => f.id);
+                document.getElementById('bulkAssignGroupModal').dataset.fundIds = JSON.stringify(fundIds);
+
+                // Build preview HTML
+                let previewHtml = `
+                    <p style="margin-bottom: 10px;"><strong>${matchingFunds.length}</strong> investment(s) will be assigned to <strong>${escapeHtml(targetGroupName)}</strong>:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--color-border);">
+                                <th style="text-align: left; padding: 5px;">Fund Name</th>
+                                <th style="text-align: left; padding: 5px;">Current Group</th>
+                                <th style="text-align: right; padding: 5px;">Commitment</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                matchingFunds.forEach(fund => {
+                    const currentGroup = fund.groupId
+                        ? (AppState.getGroupByIdSync(fund.groupId)?.name || 'Unknown')
+                        : 'No Group';
+                    previewHtml += `
+                        <tr style="border-bottom: 1px solid var(--color-border);">
+                            <td style="padding: 5px;">${escapeHtml(fund.fundName)}</td>
+                            <td style="padding: 5px;">${escapeHtml(currentGroup)}</td>
+                            <td style="text-align: right; padding: 5px;">${formatCurrency(fund.commitment)}</td>
+                        </tr>
+                    `;
+                });
+
+                previewHtml += `
+                        </tbody>
+                    </table>
+                `;
+
+                document.getElementById('bulkAssignGroupPreviewContent').innerHTML = previewHtml;
+                document.getElementById('bulkAssignGroupPreview').style.display = 'block';
+                document.getElementById('applyBulkAssignGroupBtn').disabled = false;
+
+            } catch (err) {
+                showStatus('Error generating preview: ' + err.message, 'error');
+                Debug.error('Error in previewBulkAssignGroup:', err);
+            }
+        }
+
+        async function applyBulkAssignGroup() {
+            const accountNumber = document.getElementById('bulkAssignGroupAccount').value;
+            const targetGroupId = document.getElementById('bulkAssignGroupTarget').value;
+            const fundIdsJson = document.getElementById('bulkAssignGroupModal').dataset.fundIds;
+
+            if (!fundIdsJson) {
+                showStatus('Please preview first', 'error');
+                return;
+            }
+
+            const fundIds = JSON.parse(fundIdsJson);
+            const targetGroupName = targetGroupId
+                ? (AppState.getGroupByIdSync(parseInt(targetGroupId))?.name || 'Unknown Group')
+                : 'No Group';
+
+            const confirmed = await showConfirmDialog(
+                `Are you sure you want to assign all ${fundIds.length} investment(s) for account "${accountNumber}" to "${targetGroupName}"?`,
+                {
+                    title: 'Confirm Bulk Group Assignment',
+                    confirmText: 'Assign',
+                    cancelText: 'Cancel'
+                }
+            );
+
+            if (!confirmed) return;
+
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const fundId of fundIds) {
+                    try {
+                        const fund = await getFundById(fundId);
+                        if (fund) {
+                            fund.groupId = targetGroupId ? parseInt(targetGroupId) : null;
+                            await saveFund(fund);
+                            successCount++;
+                        }
+                    } catch (err) {
+                        Debug.error('Error updating fund:', fundId, err);
+                        errorCount++;
+                    }
+                }
+
+                // Clear metrics cache and refresh the table
+                AppState.clearMetricsCache();
+                await renderTable();
+
+                closeBulkAssignGroupModal();
+
+                if (errorCount === 0) {
+                    showStatus(`Successfully assigned ${successCount} investment(s) to "${targetGroupName}"`, 'success');
+                } else {
+                    showStatus(`Assigned ${successCount} investment(s), ${errorCount} failed`, 'warning');
+                }
+
+            } catch (err) {
+                showStatus('Error assigning groups: ' + err.message, 'error');
+                Debug.error('Error in applyBulkAssignGroup:', err);
+            }
+        }
+
+        // ==================== End Bulk Assign Group Functions ====================
+
         async function populateFundNamesDropdown(valueToSet = null) {
             const select = document.getElementById('fundName');
             const currentValue = valueToSet !== null ? valueToSet : select.value;
@@ -8237,7 +9342,14 @@
                         }
                     }
 
-                    // Import sorted groups
+                    // Get existing groups to check for duplicates by name
+                    const existingGroups = await getAllGroups();
+                    const existingGroupsByName = {};
+                    existingGroups.forEach(g => {
+                        existingGroupsByName[g.name.toLowerCase()] = g;
+                    });
+
+                    // Import sorted groups (merge with existing if name matches)
                     for (const group of sortedGroups) {
                         const oldId = group.id;
                         const { id, ...groupData } = group;
@@ -8247,10 +9359,22 @@
                             groupData.parentGroupId = oldGroupIdToNew[groupData.parentGroupId];
                         }
 
-                        // Save group and get new ID
-                        const newId = await saveGroup(groupData);
-                        if (oldId != null && newId) {
-                            oldGroupIdToNew[oldId] = newId;
+                        // Check if group with same name already exists
+                        const existingGroup = existingGroupsByName[groupData.name.toLowerCase()];
+                        if (existingGroup) {
+                            // Use existing group's ID instead of creating duplicate
+                            if (oldId != null) {
+                                oldGroupIdToNew[oldId] = existingGroup.id;
+                            }
+                            Debug.log(`Group "${groupData.name}" already exists, using existing group ID ${existingGroup.id}`);
+                        } else {
+                            // Save new group and get new ID
+                            const newId = await saveGroup(groupData);
+                            if (oldId != null && newId) {
+                                oldGroupIdToNew[oldId] = newId;
+                            }
+                            // Add to existing map for subsequent imports in same batch
+                            existingGroupsByName[groupData.name.toLowerCase()] = { ...groupData, id: newId };
                         }
                     }
                     // Reload groups cache
@@ -8355,7 +9479,7 @@
 
                         const fundData = {
                             fundName: fund.fundName,
-                            accountNumber: fund.accountNumber,
+                            accountNumber: (fund.accountNumber || '').replace(/\s/g, ''),
                             groupId: groupId,
                             commitment: parseCurrency(fund.commitment),
                             cashFlows: cashFlows,
@@ -8549,6 +9673,58 @@
             } catch (err) {
                 showStatus('Error loading sample data: ' + err.message, 'error');
                 Debug.error('Error loading sample data:', err);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function clearDatabase() {
+            const confirmed = await showConfirm(
+                'This will permanently delete ALL data including funds, groups, and fund names. This action cannot be undone. Are you sure?',
+                {
+                    title: 'Clear Database',
+                    confirmText: 'Delete Everything',
+                    cancelText: 'Cancel',
+                    confirmClass: 'btn-danger'
+                }
+            );
+
+            if (!confirmed) return;
+
+            showLoading('Clearing database...');
+
+            try {
+                // Clear all funds
+                const funds = await getAllFunds();
+                for (const fund of funds) {
+                    await deleteFundFromDB(fund.id);
+                }
+
+                // Clear all groups
+                const allGroups = await getAllGroups();
+                for (const group of allGroups) {
+                    await deleteGroup(group.id);
+                }
+
+                // Clear all fund names
+                const fundNamesList = await getAllFundNames();
+                for (const name of fundNamesList) {
+                    await deleteFundName(name);
+                }
+
+                // Reset AppState
+                AppState.setFunds([]);
+                AppState.setGroups([]);
+                AppState.setFundNames(new Set());
+                AppState.clearMetricsCache();
+                AppState.groupDescendantsCache.clear();
+                fundNameData.clear();
+
+                await renderTable();
+                showStatus('Database cleared successfully', 'success');
+            } catch (err) {
+                showStatus('Error clearing database: ' + err.message, 'error');
+                Debug.error('Error clearing database:', err);
             } finally {
                 hideLoading();
             }
@@ -8764,10 +9940,10 @@
         const EventListeners = {
             /** Filter controls and toolbar */
             setupFilters() {
-                document.getElementById('groupFilter').addEventListener('change', applyFilters);
-                document.getElementById('fundFilter').addEventListener('change', applyFilters);
-                document.getElementById('accountFilter').addEventListener('change', applyFilters);
-                document.getElementById('vintageFilter').addEventListener('change', applyFilters);
+                // Initialize multi-select dropdowns (these trigger applyFilters on selection change)
+                initMultiSelectDropdowns();
+
+                // Search input uses debounced filtering
                 document.getElementById('searchInput').addEventListener('input', applyFiltersDebounced);
                 document.getElementById('cutoffDate').addEventListener('change', applyFilters);
                 document.getElementById('timelineHeader').addEventListener('click', toggleTimelinePanel);
@@ -8834,6 +10010,30 @@
                 document.getElementById('cancelEditBtn').addEventListener('click', cancelGroupEdit);
             },
 
+            /** Bulk cash flow modal */
+            setupBulkCashFlowModal() {
+                document.getElementById('closeBulkCashFlowModalBtn').addEventListener('click', closeBulkCashFlowModal);
+                document.getElementById('cancelBulkCashFlowBtn').addEventListener('click', closeBulkCashFlowModal);
+                document.getElementById('previewBulkCashFlowBtn').addEventListener('click', previewBulkCashFlow);
+                document.getElementById('applyBulkCashFlowBtn').addEventListener('click', applyBulkCashFlow);
+            },
+
+            /** Bulk remove fund modal */
+            setupBulkRemoveFundModal() {
+                document.getElementById('closeBulkRemoveFundModalBtn').addEventListener('click', closeBulkRemoveFundModal);
+                document.getElementById('cancelBulkRemoveFundBtn').addEventListener('click', closeBulkRemoveFundModal);
+                document.getElementById('previewBulkRemoveFundBtn').addEventListener('click', previewBulkRemoveFund);
+                document.getElementById('applyBulkRemoveFundBtn').addEventListener('click', applyBulkRemoveFund);
+            },
+
+            /** Bulk assign group modal */
+            setupBulkAssignGroupModal() {
+                document.getElementById('closeBulkAssignGroupModalBtn').addEventListener('click', closeBulkAssignGroupModal);
+                document.getElementById('cancelBulkAssignGroupBtn').addEventListener('click', closeBulkAssignGroupModal);
+                document.getElementById('previewBulkAssignGroupBtn').addEventListener('click', previewBulkAssignGroup);
+                document.getElementById('applyBulkAssignGroupBtn').addEventListener('click', applyBulkAssignGroup);
+            },
+
             /** Details modal with cash flows and NAV tables */
             setupDetailsModal() {
                 document.getElementById('closeDetailsModalBtn').addEventListener('click', closeDetailsModal);
@@ -8891,10 +10091,14 @@
                     'sidebarNewInvestment': showAddFundModal,
                     'sidebarManageFunds': showManageFundsModal,
                     'sidebarManageGroups': showManageGroupsModal,
+                    'sidebarBulkCashFlow': showBulkCashFlowModal,
+                    'sidebarBulkAssignGroup': showBulkAssignGroupModal,
                     'sidebarExportCSV': exportToCSV,
                     'sidebarExportJSON': exportDatabase,
                     'sidebarExportPDF': exportToPDF,
-                    'sidebarLoadSampleData': loadSampleData
+                    'sidebarLoadSampleData': loadSampleData,
+                    'sidebarBulkRemoveFund': showBulkRemoveFundModal,
+                    'sidebarClearDatabase': clearDatabase
                 };
                 Object.entries(menuItems).forEach(([id, handler]) => {
                     document.getElementById(id).addEventListener('click', (e) => {
@@ -8924,6 +10128,9 @@
                 this.setupActionDropdown();
                 this.setupFundNamesModal();
                 this.setupGroupsModal();
+                this.setupBulkCashFlowModal();
+                this.setupBulkRemoveFundModal();
+                this.setupBulkAssignGroupModal();
                 this.setupDetailsModal();
                 this.setupBackupWarning();
                 this.setupSidebar();

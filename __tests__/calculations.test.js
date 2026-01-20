@@ -305,14 +305,26 @@ describe('getOutstandingCommitment', () => {
         expect(getOutstandingCommitment(fund)).toBe(0);
     });
 
-    test('ignores distributions', () => {
+    test('ignores non-recallable distributions', () => {
         const fund = {
             commitment: 10000,
             cashFlows: [
                 { date: '2020-01-01', type: 'Contribution', amount: -3000, affectsCommitment: true },
-                { date: '2021-01-01', type: 'Distribution', amount: 5000 }
+                { date: '2021-01-01', type: 'Distribution', amount: 5000, affectsCommitment: false }
             ]
         };
+        expect(getOutstandingCommitment(fund)).toBe(7000);
+    });
+
+    test('handles recallable distributions', () => {
+        const fund = {
+            commitment: 10000,
+            cashFlows: [
+                { date: '2020-01-01', type: 'Contribution', amount: -5000, affectsCommitment: true },
+                { date: '2021-01-01', type: 'Distribution', amount: 2000, affectsCommitment: true }
+            ]
+        };
+        // 10000 - 5000 + 2000 = 7000
         expect(getOutstandingCommitment(fund)).toBe(7000);
     });
 });
@@ -378,7 +390,7 @@ describe('calculateMetrics', () => {
             commitment: 10000,
             cashFlows: [
                 { date: '2020-01-01', type: 'Contribution', amount: -5000, affectsCommitment: true },
-                { date: '2021-01-01', type: 'Distribution', amount: 3000 }
+                { date: '2021-01-01', type: 'Distribution', amount: 3000, affectsCommitment: false }
             ],
             monthlyNav: [
                 { date: '2021-12-31', amount: 4000 }
