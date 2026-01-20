@@ -8535,6 +8535,15 @@
                     }
                 }
 
+                // Also remove the fund name
+                try {
+                    await deleteFundName(fundName);
+                    fundNames.delete(fundName);
+                    fundNameData.delete(fundName);
+                } catch (err) {
+                    Debug.error('Error removing fund name:', fundName, err);
+                }
+
                 // Clear metrics cache and refresh the table
                 AppState.clearMetricsCache();
                 await renderTable();
