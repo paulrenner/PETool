@@ -7611,7 +7611,7 @@
                     deleteBtn.className = 'btn-icon';
                     deleteBtn.textContent = '×';
                     deleteBtn.title = 'Delete';
-                    deleteBtn.style.color = '#E74C3C';
+                    deleteBtn.style.color = 'var(--color-danger)';
                     deleteBtn.setAttribute('data-fund-name', fundNameObj.name);
                     deleteBtn.onclick = function() { removeFundName(this.getAttribute('data-fund-name')); };
 
@@ -9190,7 +9190,20 @@
                     event.preventDefault();
                     const fundId = parseInt(focusedRow.getAttribute('data-fund-id'));
                     if (fundId != null) {
-                        deleteFund(fundId);
+                        const fund = await getFundById(fundId);
+                        if (fund) {
+                            const confirmed = await showConfirm(`Are you sure you want to delete "${fund.fundName} - ${fund.accountNumber}"?`, {
+                                title: 'Delete Fund',
+                                confirmText: 'Delete',
+                                cancelText: 'Cancel'
+                            });
+                            if (confirmed) {
+                                await deleteFundFromDB(fundId);
+                                AppState.clearMetricsCache();
+                                await renderTable();
+                                showStatus('Fund deleted successfully', 'success');
+                            }
+                        }
                     }
                     return;
                 }
