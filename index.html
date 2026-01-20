@@ -5820,6 +5820,9 @@
                     const cfDate = new Date(cf.date);
                     const year = cfDate.getFullYear();
 
+                    // Skip adjustment type cash flows - they shouldn't appear in timeline
+                    if (cf.type === 'Adjustment') return;
+
                     // Only include historical data (on or before cutoff date)
                     if (cutoffDate && cfDate > cutoffDate) return;
                     if (year > cutoffYear) return;
