@@ -6510,7 +6510,7 @@
          * Show keyboard shortcuts modal
          */
         function showShortcutsModal() {
-            document.getElementById('shortcutsModal').classList.add('show');
+            Modal.show('shortcutsModal');
         }
 
         /**
@@ -6673,7 +6673,7 @@
                 document.getElementById('accountNumber').value = '';
                 document.getElementById('commitment').value = '';
 
-                document.getElementById('fundModal').classList.add('show');
+                Modal.show('fundModal');
             } catch (err) {
                 showStatus('Error opening add investment modal: ' + err.message, 'error');
                 Debug.error('Error in showAddFundModal:', err);
@@ -6727,7 +6727,7 @@
                 document.getElementById('accountNumber').value = fund.accountNumber + ' (Copy)';
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
 
-                document.getElementById('fundModal').classList.add('show');
+                Modal.show('fundModal');
             } catch (err) {
                 showStatus('Error loading fund: ' + err.message, 'error');
             }
@@ -7355,7 +7355,7 @@
                 if (confirmed) {
                     row.remove();
                     AppState.setUnsavedChanges(true);
-                    updateDetailsSummary();
+                    await updateDetailsSummary();
                 }
             }
         }
@@ -7385,7 +7385,7 @@
                 if (confirmed) {
                     row.remove();
                     AppState.setUnsavedChanges(true);
-                    updateDetailsSummary();
+                    await updateDetailsSummary();
                 }
             }
         }
@@ -7518,7 +7518,7 @@
                 // Clear the Add Fund form when opening
                 clearAddFundForm();
 
-                document.getElementById('manageFundNamesModal').classList.add('show');
+                Modal.show('manageFundNamesModal');
             } catch (err) {
                 showStatus('Error opening manage funds modal: ' + err.message, 'error');
                 Debug.error('Error in showManageFundsModal:', err);
@@ -7689,7 +7689,7 @@
             document.getElementById('editFundTermStartDate').value = fundNameObj.investmentTermStartDate || '';
             document.getElementById('editFundInvestmentTerm').value = fundNameObj.investmentTermYears || '';
 
-            document.getElementById('editFundNameModal').classList.add('show');
+            Modal.show('editFundNameModal');
         }
 
         function closeEditFundNameModal() {
@@ -7881,7 +7881,7 @@
             try {
                 await loadGroupsList();
                 await populateGroupParentDropdown();
-                document.getElementById('manageGroupsModal').classList.add('show');
+                Modal.show('manageGroupsModal');
             } catch (err) {
                 showStatus('Error opening manage groups modal: ' + err.message, 'error');
                 Debug.error('Error in showManageGroupsModal:', err);
@@ -8176,7 +8176,7 @@
                 document.getElementById('bulkCashFlowPreview').style.display = 'none';
                 document.getElementById('applyBulkCashFlowBtn').disabled = true;
 
-                document.getElementById('bulkCashFlowModal').classList.add('show');
+                Modal.show('bulkCashFlowModal');
             } catch (err) {
                 showStatus('Error opening bulk cash flow modal: ' + err.message, 'error');
                 Debug.error('Error in showBulkCashFlowModal:', err);
@@ -8394,7 +8394,7 @@
                 document.getElementById('bulkRemoveFundPreview').style.display = 'none';
                 document.getElementById('applyBulkRemoveFundBtn').disabled = true;
 
-                document.getElementById('bulkRemoveFundModal').classList.add('show');
+                Modal.show('bulkRemoveFundModal');
             } catch (err) {
                 showStatus('Error opening bulk remove fund modal: ' + err.message, 'error');
                 Debug.error('Error in showBulkRemoveFundModal:', err);
@@ -8561,7 +8561,7 @@
                 document.getElementById('bulkAssignGroupPreview').style.display = 'none';
                 document.getElementById('applyBulkAssignGroupBtn').disabled = true;
 
-                document.getElementById('bulkAssignGroupModal').classList.add('show');
+                Modal.show('bulkAssignGroupModal');
             } catch (err) {
                 showStatus('Error opening bulk assign group modal: ' + err.message, 'error');
                 Debug.error('Error in showBulkAssignGroupModal:', err);
@@ -9938,69 +9938,91 @@
 
             /** Fund names management modal */
             setupFundNamesModal() {
-                document.getElementById('closeManageFundsModalBtn').addEventListener('click', closeManageFundsModal);
-                document.getElementById('closeManageFundsModal2Btn').addEventListener('click', closeManageFundsModal);
-                document.getElementById('addNewFundNameBtn').addEventListener('click', addNewFundName);
+                const wrapAsync = (fn) => async (e) => {
+                    try { await fn(e); } catch (err) { Debug.error('Fund names modal error:', err); showStatus('An error occurred', 'error'); }
+                };
+                document.getElementById('closeManageFundsModalBtn').addEventListener('click', wrapAsync(closeManageFundsModal));
+                document.getElementById('closeManageFundsModal2Btn').addEventListener('click', wrapAsync(closeManageFundsModal));
+                document.getElementById('addNewFundNameBtn').addEventListener('click', wrapAsync(addNewFundName));
                 document.getElementById('closeEditFundNameModalBtn').addEventListener('click', closeEditFundNameModal);
-                document.getElementById('saveEditedFundNameBtn').addEventListener('click', saveEditedFundName);
+                document.getElementById('saveEditedFundNameBtn').addEventListener('click', wrapAsync(saveEditedFundName));
                 document.getElementById('cancelEditFundNameBtn').addEventListener('click', closeEditFundNameModal);
             },
 
             /** Groups management modal */
             setupGroupsModal() {
+                const wrapAsync = (fn) => async (e) => {
+                    try { await fn(e); } catch (err) { Debug.error('Groups modal error:', err); showStatus('An error occurred', 'error'); }
+                };
                 document.getElementById('closeManageGroupsModal2Btn').addEventListener('click', closeManageGroupsModal);
                 document.getElementById('closeManageGroupsModalBtn').addEventListener('click', closeManageGroupsModal);
-                document.getElementById('saveGroupBtn').addEventListener('click', saveGroupChanges);
+                document.getElementById('saveGroupBtn').addEventListener('click', wrapAsync(saveGroupChanges));
                 document.getElementById('cancelEditBtn').addEventListener('click', cancelGroupEdit);
             },
 
             /** Bulk cash flow modal */
             setupBulkCashFlowModal() {
+                const wrapAsync = (fn) => async (e) => {
+                    try { await fn(e); } catch (err) { Debug.error('Bulk cash flow modal error:', err); showStatus('An error occurred', 'error'); }
+                };
                 document.getElementById('closeBulkCashFlowModalBtn').addEventListener('click', closeBulkCashFlowModal);
                 document.getElementById('cancelBulkCashFlowBtn').addEventListener('click', closeBulkCashFlowModal);
-                document.getElementById('previewBulkCashFlowBtn').addEventListener('click', previewBulkCashFlow);
-                document.getElementById('applyBulkCashFlowBtn').addEventListener('click', applyBulkCashFlow);
+                document.getElementById('previewBulkCashFlowBtn').addEventListener('click', wrapAsync(previewBulkCashFlow));
+                document.getElementById('applyBulkCashFlowBtn').addEventListener('click', wrapAsync(applyBulkCashFlow));
             },
 
             /** Bulk remove fund modal */
             setupBulkRemoveFundModal() {
+                const wrapAsync = (fn) => async (e) => {
+                    try { await fn(e); } catch (err) { Debug.error('Bulk remove fund modal error:', err); showStatus('An error occurred', 'error'); }
+                };
                 document.getElementById('closeBulkRemoveFundModalBtn').addEventListener('click', closeBulkRemoveFundModal);
                 document.getElementById('cancelBulkRemoveFundBtn').addEventListener('click', closeBulkRemoveFundModal);
-                document.getElementById('previewBulkRemoveFundBtn').addEventListener('click', previewBulkRemoveFund);
-                document.getElementById('applyBulkRemoveFundBtn').addEventListener('click', applyBulkRemoveFund);
+                document.getElementById('previewBulkRemoveFundBtn').addEventListener('click', wrapAsync(previewBulkRemoveFund));
+                document.getElementById('applyBulkRemoveFundBtn').addEventListener('click', wrapAsync(applyBulkRemoveFund));
             },
 
             /** Bulk assign group modal */
             setupBulkAssignGroupModal() {
+                const wrapAsync = (fn) => async (e) => {
+                    try { await fn(e); } catch (err) { Debug.error('Bulk assign group modal error:', err); showStatus('An error occurred', 'error'); }
+                };
                 document.getElementById('closeBulkAssignGroupModalBtn').addEventListener('click', closeBulkAssignGroupModal);
                 document.getElementById('cancelBulkAssignGroupBtn').addEventListener('click', closeBulkAssignGroupModal);
-                document.getElementById('previewBulkAssignGroupBtn').addEventListener('click', previewBulkAssignGroup);
-                document.getElementById('applyBulkAssignGroupBtn').addEventListener('click', applyBulkAssignGroup);
+                document.getElementById('previewBulkAssignGroupBtn').addEventListener('click', wrapAsync(previewBulkAssignGroup));
+                document.getElementById('applyBulkAssignGroupBtn').addEventListener('click', wrapAsync(applyBulkAssignGroup));
             },
 
             /** Details modal with cash flows and NAV tables */
             setupDetailsModal() {
-                document.getElementById('closeDetailsModalBtn').addEventListener('click', closeDetailsModal);
-                document.getElementById('cancelDetailsModalBtn').addEventListener('click', closeDetailsModal);
+                const wrapAsync = (fn) => async (e) => {
+                    try { await fn(e); } catch (err) { Debug.error('Details modal error:', err); showStatus('An error occurred', 'error'); }
+                };
+                document.getElementById('closeDetailsModalBtn').addEventListener('click', wrapAsync(closeDetailsModal));
+                document.getElementById('cancelDetailsModalBtn').addEventListener('click', wrapAsync(closeDetailsModal));
                 document.getElementById('addCashFlowRowBtn').addEventListener('click', addCashFlowRow);
                 document.getElementById('addNavRowBtn').addEventListener('click', addNavRow);
-                document.getElementById('saveDetailsChangesBtn').addEventListener('click', saveDetailsChanges);
+                document.getElementById('saveDetailsChangesBtn').addEventListener('click', wrapAsync(saveDetailsChanges));
 
                 // Event delegation for dynamically created rows
-                document.getElementById('cashFlowsTable').addEventListener('click', (e) => {
-                    const btn = e.target.closest('[data-action="deleteCashFlow"]');
-                    if (btn) deleteCashFlowRow(btn);
+                document.getElementById('cashFlowsTable').addEventListener('click', async (e) => {
+                    try {
+                        const btn = e.target.closest('[data-action="deleteCashFlow"]');
+                        if (btn) await deleteCashFlowRow(btn);
+                    } catch (err) { Debug.error('Delete cash flow error:', err); showStatus('An error occurred', 'error'); }
                 });
-                document.getElementById('navTable').addEventListener('click', (e) => {
-                    const btn = e.target.closest('[data-action="deleteNav"]');
-                    if (btn) deleteNavRow(btn);
+                document.getElementById('navTable').addEventListener('click', async (e) => {
+                    try {
+                        const btn = e.target.closest('[data-action="deleteNav"]');
+                        if (btn) await deleteNavRow(btn);
+                    } catch (err) { Debug.error('Delete NAV error:', err); showStatus('An error occurred', 'error'); }
                 });
 
                 // Update summary when cash flows or NAV values change
-                document.getElementById('cashFlowsTable').addEventListener('input', updateDetailsSummary);
-                document.getElementById('cashFlowsTable').addEventListener('change', updateDetailsSummary);
-                document.getElementById('navTable').addEventListener('input', updateDetailsSummary);
-                document.getElementById('navTable').addEventListener('change', updateDetailsSummary);
+                document.getElementById('cashFlowsTable').addEventListener('input', () => updateDetailsSummary());
+                document.getElementById('cashFlowsTable').addEventListener('change', () => updateDetailsSummary());
+                document.getElementById('navTable').addEventListener('input', () => updateDetailsSummary());
+                document.getElementById('navTable').addEventListener('change', () => updateDetailsSummary());
                 document.getElementById('editFundTagsContainer').addEventListener('click', (e) => {
                     const btn = e.target.closest('[data-action="removeTag"]');
                     if (btn) removeEditFundTag(btn);
@@ -10011,9 +10033,11 @@
             setupBackupWarning() {
                 document.getElementById('closeBackupWarningBtn').addEventListener('click', closeBackupWarning);
                 document.getElementById('exportNowBtn').addEventListener('click', async () => {
-                    closeBackupWarning();
-                    await exportDatabase();
-                    updateLastBackupTime();
+                    try {
+                        closeBackupWarning();
+                        await exportDatabase();
+                        updateLastBackupTime();
+                    } catch (err) { Debug.error('Export database error:', err); showStatus('Export failed', 'error'); }
                 });
                 document.getElementById('remindLaterBtn').addEventListener('click', () => {
                     if (document.getElementById('dontShowBackupWarning').checked) {
@@ -10045,10 +10069,15 @@
                     'sidebarClearDatabase': clearDatabase
                 };
                 Object.entries(menuItems).forEach(([id, handler]) => {
-                    document.getElementById(id).addEventListener('click', (e) => {
+                    document.getElementById(id).addEventListener('click', async (e) => {
                         e.preventDefault();
                         closeSidebar();
-                        handler();
+                        try {
+                            await handler();
+                        } catch (err) {
+                            Debug.error(`Error in sidebar handler ${id}:`, err);
+                            showStatus('An error occurred: ' + err.message, 'error');
+                        }
                     });
                 });
 
