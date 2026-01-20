@@ -2937,6 +2937,11 @@
                         Load Sample Data
                     </a>
                 </div>
+                <div class="sidebar-item">
+                    <a href="#" id="sidebarClearDatabase" style="color: var(--color-danger);">
+                        Clear Database
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -9240,6 +9245,58 @@
             }
         }
 
+        async function clearDatabase() {
+            const confirmed = await showConfirm(
+                'This will permanently delete ALL data including funds, groups, and fund names. This action cannot be undone. Are you sure?',
+                {
+                    title: 'Clear Database',
+                    confirmText: 'Delete Everything',
+                    cancelText: 'Cancel',
+                    confirmClass: 'btn-danger'
+                }
+            );
+
+            if (!confirmed) return;
+
+            showLoading('Clearing database...');
+
+            try {
+                // Clear all funds
+                const funds = await getAllFunds();
+                for (const fund of funds) {
+                    await deleteFund(fund.id);
+                }
+
+                // Clear all groups
+                const allGroups = await getAllGroups();
+                for (const group of allGroups) {
+                    await deleteGroup(group.id);
+                }
+
+                // Clear all fund names
+                const fundNamesList = await getAllFundNames();
+                for (const name of fundNamesList) {
+                    await deleteFundName(name);
+                }
+
+                // Reset AppState
+                AppState.setFunds([]);
+                AppState.setGroups([]);
+                AppState.setFundNames(new Set());
+                AppState.clearMetricsCache();
+                AppState.groupDescendantsCache.clear();
+                fundNameData.clear();
+
+                await renderTable();
+                showStatus('Database cleared successfully', 'success');
+            } catch (err) {
+                showStatus('Error clearing database: ' + err.message, 'error');
+                Debug.error('Error clearing database:', err);
+            } finally {
+                hideLoading();
+            }
+        }
+
         // ===========================
         // Column Resizing
         // ===========================
@@ -9589,7 +9646,8 @@
                     'sidebarExportCSV': exportToCSV,
                     'sidebarExportJSON': exportDatabase,
                     'sidebarExportPDF': exportToPDF,
-                    'sidebarLoadSampleData': loadSampleData
+                    'sidebarLoadSampleData': loadSampleData,
+                    'sidebarClearDatabase': clearDatabase
                 };
                 Object.entries(menuItems).forEach(([id, handler]) => {
                     document.getElementById(id).addEventListener('click', (e) => {
