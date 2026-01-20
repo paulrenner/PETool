@@ -9268,7 +9268,7 @@
 
                         const fundData = {
                             fundName: fund.fundName,
-                            accountNumber: fund.accountNumber,
+                            accountNumber: (fund.accountNumber || '').replace(/\s/g, ''),
                             groupId: groupId,
                             commitment: parseCurrency(fund.commitment),
                             cashFlows: cashFlows,
