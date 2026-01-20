@@ -4954,8 +4954,8 @@
                     return { valid: false, error: 'Invalid amount', index: i };
                 }
 
-                if (!['Contribution', 'Distribution'].includes(cf.type)) {
-                    return { valid: false, error: 'Invalid cash flow type (must be Contribution or Distribution)', index: i };
+                if (!['Contribution', 'Distribution', 'Adjustment'].includes(cf.type)) {
+                    return { valid: false, error: 'Invalid cash flow type (must be Contribution, Distribution, or Adjustment)', index: i };
                 }
             }
 
@@ -5750,9 +5750,6 @@
                 }
 
                 fund.cashFlows.forEach(cf => {
-                    // Skip adjustments - they don't affect the cash flow timeline
-                    if (cf.type === 'Adjustment') return;
-
                     const cfDate = new Date(cf.date);
                     const year = cfDate.getFullYear();
 
