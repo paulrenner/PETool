@@ -152,9 +152,17 @@
         [data-theme="dark"] input,
         [data-theme="dark"] textarea,
         [data-theme="dark"] select,
-        [data-theme="dark"] select option {
+        [data-theme="dark"] select option,
+        [data-theme="dark"] .form-group input,
+        [data-theme="dark"] .form-group textarea,
+        [data-theme="dark"] .form-group select {
             background-color: #2D3748;
             color: #F7FAFC;
+        }
+
+        [data-theme="dark"] input::placeholder,
+        [data-theme="dark"] textarea::placeholder {
+            color: #A0AEC0;
         }
 
         [data-theme="dark"] .details-table th {
