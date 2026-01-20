@@ -238,6 +238,21 @@
             border-left-color: #63B3ED;
         }
 
+        [data-theme="dark"] .multi-select-search {
+            background: var(--color-bg);
+            border-bottom-color: #4A5568;
+        }
+
+        [data-theme="dark"] .multi-select-search input {
+            background: #374151;
+            border-color: #4A5568;
+            color: var(--color-text);
+        }
+
+        [data-theme="dark"] .multi-select-search input:focus {
+            border-color: var(--color-action);
+        }
+
         /* Portfolio Summary Stats */
         .portfolio-summary {
             display: flex;
@@ -906,6 +921,56 @@
             flex: 1;
             padding: 4px 8px;
             font-size: 12px;
+        }
+
+        .multi-select-search {
+            padding: 8px;
+            border-bottom: 1px solid var(--color-border);
+            position: sticky;
+            top: 0;
+            background: var(--color-white);
+            z-index: 1;
+        }
+
+        .multi-select-search input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid var(--color-border-input);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            background: var(--color-white);
+            color: var(--color-text);
+        }
+
+        .multi-select-search input:focus {
+            outline: none;
+            border-color: var(--color-action);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .multi-select-search input::placeholder {
+            color: var(--color-muted);
+        }
+
+        .multi-select-options {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .multi-select-option.search-hidden {
+            display: none;
+        }
+
+        .multi-select-no-results {
+            padding: 12px;
+            text-align: center;
+            color: var(--color-muted);
+            font-size: 13px;
+            display: none;
+        }
+
+        .multi-select-no-results.visible {
+            display: block;
         }
 
         button {
@@ -3719,7 +3784,7 @@
             if (!dropdown) return;
 
             let seenTopLevelGroup = false;
-            dropdown.innerHTML = options.map(opt => {
+            const optionsHtml = options.map(opt => {
                 const isSelected = preserveValues.includes(opt.value);
                 const indentStyle = opt.indent ? `style="--indent-level: ${opt.indent}"` : '';
 
@@ -3752,7 +3817,59 @@
                 `;
             }).join('');
 
+            dropdown.innerHTML = `
+                <div class="multi-select-search">
+                    <input type="text" placeholder="Search..." aria-label="Search options">
+                </div>
+                <div class="multi-select-options">${optionsHtml}</div>
+                <div class="multi-select-no-results">No matches found</div>
+            `;
+
             updateMultiSelectDisplay(id);
+        }
+
+        /**
+         * Filter options in a multi-select dropdown based on search text
+         * @param {HTMLElement} container - The multi-select container element
+         * @param {string} searchText - The search text to filter by
+         */
+        function filterMultiSelectOptions(container, searchText) {
+            const optionsContainer = container.querySelector('.multi-select-options');
+            const noResults = container.querySelector('.multi-select-no-results');
+            if (!optionsContainer) return;
+
+            const options = optionsContainer.querySelectorAll('.multi-select-option');
+            const searchLower = searchText.toLowerCase().trim();
+            let visibleCount = 0;
+
+            options.forEach(option => {
+                const label = option.querySelector('label');
+                const text = label ? label.textContent.toLowerCase() : '';
+
+                if (searchLower === '' || text.includes(searchLower)) {
+                    option.classList.remove('search-hidden');
+                    visibleCount++;
+                } else {
+                    option.classList.add('search-hidden');
+                }
+            });
+
+            // Show/hide no results message
+            if (noResults) {
+                noResults.classList.toggle('visible', visibleCount === 0 && searchLower !== '');
+            }
+        }
+
+        /**
+         * Clear the search input and show all options in a multi-select dropdown
+         * @param {HTMLElement} container - The multi-select container element
+         */
+        function clearMultiSelectSearch(container) {
+            const searchInput = container.querySelector('.multi-select-search input');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            filterMultiSelectOptions(container, '');
         }
 
         /**
@@ -3770,16 +3887,22 @@
                     e.stopPropagation();
                     const wasOpen = container.classList.contains('open');
 
-                    // Close all other multi-selects
+                    // Close all other multi-selects (and clear their search)
                     document.querySelectorAll('.multi-select.open').forEach(ms => {
                         ms.classList.remove('open');
                         ms.querySelector('.multi-select-trigger').setAttribute('aria-expanded', 'false');
+                        clearMultiSelectSearch(ms);
                     });
 
                     // Toggle this one
                     if (!wasOpen) {
                         container.classList.add('open');
                         trigger.setAttribute('aria-expanded', 'true');
+                        // Focus the search input after opening
+                        setTimeout(() => {
+                            const searchInput = dropdown.querySelector('.multi-select-search input');
+                            if (searchInput) searchInput.focus();
+                        }, 0);
                     }
                 });
 
@@ -3791,11 +3914,33 @@
                     } else if (e.key === 'Escape') {
                         container.classList.remove('open');
                         trigger.setAttribute('aria-expanded', 'false');
+                        clearMultiSelectSearch(container);
                     }
                 });
 
-                // Handle option clicks (using event delegation)
+                // Handle search input (using event delegation since input is added dynamically)
+                dropdown.addEventListener('input', (e) => {
+                    if (e.target.matches('.multi-select-search input')) {
+                        filterMultiSelectOptions(container, e.target.value);
+                    }
+                });
+
+                // Handle keyboard events in dropdown (for search input)
+                dropdown.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        container.classList.remove('open');
+                        trigger.setAttribute('aria-expanded', 'false');
+                        clearMultiSelectSearch(container);
+                        trigger.focus();
+                    }
+                });
+
+                // Prevent clicks on search input from closing dropdown
                 dropdown.addEventListener('click', (e) => {
+                    if (e.target.closest('.multi-select-search')) {
+                        e.stopPropagation();
+                        return;
+                    }
                     const option = e.target.closest('.multi-select-option');
                     if (option) {
                         e.stopPropagation();
@@ -3815,6 +3960,7 @@
                     document.querySelectorAll('.multi-select.open').forEach(ms => {
                         ms.classList.remove('open');
                         ms.querySelector('.multi-select-trigger').setAttribute('aria-expanded', 'false');
+                        clearMultiSelectSearch(ms);
                     });
                 }
             });
