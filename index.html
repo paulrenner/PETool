@@ -185,6 +185,42 @@
             background: #2D3748;
         }
 
+        [data-theme="dark"] .multi-select-trigger {
+            background: #2D3748;
+            border-color: #4A5568;
+            color: #F7FAFC;
+        }
+
+        [data-theme="dark"] .multi-select-dropdown {
+            background: #2D3748;
+            border-color: #4A5568;
+        }
+
+        [data-theme="dark"] .multi-select-option:hover {
+            background: #374151;
+        }
+
+        [data-theme="dark"] .multi-select-option.selected {
+            background: rgba(99, 179, 237, 0.2);
+        }
+
+        [data-theme="dark"] .multi-select-actions {
+            background: #1F2937;
+            border-top-color: #4A5568;
+        }
+
+        [data-theme="dark"] .multi-select-option.group-top-level {
+            background: #374151;
+        }
+
+        [data-theme="dark"] .multi-select-option.group-separator {
+            border-top-color: #4A5568;
+        }
+
+        [data-theme="dark"] .multi-select-option.group-child {
+            border-left-color: #63B3ED;
+        }
+
         /* Portfolio Summary Stats */
         .portfolio-summary {
             display: flex;
@@ -702,6 +738,157 @@
 
         .filter-badge .clear-filters:hover {
             background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Multi-select dropdown */
+        .multi-select {
+            position: relative;
+            min-width: 150px;
+        }
+
+        .multi-select-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--color-border-input);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            background: var(--color-white);
+            color: var(--color-text);
+            cursor: pointer;
+            min-height: 36px;
+            gap: 8px;
+        }
+
+        .multi-select-trigger:hover {
+            border-color: var(--color-action);
+        }
+
+        .multi-select.open .multi-select-trigger {
+            border-color: var(--color-action);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .multi-select-display {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .multi-select-display .placeholder {
+            color: var(--color-muted);
+        }
+
+        .multi-select-count {
+            background: var(--color-action);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+
+        .multi-select-arrow {
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+
+        .multi-select.open .multi-select-arrow {
+            transform: rotate(180deg);
+        }
+
+        .multi-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 220px;
+            margin-top: 4px;
+            background: var(--color-white);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            max-height: 250px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .multi-select.open .multi-select-dropdown {
+            display: block;
+        }
+
+        .multi-select-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .multi-select-option:hover {
+            background: var(--color-alt-bg);
+        }
+
+        .multi-select-option.selected {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .multi-select-option input[type="checkbox"] {
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .multi-select-option label {
+            flex: 1;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .multi-select-option.group-option {
+            padding-left: calc(12px + var(--indent-level, 0) * 16px);
+        }
+
+        /* Top-level group styling */
+        .multi-select-option.group-top-level {
+            background: var(--color-alt-bg);
+            font-weight: 600;
+        }
+
+        .multi-select-option.group-top-level label {
+            font-weight: 600;
+        }
+
+        /* Separator between top-level groups */
+        .multi-select-option.group-separator {
+            margin-top: 6px;
+            border-top: 1px solid var(--color-border);
+            padding-top: 10px;
+        }
+
+        /* Left border accent for child items */
+        .multi-select-option.group-child {
+            border-left: 3px solid var(--color-primary-light, #85c1e9);
+            margin-left: 8px;
+            padding-left: calc(12px + var(--indent-level, 0) * 16px - 11px);
+        }
+
+        .multi-select-actions {
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            border-top: 1px solid var(--color-border);
+            background: var(--color-alt-bg);
+        }
+
+        .multi-select-actions button {
+            flex: 1;
+            padding: 4px 8px;
+            font-size: 12px;
         }
 
         button {
@@ -2099,28 +2286,44 @@
 
         <div class="controls-bar" role="search" aria-label="Filter and search controls">
             <div class="control-group">
-                <label for="groupFilter">Filter by Group</label>
-                <select id="groupFilter">
-                    <option value="">All Groups</option>
-                </select>
+                <label>Filter by Group</label>
+                <div class="multi-select" id="groupFilter" data-placeholder="All Groups">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Groups</span></span>
+                        <span class="multi-select-arrow">▾</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
             </div>
             <div class="control-group">
-                <label for="fundFilter">Filter by Fund</label>
-                <select id="fundFilter">
-                    <option value="">All Funds</option>
-                </select>
+                <label>Filter by Fund</label>
+                <div class="multi-select" id="fundFilter" data-placeholder="All Funds">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Funds</span></span>
+                        <span class="multi-select-arrow">▾</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
             </div>
             <div class="control-group">
-                <label for="accountFilter">Filter by Account</label>
-                <select id="accountFilter">
-                    <option value="">All Accounts</option>
-                </select>
+                <label>Filter by Account</label>
+                <div class="multi-select" id="accountFilter" data-placeholder="All Accounts">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Accounts</span></span>
+                        <span class="multi-select-arrow">▾</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
             </div>
             <div class="control-group">
-                <label for="vintageFilter">Filter by Vintage</label>
-                <select id="vintageFilter">
-                    <option value="">All Vintages</option>
-                </select>
+                <label>Filter by Vintage</label>
+                <div class="multi-select" id="vintageFilter" data-placeholder="All Vintages">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Vintages</span></span>
+                        <span class="multi-select-arrow">▾</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
             </div>
             <div class="control-group">
                 <label for="searchInput">Search</label>
@@ -3314,31 +3517,221 @@
         }
 
         // ===========================
+        // Multi-Select Dropdown Component
+        // ===========================
+
+        /**
+         * Get selected values from a multi-select dropdown
+         * @param {string} id - The multi-select element ID
+         * @returns {Array<string>} Array of selected values
+         */
+        function getMultiSelectValues(id) {
+            const container = document.getElementById(id);
+            if (!container) return [];
+            const selected = container.querySelectorAll('.multi-select-option.selected');
+            return Array.from(selected).map(opt => opt.dataset.value);
+        }
+
+        /**
+         * Set selected values for a multi-select dropdown
+         * @param {string} id - The multi-select element ID
+         * @param {Array<string>} values - Array of values to select
+         */
+        function setMultiSelectValues(id, values) {
+            const container = document.getElementById(id);
+            if (!container) return;
+            const options = container.querySelectorAll('.multi-select-option');
+            options.forEach(opt => {
+                if (values.includes(opt.dataset.value)) {
+                    opt.classList.add('selected');
+                    const checkbox = opt.querySelector('input[type="checkbox"]');
+                    if (checkbox) checkbox.checked = true;
+                } else {
+                    opt.classList.remove('selected');
+                    const checkbox = opt.querySelector('input[type="checkbox"]');
+                    if (checkbox) checkbox.checked = false;
+                }
+            });
+            updateMultiSelectDisplay(id);
+        }
+
+        /**
+         * Clear all selections in a multi-select dropdown
+         * @param {string} id - The multi-select element ID
+         */
+        function clearMultiSelect(id) {
+            setMultiSelectValues(id, []);
+        }
+
+        /**
+         * Update the display text of a multi-select dropdown
+         * @param {string} id - The multi-select element ID
+         */
+        function updateMultiSelectDisplay(id) {
+            const container = document.getElementById(id);
+            if (!container) return;
+            const display = container.querySelector('.multi-select-display');
+            const placeholder = container.dataset.placeholder || 'Select...';
+            const selected = getMultiSelectValues(id);
+
+            if (selected.length === 0) {
+                display.innerHTML = `<span class="placeholder">${escapeHtml(placeholder)}</span>`;
+            } else if (selected.length === 1) {
+                // Show the single selected value
+                const option = container.querySelector(`.multi-select-option[data-value="${CSS.escape(selected[0])}"]`);
+                const label = option ? option.querySelector('label').textContent : selected[0];
+                display.innerHTML = escapeHtml(label);
+            } else {
+                // Show count badge
+                display.innerHTML = `<span class="multi-select-count">${selected.length} selected</span>`;
+            }
+        }
+
+        /**
+         * Populate options in a multi-select dropdown
+         * @param {string} id - The multi-select element ID
+         * @param {Array<{value: string, label: string, indent?: number}>} options - Array of option objects
+         * @param {Array<string>} preserveValues - Values to preserve selection for
+         */
+        function populateMultiSelect(id, options, preserveValues = []) {
+            const container = document.getElementById(id);
+            if (!container) return;
+            const dropdown = container.querySelector('.multi-select-dropdown');
+            if (!dropdown) return;
+
+            let seenTopLevelGroup = false;
+            dropdown.innerHTML = options.map(opt => {
+                const isSelected = preserveValues.includes(opt.value);
+                const indentStyle = opt.indent ? `style="--indent-level: ${opt.indent}"` : '';
+
+                // Build CSS classes based on hierarchy level
+                let classes = ['multi-select-option'];
+                if (opt.indent !== undefined) {
+                    if (opt.indent === 0) {
+                        // Top-level group
+                        classes.push('group-top-level');
+                        if (seenTopLevelGroup) {
+                            classes.push('group-separator');
+                        }
+                        seenTopLevelGroup = true;
+                    } else {
+                        // Child group
+                        classes.push('group-option', 'group-child');
+                    }
+                }
+                if (isSelected) classes.push('selected');
+
+                return `
+                    <div class="${classes.join(' ')}"
+                         data-value="${escapeHtml(opt.value)}"
+                         role="option"
+                         aria-selected="${isSelected}"
+                         ${indentStyle}>
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} tabindex="-1">
+                        <label>${escapeHtml(opt.label)}</label>
+                    </div>
+                `;
+            }).join('');
+
+            updateMultiSelectDisplay(id);
+        }
+
+        /**
+         * Initialize multi-select dropdown event handlers
+         */
+        function initMultiSelectDropdowns() {
+            const multiSelects = document.querySelectorAll('.multi-select');
+
+            multiSelects.forEach(container => {
+                const trigger = container.querySelector('.multi-select-trigger');
+                const dropdown = container.querySelector('.multi-select-dropdown');
+
+                // Toggle dropdown on trigger click
+                trigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const wasOpen = container.classList.contains('open');
+
+                    // Close all other multi-selects
+                    document.querySelectorAll('.multi-select.open').forEach(ms => {
+                        ms.classList.remove('open');
+                        ms.querySelector('.multi-select-trigger').setAttribute('aria-expanded', 'false');
+                    });
+
+                    // Toggle this one
+                    if (!wasOpen) {
+                        container.classList.add('open');
+                        trigger.setAttribute('aria-expanded', 'true');
+                    }
+                });
+
+                // Keyboard navigation
+                trigger.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        trigger.click();
+                    } else if (e.key === 'Escape') {
+                        container.classList.remove('open');
+                        trigger.setAttribute('aria-expanded', 'false');
+                    }
+                });
+
+                // Handle option clicks (using event delegation)
+                dropdown.addEventListener('click', (e) => {
+                    const option = e.target.closest('.multi-select-option');
+                    if (option) {
+                        e.stopPropagation();
+                        option.classList.toggle('selected');
+                        const checkbox = option.querySelector('input[type="checkbox"]');
+                        if (checkbox) checkbox.checked = option.classList.contains('selected');
+                        option.setAttribute('aria-selected', option.classList.contains('selected'));
+                        updateMultiSelectDisplay(container.id);
+                        applyFilters();
+                    }
+                });
+            });
+
+            // Close all dropdowns when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.multi-select')) {
+                    document.querySelectorAll('.multi-select.open').forEach(ms => {
+                        ms.classList.remove('open');
+                        ms.querySelector('.multi-select-trigger').setAttribute('aria-expanded', 'false');
+                    });
+                }
+            });
+        }
+
+        // ===========================
         // Filter Configuration
         // ===========================
 
         /**
          * Filter configurations for declarative filtering
+         * Now handles arrays of values for multi-select filters
          */
         const FilterConfigs = [
             {
                 id: 'fundFilter',
-                apply: (fund, value) => !value || fund.fundName === value
+                isMultiSelect: true,
+                apply: (fund, values) => values.length === 0 || values.includes(fund.fundName)
             },
             {
                 id: 'accountFilter',
-                apply: (fund, value) => !value || fund.accountNumber === value
+                isMultiSelect: true,
+                apply: (fund, values) => values.length === 0 || values.includes(fund.accountNumber)
             },
             {
                 id: 'vintageFilter',
-                apply: (fund, value) => {
-                    if (!value) return true;
+                isMultiSelect: true,
+                apply: (fund, values) => {
+                    if (values.length === 0) return true;
                     const vintage = getVintageYear(fund);
-                    return vintage && vintage.toString() === value;
+                    return vintage && values.includes(vintage.toString());
                 }
             },
             {
                 id: 'searchInput',
+                isMultiSelect: false,
                 apply: (fund, value) => {
                     if (!value) return true;
                     const searchLower = value.toLowerCase();
@@ -3424,8 +3817,9 @@
                 // Update O(1) lookup map
                 this.groupsMap.clear();
                 groupList.forEach(g => this.groupsMap.set(g.id, g));
-                // Clear ancestor cache since groups changed
+                // Clear caches since groups changed
                 this.ancestorCache.clear();
+                this.groupDescendantsCache.clear();
             },
 
             // O(1) group lookup by ID (synchronous)
@@ -3448,6 +3842,30 @@
                 }
                 this.ancestorCache.set(groupId, ancestors);
                 return ancestors;
+            },
+
+            // Get descendant group IDs with memoization (synchronous)
+            getDescendantIds(groupId) {
+                if (this.groupDescendantsCache.has(groupId)) {
+                    return this.groupDescendantsCache.get(groupId);
+                }
+                const descendants = [groupId];
+                // Find all groups that have this groupId as ancestor
+                for (const [id, group] of this.groupsMap) {
+                    if (group.parentGroupId === groupId) {
+                        // Recursively get descendants of this child
+                        const childDescendants = this.getDescendantIds(id);
+                        descendants.push(...childDescendants.slice(1)); // Skip first (the child itself is already in childDescendants)
+                        descendants.push(id);
+                    }
+                }
+                this.groupDescendantsCache.set(groupId, descendants);
+                return descendants;
+            },
+
+            // Clear descendant cache (call when groups change)
+            clearDescendantCache() {
+                this.groupDescendantsCache.clear();
             },
 
             setUnsavedChanges(value) {
@@ -4598,8 +5016,8 @@
                     return { valid: false, error: 'Invalid amount', index: i };
                 }
 
-                if (!['Contribution', 'Distribution'].includes(cf.type)) {
-                    return { valid: false, error: 'Invalid cash flow type (must be Contribution or Distribution)', index: i };
+                if (!['Contribution', 'Distribution', 'Adjustment'].includes(cf.type)) {
+                    return { valid: false, error: 'Invalid cash flow type (must be Contribution, Distribution, or Adjustment)', index: i };
                 }
             }
 
@@ -4729,11 +5147,11 @@
 
                 if (fundsWithMetrics.length === 0) {
                     // Check if this is due to filters or no data at all
-                    const hasFilters = document.getElementById('fundFilter').value ||
-                        document.getElementById('accountFilter').value ||
-                        document.getElementById('groupFilter').value ||
+                    const hasFilters = getMultiSelectValues('fundFilter').length > 0 ||
+                        getMultiSelectValues('accountFilter').length > 0 ||
+                        getMultiSelectValues('groupFilter').length > 0 ||
                         document.getElementById('searchInput').value ||
-                        document.getElementById('vintageFilter').value;
+                        getMultiSelectValues('vintageFilter').length > 0;
 
                     const hasAnyFunds = currentFunds.length > 0;
 
@@ -4869,12 +5287,13 @@
 
         function applyCurrentFilters(funds) {
             // Get filter values once (cached for all funds)
+            // Multi-select filters return arrays, regular inputs return strings
             const filterValues = {
-                fundFilter: document.getElementById('fundFilter').value,
-                accountFilter: document.getElementById('accountFilter').value,
-                groupFilter: document.getElementById('groupFilter').value,
+                fundFilter: getMultiSelectValues('fundFilter'),
+                accountFilter: getMultiSelectValues('accountFilter'),
+                groupFilter: getMultiSelectValues('groupFilter'),
                 searchInput: document.getElementById('searchInput').value.toLowerCase().trim(),
-                vintageFilter: document.getElementById('vintageFilter').value
+                vintageFilter: getMultiSelectValues('vintageFilter')
             };
 
             return funds.filter(fund => {
@@ -4885,13 +5304,24 @@
                 }
 
                 // Group filter (special handling for hierarchical groups)
-                if (filterValues.groupFilter) {
-                    const groupId = parseInt(filterValues.groupFilter);
+                if (filterValues.groupFilter.length > 0) {
                     if (!fund.groupId) return false;
-                    if (!currentGroupDescendants || currentGroupDescendants.groupId !== groupId) {
-                        return false; // Will be set by async filter
+                    // Check if fund belongs to any of the selected groups or their descendants
+                    let matchesGroup = false;
+                    for (const groupIdStr of filterValues.groupFilter) {
+                        const groupId = parseInt(groupIdStr);
+                        if (fund.groupId === groupId) {
+                            matchesGroup = true;
+                            break;
+                        }
+                        // Check descendants of this group
+                        const descendants = AppState.getDescendantIds(groupId);
+                        if (descendants.includes(fund.groupId)) {
+                            matchesGroup = true;
+                            break;
+                        }
                     }
-                    if (!currentGroupDescendants.ids.includes(fund.groupId)) return false;
+                    if (!matchesGroup) return false;
                 }
 
                 // Tags search (extends searchInput to include tags)
@@ -4912,143 +5342,130 @@
         }
 
         function updateFilterDropdowns(allFunds) {
-            // Get current filter values
-            const groupFilter = document.getElementById('groupFilter');
-            const fundFilter = document.getElementById('fundFilter');
-            const accountFilter = document.getElementById('accountFilter');
-            const vintageFilter = document.getElementById('vintageFilter');
+            // Get current multi-select values (arrays)
+            const currentGroupValues = getMultiSelectValues('groupFilter');
+            const currentFundValues = getMultiSelectValues('fundFilter');
+            const currentAccountValues = getMultiSelectValues('accountFilter');
+            const currentVintageValues = getMultiSelectValues('vintageFilter');
 
-            const currentGroupValue = groupFilter.value;
-            const currentFundValue = fundFilter.value;
-            const currentAccountValue = accountFilter.value;
-            const currentVintageValue = vintageFilter.value;
-
-            // Helper function to filter funds by group
-            const filterByGroup = (funds, groupId) => {
-                if (!groupId) return funds;
-                const gId = parseInt(groupId);
+            // Helper function to filter funds by multiple groups
+            const filterByGroups = (funds, groupIds) => {
+                if (groupIds.length === 0) return funds;
                 return funds.filter(fund => {
                     if (!fund.groupId) return false;
-                    if (fund.groupId === gId) return true;
-                    // Check if fund's group is descendant of selected group
-                    if (currentGroupDescendants && currentGroupDescendants.groupId === gId) {
-                        return currentGroupDescendants.ids.includes(fund.groupId);
+                    for (const groupIdStr of groupIds) {
+                        const gId = parseInt(groupIdStr);
+                        if (fund.groupId === gId) return true;
+                        // Check if fund's group is descendant of selected group
+                        const descendants = AppState.getDescendantIds(gId);
+                        if (descendants.includes(fund.groupId)) return true;
                     }
                     return false;
                 });
             };
 
-            // Helper function to filter funds by vintage
-            const filterByVintage = (funds, vintage) => {
-                if (!vintage) return funds;
-                const vintageYear = parseInt(vintage);
-                return funds.filter(fund => getVintageYear(fund) === vintageYear);
+            // Helper function to filter funds by multiple vintages
+            const filterByVintages = (funds, vintages) => {
+                if (vintages.length === 0) return funds;
+                return funds.filter(fund => {
+                    const vintage = getVintageYear(fund);
+                    return vintage && vintages.includes(vintage.toString());
+                });
+            };
+
+            // Helper function to filter funds by multiple fund names
+            const filterByFunds = (funds, fundNames) => {
+                if (fundNames.length === 0) return funds;
+                return funds.filter(f => fundNames.includes(f.fundName));
+            };
+
+            // Helper function to filter funds by multiple accounts
+            const filterByAccounts = (funds, accounts) => {
+                if (accounts.length === 0) return funds;
+                return funds.filter(f => accounts.includes(f.accountNumber));
             };
 
             // 1. Update FUND dropdown (filter by group, account, and vintage)
             let fundsForFundDropdown = allFunds;
-            if (currentGroupValue) {
-                fundsForFundDropdown = filterByGroup(fundsForFundDropdown, currentGroupValue);
-            }
-            if (currentAccountValue) {
-                fundsForFundDropdown = fundsForFundDropdown.filter(f => f.accountNumber === currentAccountValue);
-            }
-            if (currentVintageValue) {
-                fundsForFundDropdown = filterByVintage(fundsForFundDropdown, currentVintageValue);
-            }
+            fundsForFundDropdown = filterByGroups(fundsForFundDropdown, currentGroupValues);
+            fundsForFundDropdown = filterByAccounts(fundsForFundDropdown, currentAccountValues);
+            fundsForFundDropdown = filterByVintages(fundsForFundDropdown, currentVintageValues);
+
             const uniqueFunds = [...new Set(fundsForFundDropdown.map(f => f.fundName))].sort();
-            fundFilter.innerHTML = '<option value="">All Funds</option>';
-            uniqueFunds.forEach(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                fundFilter.appendChild(option);
-            });
-            if (currentFundValue && uniqueFunds.includes(currentFundValue)) {
-                fundFilter.value = currentFundValue;
-            } else {
-                fundFilter.value = '';
-            }
+            const fundOptions = uniqueFunds.map(name => ({ value: name, label: name }));
+            // Preserve selections that are still valid
+            const validFundValues = currentFundValues.filter(v => uniqueFunds.includes(v));
+            populateMultiSelect('fundFilter', fundOptions, validFundValues);
 
             // 2. Update ACCOUNT dropdown (filter by group, fund, and vintage)
             let fundsForAccountDropdown = allFunds;
-            if (currentGroupValue) {
-                fundsForAccountDropdown = filterByGroup(fundsForAccountDropdown, currentGroupValue);
-            }
-            if (currentFundValue) {
-                fundsForAccountDropdown = fundsForAccountDropdown.filter(f => f.fundName === currentFundValue);
-            }
-            if (currentVintageValue) {
-                fundsForAccountDropdown = filterByVintage(fundsForAccountDropdown, currentVintageValue);
-            }
+            fundsForAccountDropdown = filterByGroups(fundsForAccountDropdown, currentGroupValues);
+            fundsForAccountDropdown = filterByFunds(fundsForAccountDropdown, currentFundValues);
+            fundsForAccountDropdown = filterByVintages(fundsForAccountDropdown, currentVintageValues);
+
             const uniqueAccounts = [...new Set(fundsForAccountDropdown.map(f => f.accountNumber))].sort();
-            accountFilter.innerHTML = '<option value="">All Accounts</option>';
-            uniqueAccounts.forEach(account => {
-                const option = document.createElement('option');
-                option.value = account;
-                option.textContent = account;
-                accountFilter.appendChild(option);
-            });
-            if (currentAccountValue && uniqueAccounts.includes(currentAccountValue)) {
-                accountFilter.value = currentAccountValue;
-            } else {
-                accountFilter.value = '';
-            }
+            const accountOptions = uniqueAccounts.map(account => ({ value: account, label: account }));
+            const validAccountValues = currentAccountValues.filter(v => uniqueAccounts.includes(v));
+            populateMultiSelect('accountFilter', accountOptions, validAccountValues);
 
             // 3. Update GROUP dropdown
-            groupFilter.innerHTML = '<option value="">All Groups</option>';
+            const groupOptions = [];
             if (groups.length > 0) {
                 const tree = buildGroupsTree(groups, null);
 
-                // If a group is already selected, keep it selected and show all groups
-                // Group filter takes priority and should not be auto-cleared
-                if (currentGroupValue) {
-                    addGroupOptionsToSelect(groupFilter, tree, 0);
-                    groupFilter.value = currentGroupValue;
-                } else if (currentFundValue || currentAccountValue || currentVintageValue) {
-                    // Only filter groups when NO group is selected but fund/account/vintage IS selected
-                    // This helps users see which groups contain the selected fund/account/vintage
-                    let fundsForGroupDropdown = allFunds;
-                    if (currentFundValue) {
-                        fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.fundName === currentFundValue);
-                    }
-                    if (currentAccountValue) {
-                        fundsForGroupDropdown = fundsForGroupDropdown.filter(f => f.accountNumber === currentAccountValue);
-                    }
-                    if (currentVintageValue) {
-                        fundsForGroupDropdown = filterByVintage(fundsForGroupDropdown, currentVintageValue);
-                    }
+                // Helper to flatten tree into options with indentation
+                const flattenGroupTree = (nodes, level, validGroupIds = null) => {
+                    const options = [];
+                    nodes.forEach(node => {
+                        // If filtering, only include if this group or descendants have matching funds
+                        if (validGroupIds === null || validGroupIds.has(node.id)) {
+                            options.push({
+                                value: node.id.toString(),
+                                label: node.name,
+                                indent: level
+                            });
+                        }
+                        if (node.children && node.children.length > 0) {
+                            options.push(...flattenGroupTree(node.children, level + 1, validGroupIds));
+                        }
+                    });
+                    return options;
+                };
 
-                    // Collect all group IDs including ancestors
+                // If groups already selected, show all groups
+                // Otherwise, filter to groups containing matching funds
+                if (currentGroupValues.length > 0) {
+                    groupOptions.push(...flattenGroupTree(tree, 0));
+                } else if (currentFundValues.length > 0 || currentAccountValues.length > 0 || currentVintageValues.length > 0) {
+                    // Filter groups to only those containing matching funds
+                    let fundsForGroupDropdown = allFunds;
+                    fundsForGroupDropdown = filterByFunds(fundsForGroupDropdown, currentFundValues);
+                    fundsForGroupDropdown = filterByAccounts(fundsForGroupDropdown, currentAccountValues);
+                    fundsForGroupDropdown = filterByVintages(fundsForGroupDropdown, currentVintageValues);
+
                     const validGroupIds = new Set();
                     fundsForGroupDropdown.forEach(fund => {
                         if (fund.groupId != null) {
-                            // Add the fund's group and all its ancestors
                             const ancestors = getAncestorGroupIds(fund.groupId);
                             ancestors.forEach(id => validGroupIds.add(id));
                         }
                     });
-
-                    addGroupOptionsToSelectFiltered(groupFilter, tree, 0, validGroupIds);
+                    groupOptions.push(...flattenGroupTree(tree, 0, validGroupIds));
                 } else {
-                    // No filters active - show all groups
-                    addGroupOptionsToSelect(groupFilter, tree, 0);
+                    groupOptions.push(...flattenGroupTree(tree, 0));
                 }
             }
+            const validGroupValues = currentGroupValues.filter(v =>
+                groupOptions.some(opt => opt.value === v)
+            );
+            populateMultiSelect('groupFilter', groupOptions, validGroupValues);
 
             // 4. Update VINTAGE dropdown (filter by group, fund, and account)
             let fundsForVintageDropdown = allFunds;
-            if (currentGroupValue) {
-                fundsForVintageDropdown = filterByGroup(fundsForVintageDropdown, currentGroupValue);
-            }
-            if (currentFundValue) {
-                fundsForVintageDropdown = fundsForVintageDropdown.filter(f => f.fundName === currentFundValue);
-            }
-            if (currentAccountValue) {
-                fundsForVintageDropdown = fundsForVintageDropdown.filter(f => f.accountNumber === currentAccountValue);
-            }
+            fundsForVintageDropdown = filterByGroups(fundsForVintageDropdown, currentGroupValues);
+            fundsForVintageDropdown = filterByFunds(fundsForVintageDropdown, currentFundValues);
+            fundsForVintageDropdown = filterByAccounts(fundsForVintageDropdown, currentAccountValues);
 
-            // Get unique vintage years from filtered funds
             const vintages = new Set();
             fundsForVintageDropdown.forEach(fund => {
                 const vintage = getVintageYear(fund);
@@ -5057,22 +5474,14 @@
                 }
             });
             const sortedVintages = Array.from(vintages).sort((a, b) => b - a);
-
-            vintageFilter.innerHTML = '<option value="">All Vintages</option>';
-            sortedVintages.forEach(year => {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                vintageFilter.appendChild(option);
-            });
-
-            // Restore selection if still valid
-            if (currentVintageValue && sortedVintages.includes(parseInt(currentVintageValue))) {
-                vintageFilter.value = currentVintageValue;
-            } else if (currentVintageValue) {
-                // Selection no longer valid, clear it
-                vintageFilter.value = '';
-            }
+            const vintageOptions = sortedVintages.map(year => ({
+                value: year.toString(),
+                label: year.toString()
+            }));
+            const validVintageValues = currentVintageValues.filter(v =>
+                sortedVintages.includes(parseInt(v))
+            );
+            populateMultiSelect('vintageFilter', vintageOptions, validVintageValues);
         }
 
         // Helper function to get all ancestor group IDs (uses memoized AppState version)
@@ -5151,33 +5560,10 @@
             setFilterLoading(true);
 
             try {
-                const groupFilterValue = document.getElementById('groupFilter').value;
-
                 // Check if cancelled
                 if (signal.aborted) return;
 
-                // Precompute descendants if group filter is active
-                if (groupFilterValue) {
-                    const groupId = parseInt(groupFilterValue);
-
-                    // Use cached descendants if available and valid
-                    if (!AppState.groupDescendantsCache.has(groupId)) {
-                        const descendants = await getAllDescendantGroupIds(groupId);
-                        if (signal.aborted) return; // Check again after async operation
-                        AppState.groupDescendantsCache.set(groupId, descendants);
-                    }
-
-                    AppState.setCurrentGroupDescendants({
-                        groupId,
-                        ids: AppState.groupDescendantsCache.get(groupId)
-                    });
-                } else {
-                    AppState.setCurrentGroupDescendants(null);
-                }
-
-                if (signal.aborted) return;
-
-                // Update header based on selected group
+                // Update header based on selected groups
                 updateHeader();
 
                 if (signal.aborted) return;
@@ -5211,12 +5597,13 @@
         const applyFiltersDebounced = debounce(applyFilters, CONFIG.DEBOUNCE_FILTER);
 
         function updateHeader() {
-            const groupFilterValue = document.getElementById('groupFilter').value;
+            const groupFilterValues = getMultiSelectValues('groupFilter');
             const headerTitle = document.getElementById('headerTitle');
             const headerSubtitle = document.getElementById('headerSubtitle');
 
-            if (groupFilterValue) {
-                const groupId = parseInt(groupFilterValue);
+            if (groupFilterValues.length === 1) {
+                // Single group selected - show group name
+                const groupId = parseInt(groupFilterValues[0]);
                 const group = AppState.getGroupByIdSync(groupId);
 
                 if (group) {
@@ -5236,6 +5623,10 @@
                         headerSubtitle.textContent = '';
                     }
                 }
+            } else if (groupFilterValues.length > 1) {
+                // Multiple groups selected
+                headerTitle.textContent = `${groupFilterValues.length} Groups Selected`;
+                headerSubtitle.textContent = 'Multiple investor groups';
             } else {
                 // Reset to default
                 headerTitle.textContent = 'PE Fund Manager';
@@ -5244,11 +5635,14 @@
         }
 
         async function resetFilters() {
-            document.getElementById('fundFilter').value = '';
-            document.getElementById('accountFilter').value = '';
-            document.getElementById('groupFilter').value = '';
+            // Clear multi-select filters
+            clearMultiSelect('fundFilter');
+            clearMultiSelect('accountFilter');
+            clearMultiSelect('groupFilter');
+            clearMultiSelect('vintageFilter');
+
+            // Clear search input
             document.getElementById('searchInput').value = '';
-            document.getElementById('vintageFilter').value = '';
 
             // Reset cutoff date to latest quarter end (same as page load)
             const quarterEnd = getLatestQuarterEnd();
@@ -5270,26 +5664,32 @@
          * Update the active filters indicator
          */
         function updateActiveFiltersIndicator() {
-            const fundFilter = document.getElementById('fundFilter').value;
-            const accountFilter = document.getElementById('accountFilter').value;
-            const groupFilter = document.getElementById('groupFilter').value;
+            // Get multi-select values (arrays)
+            const fundFilter = getMultiSelectValues('fundFilter');
+            const accountFilter = getMultiSelectValues('accountFilter');
+            const groupFilter = getMultiSelectValues('groupFilter');
+            const vintageFilter = getMultiSelectValues('vintageFilter');
             const searchInput = document.getElementById('searchInput').value.trim();
-            const vintageFilter = document.getElementById('vintageFilter').value;
 
-            // Count active filters
+            // Count active filters (count each multi-select with selections as 1 filter)
             let filterCount = 0;
-            if (fundFilter) filterCount++;
-            if (accountFilter) filterCount++;
-            if (groupFilter) filterCount++;
+            if (fundFilter.length > 0) filterCount++;
+            if (accountFilter.length > 0) filterCount++;
+            if (groupFilter.length > 0) filterCount++;
             if (searchInput) filterCount++;
-            if (vintageFilter) filterCount++;
+            if (vintageFilter.length > 0) filterCount++;
+
+            // Count total individual selections for display
+            const totalSelections = fundFilter.length + accountFilter.length +
+                groupFilter.length + vintageFilter.length + (searchInput ? 1 : 0);
 
             const indicator = document.getElementById('activeFiltersIndicator');
 
             if (indicator) {
                 if (filterCount > 0) {
                     indicator.style.display = 'inline-flex';
-                    indicator.innerHTML = `${filterCount} filter${filterCount > 1 ? 's' : ''} <button class="clear-filters" title="Clear all filters" aria-label="Clear all filters">&times;</button>`;
+                    const label = totalSelections === 1 ? '1 filter' : `${totalSelections} filters`;
+                    indicator.innerHTML = `${label} <button class="clear-filters" title="Clear all filters" aria-label="Clear all filters">&times;</button>`;
                     // Attach event listener to the clear button
                     const clearBtn = indicator.querySelector('.clear-filters');
                     if (clearBtn) {
@@ -5412,9 +5812,6 @@
                 }
 
                 fund.cashFlows.forEach(cf => {
-                    // Skip adjustments - they don't affect the cash flow timeline
-                    if (cf.type === 'Adjustment') return;
-
                     const cfDate = new Date(cf.date);
                     const year = cfDate.getFullYear();
 
@@ -9053,10 +9450,10 @@
         const EventListeners = {
             /** Filter controls and toolbar */
             setupFilters() {
-                document.getElementById('groupFilter').addEventListener('change', applyFilters);
-                document.getElementById('fundFilter').addEventListener('change', applyFilters);
-                document.getElementById('accountFilter').addEventListener('change', applyFilters);
-                document.getElementById('vintageFilter').addEventListener('change', applyFilters);
+                // Initialize multi-select dropdowns (these trigger applyFilters on selection change)
+                initMultiSelectDropdowns();
+
+                // Search input uses debounced filtering
                 document.getElementById('searchInput').addEventListener('input', applyFiltersDebounced);
                 document.getElementById('cutoffDate').addEventListener('change', applyFilters);
                 document.getElementById('timelineHeader').addEventListener('click', toggleTimelinePanel);
