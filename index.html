@@ -2348,6 +2348,10 @@
             <!-- Portfolio Summary Stats -->
             <div id="portfolioSummary" class="portfolio-summary">
                 <div class="summary-stat">
+                    <span class="summary-label">Investments</span>
+                    <span class="summary-value" id="summaryInvestmentCount">0</span>
+                </div>
+                <div class="summary-stat">
                     <span class="summary-label">Funds</span>
                     <span class="summary-value" id="summaryFundCount">0</span>
                 </div>
@@ -5602,8 +5606,8 @@
                 await renderTable();
 
                 // Announce results to screen readers
-                const fundCount = document.getElementById('summaryFundCount').textContent;
-                announceToScreenReader(`Filter applied. Showing ${fundCount} funds.`);
+                const investmentCount = document.getElementById('summaryInvestmentCount').textContent;
+                announceToScreenReader(`Filter applied. Showing ${investmentCount} investments.`);
             } catch (err) {
                 if (err.name === 'AbortError') {
                     // Operation was cancelled, ignore
@@ -5785,8 +5789,12 @@
             const portfolioRVPI = calculateRVPI(totalNav, totalContributions);
             const portfolioTVPI = calculateTVPI(totalNav, totalDistributions, totalContributions);
 
+            // Calculate unique fund count
+            const uniqueFundCount = new Set(fundsWithMetrics.map(f => f.fundName)).size;
+
             // Update DOM
-            document.getElementById('summaryFundCount').textContent = count;
+            document.getElementById('summaryInvestmentCount').textContent = count;
+            document.getElementById('summaryFundCount').textContent = uniqueFundCount;
             document.getElementById('summaryCommitment').textContent = formatCurrency(totalCommitment);
             document.getElementById('summaryNav').textContent = formatCurrency(totalNav);
 
