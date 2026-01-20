@@ -9264,7 +9264,7 @@
                 // Clear all funds
                 const funds = await getAllFunds();
                 for (const fund of funds) {
-                    await deleteFund(fund.id);
+                    await deleteFundFromDB(fund.id);
                 }
 
                 // Clear all groups
