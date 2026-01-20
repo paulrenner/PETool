@@ -6029,10 +6029,10 @@
             const maxDataYear = Math.max(...yearsWithData);
 
             // Determine display range:
-            // Historical: from minDataYear to cutoffYear (at least 5 years back from cutoff if data exists)
-            // Projected: from cutoffYear+1 to at least 5 years out or maxDataYear
-            const historicalStart = Math.min(minDataYear, dividerYear - 4);
-            const projectedEnd = Math.max(maxDataYear, dividerYear + 5);
+            // Historical: from minDataYear to cutoffYear (at least 10 years back from cutoff if data exists)
+            // Projected: from cutoffYear+1 to at least 6 years out or maxDataYear
+            const historicalStart = Math.min(minDataYear, dividerYear - 9);
+            const projectedEnd = Math.max(maxDataYear, dividerYear + 6);
 
             // Build continuous year range
             const years = [];
@@ -6040,12 +6040,12 @@
                 years.push(y);
             }
 
-            // Limit to reasonable display (last 5 historical + next 5 projected = 10 years max)
+            // Limit to reasonable display (last 10 historical + next 6 projected = 16 years max)
             const historicalYears = years.filter(y => y <= dividerYear);
             const projectedYears = years.filter(y => y > dividerYear);
 
-            const displayHistorical = historicalYears.slice(-5);
-            const displayProjected = projectedYears.slice(0, 5);
+            const displayHistorical = historicalYears.slice(-10);
+            const displayProjected = projectedYears.slice(0, 6);
 
             return {
                 years: [...displayHistorical, ...displayProjected],
