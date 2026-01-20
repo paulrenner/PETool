@@ -2491,24 +2491,6 @@
                     <input type="number" id="duplicateMultiplier" step="any" value="1">
                 </div>
 
-                <div class="form-group">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <label for="cashFlows">Cash Flows (JSON)</label>
-                        <button type="button" class="btn-link" onclick="fillCashFlowsExample()" style="font-size: 12px;">View Example</button>
-                    </div>
-                    <textarea id="cashFlows" placeholder='[{"date":"2024-01-15","amount":-1000000,"type":"Contribution","affectsCommitment":true}]'></textarea>
-                    <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number,"type":"Contribution|Distribution|Adjustment","affectsCommitment":true}]</div>
-                </div>
-
-                <div class="form-group">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <label for="monthlyNav">Values (JSON)</label>
-                        <button type="button" class="btn-link" onclick="fillNavExample()" style="font-size: 12px;">View Example</button>
-                    </div>
-                    <textarea id="monthlyNav" placeholder='[{"date":"2024-01-31","amount":950000}]'></textarea>
-                    <div class="hint">Format: [{"date":"YYYY-MM-DD","amount":number}]</div>
-                </div>
-
                 <div class="form-actions">
                     <button type="submit" class="btn-primary" id="saveFundBtn">Save</button>
                     <button type="button" class="btn-secondary" id="cancelFundModalBtn">Cancel</button>
@@ -6659,36 +6641,6 @@
         }
 
         // ===========================
-        // JSON Example Functions
-        // ===========================
-
-        function fillCashFlowsExample() {
-            const textarea = document.getElementById('cashFlows');
-            const currentYear = new Date().getFullYear();
-            const example = [
-                { date: `${currentYear}-01-15`, amount: -500000, type: "Contribution", affectsCommitment: true },
-                { date: `${currentYear}-04-15`, amount: -300000, type: "Contribution", affectsCommitment: true },
-                { date: `${currentYear}-07-20`, amount: 150000, type: "Distribution", affectsCommitment: false }
-            ];
-            textarea.value = JSON.stringify(example, null, 2);
-            textarea.focus();
-            showStatus('Example cash flows added. Modify the dates and amounts as needed.', 'success');
-        }
-
-        function fillNavExample() {
-            const textarea = document.getElementById('monthlyNav');
-            const currentYear = new Date().getFullYear();
-            const example = [
-                { date: `${currentYear}-01-31`, amount: 480000 },
-                { date: `${currentYear}-02-28`, amount: 495000 },
-                { date: `${currentYear}-03-31`, amount: 510000 }
-            ];
-            textarea.value = JSON.stringify(example, null, 2);
-            textarea.focus();
-            showStatus('Example NAV entries added. Modify the dates and amounts as needed.', 'success');
-        }
-
-        // ===========================
         // Modal Functions
         // ===========================
 
@@ -6710,8 +6662,6 @@
                 // Reset other form fields (not the fund name dropdown which we just populated)
                 document.getElementById('accountNumber').value = '';
                 document.getElementById('commitment').value = '';
-                document.getElementById('cashFlows').value = '';
-                document.getElementById('monthlyNav').value = '';
 
                 document.getElementById('fundModal').classList.add('show');
             } catch (err) {
@@ -6740,8 +6690,6 @@
                 await populateFundGroupDropdown(fund.groupId);
                 document.getElementById('accountNumber').value = fund.accountNumber;
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
-                document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
-                document.getElementById('monthlyNav').value = JSON.stringify(fund.monthlyNav || [], null, 2);
 
                 Modal.show('fundModal');
             } catch (err) {
@@ -6768,8 +6716,6 @@
                 await populateFundGroupDropdown(fund.groupId);
                 document.getElementById('accountNumber').value = fund.accountNumber + ' (Copy)';
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
-                document.getElementById('cashFlows').value = JSON.stringify(fund.cashFlows || [], null, 2);
-                document.getElementById('monthlyNav').value = JSON.stringify(fund.monthlyNav || [], null, 2);
 
                 document.getElementById('fundModal').classList.add('show');
             } catch (err) {
@@ -6868,8 +6814,6 @@
                 const accountNumber = document.getElementById('accountNumber').value.trim();
                 const groupId = document.getElementById('fundGroup').value;
                 const commitmentText = document.getElementById('commitment').value.trim();
-                const cashFlowsText = document.getElementById('cashFlows').value.trim();
-                const monthlyNavText = document.getElementById('monthlyNav').value.trim();
 
                 // Validate fund name
                 const fundNameValidation = validateFundName(fundName);
@@ -6907,53 +6851,24 @@
                     return;
                 }
 
-                // Parse and validate JSON
-                let cashFlows, monthlyNav;
+                // Get cash flows and NAV from existing fund (when editing/duplicating) or start empty (new)
+                let cashFlows = [];
+                let monthlyNav = [];
 
-                // Parse cash flows (optional)
-                if (cashFlowsText) {
-                    try {
-                        cashFlows = JSON.parse(cashFlowsText);
-                        if (!Array.isArray(cashFlows)) throw new Error('Cash flows must be an array');
-                    } catch (err) {
-                        highlightFieldError('cashFlows');
-                        showStatus('Invalid cash flows JSON: ' + err.message, 'error');
-                        return;
+                if (fundId) {
+                    // Editing: preserve existing data
+                    const existingFund = await getFundById(parseInt(fundId));
+                    if (existingFund) {
+                        cashFlows = existingFund.cashFlows || [];
+                        monthlyNav = existingFund.monthlyNav || [];
                     }
-
-                    // Validate cash flows using validation function
-                    const cashFlowValidation = validateCashFlows(cashFlows);
-                    if (!cashFlowValidation.valid) {
-                        highlightFieldError('cashFlows');
-                        const errorMsg = cashFlowValidation.index !== null
-                            ? `Cash flow #${cashFlowValidation.index + 1}: ${cashFlowValidation.error}`
-                            : cashFlowValidation.error;
-                        showStatus(errorMsg, 'error');
-                        return;
+                } else if (isDuplicate) {
+                    // Duplicating: copy from source fund
+                    const sourceFund = await getFundById(parseInt(isDuplicate));
+                    if (sourceFund) {
+                        cashFlows = sourceFund.cashFlows || [];
+                        monthlyNav = sourceFund.monthlyNav || [];
                     }
-                } else {
-                    cashFlows = [];
-                }
-
-                // Parse monthly NAV
-                try {
-                    monthlyNav = monthlyNavText ? JSON.parse(monthlyNavText) : [];
-                    if (!Array.isArray(monthlyNav)) throw new Error('Monthly NAV must be an array');
-                } catch (err) {
-                    highlightFieldError('monthlyNav');
-                    showStatus('Invalid monthly NAV JSON: ' + err.message, 'error');
-                    return;
-                }
-
-                // Validate monthly NAV using validation function
-                const navValidation = validateMonthlyNav(monthlyNav);
-                if (!navValidation.valid) {
-                    highlightFieldError('monthlyNav');
-                    const errorMsg = navValidation.index !== null
-                        ? `NAV entry #${navValidation.index + 1}: ${navValidation.error}`
-                        : navValidation.error;
-                    showStatus(errorMsg, 'error');
-                    return;
                 }
 
                 // Check for duplicate fund (same fund name + account number)
