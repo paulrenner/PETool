@@ -7304,6 +7304,10 @@
                         }
                     } else if (type === 'Distribution') {
                         totalDistributions += Math.abs(amount);
+                        if (affectsCommitment) {
+                            // Recallable distribution - adds back to remaining commitment
+                            outstandingCommitment += Math.abs(amount);
+                        }
                     } else if (type === 'Adjustment' && affectsCommitment) {
                         // Adjustments directly modify outstanding commitment
                         // Positive = increase remaining, Negative = decrease remaining
