@@ -155,6 +155,10 @@ async function handleAccountNumberChange(): Promise<void> {
   // Remove any existing auto-fill indicator
   removeGroupAutoFillIndicator();
 
+  // Reset suggested group tracking
+  suggestedGroupId = null;
+  accountHasExistingGroups = false;
+
   if (!accountNumber) {
     return;
   }
@@ -164,12 +168,101 @@ async function handleAccountNumberChange(): Promise<void> {
   if (result.isAmbiguous) {
     // Show ambiguous indicator
     showGroupAutoFillIndicator('ambiguous', result.conflictingGroups);
+    accountHasExistingGroups = true;
   } else if (result.groupId !== null || result.groupName === 'No Group') {
     // Auto-fill the group
     groupSelect.value = result.groupId?.toString() || '';
     showGroupAutoFillIndicator('auto-filled', [], result.groupName || 'No Group');
+    // Store the suggested group for comparison when user changes it
+    suggestedGroupId = result.groupId;
+    accountHasExistingGroups = true;
   }
   // If no existing association found, no indicator is shown
+}
+
+// Store the suggested group for comparison when user changes it
+let suggestedGroupId: number | null = null;
+let accountHasExistingGroups = false;
+
+/**
+ * Show warning when user changes group from the suggested value
+ */
+function showGroupChangeWarning(conflictingGroups: { groupId: number | null; groupName: string; count: number }[]): void {
+  removeGroupAutoFillIndicator();
+
+  const groupFormGroup = document.getElementById('fundGroup')?.closest('.form-group');
+  if (!groupFormGroup) return;
+
+  const indicator = document.createElement('div');
+  indicator.id = 'groupAutoFillIndicator';
+  indicator.style.cssText = 'margin-top: 6px; font-size: 12px; display: flex; align-items: flex-start; gap: 6px;';
+
+  const groupsList = conflictingGroups.map((g) => `${escapeHtml(g.groupName)} (${g.count})`).join(', ');
+  indicator.innerHTML = `
+    <span style="color: var(--color-warning); display: flex; align-items: center; gap: 4px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      Multiple groups will exist for this account
+    </span>
+    <span style="color: var(--color-text-light); font-size: 11px;">(${groupsList})</span>
+  `;
+
+  groupFormGroup.appendChild(indicator);
+}
+
+/**
+ * Handle group dropdown change - show warning if different from suggested
+ */
+async function handleGroupChange(): Promise<void> {
+  const groupSelect = document.getElementById('fundGroup') as HTMLSelectElement;
+  const accountInput = document.getElementById('accountNumber') as HTMLInputElement;
+
+  if (!groupSelect || !accountInput || !accountHasExistingGroups) return;
+
+  const accountNumber = accountInput.value.trim();
+  if (!accountNumber) return;
+
+  const selectedGroupId = groupSelect.value ? parseInt(groupSelect.value) : null;
+
+  // If user changed to a different group than suggested
+  if (selectedGroupId !== suggestedGroupId) {
+    // Look up existing groups for this account
+    const fundIdInput = document.getElementById('fundId') as HTMLInputElement;
+    const excludeFundId = fundIdInput?.value ? parseInt(fundIdInput.value) : null;
+    const result = await lookupGroupForAccount(accountNumber, excludeFundId);
+
+    if (result.conflictingGroups.length > 0 || result.groupId !== null) {
+      // Build list of groups including the newly selected one
+      const selectedGroupName = selectedGroupId
+        ? (AppState.getGroupByIdSync(selectedGroupId)?.name || 'Unknown Group')
+        : 'No Group';
+
+      const allGroups = [...result.conflictingGroups];
+
+      // If not ambiguous, add the original suggested group
+      if (!result.isAmbiguous && result.groupId !== null) {
+        allGroups.push({ groupId: result.groupId, groupName: result.groupName || 'No Group', count: 1 });
+      }
+
+      // Add the newly selected group if not already in the list
+      if (!allGroups.some(g => g.groupId === selectedGroupId)) {
+        allGroups.push({ groupId: selectedGroupId, groupName: selectedGroupName, count: 0 });
+      }
+
+      showGroupChangeWarning(allGroups);
+    }
+  } else {
+    // User selected the suggested group - show auto-filled indicator
+    if (suggestedGroupId !== null) {
+      const groupName = AppState.getGroupByIdSync(suggestedGroupId)?.name || 'No Group';
+      showGroupAutoFillIndicator('auto-filled', [], groupName);
+    } else {
+      removeGroupAutoFillIndicator();
+    }
+  }
 }
 
 /**
@@ -177,6 +270,8 @@ async function handleAccountNumberChange(): Promise<void> {
  */
 export function initAccountNumberAutoFill(): void {
   const accountInput = document.getElementById('accountNumber');
+  const groupSelect = document.getElementById('fundGroup');
+
   if (!accountInput) return;
 
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -189,6 +284,11 @@ export function initAccountNumberAutoFill(): void {
 
   // Also trigger on blur for immediate feedback
   accountInput.addEventListener('blur', handleAccountNumberChange);
+
+  // Listen for group dropdown changes
+  if (groupSelect) {
+    groupSelect.addEventListener('change', handleGroupChange);
+  }
 }
 
 /**

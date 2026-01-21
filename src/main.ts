@@ -661,41 +661,6 @@ function handleActionButtonClick(event: Event): void {
   dropdown.classList.add('show');
 }
 
-/**
- * Handle table row click
- */
-function handleTableRowClick(event: Event): void {
-  const target = event.target as HTMLElement;
-
-  // Skip if clicking on action button
-  if (target.closest('.fund-actions-btn')) return;
-
-  const row = target.closest('tr[data-fund-id]') as HTMLElement;
-  if (!row) return;
-
-  const fundId = parseInt(row.dataset.fundId || '0');
-  if (fundId) {
-    showDetailsModal(fundId, renderTable);
-  }
-}
-
-/**
- * Handle keyboard navigation in table
- */
-function handleTableKeydown(event: KeyboardEvent): void {
-  const target = event.target as HTMLElement;
-  const row = target.closest('tr[data-fund-id]') as HTMLElement;
-  if (!row) return;
-
-  const fundId = parseInt(row.dataset.fundId || '0');
-  if (!fundId) return;
-
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault();
-    showDetailsModal(fundId, renderTable);
-  }
-}
-
 // ===========================
 // Sidebar Functions
 // ===========================
@@ -735,6 +700,51 @@ function initializeDarkMode(): void {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   });
+}
+
+// ===========================
+// Cutoff Date Initialization
+// ===========================
+
+/**
+ * Get the most recent quarter-end date
+ * Quarter-ends are: March 31, June 30, September 30, December 31
+ */
+function getMostRecentQuarterEnd(): Date {
+  const today = new Date();
+  const year = today.getFullYear();
+
+  // Quarter end months: 2 (March), 5 (June), 8 (September), 11 (December)
+  const quarterEnds = [
+    new Date(year, 2, 31),  // March 31
+    new Date(year, 5, 30),  // June 30
+    new Date(year, 8, 30),  // September 30
+    new Date(year, 11, 31), // December 31
+  ];
+
+  // Find the most recent quarter-end that's not in the future
+  for (let i = quarterEnds.length - 1; i >= 0; i--) {
+    if (quarterEnds[i]! <= today) {
+      return quarterEnds[i]!;
+    }
+  }
+
+  // If all this year's quarter-ends are in the future, return last year's Q4
+  return new Date(year - 1, 11, 31);
+}
+
+/**
+ * Initialize the cutoff date to the most recent quarter-end
+ */
+function initializeCutoffDate(): void {
+  const cutoffInput = document.getElementById('cutoffDate') as HTMLInputElement;
+  if (!cutoffInput) return;
+
+  const quarterEnd = getMostRecentQuarterEnd();
+  const year = quarterEnd.getFullYear();
+  const month = String(quarterEnd.getMonth() + 1).padStart(2, '0');
+  const day = String(quarterEnd.getDate()).padStart(2, '0');
+  cutoffInput.value = `${year}-${month}-${day}`;
 }
 
 // ===========================
@@ -860,9 +870,9 @@ function initializeEventListeners(): void {
   if (tableBody) {
     tableBody.addEventListener('click', (e) => {
       handleActionButtonClick(e);
-      handleTableRowClick(e);
+      // Note: Row click to open details modal was removed per user request
+      // Users can access fund details via the action menu
     });
-    tableBody.addEventListener('keydown', handleTableKeydown);
   }
 
   // Close action dropdown on outside click
@@ -1469,6 +1479,7 @@ async function init(): Promise<void> {
 
     // Initialize UI components
     initializeDarkMode();
+    initializeCutoffDate();
     initMultiSelectDropdowns();
     initializeEventListeners();
     initBackupWarningListeners();
