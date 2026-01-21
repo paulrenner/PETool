@@ -202,18 +202,35 @@ export function saveFundToDB(fundData: Fund): Promise<number> {
 }
 
 /**
+ * Normalize cash flow type to proper case
+ */
+function normalizeCashFlowType(type: any, amount: number): 'Contribution' | 'Distribution' | 'Adjustment' {
+  if (typeof type === 'string') {
+    const lower = type.toLowerCase().trim();
+    if (lower === 'contribution' || lower === 'capital call') return 'Contribution';
+    if (lower === 'distribution') return 'Distribution';
+    if (lower === 'adjustment') return 'Adjustment';
+  }
+  // Fallback based on amount sign
+  return amount < 0 ? 'Contribution' : 'Distribution';
+}
+
+/**
  * Normalize a fund object to ensure all fields have correct types
  * This handles data that may have been stored in older formats
  */
 function normalizeFund(fund: any): Fund {
   // Ensure cashFlows is an array with proper structure
   const cashFlows = Array.isArray(fund.cashFlows)
-    ? fund.cashFlows.map((cf: any) => ({
-        date: cf.date || '',
-        amount: typeof cf.amount === 'number' ? cf.amount : parseFloat(cf.amount) || 0,
-        type: cf.type || (cf.amount < 0 ? 'Contribution' : 'Distribution'),
-        affectsCommitment: cf.affectsCommitment !== undefined ? cf.affectsCommitment : true,
-      }))
+    ? fund.cashFlows.map((cf: any) => {
+        const amount = typeof cf.amount === 'number' ? cf.amount : parseFloat(cf.amount) || 0;
+        return {
+          date: cf.date || '',
+          amount,
+          type: normalizeCashFlowType(cf.type, amount),
+          affectsCommitment: cf.affectsCommitment !== undefined ? cf.affectsCommitment : true,
+        };
+      })
     : [];
 
   // Ensure monthlyNav is an array with proper structure
@@ -223,6 +240,11 @@ function normalizeFund(fund: any): Fund {
         amount: typeof nav.amount === 'number' ? nav.amount : parseFloat(nav.amount) || 0,
       }))
     : [];
+
+  // Debug logging - remove in production
+  if (fund.cashFlows?.length > 0 && cashFlows.length === 0) {
+    console.warn('Cash flows were lost during normalization for fund:', fund.fundName);
+  }
 
   return {
     id: fund.id,
@@ -238,7 +260,36 @@ function normalizeFund(fund: any): Fund {
 
 export async function getAllFunds(): Promise<Fund[]> {
   const rawFunds = await transaction<any[]>(CONFIG.FUNDS_STORE, 'readonly', (store) => store.getAll());
-  return rawFunds.map(normalizeFund);
+
+  // Debug: Log raw data structure
+  if (rawFunds.length > 0) {
+    const sample = rawFunds[0];
+    console.log('DB Debug - Sample raw fund:', {
+      fundName: sample.fundName,
+      hasCashFlows: Array.isArray(sample.cashFlows),
+      cashFlowsCount: sample.cashFlows?.length || 0,
+      firstCashFlow: sample.cashFlows?.[0],
+      hasMonthlyNav: Array.isArray(sample.monthlyNav),
+      monthlyNavCount: sample.monthlyNav?.length || 0,
+      firstNav: sample.monthlyNav?.[0],
+    });
+  }
+
+  const normalized = rawFunds.map(normalizeFund);
+
+  // Debug: Log normalized data
+  if (normalized.length > 0 && normalized[0]) {
+    const sample = normalized[0];
+    console.log('DB Debug - Sample normalized fund:', {
+      fundName: sample.fundName,
+      cashFlowsCount: sample.cashFlows.length,
+      firstCashFlow: sample.cashFlows[0] || null,
+      monthlyNavCount: sample.monthlyNav.length,
+      firstNav: sample.monthlyNav[0] || null,
+    });
+  }
+
+  return normalized;
 }
 
 export async function getFundById(id: number): Promise<Fund | undefined> {
