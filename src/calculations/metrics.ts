@@ -154,6 +154,18 @@ export function calculateMetrics(fund: Fund, cutoffDate?: Date): FundMetrics {
   const irr = calculateIRR(cashFlowsForIRR);
   const moic = calculateMOIC(cashFlowsForIRR);
 
+  // Debug logging for calculations
+  console.log('Metrics Debug -', fund.fundName, {
+    cashFlowCount: fund.cashFlows?.length,
+    navCount: fund.monthlyNav?.length,
+    calledCapital,
+    distributions,
+    nav,
+    irr,
+    moic,
+    cashFlowsForIRR: cashFlowsForIRR.slice(0, 3),
+  });
+
   // Calculate DPI, RVPI, TVPI
   const dpi = calledCapital > 0 ? distributions / calledCapital : null;
   const rvpi = calledCapital > 0 ? nav / calledCapital : null;
