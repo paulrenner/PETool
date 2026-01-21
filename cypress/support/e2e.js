@@ -15,20 +15,22 @@ Cypress.Commands.add('clearIndexedDB', () => {
 
 // Reload and wait for app to be ready
 Cypress.Commands.add('visitAndWait', () => {
-  // Set flag before visiting to prevent backup modal
-  cy.window().then((win) => {
-    win.localStorage.setItem('hideBackupWarning', 'true');
-    win.localStorage.setItem('backupWarningDismissed', 'true');
-    win.localStorage.setItem('dontShowBackupWarning', 'true');
+  // Visit first, then immediately set localStorage before app initializes
+  cy.visit('/', {
+    onBeforeLoad(win) {
+      // Set the correct localStorage key before app loads
+      win.localStorage.setItem('backupWarningShown', 'true');
+    }
   });
-  cy.visit('/');
   cy.get('#fundsTable').should('exist');
   // Wait for loading overlay to disappear
   cy.get('#loadingOverlay').should('not.be.visible');
-  // Dismiss backup modal if it appears anyway
+  // Extra safety: dismiss backup modal if it still appears
+  cy.wait(100);
   cy.get('body').then($body => {
-    if ($body.find('#backupWarningModal:visible').length > 0) {
-      cy.get('#remindLaterBtn').click();
+    if ($body.find('#backupWarningModal').is(':visible')) {
+      cy.get('#dontShowBackupWarning').check({ force: true });
+      cy.get('#remindLaterBtn').click({ force: true });
     }
   });
 });
@@ -193,14 +195,7 @@ Cypress.Commands.add('getTableCell', (fundName, columnIndex) => {
   return cy.contains('#fundsTableBody tr', fundName).find('td').eq(columnIndex);
 });
 
-// Before each test, clear IndexedDB and localStorage, then suppress backup warning
+// Before each test, clear IndexedDB (localStorage cleared in visitAndWait)
 beforeEach(() => {
   cy.clearIndexedDB();
-  cy.clearLocalStorage();
-  // Suppress the backup warning modal
-  cy.window().then((win) => {
-    win.localStorage.setItem('hideBackupWarning', 'true');
-    win.localStorage.setItem('backupWarningDismissed', 'true');
-    win.localStorage.setItem('dontShowBackupWarning', 'true');
-  });
 });
