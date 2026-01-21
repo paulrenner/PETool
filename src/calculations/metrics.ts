@@ -24,21 +24,6 @@ export function getTotalByType(
 ): number {
   const flows = fund.cashFlows || [];
 
-  // Debug: Check why filtering might fail
-  if (flows.length > 0) {
-    const sample = flows[0];
-    console.log('getTotalByType Debug -', fund.fundName, {
-      type,
-      flowsCount: flows.length,
-      sampleFlow: sample,
-      sampleType: sample?.type,
-      sampleTypeMatch: sample?.type === type,
-      sampleDate: sample?.date,
-      sampleDateValid: isValidDate(sample?.date || ''),
-      sampleAmount: sample?.amount,
-    });
-  }
-
   return flows
     .filter(
       (cf) =>
@@ -170,18 +155,6 @@ export function calculateMetrics(fund: Fund, cutoffDate?: Date): FundMetrics {
   const cashFlowsForIRR = parseCashFlowsForIRR(fund, cutoffDate);
   const irr = calculateIRR(cashFlowsForIRR);
   const moic = calculateMOIC(cashFlowsForIRR);
-
-  // Debug logging for calculations
-  console.log('Metrics Debug -', fund.fundName, {
-    cashFlowCount: fund.cashFlows?.length,
-    navCount: fund.monthlyNav?.length,
-    calledCapital,
-    distributions,
-    nav,
-    irr,
-    moic,
-    cashFlowsForIRR: cashFlowsForIRR.slice(0, 3),
-  });
 
   // Calculate DPI, RVPI, TVPI
   const dpi = calledCapital > 0 ? distributions / calledCapital : null;

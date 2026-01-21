@@ -298,20 +298,6 @@ function normalizeFund(fund: any): Fund {
       }))
     : [];
 
-  // Debug logging for date normalization
-  if (fund.cashFlows?.length > 0 && cashFlows.length > 0) {
-    const originalDate = fund.cashFlows[0]?.date;
-    const normalizedDate = cashFlows[0]?.date;
-    if (originalDate !== normalizedDate) {
-      console.log('Date normalization:', { original: originalDate, normalized: normalizedDate });
-    }
-  }
-
-  // Debug logging - remove in production
-  if (fund.cashFlows?.length > 0 && cashFlows.length === 0) {
-    console.warn('Cash flows were lost during normalization for fund:', fund.fundName);
-  }
-
   return {
     id: fund.id,
     fundName: fund.fundName || '',
@@ -326,36 +312,7 @@ function normalizeFund(fund: any): Fund {
 
 export async function getAllFunds(): Promise<Fund[]> {
   const rawFunds = await transaction<any[]>(CONFIG.FUNDS_STORE, 'readonly', (store) => store.getAll());
-
-  // Debug: Log raw data structure
-  if (rawFunds.length > 0) {
-    const sample = rawFunds[0];
-    console.log('DB Debug - Sample raw fund:', {
-      fundName: sample.fundName,
-      hasCashFlows: Array.isArray(sample.cashFlows),
-      cashFlowsCount: sample.cashFlows?.length || 0,
-      firstCashFlow: sample.cashFlows?.[0],
-      hasMonthlyNav: Array.isArray(sample.monthlyNav),
-      monthlyNavCount: sample.monthlyNav?.length || 0,
-      firstNav: sample.monthlyNav?.[0],
-    });
-  }
-
-  const normalized = rawFunds.map(normalizeFund);
-
-  // Debug: Log normalized data
-  if (normalized.length > 0 && normalized[0]) {
-    const sample = normalized[0];
-    console.log('DB Debug - Sample normalized fund:', {
-      fundName: sample.fundName,
-      cashFlowsCount: sample.cashFlows.length,
-      firstCashFlow: sample.cashFlows[0] || null,
-      monthlyNavCount: sample.monthlyNav.length,
-      firstNav: sample.monthlyNav[0] || null,
-    });
-  }
-
-  return normalized;
+  return rawFunds.map(normalizeFund);
 }
 
 export async function getFundById(id: number): Promise<Fund | undefined> {
