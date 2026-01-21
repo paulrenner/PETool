@@ -5,7 +5,7 @@ import {
     validateFileSize,
     validateCashFlow,
     validateNavEntry
-} from '../src/validation.js';
+} from '../src/utils/validation';
 
 describe('isValidDate', () => {
     test('returns true for valid date in YYYY-MM-DD format', () => {

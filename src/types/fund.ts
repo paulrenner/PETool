@@ -55,6 +55,12 @@ export interface FundMetrics {
   tvpi: number | null;
   outstandingCommitment: number;
   vintageYear: number | null;
+  // Backward-compatible aliases
+  commitment?: number;
+  totalContributions?: number;
+  totalDistributions?: number;
+  investmentReturn?: number;
+  vintage?: number | null;
 }
 
 /**

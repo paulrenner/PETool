@@ -141,12 +141,14 @@ export function parseCashFlowsForIRR(fund: Fund, cutoffDate?: Date): IRRCashFlow
  * Calculate all metrics for a fund
  */
 export function calculateMetrics(fund: Fund, cutoffDate?: Date): FundMetrics {
+  const commitment = parseCurrency(fund.commitment) || 0;
   const calledCapital = getTotalByType(fund, 'Contribution', cutoffDate);
   const distributions = getTotalByType(fund, 'Distribution', cutoffDate);
   const nav = getLatestNav(fund, cutoffDate);
   const navDate = getLatestNavDate(fund, cutoffDate);
   const outstandingCommitment = getOutstandingCommitment(fund, cutoffDate);
   const vintageYear = getVintageYear(fund);
+  const investmentReturn = distributions + nav - calledCapital;
 
   const cashFlowsForIRR = parseCashFlowsForIRR(fund, cutoffDate);
   const irr = calculateIRR(cashFlowsForIRR);
@@ -169,5 +171,11 @@ export function calculateMetrics(fund: Fund, cutoffDate?: Date): FundMetrics {
     tvpi,
     outstandingCommitment,
     vintageYear,
+    // Backward-compatible aliases for legacy tests
+    commitment,
+    totalContributions: calledCapital,
+    totalDistributions: distributions,
+    investmentReturn,
+    vintage: vintageYear,
   };
 }

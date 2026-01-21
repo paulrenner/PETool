@@ -1,13 +1,14 @@
 export default {
   testEnvironment: 'jsdom',
   transform: {
+    '^.+\\.tsx?$': 'ts-jest',
     '^.+\\.js$': 'babel-jest',
   },
-  moduleFileExtensions: ['js'],
-  testMatch: ['**/__tests__/**/*.test.js'],
+  moduleFileExtensions: ['ts', 'tsx', 'js'],
+  testMatch: ['**/__tests__/**/*.test.js', '**/__tests__/**/*.test.ts'],
   collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/**/*.test.js',
+    'src/**/*.ts',
+    '!src/**/*.test.ts',
   ],
   coverageThreshold: {
     global: {
