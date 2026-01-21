@@ -31,7 +31,7 @@ describe('Multi-Select Filters', () => {
       cy.get('#fundFilter .multi-select-dropdown').contains('Alpha Fund').click();
 
       // Close dropdown
-      cy.get('body').click(0, 0);
+      cy.get('#mainContent').click();
 
       // Should show only Alpha Fund
       cy.contains('#fundsTableBody tr', 'Alpha Fund').should('exist');
@@ -108,7 +108,7 @@ describe('Multi-Select Filters', () => {
     it('should show active filters badge when filter is applied', () => {
       cy.get('#fundFilter .multi-select-trigger').click();
       cy.get('#fundFilter .multi-select-dropdown').contains('Alpha Fund').click();
-      cy.get('body').click(0, 0);
+      cy.get('#mainContent').click();
 
       // Active filters indicator should be visible
       cy.get('#activeFiltersIndicator').should('be.visible');
@@ -155,8 +155,8 @@ describe('Table Sorting', () => {
     it('should sort by commitment', () => {
       cy.get('th[data-sort="commitment"]').click();
 
-      // Check that sorting occurred (first should be lowest or highest depending on default)
-      cy.get('#fundsTableBody tr').should('have.length', 3);
+      // Check that sorting occurred (3 funds + 1 totals row = 4 rows)
+      cy.get('#fundsTableBody tr').should('have.length', 4);
     });
 
     it('should show sort indicator on sorted column', () => {
@@ -186,8 +186,8 @@ describe('Table Sorting', () => {
       // Then Shift+click on commitment for secondary sort
       cy.get('th[data-sort="commitment"]').click({ shiftKey: true });
 
-      // Table should still be sorted
-      cy.get('#fundsTableBody tr').should('have.length', 3);
+      // Table should still be sorted (3 funds + 1 totals row = 4 rows)
+      cy.get('#fundsTableBody tr').should('have.length', 4);
     });
   });
 });
@@ -206,7 +206,7 @@ describe('Portfolio Summary with Filters', () => {
     // Filter to just one fund
     cy.get('#fundFilter .multi-select-trigger').click();
     cy.get('#fundFilter .multi-select-dropdown').contains('Fund One').click();
-    cy.get('body').click(0, 0);
+    cy.get('#mainContent').click();
 
     // Summary should update to show 1 investment
     cy.get('#summaryInvestmentCount').should('contain', '1');
@@ -216,7 +216,7 @@ describe('Portfolio Summary with Filters', () => {
     // Filter to just Fund Two (500k commitment)
     cy.get('#fundFilter .multi-select-trigger').click();
     cy.get('#fundFilter .multi-select-dropdown').contains('Fund Two').click();
-    cy.get('body').click(0, 0);
+    cy.get('#mainContent').click();
 
     // Should show only Fund Two's commitment
     cy.get('#summaryCommitment').should('contain', '500,000');

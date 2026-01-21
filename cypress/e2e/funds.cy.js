@@ -215,7 +215,7 @@ describe('Fund Management', () => {
       cy.openActionMenu('Action Menu Fund');
       cy.get('#actionDropdown').should('be.visible');
 
-      cy.get('body').click(0, 0);
+      cy.get('#mainContent').click();
       cy.get('#actionDropdown').should('not.be.visible');
     });
   });
