@@ -17,97 +17,166 @@ Cypress.Commands.add('clearIndexedDB', () => {
 Cypress.Commands.add('visitAndWait', () => {
   cy.visit('/');
   cy.get('#fundsTable').should('exist');
+  // Wait for loading overlay to disappear
+  cy.get('#loadingOverlay').should('not.be.visible');
 });
 
-// Add a fund via the modal
+// Open sidebar
+Cypress.Commands.add('openSidebar', () => {
+  cy.get('#toggleSidebarBtn').click();
+  cy.get('#sidebar').should('be.visible');
+});
+
+// Close sidebar
+Cypress.Commands.add('closeSidebar', () => {
+  cy.get('#closeSidebarBtn').click();
+  cy.get('#sidebar').should('not.be.visible');
+});
+
+// Add a fund via the sidebar and modal
 Cypress.Commands.add('addFund', (fundData) => {
   const {
     name,
-    accountNumber = '',
-    group = '',
-    vintage = '',
-    commitment = '',
-    strategy = '',
-    tags = []
+    accountNumber = 'Test Account',
+    commitment = '100000'
   } = fundData;
 
-  cy.get('#addFundBtn').click();
+  // Open sidebar and click New Investment
+  cy.openSidebar();
+  cy.get('#sidebarNewInvestment').click();
+
   cy.get('#fundModal').should('be.visible');
 
-  cy.get('#fundName').clear().type(name);
+  // Fund name is a select - we need to add a new fund name first
+  // Check if we need to add a new fund name option
+  cy.get('#fundName').then($select => {
+    const options = [...$select.find('option')].map(o => o.text);
+    if (!options.includes(name)) {
+      // Select "Add new fund..." option or type in the select
+      // The select should have an option to add new
+      cy.get('#fundName').select('__new__').then(() => {
+        cy.get('#newFundNameContainer').should('be.visible');
+        cy.get('#newFundNameInline').type(name);
+        cy.get('#addNewFundNameBtn').click();
+      });
+    } else {
+      cy.get('#fundName').select(name);
+    }
+  });
 
-  if (accountNumber) {
-    cy.get('#accountNumber').clear().type(accountNumber);
-  }
-  if (vintage) {
-    cy.get('#vintageYear').clear().type(vintage);
-  }
-  if (commitment) {
-    cy.get('#commitment').clear().type(commitment);
-  }
+  cy.get('#accountNumber').clear().type(accountNumber);
+  cy.get('#commitment').clear().type(commitment);
 
-  cy.get('#fundModal .btn-primary').click();
+  cy.get('#saveFundBtn').click();
   cy.get('#fundModal').should('not.be.visible');
 });
 
-// Add a cash flow to a fund
+// Add a fund with a pre-existing fund name
+Cypress.Commands.add('addFundWithExistingName', (fundData) => {
+  const {
+    name,
+    accountNumber = 'Test Account',
+    commitment = '100000'
+  } = fundData;
+
+  cy.openSidebar();
+  cy.get('#sidebarNewInvestment').click();
+  cy.get('#fundModal').should('be.visible');
+
+  cy.get('#fundName').select(name);
+  cy.get('#accountNumber').clear().type(accountNumber);
+  cy.get('#commitment').clear().type(commitment);
+
+  cy.get('#saveFundBtn').click();
+  cy.get('#fundModal').should('not.be.visible');
+});
+
+// Open fund details modal
+Cypress.Commands.add('openFundDetails', (fundName) => {
+  // Click on the fund name in the table to open details
+  cy.contains('#fundsTableBody tr', fundName).within(() => {
+    cy.get('td').first().click();
+  });
+  cy.get('#detailsModal').should('be.visible');
+});
+
+// Add a cash flow via the details modal
 Cypress.Commands.add('addCashFlow', (fundName, cashFlowData) => {
   const { date, type, amount } = cashFlowData;
 
-  // Find the fund row and click the action button
-  cy.contains('tr', fundName).within(() => {
-    cy.get('.action-btn').click();
+  cy.openFundDetails(fundName);
+
+  // Click add cash flow button
+  cy.get('#addCashFlowRowBtn').click();
+
+  // Fill in the new row (last row in the cash flows table)
+  cy.get('#cashFlowsTable tbody tr').last().within(() => {
+    cy.get('input[type="date"]').type(date);
+    cy.get('input[type="text"], input[type="number"]').first().clear().type(amount.toString());
+    cy.get('select').select(type);
   });
 
-  cy.get('.action-dropdown').should('be.visible');
-  cy.contains('Add Cash Flow').click();
-
-  cy.get('#cashFlowModal').should('be.visible');
-  cy.get('#cfDate').clear().type(date);
-  cy.get('#cfType').select(type);
-  cy.get('#cfAmount').clear().type(amount.toString());
-
-  cy.get('#cashFlowModal .btn-primary').click();
-  cy.get('#cashFlowModal').should('not.be.visible');
+  // Save changes
+  cy.get('#saveDetailsChangesBtn').click();
+  cy.get('#detailsModal').should('not.be.visible');
 });
 
-// Add a NAV entry to a fund
+// Add a NAV entry via the details modal
 Cypress.Commands.add('addNav', (fundName, navData) => {
   const { date, amount } = navData;
 
-  cy.contains('tr', fundName).within(() => {
-    cy.get('.action-btn').click();
+  cy.openFundDetails(fundName);
+
+  // Click add NAV button
+  cy.get('#addNavRowBtn').click();
+
+  // Fill in the new row (last row in the NAV table)
+  cy.get('#navTable tbody tr').last().within(() => {
+    cy.get('input[type="date"]').type(date);
+    cy.get('input[type="text"], input[type="number"]').clear().type(amount.toString());
   });
 
-  cy.get('.action-dropdown').should('be.visible');
-  cy.contains('Add NAV').click();
+  // Save changes
+  cy.get('#saveDetailsChangesBtn').click();
+  cy.get('#detailsModal').should('not.be.visible');
+});
 
-  cy.get('#navModal').should('be.visible');
-  cy.get('#navDate').clear().type(date);
-  cy.get('#navAmount').clear().type(amount.toString());
-
-  cy.get('#navModal .btn-primary').click();
-  cy.get('#navModal').should('not.be.visible');
+// Open action dropdown for a fund
+Cypress.Commands.add('openActionMenu', (fundName) => {
+  cy.contains('#fundsTableBody tr', fundName).within(() => {
+    cy.get('td').last().find('button, .action-btn, [role="button"]').click();
+  });
+  cy.get('#actionDropdown').should('be.visible');
 });
 
 // Delete a fund
 Cypress.Commands.add('deleteFund', (fundName) => {
-  cy.contains('tr', fundName).within(() => {
-    cy.get('.action-btn').click();
-  });
+  cy.openActionMenu(fundName);
+  cy.get('#actionDelete').click();
 
-  cy.get('.action-dropdown').should('be.visible');
-  cy.contains('Delete Fund').click();
-
-  // Confirm deletion in the confirm modal
+  // Confirm deletion
   cy.get('#confirmModal').should('be.visible');
-  cy.get('#confirmModal .btn-danger').click();
+  cy.get('#confirmModalConfirmBtn').click();
   cy.get('#confirmModal').should('not.be.visible');
 });
 
-// Get a table cell value by fund name and column
+// Edit a fund
+Cypress.Commands.add('editFund', (fundName) => {
+  cy.openActionMenu(fundName);
+  cy.get('#actionEdit').click();
+  cy.get('#fundModal').should('be.visible');
+});
+
+// Toggle dark mode via sidebar
+Cypress.Commands.add('toggleDarkMode', () => {
+  cy.openSidebar();
+  cy.get('#sidebarDarkModeCheckbox').click();
+  cy.closeSidebar();
+});
+
+// Get a table cell value by fund name and column index
 Cypress.Commands.add('getTableCell', (fundName, columnIndex) => {
-  return cy.contains('tr', fundName).find('td').eq(columnIndex);
+  return cy.contains('#fundsTableBody tr', fundName).find('td').eq(columnIndex);
 });
 
 // Before each test, clear IndexedDB and localStorage

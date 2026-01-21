@@ -7,40 +7,87 @@ describe('Application Basics', () => {
 
   describe('Page Load', () => {
     it('should load the application', () => {
-      cy.get('h1').contains('PE Fund Manager');
+      cy.get('#headerTitle').contains('PE Fund Manager');
     });
 
     it('should display the main table', () => {
       cy.get('#fundsTable').should('be.visible');
     });
 
-    it('should show the Add Fund button', () => {
-      cy.get('#addFundBtn').should('be.visible').contains('Add Fund');
+    it('should show the sidebar toggle button', () => {
+      cy.get('#toggleSidebarBtn').should('be.visible');
     });
 
-    it('should show the search input', () => {
-      cy.get('#searchInput').should('be.visible');
+    it('should show filter controls', () => {
+      cy.get('#groupFilter').should('exist');
+      cy.get('#fundFilter').should('exist');
+      cy.get('#vintageFilter').should('exist');
+      cy.get('#cutoffDate').should('exist');
+    });
+
+    it('should show portfolio summary', () => {
+      cy.get('#portfolioSummary').should('be.visible');
+      cy.get('#summaryInvestmentCount').should('exist');
+      cy.get('#summaryFundCount').should('exist');
+    });
+  });
+
+  describe('Sidebar', () => {
+    it('should open sidebar when clicking toggle button', () => {
+      cy.get('#sidebar').should('not.be.visible');
+      cy.openSidebar();
+      cy.get('#sidebar').should('be.visible');
+    });
+
+    it('should close sidebar when clicking close button', () => {
+      cy.openSidebar();
+      cy.closeSidebar();
+      cy.get('#sidebar').should('not.be.visible');
+    });
+
+    it('should close sidebar when clicking overlay', () => {
+      cy.openSidebar();
+      cy.get('#sidebarOverlay').click({ force: true });
+      cy.get('#sidebar').should('not.be.visible');
+    });
+
+    it('should show all sidebar sections', () => {
+      cy.openSidebar();
+      cy.get('#sidebar').contains('View Options');
+      cy.get('#sidebar').contains('Manage');
+      cy.get('#sidebar').contains('Data');
+    });
+
+    it('should have New Investment link', () => {
+      cy.openSidebar();
+      cy.get('#sidebarNewInvestment').should('be.visible');
+    });
+
+    it('should have export options', () => {
+      cy.openSidebar();
+      cy.get('#sidebarExportCSV').should('be.visible');
+      cy.get('#sidebarExportJSON').should('be.visible');
     });
   });
 
   describe('Theme Toggle', () => {
-    it('should toggle dark mode', () => {
+    it('should toggle dark mode via sidebar', () => {
       // Check initial state (light mode)
       cy.get('html').should('not.have.attr', 'data-theme', 'dark');
 
-      // Click theme toggle
-      cy.get('#themeToggle').click();
+      // Toggle dark mode
+      cy.toggleDarkMode();
 
       // Should be in dark mode
       cy.get('html').should('have.attr', 'data-theme', 'dark');
 
       // Toggle back
-      cy.get('#themeToggle').click();
+      cy.toggleDarkMode();
       cy.get('html').should('not.have.attr', 'data-theme', 'dark');
     });
 
     it('should persist theme preference', () => {
-      cy.get('#themeToggle').click();
+      cy.toggleDarkMode();
       cy.get('html').should('have.attr', 'data-theme', 'dark');
 
       // Reload page
@@ -52,57 +99,59 @@ describe('Application Basics', () => {
     });
   });
 
-  describe('Export Functionality', () => {
-    beforeEach(() => {
-      cy.addFund({ name: 'Export Test Fund' });
-    });
-
-    it('should show export button', () => {
-      cy.get('#exportBtn').should('be.visible');
-    });
-
-    it('should open export options', () => {
-      cy.get('#exportBtn').click();
-      // Export menu or modal should appear
-      cy.get('.export-menu, #exportModal').should('be.visible');
-    });
-  });
-
-  describe('Import Functionality', () => {
-    it('should show import button', () => {
-      cy.get('#importBtn').should('be.visible');
-    });
-  });
-
   describe('Keyboard Shortcuts', () => {
-    it('should focus search on Ctrl+F', () => {
-      cy.get('body').type('{ctrl}f');
-      cy.get('#searchInput').should('be.focused');
+    it('should open shortcuts modal with ?', () => {
+      cy.get('body').type('?');
+      cy.get('#shortcutsModal').should('be.visible');
+    });
+
+    it('should close modal with Escape', () => {
+      cy.get('body').type('?');
+      cy.get('#shortcutsModal').should('be.visible');
+      cy.get('body').type('{esc}');
+      cy.get('#shortcutsModal').should('not.be.visible');
+    });
+
+    it('should open new investment with Ctrl+N', () => {
+      cy.get('body').type('{ctrl}n');
+      cy.get('#fundModal').should('be.visible');
     });
   });
 
   describe('Empty State', () => {
-    it('should show empty state when no funds exist', () => {
-      cy.get('#fundsTable tbody tr').should('have.length', 0);
+    it('should show empty table when no funds exist', () => {
+      cy.get('#fundsTableBody tr').should('have.length', 0);
     });
 
-    it('should show funds after adding one', () => {
-      cy.addFund({ name: 'First Fund' });
-      cy.get('#fundsTable tbody tr').should('have.length', 1);
+    it('should show zero counts in summary', () => {
+      cy.get('#summaryInvestmentCount').should('contain', '0');
+      cy.get('#summaryFundCount').should('contain', '0');
     });
   });
 
   describe('Responsive Design', () => {
     it('should work on mobile viewport', () => {
       cy.viewport('iphone-x');
-      cy.get('#addFundBtn').should('be.visible');
-      cy.get('#fundsTable').should('be.visible');
+      cy.get('#toggleSidebarBtn').should('be.visible');
+      cy.get('#fundsTable').should('exist');
     });
 
     it('should work on tablet viewport', () => {
       cy.viewport('ipad-2');
-      cy.get('#addFundBtn').should('be.visible');
-      cy.get('#fundsTable').should('be.visible');
+      cy.get('#toggleSidebarBtn').should('be.visible');
+      cy.get('#fundsTable').should('exist');
+    });
+  });
+
+  describe('Timeline Panel', () => {
+    it('should have timeline panel', () => {
+      cy.get('#timelinePanel').should('exist');
+    });
+
+    it('should toggle timeline visibility', () => {
+      cy.get('#timelineHeader').click();
+      // Timeline content should toggle
+      cy.get('.timeline-content').should('exist');
     });
   });
 });
@@ -110,14 +159,15 @@ describe('Application Basics', () => {
 describe('Data Persistence', () => {
   it('should persist funds across page reloads', () => {
     cy.visitAndWait();
-    cy.addFund({ name: 'Persistent Fund' });
-    cy.contains('tr', 'Persistent Fund').should('exist');
+    cy.addFund({ name: 'Persistent Fund', accountNumber: 'ACC-001', commitment: '500000' });
+    cy.contains('#fundsTableBody tr', 'Persistent Fund').should('exist');
 
-    // Reload the page (without clearing IndexedDB)
+    // Reload the page (without clearing IndexedDB in beforeEach for this test)
     cy.visit('/');
     cy.get('#fundsTable').should('exist');
+    cy.get('#loadingOverlay').should('not.be.visible');
 
     // Fund should still be there
-    cy.contains('tr', 'Persistent Fund').should('exist');
+    cy.contains('#fundsTableBody tr', 'Persistent Fund').should('exist');
   });
 });

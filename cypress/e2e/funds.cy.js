@@ -6,120 +6,217 @@ describe('Fund Management', () => {
   });
 
   describe('Adding Funds', () => {
+    it('should open new investment modal from sidebar', () => {
+      cy.openSidebar();
+      cy.get('#sidebarNewInvestment').click();
+      cy.get('#fundModal').should('be.visible');
+      cy.get('#fundModalTitle').should('contain', 'Add New Investment');
+    });
+
     it('should add a new fund with basic information', () => {
-      cy.addFund({ name: 'Test Fund Alpha' });
+      cy.addFund({
+        name: 'Test Fund Alpha',
+        accountNumber: 'ACC-001',
+        commitment: '1000000'
+      });
 
       // Verify the fund appears in the table
-      cy.contains('tr', 'Test Fund Alpha').should('exist');
+      cy.contains('#fundsTableBody tr', 'Test Fund Alpha').should('exist');
+      cy.contains('#fundsTableBody tr', 'ACC-001').should('exist');
     });
 
-    it('should add a fund with all fields populated', () => {
-      cy.get('#addFundBtn').click();
+    it('should show validation error for missing required fields', () => {
+      cy.openSidebar();
+      cy.get('#sidebarNewInvestment').click();
       cy.get('#fundModal').should('be.visible');
 
-      cy.get('#fundName').type('Complete Fund');
-      cy.get('#accountNumber').type('ACC-001');
-      cy.get('#vintageYear').type('2020');
-      cy.get('#commitment').type('1000000');
-
-      cy.get('#fundModal .btn-primary').click();
-      cy.get('#fundModal').should('not.be.visible');
-
-      cy.contains('tr', 'Complete Fund').should('exist');
-    });
-
-    it('should show validation error for empty fund name', () => {
-      cy.get('#addFundBtn').click();
-      cy.get('#fundModal').should('be.visible');
-
-      // Try to save without entering a name
-      cy.get('#fundModal .btn-primary').click();
+      // Try to save without entering required fields
+      cy.get('#saveFundBtn').click();
 
       // Modal should still be visible (validation failed)
       cy.get('#fundModal').should('be.visible');
     });
 
-    it('should add multiple funds', () => {
-      cy.addFund({ name: 'Fund One' });
-      cy.addFund({ name: 'Fund Two' });
-      cy.addFund({ name: 'Fund Three' });
+    it('should close modal on cancel', () => {
+      cy.openSidebar();
+      cy.get('#sidebarNewInvestment').click();
+      cy.get('#fundModal').should('be.visible');
 
-      cy.contains('tr', 'Fund One').should('exist');
-      cy.contains('tr', 'Fund Two').should('exist');
-      cy.contains('tr', 'Fund Three').should('exist');
+      cy.get('#cancelFundModalBtn').click();
+      cy.get('#fundModal').should('not.be.visible');
+    });
+
+    it('should close modal on X button', () => {
+      cy.openSidebar();
+      cy.get('#sidebarNewInvestment').click();
+      cy.get('#fundModal').should('be.visible');
+
+      cy.get('#closeFundModalBtn').click();
+      cy.get('#fundModal').should('not.be.visible');
+    });
+
+    it('should update summary counts after adding fund', () => {
+      cy.get('#summaryInvestmentCount').should('contain', '0');
+
+      cy.addFund({ name: 'Count Test Fund', accountNumber: 'ACC-001', commitment: '500000' });
+
+      cy.get('#summaryInvestmentCount').should('contain', '1');
     });
   });
 
   describe('Editing Funds', () => {
     beforeEach(() => {
-      cy.addFund({ name: 'Editable Fund' });
+      cy.addFund({ name: 'Editable Fund', accountNumber: 'ACC-EDIT', commitment: '750000' });
     });
 
-    it('should edit an existing fund', () => {
-      cy.contains('tr', 'Editable Fund').within(() => {
-        cy.get('.action-btn').click();
-      });
-
-      cy.get('.action-dropdown').should('be.visible');
-      cy.contains('Edit Fund').click();
-
+    it('should open edit modal via action menu', () => {
+      cy.editFund('Editable Fund');
       cy.get('#fundModal').should('be.visible');
-      cy.get('#fundName').clear().type('Renamed Fund');
-      cy.get('#fundModal .btn-primary').click();
+    });
 
-      cy.contains('tr', 'Renamed Fund').should('exist');
-      cy.contains('tr', 'Editable Fund').should('not.exist');
+    it('should update fund account number', () => {
+      cy.editFund('Editable Fund');
+
+      cy.get('#accountNumber').clear().type('ACC-UPDATED');
+      cy.get('#saveFundBtn').click();
+
+      cy.get('#fundModal').should('not.be.visible');
+      cy.contains('#fundsTableBody tr', 'ACC-UPDATED').should('exist');
+    });
+
+    it('should update fund commitment', () => {
+      cy.editFund('Editable Fund');
+
+      cy.get('#commitment').clear().type('1500000');
+      cy.get('#saveFundBtn').click();
+
+      cy.get('#fundModal').should('not.be.visible');
+      cy.contains('#fundsTableBody tr', '1,500,000').should('exist');
     });
   });
 
   describe('Deleting Funds', () => {
     beforeEach(() => {
-      cy.addFund({ name: 'Fund To Delete' });
+      cy.addFund({ name: 'Fund To Delete', accountNumber: 'ACC-DEL', commitment: '100000' });
     });
 
-    it('should delete a fund', () => {
-      cy.contains('tr', 'Fund To Delete').should('exist');
+    it('should delete a fund via action menu', () => {
+      cy.contains('#fundsTableBody tr', 'Fund To Delete').should('exist');
       cy.deleteFund('Fund To Delete');
-      cy.contains('tr', 'Fund To Delete').should('not.exist');
+      cy.contains('#fundsTableBody tr', 'Fund To Delete').should('not.exist');
+    });
+
+    it('should show confirmation modal before deleting', () => {
+      cy.openActionMenu('Fund To Delete');
+      cy.get('#actionDelete').click();
+
+      cy.get('#confirmModal').should('be.visible');
+      cy.get('#confirmModalMessage').should('not.be.empty');
     });
 
     it('should cancel fund deletion', () => {
-      cy.contains('tr', 'Fund To Delete').within(() => {
-        cy.get('.action-btn').click();
-      });
-
-      cy.get('.action-dropdown').should('be.visible');
-      cy.contains('Delete Fund').click();
+      cy.openActionMenu('Fund To Delete');
+      cy.get('#actionDelete').click();
 
       cy.get('#confirmModal').should('be.visible');
-      cy.get('#confirmModal .btn-secondary').click(); // Cancel button
+      cy.get('#confirmModalCancelBtn').click();
 
-      cy.contains('tr', 'Fund To Delete').should('exist');
+      cy.get('#confirmModal').should('not.be.visible');
+      cy.contains('#fundsTableBody tr', 'Fund To Delete').should('exist');
+    });
+
+    it('should update summary counts after deletion', () => {
+      cy.get('#summaryInvestmentCount').should('contain', '1');
+
+      cy.deleteFund('Fund To Delete');
+
+      cy.get('#summaryInvestmentCount').should('contain', '0');
     });
   });
 
   describe('Fund Details', () => {
     beforeEach(() => {
-      cy.addFund({ name: 'Details Fund' });
+      cy.addFund({ name: 'Details Fund', accountNumber: 'ACC-DET', commitment: '2000000' });
     });
 
-    it('should show fund details when clicking on fund name', () => {
-      cy.contains('tr', 'Details Fund').within(() => {
-        cy.contains('Details Fund').click();
-      });
-
+    it('should open details modal when clicking on fund row', () => {
+      cy.openFundDetails('Details Fund');
       cy.get('#detailsModal').should('be.visible');
-      cy.get('#detailsModal').contains('Details Fund');
     });
 
-    it('should close details modal', () => {
-      cy.contains('tr', 'Details Fund').within(() => {
-        cy.contains('Details Fund').click();
-      });
+    it('should show fund name in details modal title', () => {
+      cy.openFundDetails('Details Fund');
+      cy.get('#detailsModalTitle').should('contain', 'Details Fund');
+    });
 
+    it('should show commitment in details summary', () => {
+      cy.openFundDetails('Details Fund');
+      cy.get('#detailsSummaryCommitment').should('contain', '2,000,000');
+    });
+
+    it('should close details modal on cancel', () => {
+      cy.openFundDetails('Details Fund');
       cy.get('#detailsModal').should('be.visible');
-      cy.get('#detailsModal .close-btn').click();
+
+      cy.get('#cancelDetailsModalBtn').click();
       cy.get('#detailsModal').should('not.be.visible');
+    });
+
+    it('should close details modal on X button', () => {
+      cy.openFundDetails('Details Fund');
+      cy.get('#detailsModal').should('be.visible');
+
+      cy.get('#closeDetailsModalBtn').click();
+      cy.get('#detailsModal').should('not.be.visible');
+    });
+
+    it('should open details via action menu', () => {
+      cy.openActionMenu('Details Fund');
+      cy.get('#actionViewDetails').click();
+
+      cy.get('#detailsModal').should('be.visible');
+      cy.get('#detailsModalTitle').should('contain', 'Details Fund');
+    });
+  });
+
+  describe('Duplicate Fund', () => {
+    beforeEach(() => {
+      cy.addFund({ name: 'Original Fund', accountNumber: 'ACC-ORIG', commitment: '500000' });
+    });
+
+    it('should open duplicate modal via action menu', () => {
+      cy.openActionMenu('Original Fund');
+      cy.get('#actionDuplicate').click();
+
+      cy.get('#fundModal').should('be.visible');
+    });
+  });
+
+  describe('Action Menu', () => {
+    beforeEach(() => {
+      cy.addFund({ name: 'Action Menu Fund', accountNumber: 'ACC-ACT', commitment: '300000' });
+    });
+
+    it('should show action dropdown on click', () => {
+      cy.openActionMenu('Action Menu Fund');
+      cy.get('#actionDropdown').should('be.visible');
+    });
+
+    it('should have all action options', () => {
+      cy.openActionMenu('Action Menu Fund');
+
+      cy.get('#actionEdit').should('be.visible');
+      cy.get('#actionDuplicate').should('be.visible');
+      cy.get('#actionViewDetails').should('be.visible');
+      cy.get('#actionDelete').should('be.visible');
+    });
+
+    it('should close dropdown when clicking elsewhere', () => {
+      cy.openActionMenu('Action Menu Fund');
+      cy.get('#actionDropdown').should('be.visible');
+
+      cy.get('body').click(0, 0);
+      cy.get('#actionDropdown').should('not.be.visible');
     });
   });
 });

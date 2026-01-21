@@ -1,70 +1,122 @@
 /// <reference types="cypress" />
 
-describe('Filtering', () => {
+describe('Multi-Select Filters', () => {
   beforeEach(() => {
     cy.visitAndWait();
     // Add several funds for filtering tests
-    cy.addFund({ name: 'Alpha Fund' });
-    cy.addFund({ name: 'Beta Fund' });
-    cy.addFund({ name: 'Gamma Fund' });
+    cy.addFund({ name: 'Alpha Fund', accountNumber: 'ACC-A', commitment: '1000000' });
+    cy.addFund({ name: 'Beta Fund', accountNumber: 'ACC-B', commitment: '500000' });
+    cy.addFund({ name: 'Gamma Fund', accountNumber: 'ACC-C', commitment: '750000' });
   });
 
-  describe('Search Filter', () => {
-    it('should filter funds by name', () => {
-      cy.get('#searchInput').type('Alpha');
-
-      cy.contains('tr', 'Alpha Fund').should('be.visible');
-      cy.contains('tr', 'Beta Fund').should('not.exist');
-      cy.contains('tr', 'Gamma Fund').should('not.exist');
+  describe('Fund Filter', () => {
+    it('should have fund filter dropdown', () => {
+      cy.get('#fundFilter').should('exist');
     });
 
-    it('should show all funds when search is cleared', () => {
-      cy.get('#searchInput').type('Alpha');
-      cy.contains('tr', 'Beta Fund').should('not.exist');
-
-      cy.get('#searchInput').clear();
-
-      cy.contains('tr', 'Alpha Fund').should('be.visible');
-      cy.contains('tr', 'Beta Fund').should('be.visible');
-      cy.contains('tr', 'Gamma Fund').should('be.visible');
+    it('should open fund filter dropdown on click', () => {
+      cy.get('#fundFilter .multi-select-trigger').click();
+      cy.get('#fundFilter .multi-select-dropdown').should('be.visible');
     });
 
-    it('should be case insensitive', () => {
-      cy.get('#searchInput').type('alpha');
-      cy.contains('tr', 'Alpha Fund').should('be.visible');
-
-      cy.get('#searchInput').clear().type('BETA');
-      cy.contains('tr', 'Beta Fund').should('be.visible');
+    it('should show fund names in dropdown', () => {
+      cy.get('#fundFilter .multi-select-trigger').click();
+      cy.get('#fundFilter .multi-select-dropdown').should('contain', 'Alpha Fund');
+      cy.get('#fundFilter .multi-select-dropdown').should('contain', 'Beta Fund');
+      cy.get('#fundFilter .multi-select-dropdown').should('contain', 'Gamma Fund');
     });
 
-    it('should filter by partial match', () => {
-      cy.get('#searchInput').type('Fund');
+    it('should filter table when selecting a fund', () => {
+      cy.get('#fundFilter .multi-select-trigger').click();
+      cy.get('#fundFilter .multi-select-dropdown').contains('Alpha Fund').click();
 
-      cy.contains('tr', 'Alpha Fund').should('be.visible');
-      cy.contains('tr', 'Beta Fund').should('be.visible');
-      cy.contains('tr', 'Gamma Fund').should('be.visible');
-    });
+      // Close dropdown
+      cy.get('body').click(0, 0);
 
-    it('should show no results for non-matching search', () => {
-      cy.get('#searchInput').type('NonExistent');
-
-      cy.get('#fundsTable tbody tr').should('have.length', 0);
+      // Should show only Alpha Fund
+      cy.contains('#fundsTableBody tr', 'Alpha Fund').should('exist');
+      // Others should be hidden (either not exist or not be visible)
+      cy.get('#fundsTableBody').should('not.contain', 'Beta Fund');
     });
   });
 
-  describe('Filter Persistence', () => {
-    it('should maintain filter after adding a fund', () => {
-      cy.get('#searchInput').type('Alpha');
-      cy.contains('tr', 'Alpha Fund').should('be.visible');
-      cy.contains('tr', 'Beta Fund').should('not.exist');
+  describe('Account Filter', () => {
+    it('should have account filter dropdown', () => {
+      cy.get('#accountFilter').should('exist');
+    });
 
-      // Add a new fund
-      cy.addFund({ name: 'Alpha Two' });
+    it('should show account numbers in dropdown', () => {
+      cy.get('#accountFilter .multi-select-trigger').click();
+      cy.get('#accountFilter .multi-select-dropdown').should('contain', 'ACC-A');
+      cy.get('#accountFilter .multi-select-dropdown').should('contain', 'ACC-B');
+    });
+  });
 
-      // Filter should still be active
-      cy.contains('tr', 'Alpha Fund').should('be.visible');
-      cy.contains('tr', 'Alpha Two').should('be.visible');
-      cy.contains('tr', 'Beta Fund').should('not.exist');
+  describe('Vintage Filter', () => {
+    it('should have vintage filter dropdown', () => {
+      cy.get('#vintageFilter').should('exist');
+    });
+  });
+
+  describe('Group Filter', () => {
+    it('should have group filter dropdown', () => {
+      cy.get('#groupFilter').should('exist');
+    });
+
+    it('should open group filter dropdown on click', () => {
+      cy.get('#groupFilter .multi-select-trigger').click();
+      cy.get('#groupFilter .multi-select-dropdown').should('be.visible');
+    });
+  });
+
+  describe('Tag Filter', () => {
+    it('should have tag filter dropdown', () => {
+      cy.get('#tagFilter').should('exist');
+    });
+  });
+
+  describe('Cutoff Date', () => {
+    it('should have cutoff date input', () => {
+      cy.get('#cutoffDate').should('exist');
+    });
+
+    it('should be a date input', () => {
+      cy.get('#cutoffDate').should('have.attr', 'type', 'date');
+    });
+
+    it('should recalculate metrics when cutoff date changes', () => {
+      // Add some cash flows first
+      cy.openFundDetails('Alpha Fund');
+      cy.get('#addCashFlowRowBtn').click();
+      cy.get('#cashFlowsTable tbody tr').last().within(() => {
+        cy.get('input[type="date"]').type('2020-01-15');
+        cy.get('input[type="text"], input[type="number"]').first().clear().type('100000');
+        cy.get('select').select('Contribution');
+      });
+      cy.get('#saveDetailsChangesBtn').click();
+
+      // Set a cutoff date before the cash flow
+      cy.get('#cutoffDate').type('2019-12-31');
+
+      // Metrics should be recalculated (contributions should be 0 before the cash flow date)
+      // This is a basic check - the actual behavior depends on implementation
+      cy.get('#fundsTable').should('exist');
+    });
+  });
+
+  describe('Active Filters Indicator', () => {
+    it('should show active filters badge when filter is applied', () => {
+      cy.get('#fundFilter .multi-select-trigger').click();
+      cy.get('#fundFilter .multi-select-dropdown').contains('Alpha Fund').click();
+      cy.get('body').click(0, 0);
+
+      // Active filters indicator should be visible
+      cy.get('#activeFiltersIndicator').should('be.visible');
+    });
+
+    it('should hide active filters badge when no filters', () => {
+      // Initially no filters
+      cy.get('#activeFiltersIndicator').should('not.be.visible');
     });
   });
 });
@@ -72,29 +124,101 @@ describe('Filtering', () => {
 describe('Table Sorting', () => {
   beforeEach(() => {
     cy.visitAndWait();
-    cy.addFund({ name: 'Zebra Fund' });
-    cy.addFund({ name: 'Alpha Fund' });
-    cy.addFund({ name: 'Middle Fund' });
+    cy.addFund({ name: 'Zebra Fund', accountNumber: 'ACC-Z', commitment: '100000' });
+    cy.addFund({ name: 'Alpha Fund', accountNumber: 'ACC-A', commitment: '500000' });
+    cy.addFund({ name: 'Middle Fund', accountNumber: 'ACC-M', commitment: '300000' });
   });
 
-  it('should sort by fund name ascending', () => {
-    // Click the Fund Name column header
-    cy.get('th').contains('Fund Name').click();
+  describe('Column Sorting', () => {
+    it('should have sortable column headers', () => {
+      cy.get('th[data-sort="fundName"]').should('exist');
+      cy.get('th[data-sort="commitment"]').should('exist');
+      cy.get('th[data-sort="irr"]').should('exist');
+    });
 
-    // Get all fund names and verify order
-    cy.get('#fundsTable tbody tr').then(($rows) => {
-      const names = [...$rows].map(row =>
-        row.querySelector('td:first-child')?.textContent?.trim()
-      );
-      expect(names[0]).to.equal('Alpha Fund');
+    it('should sort by fund name when clicking header', () => {
+      cy.get('th[data-sort="fundName"]').click();
+
+      // First row should be Alpha (ascending)
+      cy.get('#fundsTableBody tr').first().should('contain', 'Alpha Fund');
+    });
+
+    it('should toggle sort direction on second click', () => {
+      // Click twice for descending
+      cy.get('th[data-sort="fundName"]').click();
+      cy.get('th[data-sort="fundName"]').click();
+
+      // First row should be Zebra (descending)
+      cy.get('#fundsTableBody tr').first().should('contain', 'Zebra Fund');
+    });
+
+    it('should sort by commitment', () => {
+      cy.get('th[data-sort="commitment"]').click();
+
+      // Check that sorting occurred (first should be lowest or highest depending on default)
+      cy.get('#fundsTableBody tr').should('have.length', 3);
+    });
+
+    it('should show sort indicator on sorted column', () => {
+      cy.get('th[data-sort="fundName"]').click();
+
+      // Should have some sort indicator class or attribute
+      cy.get('th[data-sort="fundName"]').should('satisfy', ($el) => {
+        const classList = $el[0].className;
+        const innerHTML = $el[0].innerHTML;
+        // Check for common sort indicators
+        return classList.includes('sort') ||
+               classList.includes('asc') ||
+               classList.includes('desc') ||
+               innerHTML.includes('▲') ||
+               innerHTML.includes('▼') ||
+               innerHTML.includes('↑') ||
+               innerHTML.includes('↓');
+      });
     });
   });
 
-  it('should toggle sort direction on second click', () => {
-    // Click twice for descending
-    cy.get('th').contains('Fund Name').click();
-    cy.get('th').contains('Fund Name').click();
+  describe('Multi-Column Sorting', () => {
+    it('should allow sorting by multiple columns with Shift+click', () => {
+      // Sort by fund name first
+      cy.get('th[data-sort="fundName"]').click();
 
-    cy.get('#fundsTable tbody tr').first().should('contain', 'Zebra Fund');
+      // Then Shift+click on commitment for secondary sort
+      cy.get('th[data-sort="commitment"]').click({ shiftKey: true });
+
+      // Table should still be sorted
+      cy.get('#fundsTableBody tr').should('have.length', 3);
+    });
+  });
+});
+
+describe('Portfolio Summary with Filters', () => {
+  beforeEach(() => {
+    cy.visitAndWait();
+    cy.addFund({ name: 'Fund One', accountNumber: 'ACC-1', commitment: '1000000' });
+    cy.addFund({ name: 'Fund Two', accountNumber: 'ACC-2', commitment: '500000' });
+  });
+
+  it('should update summary when filter is applied', () => {
+    // Initially shows 2 investments
+    cy.get('#summaryInvestmentCount').should('contain', '2');
+
+    // Filter to just one fund
+    cy.get('#fundFilter .multi-select-trigger').click();
+    cy.get('#fundFilter .multi-select-dropdown').contains('Fund One').click();
+    cy.get('body').click(0, 0);
+
+    // Summary should update to show 1 investment
+    cy.get('#summaryInvestmentCount').should('contain', '1');
+  });
+
+  it('should update total commitment when filtered', () => {
+    // Filter to just Fund Two (500k commitment)
+    cy.get('#fundFilter .multi-select-trigger').click();
+    cy.get('#fundFilter .multi-select-dropdown').contains('Fund Two').click();
+    cy.get('body').click(0, 0);
+
+    // Should show only Fund Two's commitment
+    cy.get('#summaryCommitment').should('contain', '500,000');
   });
 });

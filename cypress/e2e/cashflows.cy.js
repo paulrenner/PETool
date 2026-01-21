@@ -3,109 +3,87 @@
 describe('Cash Flow Management', () => {
   beforeEach(() => {
     cy.visitAndWait();
-    cy.addFund({ name: 'Cash Flow Test Fund' });
+    cy.addFund({ name: 'Cash Flow Test Fund', accountNumber: 'ACC-CF', commitment: '1000000' });
   });
 
   describe('Adding Cash Flows', () => {
-    it('should add a contribution cash flow', () => {
-      cy.addCashFlow('Cash Flow Test Fund', {
-        date: '2023-01-15',
-        type: 'Contribution',
-        amount: 100000
-      });
-
-      // Open details to verify cash flow was added
-      cy.contains('tr', 'Cash Flow Test Fund').within(() => {
-        cy.contains('Cash Flow Test Fund').click();
-      });
-
-      cy.get('#detailsModal').should('be.visible');
-      cy.get('#detailsModal').contains('Contribution');
-      cy.get('#detailsModal').contains('100,000');
+    it('should show Add Cash Flow button in details modal', () => {
+      cy.openFundDetails('Cash Flow Test Fund');
+      cy.get('#addCashFlowRowBtn').should('be.visible');
     });
 
-    it('should add a distribution cash flow', () => {
-      cy.addCashFlow('Cash Flow Test Fund', {
-        date: '2023-06-15',
-        type: 'Distribution',
-        amount: 50000
-      });
+    it('should add a new cash flow row when clicking Add Cash Flow', () => {
+      cy.openFundDetails('Cash Flow Test Fund');
 
-      cy.contains('tr', 'Cash Flow Test Fund').within(() => {
-        cy.contains('Cash Flow Test Fund').click();
-      });
+      // Get initial row count
+      cy.get('#cashFlowsTable tbody tr').then($rows => {
+        const initialCount = $rows.length;
 
-      cy.get('#detailsModal').should('be.visible');
-      cy.get('#detailsModal').contains('Distribution');
+        cy.get('#addCashFlowRowBtn').click();
+
+        // Should have one more row
+        cy.get('#cashFlowsTable tbody tr').should('have.length', initialCount + 1);
+      });
     });
 
-    it('should add multiple cash flows', () => {
-      cy.addCashFlow('Cash Flow Test Fund', {
-        date: '2023-01-15',
-        type: 'Contribution',
-        amount: 100000
+    it('should have date, amount, and type fields in cash flow row', () => {
+      cy.openFundDetails('Cash Flow Test Fund');
+      cy.get('#addCashFlowRowBtn').click();
+
+      cy.get('#cashFlowsTable tbody tr').last().within(() => {
+        cy.get('input[type="date"]').should('exist');
+        cy.get('input[type="text"], input[type="number"]').should('exist');
+        cy.get('select').should('exist');
+      });
+    });
+
+    it('should save cash flow when clicking Save Changes', () => {
+      cy.openFundDetails('Cash Flow Test Fund');
+      cy.get('#addCashFlowRowBtn').click();
+
+      cy.get('#cashFlowsTable tbody tr').last().within(() => {
+        cy.get('input[type="date"]').type('2023-06-15');
+        cy.get('input[type="text"], input[type="number"]').first().clear().type('100000');
+        cy.get('select').select('Contribution');
       });
 
-      cy.addCashFlow('Cash Flow Test Fund', {
-        date: '2023-03-15',
-        type: 'Contribution',
-        amount: 50000
-      });
+      cy.get('#saveDetailsChangesBtn').click();
+      cy.get('#detailsModal').should('not.be.visible');
 
-      cy.addCashFlow('Cash Flow Test Fund', {
-        date: '2023-06-15',
-        type: 'Distribution',
-        amount: 25000
-      });
-
-      // Verify in details modal
-      cy.contains('tr', 'Cash Flow Test Fund').within(() => {
-        cy.contains('Cash Flow Test Fund').click();
-      });
-
-      cy.get('#detailsModal').should('be.visible');
-      // Should show multiple cash flows
-      cy.get('#detailsModal').find('table').should('exist');
+      // Reopen and verify cash flow was saved
+      cy.openFundDetails('Cash Flow Test Fund');
+      cy.get('#cashFlowsTable tbody').should('contain', '100,000');
     });
   });
 
-  describe('Cash Flow Validation', () => {
-    it('should require a date', () => {
-      cy.contains('tr', 'Cash Flow Test Fund').within(() => {
-        cy.get('.action-btn').click();
+  describe('Cash Flow Types', () => {
+    it('should have Contribution option', () => {
+      cy.openFundDetails('Cash Flow Test Fund');
+      cy.get('#addCashFlowRowBtn').click();
+
+      cy.get('#cashFlowsTable tbody tr').last().within(() => {
+        cy.get('select').should('contain', 'Contribution');
       });
-
-      cy.get('.action-dropdown').should('be.visible');
-      cy.contains('Add Cash Flow').click();
-
-      cy.get('#cashFlowModal').should('be.visible');
-      // Don't fill date, just type and amount
-      cy.get('#cfType').select('Contribution');
-      cy.get('#cfAmount').type('100000');
-
-      cy.get('#cashFlowModal .btn-primary').click();
-
-      // Modal should still be visible (validation failed)
-      cy.get('#cashFlowModal').should('be.visible');
     });
 
-    it('should require a positive amount', () => {
-      cy.contains('tr', 'Cash Flow Test Fund').within(() => {
-        cy.get('.action-btn').click();
+    it('should have Distribution option', () => {
+      cy.openFundDetails('Cash Flow Test Fund');
+      cy.get('#addCashFlowRowBtn').click();
+
+      cy.get('#cashFlowsTable tbody tr').last().within(() => {
+        cy.get('select').should('contain', 'Distribution');
       });
+    });
+  });
 
-      cy.get('.action-dropdown').should('be.visible');
-      cy.contains('Add Cash Flow').click();
+  describe('Deleting Cash Flows', () => {
+    it('should have delete button for cash flow rows', () => {
+      cy.openFundDetails('Cash Flow Test Fund');
+      cy.get('#addCashFlowRowBtn').click();
 
-      cy.get('#cashFlowModal').should('be.visible');
-      cy.get('#cfDate').type('2023-01-15');
-      cy.get('#cfType').select('Contribution');
-      cy.get('#cfAmount').type('0');
-
-      cy.get('#cashFlowModal .btn-primary').click();
-
-      // Modal should still be visible (validation failed)
-      cy.get('#cashFlowModal').should('be.visible');
+      cy.get('#cashFlowsTable tbody tr').last().within(() => {
+        cy.get('button, .delete-btn, [title*="delete" i], [title*="remove" i]').should('exist');
+      });
     });
   });
 });
@@ -113,37 +91,51 @@ describe('Cash Flow Management', () => {
 describe('NAV Management', () => {
   beforeEach(() => {
     cy.visitAndWait();
-    cy.addFund({ name: 'NAV Test Fund' });
+    cy.addFund({ name: 'NAV Test Fund', accountNumber: 'ACC-NAV', commitment: '500000' });
   });
 
   describe('Adding NAV Entries', () => {
-    it('should add a NAV entry', () => {
-      cy.addNav('NAV Test Fund', {
-        date: '2023-12-31',
-        amount: 150000
-      });
+    it('should show Add Value button in details modal', () => {
+      cy.openFundDetails('NAV Test Fund');
+      cy.get('#addNavRowBtn').should('be.visible');
+    });
 
-      // Check the NAV column in the table
-      cy.contains('tr', 'NAV Test Fund').within(() => {
-        cy.contains('150,000').should('exist');
+    it('should add a new NAV row when clicking Add Value', () => {
+      cy.openFundDetails('NAV Test Fund');
+
+      cy.get('#navTable tbody tr').then($rows => {
+        const initialCount = $rows.length;
+
+        cy.get('#addNavRowBtn').click();
+
+        cy.get('#navTable tbody tr').should('have.length', initialCount + 1);
       });
     });
 
-    it('should update NAV when adding a newer entry', () => {
-      cy.addNav('NAV Test Fund', {
-        date: '2023-06-30',
-        amount: 100000
+    it('should have date and amount fields in NAV row', () => {
+      cy.openFundDetails('NAV Test Fund');
+      cy.get('#addNavRowBtn').click();
+
+      cy.get('#navTable tbody tr').last().within(() => {
+        cy.get('input[type="date"]').should('exist');
+        cy.get('input[type="text"], input[type="number"]').should('exist');
+      });
+    });
+
+    it('should save NAV when clicking Save Changes', () => {
+      cy.openFundDetails('NAV Test Fund');
+      cy.get('#addNavRowBtn').click();
+
+      cy.get('#navTable tbody tr').last().within(() => {
+        cy.get('input[type="date"]').type('2023-12-31');
+        cy.get('input[type="text"], input[type="number"]').clear().type('550000');
       });
 
-      cy.addNav('NAV Test Fund', {
-        date: '2023-12-31',
-        amount: 150000
-      });
+      cy.get('#saveDetailsChangesBtn').click();
+      cy.get('#detailsModal').should('not.be.visible');
 
-      // Should show the latest NAV
-      cy.contains('tr', 'NAV Test Fund').within(() => {
-        cy.contains('150,000').should('exist');
-      });
+      // Verify NAV appears in main table
+      cy.contains('#fundsTableBody tr', 'NAV Test Fund').should('contain', '550,000');
     });
   });
 });
@@ -151,34 +143,79 @@ describe('NAV Management', () => {
 describe('Metrics Calculation', () => {
   beforeEach(() => {
     cy.visitAndWait();
-    cy.addFund({ name: 'Metrics Test Fund' });
+    cy.addFund({ name: 'Metrics Test Fund', accountNumber: 'ACC-MET', commitment: '1000000' });
   });
 
-  it('should calculate metrics after adding cash flows and NAV', () => {
-    // Add contributions
-    cy.addCashFlow('Metrics Test Fund', {
-      date: '2020-01-15',
-      type: 'Contribution',
-      amount: 100000
+  it('should show contributions total in details summary', () => {
+    // Add a contribution
+    cy.openFundDetails('Metrics Test Fund');
+    cy.get('#addCashFlowRowBtn').click();
+
+    cy.get('#cashFlowsTable tbody tr').last().within(() => {
+      cy.get('input[type="date"]').type('2020-01-15');
+      cy.get('input[type="text"], input[type="number"]').first().clear().type('250000');
+      cy.get('select').select('Contribution');
     });
 
-    // Add distribution
-    cy.addCashFlow('Metrics Test Fund', {
-      date: '2023-01-15',
-      type: 'Distribution',
-      amount: 50000
-    });
+    cy.get('#saveDetailsChangesBtn').click();
 
-    // Add NAV
-    cy.addNav('Metrics Test Fund', {
-      date: '2023-12-31',
-      amount: 120000
-    });
+    // Reopen and check summary
+    cy.openFundDetails('Metrics Test Fund');
+    cy.get('#detailsSummaryContributions').should('contain', '250,000');
+  });
 
-    // Verify metrics are calculated (not N/A)
-    cy.contains('tr', 'Metrics Test Fund').within(() => {
-      // Check that numeric values appear instead of N/A
-      cy.get('td').should('have.length.greaterThan', 3);
+  it('should show distributions total in details summary', () => {
+    // First add a contribution
+    cy.openFundDetails('Metrics Test Fund');
+    cy.get('#addCashFlowRowBtn').click();
+    cy.get('#cashFlowsTable tbody tr').last().within(() => {
+      cy.get('input[type="date"]').type('2020-01-15');
+      cy.get('input[type="text"], input[type="number"]').first().clear().type('250000');
+      cy.get('select').select('Contribution');
     });
+    cy.get('#saveDetailsChangesBtn').click();
+
+    // Add a distribution
+    cy.openFundDetails('Metrics Test Fund');
+    cy.get('#addCashFlowRowBtn').click();
+    cy.get('#cashFlowsTable tbody tr').last().within(() => {
+      cy.get('input[type="date"]').type('2023-06-15');
+      cy.get('input[type="text"], input[type="number"]').first().clear().type('100000');
+      cy.get('select').select('Distribution');
+    });
+    cy.get('#saveDetailsChangesBtn').click();
+
+    // Check summary
+    cy.openFundDetails('Metrics Test Fund');
+    cy.get('#detailsSummaryDistributions').should('contain', '100,000');
+  });
+
+  it('should calculate outstanding commitment', () => {
+    cy.openFundDetails('Metrics Test Fund');
+    // With no cash flows, outstanding should equal commitment
+    cy.get('#detailsSummaryOutstanding').should('contain', '1,000,000');
+  });
+});
+
+describe('Details Modal Summary', () => {
+  beforeEach(() => {
+    cy.visitAndWait();
+    cy.addFund({ name: 'Summary Test Fund', accountNumber: 'ACC-SUM', commitment: '750000' });
+  });
+
+  it('should display all summary stats', () => {
+    cy.openFundDetails('Summary Test Fund');
+
+    cy.get('#detailsSummaryCommitment').should('exist');
+    cy.get('#detailsSummaryContributions').should('exist');
+    cy.get('#detailsSummaryDistributions').should('exist');
+    cy.get('#detailsSummaryValue').should('exist');
+    cy.get('#detailsSummaryReturn').should('exist');
+    cy.get('#detailsSummaryOutstanding').should('exist');
+  });
+
+  it('should show commitment value', () => {
+    cy.openFundDetails('Summary Test Fund');
+    cy.get('#detailsSummaryCommitment').should('contain', '750,000');
   });
 });
