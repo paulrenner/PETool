@@ -77,6 +77,8 @@ import {
   addNewFundNameInline,
   cancelNewFundNameInline,
   initAccountNumberAutoFill,
+  showSyncAccountGroupsModal,
+  applySyncAccountGroups,
 } from './app/modals';
 
 import {
@@ -1341,6 +1343,16 @@ function initializeEventListeners(): void {
     });
   }
 
+  // Sidebar - Sync Account Groups
+  const sidebarSyncAccountGroups = document.getElementById('sidebarSyncAccountGroups');
+  if (sidebarSyncAccountGroups) {
+    sidebarSyncAccountGroups.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSidebar();
+      showSyncAccountGroupsModal();
+    });
+  }
+
   // Sidebar - Bulk Cash Flow
   const sidebarBulkCashFlow = document.getElementById('sidebarBulkCashFlow');
   if (sidebarBulkCashFlow) {
@@ -1392,6 +1404,20 @@ function initializeEventListeners(): void {
       btn.addEventListener('click', () => closeModal('importPreviewModal'));
     }
   });
+
+  // Sync Account Groups modal
+  const closeSyncAccountGroupsModalBtn = document.getElementById('closeSyncAccountGroupsModalBtn');
+  const cancelSyncAccountGroupsBtn = document.getElementById('cancelSyncAccountGroupsBtn');
+  [closeSyncAccountGroupsModalBtn, cancelSyncAccountGroupsBtn].forEach((btn) => {
+    if (btn) {
+      btn.addEventListener('click', () => closeModal('syncAccountGroupsModal'));
+    }
+  });
+
+  const applySyncAccountGroupsBtn = document.getElementById('applySyncAccountGroupsBtn');
+  if (applySyncAccountGroupsBtn) {
+    applySyncAccountGroupsBtn.addEventListener('click', () => applySyncAccountGroups(renderTable));
+  }
 
   // Cutoff date change
   const cutoffDate = document.getElementById('cutoffDate');
