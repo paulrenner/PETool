@@ -3873,6 +3873,87 @@
         }
 
         /**
+         * Handle cascading selection for group filter dropdown
+         * - Selecting a parent selects all descendants
+         * - Deselecting a parent deselects all descendants
+         * - Selecting all children of a parent auto-selects the parent (cascades up)
+         * - Deselecting a child deselects the parent
+         * @param {HTMLElement} container - The multi-select container
+         * @param {number} clickedGroupId - The group ID that was clicked
+         * @param {boolean} isNowSelected - Whether the clicked item is now selected
+         */
+        function handleGroupFilterCascade(container, clickedGroupId, isNowSelected) {
+            const optionsContainer = container.querySelector('.multi-select-options');
+            if (!optionsContainer) return;
+
+            const setOptionSelected = (groupId, selected) => {
+                const option = optionsContainer.querySelector(`[data-value="${groupId}"]`);
+                if (option) {
+                    if (selected) {
+                        option.classList.add('selected');
+                    } else {
+                        option.classList.remove('selected');
+                    }
+                    const checkbox = option.querySelector('input[type="checkbox"]');
+                    if (checkbox) checkbox.checked = selected;
+                    option.setAttribute('aria-selected', selected.toString());
+                }
+            };
+
+            const isOptionSelected = (groupId) => {
+                const option = optionsContainer.querySelector(`[data-value="${groupId}"]`);
+                return option ? option.classList.contains('selected') : false;
+            };
+
+            if (isNowSelected) {
+                // Selecting: select all descendants
+                const descendants = AppState.getDescendantIds(clickedGroupId);
+                descendants.forEach(descId => {
+                    if (descId !== clickedGroupId) {
+                        setOptionSelected(descId, true);
+                    }
+                });
+
+                // Check if all siblings are now selected, if so select parent (cascade up)
+                let currentId = clickedGroupId;
+                while (currentId != null) {
+                    const group = AppState.getGroupByIdSync(currentId);
+                    if (!group || group.parentGroupId == null) break;
+
+                    const parentId = group.parentGroupId;
+                    const siblings = AppState.getDirectChildIds(parentId);
+                    const allSiblingsSelected = siblings.every(sibId => isOptionSelected(sibId));
+
+                    if (allSiblingsSelected) {
+                        setOptionSelected(parentId, true);
+                        currentId = parentId; // Continue checking up the tree
+                    } else {
+                        break;
+                    }
+                }
+            } else {
+                // Deselecting: deselect all descendants
+                const descendants = AppState.getDescendantIds(clickedGroupId);
+                descendants.forEach(descId => {
+                    if (descId !== clickedGroupId) {
+                        setOptionSelected(descId, false);
+                    }
+                });
+
+                // Deselect all ancestors (since not all their children are selected anymore)
+                const group = AppState.getGroupByIdSync(clickedGroupId);
+                if (group && group.parentGroupId != null) {
+                    let parentId = group.parentGroupId;
+                    while (parentId != null) {
+                        setOptionSelected(parentId, false);
+                        const parentGroup = AppState.getGroupByIdSync(parentId);
+                        parentId = parentGroup ? parentGroup.parentGroupId : null;
+                    }
+                }
+            }
+        }
+
+        /**
          * Initialize multi-select dropdown event handlers
          */
         function initMultiSelectDropdowns() {
@@ -3948,6 +4029,14 @@
                         const checkbox = option.querySelector('input[type="checkbox"]');
                         if (checkbox) checkbox.checked = option.classList.contains('selected');
                         option.setAttribute('aria-selected', option.classList.contains('selected'));
+
+                        // Handle cascading selection for group filter
+                        if (container.id === 'groupFilter') {
+                            const groupId = parseInt(option.getAttribute('data-value'));
+                            const isNowSelected = option.classList.contains('selected');
+                            handleGroupFilterCascade(container, groupId, isNowSelected);
+                        }
+
                         updateMultiSelectDisplay(container.id);
                         applyFilters();
                     }
@@ -4079,6 +4168,17 @@
             // O(1) group lookup by ID (synchronous)
             getGroupByIdSync(groupId) {
                 return this.groupsMap.get(groupId);
+            },
+
+            // Get direct child group IDs (synchronous)
+            getDirectChildIds(groupId) {
+                const children = [];
+                for (const [id, group] of this.groupsMap) {
+                    if (group.parentGroupId === groupId) {
+                        children.push(id);
+                    }
+                }
+                return children;
             },
 
             // Get ancestor group IDs with memoization
