@@ -1,99 +1,155 @@
 # Claude Code Instructions
 
-## Core Constraints
+## Project Architecture
 
-1. **Single File Architecture**: All application code must remain in `index.html`. Do not split code into separate files.
+This is a Private Equity fund management application built with **TypeScript** and **Vite**. The source code is in `src/` and builds to a single `index.html` file for deployment.
 
-2. **No External Dependencies**: The application runs entirely in the browser with no external libraries (except jsPDF/jsPDF-AutoTable for PDF export which are loaded via CDN). Do not introduce npm packages, frameworks, or build tools for the main application.
+### Key Technologies
+- **TypeScript** for type-safe code
+- **Vite** with `vite-plugin-singlefile` for building
+- **IndexedDB** for client-side data storage
+- **Jest** for unit testing
 
-## Project Context
+### Directory Structure
+```
+src/
+├── main.ts          # Application entry point, event listeners
+├── index.html       # HTML template
+├── styles.css       # All CSS styles
+├── types/           # TypeScript type definitions
+│   ├── fund.ts      # Fund, CashFlow, Nav types
+│   ├── group.ts     # Group type
+│   └── index.ts     # Re-exports
+├── core/            # Core functionality
+│   ├── config.ts    # Application constants
+│   ├── state.ts     # AppState singleton
+│   └── db.ts        # IndexedDB operations
+├── calculations/    # Financial calculations
+│   ├── irr.ts       # IRR and MOIC calculations
+│   ├── metrics.ts   # Fund metrics (DPI, RVPI, TVPI, etc.)
+│   └── index.ts     # Re-exports
+├── utils/           # Utility functions
+│   ├── formatting.ts # Currency, date formatting
+│   ├── validation.ts # Input validation
+│   └── escaping.ts   # HTML/CSV escaping
+└── app/             # UI modules
+    ├── modals.ts    # Modal dialogs
+    ├── table.ts     # Table rendering
+    ├── filters.ts   # Filter functionality
+    ├── bulk.ts      # Bulk operations
+    ├── import.ts    # Data import
+    └── export.ts    # Data export
+```
 
-This is a Private Equity fund management application that:
-- Runs entirely client-side in the browser
-- Uses IndexedDB for persistent local storage
-- Has ~8000+ lines of HTML/CSS/JavaScript in a single file
+## Development Workflow
+
+### Building
+```bash
+npm run build    # TypeScript check + Vite build
+```
+Output goes to `dist/index.html`. Copy to root `index.html` for deployment.
+
+### Testing
+```bash
+npm test         # Run Jest tests
+```
+- 165 tests across 4 test suites
+- Tests import directly from `src/` TypeScript modules
+
+### Development
+The source of truth is the TypeScript code in `src/`. The root `index.html` is the **built output** for GitHub Pages deployment.
 
 ## Code Patterns
 
 ### State Management
-- Use `AppState` for all application state (centralized state management)
-- **Critical**: Always use AppState setter methods, never assign directly to properties
-  ```javascript
-  // CORRECT
-  AppState.setUnsavedChanges(true);
-  AppState.setSortColumns(newColumns);
+Use `AppState` singleton for all application state:
+```typescript
+import { AppState } from './core/state';
 
-  // WRONG - bypasses sync with legacy variables
-  AppState.hasUnsavedChanges = true;
-  ```
-- Legacy variable aliases exist for backward compatibility but are synced one-way from AppState setters
+// CORRECT - use setter methods
+AppState.setUnsavedChanges(true);
+AppState.setSortColumns(newColumns);
+AppState.setFunds(funds);
 
-### Async Patterns
-- Database operations are async - always use `await` when calling them
-- Event handlers that call async functions should be marked `async`
-- Modal openers and other UI functions that touch the database should have try/catch
+// WRONG - direct assignment
+AppState.hasUnsavedChanges = true;
+```
+
+### Database Operations
+All database functions are async:
+```typescript
+import { getAllFunds, saveFundToDB, deleteFundFromDB } from './core/db';
+
+const funds = await getAllFunds();
+const id = await saveFundToDB(fundData);
+await deleteFundFromDB(id);
+```
+
+### Date Handling
+**Critical**: JavaScript has timezone issues with date-only strings.
+```typescript
+// WRONG - timezone issues
+new Date("2021-08-01")  // Parsed as UTC, getMonth() returns local time
+
+// CORRECT - append time to force local interpretation
+new Date("2021-08-01T00:00:00")
+```
+
+The `isValidDate()` function in `src/utils/validation.ts` handles this correctly.
 
 ### Security
-- Always escape HTML output: use `escapeHtml()` for user data displayed in DOM
-- Use `escapeCSV()` for CSV exports to prevent injection
+- Use `escapeHtml()` for user data displayed in DOM
+- Use `escapeCSV()` for CSV exports
 - Validate all user input before processing
 
-### IIFE and Global Function Exposure
-The JavaScript code is wrapped in an IIFE (Immediately Invoked Function Expression), so all functions are private by default. When adding functions that need to be called from dynamically generated HTML (e.g., `onclick` handlers in innerHTML), you must expose them on `window`:
-
-```javascript
-// At the end of the IIFE, before init():
-window.myNewFunction = myNewFunction;
-```
-
-Look for the existing list near `window.showAddFundModal = showAddFundModal;` and add new functions there.
-
-**Common mistake**: Adding `onclick="myFunction()"` in dynamic HTML without exposing `myFunction` to `window` - the click will silently fail.
-
 ### CSS
-- Use CSS variables defined in `:root` for colors, spacing, shadows
-- Dark mode support via `[data-theme="dark"]` selectors
-- Print styles go in `@media print { }` blocks
-
-## Testing
-
-Run tests before committing changes:
-```bash
-npm test
-```
-
-- 164 tests across 4 test suites
-- Tests are in `__tests__/` directory
-- Testable logic is extracted to `src/` modules (calculations, validation, formatting)
-
-### Critical: Duplicated Logic in `src/` and `index.html`
-
-**Warning**: The `src/` modules contain logic that is **duplicated** from `index.html` for unit testing purposes. These are NOT shared—they are separate copies of the same functions.
-
-When modifying calculation, validation, or formatting logic, you **must update both places**:
-1. `index.html` - the actual application code
-2. `src/*.js` - the testable copy used by Jest
-
-Functions that exist in both places include:
-- `src/calculations.js`: `calculateIRR`, `calculateMOIC`, `getOutstandingCommitment`, `parseCashFlowsForIRR`, `getTotalByType`, `getLatestNav`, `getVintageYear`, `calculateMetrics`
-- `src/validation.js`: `isValidDate`, `validateFundData`, `validateCashFlow`, `validateNav`
-- `src/formatting.js`: `formatCurrency`, `formatDate`, `parseCurrency`, `escapeHtml`, `escapeCSV`
-
-**Always check both files when making changes to shared logic.**
+- CSS variables defined in `:root` in `src/styles.css`
+- Dark mode: `[data-theme="dark"]` selectors
+- Print styles: `@media print { }` blocks
 
 ## Common Tasks
 
-### Adding a new feature
-1. Add any new state to AppState with a setter method
-2. Add UI elements directly in the HTML
-3. Add CSS in the `<style>` section
-4. Add JavaScript in the main `<script>` section
-5. **If adding/modifying calculation, validation, or formatting logic**: Update both `index.html` AND the corresponding `src/*.js` file
-6. Run tests to ensure nothing is broken
+### Adding a New Feature
+1. Add types to `src/types/` if needed
+2. Add state to `AppState` with setter method if needed
+3. Implement logic in appropriate `src/` module
+4. Add event listeners in `src/main.ts`
+5. Update HTML in `src/index.html` if needed
+6. Run `npm test` and `npm run build`
+7. Copy `dist/index.html` to root and commit
 
-### Fixing a bug
-1. Identify the root cause
-2. Check if AppState setters are being used correctly
-3. Check for proper `await` on async calls
-4. **If fixing calculation, validation, or formatting logic**: Update both `index.html` AND the corresponding `src/*.js` file
-5. Test the fix manually and run `npm test`
+### Fixing a Bug
+1. Identify the root cause in the TypeScript source
+2. Fix in the appropriate `src/` module
+3. Run `npm test` to verify
+4. Run `npm run build`
+5. Copy `dist/index.html` to root and commit
+
+### Adding Tests
+Tests are in `__tests__/` and import from `src/`:
+```javascript
+import { calculateIRR } from '../src/calculations/irr';
+```
+
+## Important Notes
+
+### Data Normalization
+The `normalizeFund()` function in `src/core/db.ts` handles legacy data formats:
+- Normalizes dates to YYYY-MM-DD format
+- Normalizes cash flow types (case-insensitive)
+- Ensures proper numeric types for amounts
+
+### Calculation Functions
+Key calculation functions in `src/calculations/`:
+- `calculateIRR()` - Internal Rate of Return (Newton-Raphson method)
+- `calculateMOIC()` - Multiple on Invested Capital
+- `calculateMetrics()` - All fund metrics (IRR, MOIC, DPI, RVPI, TVPI)
+- `getTotalByType()` - Sum contributions or distributions
+- `getLatestNav()` - Latest NAV adjusted for subsequent cash flows
+
+### Module Exports
+Each directory has an `index.ts` that re-exports public functions. Import from the directory:
+```typescript
+import { calculateMetrics, calculateIRR } from './calculations';
+import { formatCurrency, parseCurrency } from './utils/formatting';
+```

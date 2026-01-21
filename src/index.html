@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PE Fund Manager</title>
+    <meta name="description" content="Private Equity Fund Analytics & Management Tool">
+</head>
+<body>
+    <!-- Skip to main content for keyboard/screen reader users -->
+    <a href="#mainContent" class="skip-link">Skip to main content</a>
+
+    <!-- Screen reader announcements for dynamic content updates -->
+    <div id="srAnnounce" class="sr-announce" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-labelledby="loadingText" aria-modal="true">
+        <div class="loading-content">
+            <div class="loading-spinner" aria-hidden="true"></div>
+            <div class="loading-text" id="loadingText">Loading...</div>
+        </div>
+    </div>
+
+    <div class="container" role="main">
+        <header role="banner">
+            <h1 id="headerTitle">PE Fund Manager</h1>
+            <p id="headerSubtitle">Private Equity Fund Analytics & Management Tool</p>
+        </header>
+
+        <div class="controls-bar" role="search" aria-label="Filter and search controls">
+            <div class="control-group">
+                <label>Filter by Group</label>
+                <div class="multi-select" id="groupFilter" data-placeholder="All Groups">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Groups</span></span>
+                        <span class="multi-select-arrow">&#9662;</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Filter by Fund</label>
+                <div class="multi-select" id="fundFilter" data-placeholder="All Funds">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Funds</span></span>
+                        <span class="multi-select-arrow">&#9662;</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Filter by Account</label>
+                <div class="multi-select" id="accountFilter" data-placeholder="All Accounts">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Accounts</span></span>
+                        <span class="multi-select-arrow">&#9662;</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Filter by Vintage</label>
+                <div class="multi-select" id="vintageFilter" data-placeholder="All Vintages">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Vintages</span></span>
+                        <span class="multi-select-arrow">&#9662;</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Filter by Tag</label>
+                <div class="multi-select" id="tagFilter" data-placeholder="All Tags">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Tags</span></span>
+                        <span class="multi-select-arrow">&#9662;</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
+            </div>
+            <div class="control-group">
+                <label for="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date">Cutoff Date</label>
+                <input type="date" id="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date" aria-label="Cutoff date for calculating metrics">
+            </div>
+            <span id="activeFiltersIndicator" class="filter-badge" style="display: none;" aria-live="polite"></span>
+            <div id="filterLoading" class="filter-loading" aria-live="polite">
+                <div class="filter-loading-spinner" aria-hidden="true"></div>
+                <span>Filtering...</span>
+            </div>
+            <div style="margin-left: auto;">
+                <button class="btn-icon" id="toggleSidebarBtn" title="Settings and Actions" aria-label="Open settings sidebar" style="font-size: 20px;">&#9776;</button>
+            </div>
+        </div>
+
+        <div class="content" id="mainContent">
+            <div id="portfolioSummary" class="portfolio-summary">
+                <div class="summary-stat">
+                    <span class="summary-label">Investments</span>
+                    <span class="summary-value" id="summaryInvestmentCount">0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Funds</span>
+                    <span class="summary-value" id="summaryFundCount">0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Total Commitment</span>
+                    <span class="summary-value" id="summaryCommitment">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-label">Total NAV</span>
+                    <span class="summary-value" id="summaryNav">$0</span>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-label-container">
+                        <span class="summary-label">Avg IRR</span>
+                        <span class="info-icon" aria-label="IRR explanation">?<span class="tooltip">Internal Rate of Return: The annualized return rate that makes the net present value of all cash flows equal to zero. Higher is better.</span></span>
+                    </div>
+                    <span class="summary-value" id="summaryIRR">N/A</span>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-label-container">
+                        <span class="summary-label">Avg MOIC</span>
+                        <span class="info-icon" aria-label="MOIC explanation">?<span class="tooltip">Multiple on Invested Capital: Total value (distributions + NAV) divided by total contributions. A MOIC of 2.0x means you doubled your money.</span></span>
+                    </div>
+                    <span class="summary-value" id="summaryMOIC">N/A</span>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-label-container">
+                        <span class="summary-label">DPI</span>
+                        <span class="info-icon" aria-label="DPI explanation">?<span class="tooltip">Distributions to Paid-In: Total distributions divided by total contributions. Measures actual cash returned to investors.</span></span>
+                    </div>
+                    <span class="summary-value" id="summaryDPI">N/A</span>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-label-container">
+                        <span class="summary-label">RVPI</span>
+                        <span class="info-icon" aria-label="RVPI explanation">?<span class="tooltip">Residual Value to Paid-In: Current NAV divided by total contributions. Represents unrealized value still held in the fund.</span></span>
+                    </div>
+                    <span class="summary-value" id="summaryRVPI">N/A</span>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-label-container">
+                        <span class="summary-label">TVPI</span>
+                        <span class="info-icon" aria-label="TVPI explanation">?<span class="tooltip">Total Value to Paid-In: DPI + RVPI. The most comprehensive measure of fund performance.</span></span>
+                    </div>
+                    <span class="summary-value" id="summaryTVPI">N/A</span>
+                </div>
+            </div>
+
+            <div id="timelinePanel" class="timeline-panel">
+                <div class="timeline-header" id="timelineHeader">
+                    <h3>
+                        <span>Cash Flow Timeline</span>
+                        <span style="font-weight: normal; font-size: 12px; color: var(--color-text-light);">(Historical + Projected)</span>
+                    </h3>
+                    <span class="timeline-toggle">&#9660;</span>
+                </div>
+                <div class="timeline-content">
+                    <div id="timelineTableContainer">
+                        <p class="timeline-no-data">No investments to display yet.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="fundsTable">
+                    <thead>
+                        <tr>
+                            <th data-sort="fundName">Fund Name</th>
+                            <th data-sort="accountNumber" class="center">Investor</th>
+                            <th data-sort="vintage" class="center">Vintage</th>
+                            <th data-sort="commitment" class="center number">Commitment</th>
+                            <th data-sort="totalContributions" class="center number">Contributions</th>
+                            <th data-sort="totalDistributions" class="center number">Distributions</th>
+                            <th data-sort="nav" class="center number">Value (NAV)</th>
+                            <th data-sort="investmentReturn" class="center number wrap-header">Investment<br>Return</th>
+                            <th data-sort="moic" class="center number">MOIC</th>
+                            <th data-sort="irr" class="center number">IRR</th>
+                            <th data-sort="outstandingCommitment" class="center number wrap-header">Outstanding<br>Commitment</th>
+                            <th class="center"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="fundsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fund Add/Edit Modal -->
+    <div id="fundModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeFundModalBtn">&times;</span>
+            <h2 id="fundModalTitle">Add New Investment</h2>
+            <form id="fundForm">
+                <input type="hidden" id="fundId">
+                <input type="hidden" id="isDuplicate">
+                <div class="form-group">
+                    <label for="fundName">Fund Name *</label>
+                    <select id="fundName" required></select>
+                    <div id="newFundNameContainer" style="display: none; margin-top: 8px;">
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="newFundNameInline" placeholder="Enter new fund name" style="flex: 1;">
+                            <button type="button" class="btn-primary" id="addNewFundNameBtn" style="padding: 8px 12px; white-space: nowrap;">Add</button>
+                            <button type="button" class="btn-secondary" id="cancelNewFundNameBtn" style="padding: 8px 12px;">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="accountNumber">Account Number *</label>
+                    <input type="text" id="accountNumber" required>
+                </div>
+                <div class="form-group">
+                    <label for="fundGroup">Group (optional)</label>
+                    <select id="fundGroup">
+                        <option value="">No Group</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="commitment">Commitment (USD) *</label>
+                    <input type="text" id="commitment" required placeholder="e.g., 1,000,000">
+                </div>
+                <div id="duplicateMultiplierContainer" class="form-group" style="display: none;">
+                    <label for="duplicateMultiplier">Duplicate Multiplier</label>
+                    <input type="number" id="duplicateMultiplier" step="any" value="1">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary" id="saveFundBtn">Save</button>
+                    <button type="button" class="btn-secondary" id="cancelFundModalBtn">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Action Dropdown -->
+    <div id="actionDropdown" class="action-dropdown">
+        <a href="#" id="actionEdit">Edit</a>
+        <a href="#" id="actionDuplicate">Duplicate</a>
+        <a href="#" id="actionViewDetails">View Details</a>
+        <a href="#" id="actionDelete" class="danger-action">Delete</a>
+    </div>
+
+    <!-- Manage Fund Names Modal -->
+    <div id="manageFundNamesModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeManageFundsModalBtn">&times;</span>
+            <h2>Manage Fund Names</h2>
+            <div class="form-group">
+                <label for="newFundNameInput">Add New Fund Name</label>
+                <input type="text" id="newFundNameInput" placeholder="Enter fund name">
+            </div>
+            <details id="newFundTermsDetails" style="margin-bottom: 15px;">
+                <summary style="cursor: pointer; color: var(--color-action); font-size: 13px;">+ Add Fund Terms (optional)</summary>
+                <div style="padding: 10px; background: var(--color-alt-bg); border-radius: var(--radius-sm); margin-top: 10px;">
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label for="newFundTermStartDate" style="font-size: 12px;">Investment Term Start Date</label>
+                        <input type="date" id="newFundTermStartDate">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="newFundInvestmentTerm" style="font-size: 12px;">Investment Term (years)</label>
+                        <input type="number" id="newFundInvestmentTerm" min="1" max="15" step="1" placeholder="e.g., 5">
+                    </div>
+                </div>
+            </details>
+            <button class="btn-primary" id="addNewFundNameModalBtn" style="width: 100%;">Add Fund Name</button>
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--color-border);">
+            <h3 style="margin-bottom: 15px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Existing Fund Names</h3>
+            <div id="fundNamesList"></div>
+            <div class="form-actions">
+                <button class="btn-secondary" id="closeManageFundsModal2Btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Fund Name Modal -->
+    <div id="editFundNameModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeEditFundNameModalBtn">&times;</span>
+            <h2>Edit Fund</h2>
+            <input type="hidden" id="editFundNameOriginal" value="">
+            <div class="form-group">
+                <label for="editFundNameInput">Fund Name</label>
+                <input type="text" id="editFundNameInput" placeholder="Enter fund name">
+            </div>
+            <div class="form-group">
+                <label for="editFundTags">Tags (optional)</label>
+                <div id="editFundTagsContainer" class="tags-container"></div>
+                <input type="text" id="editFundTagsInput" placeholder="Add tag (e.g., Venture Capital, Growth Equity)" list="editFundTagsDatalist">
+                <datalist id="editFundTagsDatalist"></datalist>
+                <div class="hint">Press Enter to add tags. Click x on a tag to remove it.</div>
+            </div>
+            <h3 style="margin: 20px 0 15px 0; color: var(--color-text); font-weight: 600; font-size: 1em; border-top: 1px solid var(--color-border); padding-top: 20px;">Fund Terms</h3>
+            <div class="form-group">
+                <label for="editFundTermStartDate">Investment Term Start Date</label>
+                <input type="date" id="editFundTermStartDate">
+            </div>
+            <div class="form-group">
+                <label for="editFundInvestmentTerm">Investment Term (years)</label>
+                <input type="number" id="editFundInvestmentTerm" min="1" max="15" step="1" placeholder="e.g., 5">
+                <div class="hint">Number of years from term start during which capital can be called</div>
+            </div>
+            <div class="form-actions">
+                <button class="btn-primary" id="saveEditedFundNameBtn">Save Changes</button>
+                <button class="btn-secondary" id="cancelEditFundNameBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Groups Modal -->
+    <div id="manageGroupsModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" id="closeManageGroupsModal2Btn">&times;</span>
+            <h2>Manage Account Groups</h2>
+            <input type="hidden" id="editGroupId" value="">
+            <h3 id="groupFormTitle" style="margin-bottom: 15px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Add New Group</h3>
+            <div class="form-group">
+                <label for="newGroupName">Group Name</label>
+                <input type="text" id="newGroupName" placeholder="e.g., John Smith, Smith Family Trust">
+                <small style="color: var(--color-text-light); font-size: 0.85em; margin-top: 4px; display: block;">Use groups to organize by account holder or entity</small>
+            </div>
+            <div class="form-group">
+                <label for="newGroupParent">Parent Group (optional)</label>
+                <select id="newGroupParent">
+                    <option value="">None (Top Level)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="newGroupType">Type (optional)</label>
+                <input type="text" id="newGroupType" placeholder="e.g., Client, Trust, Account">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button id="saveGroupBtn" class="btn-primary">Add Group</button>
+                <button id="cancelEditBtn" class="btn-secondary" style="display: none;">Cancel</button>
+            </div>
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--color-border);">
+            <h3 style="margin-bottom: 15px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Existing Groups</h3>
+            <div id="groupsList" style="max-height: 400px; overflow-y: auto;"></div>
+            <div class="form-actions">
+                <button class="btn-secondary" id="closeManageGroupsModalBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <span class="close" id="closeDetailsModalBtn">&times;</span>
+            <h2 id="detailsModalTitle">Fund Details</h2>
+            <p id="detailsModalSubtitle" style="margin: 5px 0 0 0; color: var(--color-text-light); font-size: 0.9em;"></p>
+            <div id="detailsSummary" class="portfolio-summary" style="margin-top: 20px;">
+                <div class="summary-stat"><span class="summary-label">Total Commitment</span><span class="summary-value" id="detailsSummaryCommitment">$0</span></div>
+                <div class="summary-stat"><span class="summary-label">Contributions</span><span class="summary-value" id="detailsSummaryContributions">$0</span></div>
+                <div class="summary-stat"><span class="summary-label">Distributions</span><span class="summary-value" id="detailsSummaryDistributions">$0</span></div>
+                <div class="summary-stat"><span class="summary-label">Current Value</span><span class="summary-value" id="detailsSummaryValue">$0</span></div>
+                <div class="summary-stat"><span class="summary-label">Investment Return</span><span class="summary-value" id="detailsSummaryReturn">$0</span></div>
+                <div class="summary-stat"><span class="summary-label">Outstanding Commitment</span><span class="summary-value" id="detailsSummaryOutstanding">$0</span></div>
+            </div>
+            <h3 style="margin-top: 20px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Cash Flows</h3>
+            <div class="details-table-wrapper">
+                <table class="details-table" id="cashFlowsTable">
+                    <thead><tr><th>Date</th><th class="number">Amount (USD)</th><th class="center">Type</th><th class="center">Affects Commitment?</th><th></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" id="addCashFlowRowBtn">Add Cash Flow</button>
+            <h3 style="margin-top: 30px; color: var(--color-text); font-weight: 600; font-size: 1.1em;">Values</h3>
+            <div class="details-table-wrapper">
+                <table class="details-table" id="navTable">
+                    <thead><tr><th>Date</th><th>Amount (USD)</th><th></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" id="addNavRowBtn">Add Value</button>
+            <div class="form-actions">
+                <button class="btn-primary" id="saveDetailsChangesBtn">Save Changes</button>
+                <button class="btn-secondary" id="cancelDetailsModalBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup Warning Modal -->
+    <div id="backupWarningModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close" id="closeBackupWarningBtn">&times;</span>
+            <h2 style="color: var(--color-warning); margin-bottom: 15px;">Important: Backup Your Data</h2>
+            <p style="line-height: 1.6; margin-bottom: 15px;">Your PE Fund Manager data is stored <strong>locally in your browser</strong>. This means your data could be lost if:</p>
+            <ul style="margin: 15px 0 15px 25px; line-height: 1.8;">
+                <li>You clear your browser cache or cookies</li>
+                <li>You uninstall your browser</li>
+                <li>Your computer crashes or is reset</li>
+                <li>You switch to a different device</li>
+            </ul>
+            <p style="line-height: 1.6; margin-bottom: 20px; font-weight: 600; color: var(--color-danger);">Please export your data regularly to avoid data loss!</p>
+            <div class="form-group">
+                <label><input type="checkbox" id="dontShowBackupWarning" style="margin-right: 8px;">Don't show this warning again</label>
+            </div>
+            <div class="form-actions">
+                <button class="btn-success" id="exportNowBtn">Export Now</button>
+                <button class="btn-secondary" id="remindLaterBtn">Remind Me Later</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="shortcutsModal" class="modal shortcuts-modal">
+        <div class="modal-content">
+            <span class="close" id="closeShortcutsModalBtn">&times;</span>
+            <h2>Keyboard Shortcuts</h2>
+            <div class="shortcuts-list">
+                <div class="shortcut-key"><kbd>?</kbd></div><div class="shortcut-desc">Show this help</div>
+                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>N</kbd></div><div class="shortcut-desc">Add new investment</div>
+                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>E</kbd></div><div class="shortcut-desc">Export to JSON</div>
+                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>S</kbd></div><div class="shortcut-desc">Save (in details modal)</div>
+                <div class="shortcut-key"><kbd>Esc</kbd></div><div class="shortcut-desc">Close modal/sidebar</div>
+            </div>
+            <div class="form-actions"><button class="btn-secondary" id="closeShortcutsModal2Btn">Close</button></div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="modal confirm-modal">
+        <div class="modal-content confirm-modal-content">
+            <h2 id="confirmModalTitle">Confirm</h2>
+            <p id="confirmModalMessage" class="confirm-modal-message"></p>
+            <div class="form-actions">
+                <button class="btn-secondary" id="confirmModalCancelBtn">Cancel</button>
+                <button class="btn-danger" id="confirmModalConfirmBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Cash Flow Modal -->
+    <div id="bulkCashFlowModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" id="closeBulkCashFlowModalBtn">&times;</span>
+            <h2>Bulk Cash Flow</h2>
+            <p style="color: var(--color-text-light); margin-bottom: 20px; font-size: 14px;">Add a cash flow to all investors in a fund based on a percentage of their commitment.</p>
+            <div class="form-group"><label for="bulkCashFlowFundName">Fund Name *</label><select id="bulkCashFlowFundName" required><option value="">Select a fund</option></select></div>
+            <div class="form-group"><label for="bulkCashFlowDate">Date *</label><input type="date" id="bulkCashFlowDate" required></div>
+            <div class="form-group"><label for="bulkCashFlowType">Type *</label><select id="bulkCashFlowType" required><option value="Contribution">Contribution (Capital Call)</option><option value="Distribution">Distribution</option><option value="Adjustment">Adjustment</option></select></div>
+            <div class="form-group"><label for="bulkCashFlowPercentage">Percentage of Commitment *</label><input type="number" id="bulkCashFlowPercentage" step="0.01" min="0.01" max="100" placeholder="e.g., 4.5" required><div class="hint">Enter percentage (e.g., 4.5 for 4.5%)</div></div>
+            <div class="form-group"><label><input type="checkbox" id="bulkCashFlowAffectsCommitment" checked>Affects unfunded commitment</label></div>
+            <div id="bulkCashFlowPreview" style="display: none; margin: 20px 0; padding: 15px; background: var(--color-alt-bg); border-radius: var(--radius-sm); max-height: 300px; overflow-y: auto;"><h4 style="margin: 0 0 10px 0; font-size: 14px;">Preview</h4><div id="bulkCashFlowPreviewContent"></div></div>
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" id="previewBulkCashFlowBtn">Preview</button>
+                <button type="button" class="btn-primary" id="applyBulkCashFlowBtn" disabled>Apply</button>
+                <button type="button" class="btn-secondary" id="cancelBulkCashFlowBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Remove Fund Modal -->
+    <div id="bulkRemoveFundModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" id="closeBulkRemoveFundModalBtn">&times;</span>
+            <h2>Bulk Remove Fund</h2>
+            <p style="color: var(--color-text-light); margin-bottom: 20px; font-size: 14px;">Remove all investor positions for a selected fund. This action cannot be undone.</p>
+            <div class="form-group"><label for="bulkRemoveFundName">Fund Name *</label><select id="bulkRemoveFundName" required><option value="">Select a fund</option></select></div>
+            <div id="bulkRemoveFundPreview" style="display: none; margin: 20px 0; padding: 15px; background: var(--color-alt-bg); border-radius: var(--radius-sm); max-height: 300px; overflow-y: auto;"><h4 style="margin: 0 0 10px 0; font-size: 14px; color: var(--color-danger);">The following investors will be removed:</h4><div id="bulkRemoveFundPreviewContent"></div></div>
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" id="previewBulkRemoveFundBtn">Preview</button>
+                <button type="button" class="btn-danger" id="applyBulkRemoveFundBtn" disabled>Remove All</button>
+                <button type="button" class="btn-secondary" id="cancelBulkRemoveFundBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Assign Group Modal -->
+    <div id="bulkAssignGroupModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" id="closeBulkAssignGroupModalBtn">&times;</span>
+            <h2>Bulk Assign Group</h2>
+            <p style="color: var(--color-text-light); margin-bottom: 20px; font-size: 14px;">Assign all investments with a specific account number to a group.</p>
+            <div class="form-group"><label for="bulkAssignGroupAccount">Account Number *</label><select id="bulkAssignGroupAccount" required><option value="">Select an account</option></select></div>
+            <div class="form-group"><label for="bulkAssignGroupTarget">Target Group *</label><select id="bulkAssignGroupTarget" required><option value="">No Group</option></select></div>
+            <div id="bulkAssignGroupPreview" style="display: none; margin: 20px 0; padding: 15px; background: var(--color-alt-bg); border-radius: var(--radius-sm); max-height: 300px; overflow-y: auto;"><h4 style="margin: 0 0 10px 0; font-size: 14px;">The following investments will be updated:</h4><div id="bulkAssignGroupPreviewContent"></div></div>
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" id="previewBulkAssignGroupBtn">Preview</button>
+                <button type="button" class="btn-primary" id="applyBulkAssignGroupBtn" disabled>Apply</button>
+                <button type="button" class="btn-secondary" id="cancelBulkAssignGroupBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Preview Modal -->
+    <div id="importPreviewModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <span class="close" id="closeImportPreviewModalBtn">&times;</span>
+            <h2>Import Preview</h2>
+            <p style="color: var(--color-text-light); margin-bottom: 20px; font-size: 14px;">Review the data to be imported before confirming.</p>
+            <div id="importPreviewContent" style="margin: 20px 0; padding: 15px; background: var(--color-alt-bg); border-radius: var(--radius-sm); max-height: 400px; overflow-y: auto;"><p style="color: var(--color-text-light);">Select a JSON file to preview...</p></div>
+            <div class="form-actions">
+                <label for="importPreviewFileInput" class="btn-secondary" style="cursor: pointer; display: inline-block; padding: 9px 18px; min-width: 100px; text-align: center;">Choose File</label>
+                <input type="file" id="importPreviewFileInput" accept=".json" style="display: none;">
+                <button type="button" class="btn-primary" id="applyImportBtn" disabled style="min-width: 100px;">Import</button>
+                <button type="button" class="btn-secondary" id="cancelImportPreviewBtn" style="min-width: 100px;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Panel -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h3>Settings & Actions</h3>
+            <button class="sidebar-close" id="closeSidebarBtn" title="Close">&times;</button>
+        </div>
+        <div class="sidebar-content">
+            <div class="sidebar-section">
+                <h4 class="sidebar-section-title">View Options</h4>
+                <div class="sidebar-item"><label class="sidebar-checkbox-label"><input type="checkbox" id="sidebarShowTagsCheckbox" checked><span>Show Tags</span></label></div>
+                <div class="sidebar-item"><label class="sidebar-checkbox-label"><input type="checkbox" id="sidebarDarkModeCheckbox"><span>Dark Mode</span></label></div>
+            </div>
+            <div class="sidebar-section">
+                <h4 class="sidebar-section-title">Manage</h4>
+                <div class="sidebar-item"><a href="#" id="sidebarNewInvestment">New Investment</a></div>
+                <div class="sidebar-item"><a href="#" id="sidebarManageFunds">Manage Funds</a></div>
+                <div class="sidebar-item"><a href="#" id="sidebarManageGroups">Manage Groups</a></div>
+                <div class="sidebar-item"><a href="#" id="sidebarBulkCashFlow">Bulk Cash Flow</a></div>
+                <div class="sidebar-item"><a href="#" id="sidebarBulkAssignGroup">Bulk Assign Group</a></div>
+            </div>
+            <div class="sidebar-section">
+                <h4 class="sidebar-section-title">Data</h4>
+                <div class="sidebar-item"><a href="#" id="sidebarExportCSV">Export to CSV</a></div>
+                <div class="sidebar-item"><a href="#" id="sidebarExportJSON">Export to JSON</a></div>
+                <div class="sidebar-item"><a href="#" id="sidebarExportPDF">Export to PDF</a></div>
+                <div class="sidebar-item"><a href="#" id="sidebarImportJSON">Import JSON</a></div>
+            </div>
+            <div class="sidebar-section">
+                <h4 class="sidebar-section-title">Temporary</h4>
+                <div class="sidebar-item"><a href="#" id="sidebarLoadSampleData">Load Sample Data</a></div>
+                <div class="sidebar-item"><a href="#" id="sidebarBulkRemoveFund" style="color: var(--color-danger);">Bulk Remove Fund</a></div>
+                <div class="sidebar-item"><a href="#" id="sidebarClearDatabase" style="color: var(--color-danger);">Clear Database</a></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+</body>
+</html>
