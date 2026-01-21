@@ -747,6 +747,17 @@ export async function saveFundFromModal(
       showStatus('Investment added successfully');
     }
 
+    // Sync group across all investments with the same account number
+    if (accountNumber) {
+      const allFunds = await getAllFunds();
+      const fundsWithSameAccount = allFunds.filter(
+        (f) => f.accountNumber === accountNumber && f.groupId !== groupId
+      );
+      for (const fund of fundsWithSameAccount) {
+        await saveFundToDB({ ...fund, groupId });
+      }
+    }
+
     fundModalHasUnsavedChanges = false;
     closeModal('fundModal');
     AppState.clearMetricsCache();
