@@ -5981,9 +5981,50 @@
                     }
                 }
             } else if (groupFilterValues.length > 1) {
-                // Multiple groups selected
-                headerTitle.textContent = `${groupFilterValues.length} Groups Selected`;
-                headerSubtitle.textContent = 'Multiple investor groups';
+                // Multiple groups selected - check if they share a common parent
+                const selectedIds = groupFilterValues.map(v => parseInt(v));
+
+                // Find the "effective" parent: if one selected group is ancestor of all others, use it
+                // Otherwise, check if all selected groups share the same immediate parent
+                let effectiveGroup = null;
+
+                // First, check if one of the selected groups is an ancestor of all others
+                for (const id of selectedIds) {
+                    const descendants = AppState.getDescendantIds(id);
+                    if (selectedIds.every(selId => selId === id || descendants.includes(selId))) {
+                        // This group contains all other selected groups
+                        if (!effectiveGroup || descendants.length < AppState.getDescendantIds(effectiveGroup.id).length) {
+                            effectiveGroup = AppState.getGroupByIdSync(id);
+                        }
+                    }
+                }
+
+                // If no selected group is ancestor of all, check if all share the same parent
+                if (!effectiveGroup) {
+                    const parentIds = selectedIds.map(id => {
+                        const g = AppState.getGroupByIdSync(id);
+                        return g ? g.parentGroupId : null;
+                    });
+                    const uniqueParents = [...new Set(parentIds)];
+
+                    if (uniqueParents.length === 1 && uniqueParents[0] != null) {
+                        // All selected groups share the same parent
+                        effectiveGroup = AppState.getGroupByIdSync(uniqueParents[0]);
+                    }
+                }
+
+                if (effectiveGroup) {
+                    headerTitle.textContent = effectiveGroup.name;
+                    if (effectiveGroup.parentGroupId) {
+                        const grandparent = AppState.getGroupByIdSync(effectiveGroup.parentGroupId);
+                        headerSubtitle.textContent = grandparent ? grandparent.name : (effectiveGroup.type || 'Account Group');
+                    } else {
+                        headerSubtitle.textContent = '';
+                    }
+                } else {
+                    headerTitle.textContent = `${groupFilterValues.length} Groups Selected`;
+                    headerSubtitle.textContent = 'Multiple investor groups';
+                }
             } else {
                 // Reset to default
                 headerTitle.textContent = 'PE Fund Manager';
