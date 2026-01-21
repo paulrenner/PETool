@@ -19,11 +19,13 @@ src/
 ├── types/           # TypeScript type definitions
 │   ├── fund.ts      # Fund, CashFlow, Nav types
 │   ├── group.ts     # Group type
+│   ├── state.ts     # AppState type definitions
 │   └── index.ts     # Re-exports
 ├── core/            # Core functionality
 │   ├── config.ts    # Application constants
 │   ├── state.ts     # AppState singleton
-│   └── db.ts        # IndexedDB operations
+│   ├── db.ts        # IndexedDB operations
+│   └── index.ts     # Re-exports
 ├── calculations/    # Financial calculations
 │   ├── irr.ts       # IRR and MOIC calculations
 │   ├── metrics.ts   # Fund metrics (DPI, RVPI, TVPI, etc.)
@@ -31,14 +33,24 @@ src/
 ├── utils/           # Utility functions
 │   ├── formatting.ts # Currency, date formatting
 │   ├── validation.ts # Input validation
-│   └── escaping.ts   # HTML/CSV escaping
-└── app/             # UI modules
-    ├── modals.ts    # Modal dialogs
+│   ├── escaping.ts   # HTML/CSV escaping
+│   └── index.ts     # Re-exports
+├── ui/              # Reusable UI components
+│   ├── modal.ts     # Modal dialog utilities
+│   ├── multiselect.ts # Multi-select dropdown component
+│   ├── formatter.ts # Display formatting helpers
+│   ├── storage.ts   # localStorage utilities
+│   ├── utils.ts     # DOM utilities
+│   └── index.ts     # Re-exports
+└── app/             # Application modules
+    ├── modals.ts    # Fund/cash flow modal dialogs
     ├── table.ts     # Table rendering
     ├── filters.ts   # Filter functionality
     ├── bulk.ts      # Bulk operations
     ├── import.ts    # Data import
-    └── export.ts    # Data export
+    ├── export.ts    # Data export
+    ├── timeline.ts  # Timeline visualization
+    └── index.ts     # Re-exports
 ```
 
 ## Development Workflow
@@ -53,7 +65,7 @@ Output goes to `dist/index.html`. Copy to root `index.html` for deployment.
 ```bash
 npm test         # Run Jest tests
 ```
-- 165 tests across 4 test suites
+- 265 tests across 7 test suites
 - Tests import directly from `src/` TypeScript modules
 
 ### Development
