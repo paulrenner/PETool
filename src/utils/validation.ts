@@ -23,7 +23,9 @@ export function isValidDate(dateStr: string): boolean {
   if (typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     return false;
   }
-  const date = new Date(dateStr);
+  // Use UTC methods to avoid timezone issues
+  // new Date("2021-08-01") is parsed as UTC, so we must use getUTC* methods
+  const date = new Date(dateStr + 'T00:00:00');
   if (isNaN(date.getTime())) {
     return false;
   }
