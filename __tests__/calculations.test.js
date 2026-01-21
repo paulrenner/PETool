@@ -7,7 +7,7 @@ import {
     getOutstandingCommitment,
     parseCashFlowsForIRR,
     calculateMetrics
-} from '../src/calculations.js';
+} from '../src/calculations';
 
 describe('calculateIRR', () => {
     test('returns null for empty array', () => {

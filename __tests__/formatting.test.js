@@ -1,11 +1,13 @@
 import {
     parseCurrency,
-    formatNumberWithCommas,
     formatCurrency,
     formatNumber,
+    formatNumberWithCommas,
+} from '../src/utils/formatting';
+import {
     escapeHtml,
     escapeCSV
-} from '../src/formatting.js';
+} from '../src/utils/escaping';
 
 describe('parseCurrency', () => {
     test('parses plain number', () => {

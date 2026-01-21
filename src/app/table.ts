@@ -1,0 +1,297 @@
+/**
+ * Table rendering and sorting functionality
+ */
+
+import type { Fund, FundWithMetrics, SortColumn } from '../types';
+import { AppState } from '../core/state';
+import { calculateMetrics, calculateIRR, calculateMOIC, parseCashFlowsForIRR } from '../calculations';
+import { escapeHtml } from '../utils/escaping';
+import { formatCurrency } from '../utils/formatting';
+
+/**
+ * Format MOIC for display
+ */
+export function formatMOIC(moic: number | null): string {
+  if (moic === null || moic === undefined || !isFinite(moic)) return 'N/A';
+  return moic.toFixed(2) + 'x';
+}
+
+/**
+ * Format IRR for display
+ */
+export function formatIRR(irr: number | null): string {
+  if (irr === null || irr === undefined || !isFinite(irr)) return 'N/A';
+  return (irr * 100).toFixed(2) + '%';
+}
+
+/**
+ * Get immediate parent group name for a fund
+ */
+export function getImmediateParentName(fund: Fund): string {
+  if (!fund.groupId) return '';
+  const group = AppState.getGroupByIdSync(fund.groupId);
+  return group ? group.name : '';
+}
+
+/**
+ * Get parent name + account display text
+ */
+export function getParentAccountDisplay(fund: Fund): string {
+  const parentName = getImmediateParentName(fund);
+  return parentName ? `${parentName} (${fund.accountNumber})` : fund.accountNumber;
+}
+
+/**
+ * Get HTML for investor cell display
+ */
+export function getInvestorCellHtml(fund: Fund): string {
+  const groupName = getImmediateParentName(fund);
+  if (groupName) {
+    return `<div>${escapeHtml(groupName)}</div><div style="font-size: 0.85em; color: var(--color-text-light);">${escapeHtml(fund.accountNumber)}</div>`;
+  }
+  return escapeHtml(fund.accountNumber);
+}
+
+/**
+ * Sort data by multiple columns
+ */
+export function sortData(funds: Fund[], sortColumns: SortColumn[], cutoffDate?: Date): Fund[] {
+  if (sortColumns.length === 0) return funds;
+
+  return [...funds].sort((a, b) => {
+    for (const { column, direction } of sortColumns) {
+      const multiplier = direction === 'asc' ? 1 : -1;
+      let comparison = 0;
+
+      // Get metrics for comparison (with cutoffDate for consistency with displayed values)
+      const metricsA = calculateMetrics(a, cutoffDate);
+      const metricsB = calculateMetrics(b, cutoffDate);
+
+      switch (column) {
+        case 'fundName':
+          comparison = a.fundName.localeCompare(b.fundName);
+          break;
+        case 'accountNumber':
+          comparison = getParentAccountDisplay(a).localeCompare(getParentAccountDisplay(b));
+          break;
+        case 'vintage':
+          const vintageA = metricsA.vintageYear || 0;
+          const vintageB = metricsB.vintageYear || 0;
+          comparison = vintageA - vintageB;
+          break;
+        case 'commitment':
+          comparison = (metricsA.commitment || 0) - (metricsB.commitment || 0);
+          break;
+        case 'totalContributions':
+          comparison = (metricsA.calledCapital || 0) - (metricsB.calledCapital || 0);
+          break;
+        case 'totalDistributions':
+          comparison = (metricsA.distributions || 0) - (metricsB.distributions || 0);
+          break;
+        case 'nav':
+          comparison = (metricsA.nav || 0) - (metricsB.nav || 0);
+          break;
+        case 'investmentReturn':
+          comparison = (metricsA.investmentReturn || 0) - (metricsB.investmentReturn || 0);
+          break;
+        case 'moic':
+          comparison = (metricsA.moic || 0) - (metricsB.moic || 0);
+          break;
+        case 'irr':
+          comparison = (metricsA.irr || 0) - (metricsB.irr || 0);
+          break;
+        case 'outstandingCommitment':
+          comparison = (metricsA.outstandingCommitment || 0) - (metricsB.outstandingCommitment || 0);
+          break;
+        default:
+          comparison = 0;
+      }
+
+      if (comparison !== 0) {
+        return comparison * multiplier;
+      }
+    }
+    return 0;
+  });
+}
+
+/**
+ * Render fund row HTML
+ */
+export function renderFundRow(
+  fund: FundWithMetrics,
+  _index: number,
+  showTags: boolean = false
+): string {
+  const m = fund.metrics;
+  const fundNameObj = AppState.fundNameData.get(fund.fundName);
+  const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+  const tagsHtml =
+    showTags && tags.length > 0
+      ? `<div class="table-tags">${tags.map((tag) => `<span class="table-tag">${escapeHtml(tag)}</span>`).join('')}</div>`
+      : '';
+
+  const investmentReturn = m.investmentReturn ?? (m.distributions + m.nav - m.calledCapital);
+
+  return `
+    <td>
+      <div>${escapeHtml(fund.fundName)}</div>
+      ${tagsHtml}
+    </td>
+    <td title="${escapeHtml(getParentAccountDisplay(fund))}">${getInvestorCellHtml(fund)}</td>
+    <td class="center">${m.vintageYear || 'N/A'}</td>
+    <td class="number">${formatCurrency(m.commitment || 0)}</td>
+    <td class="number">${formatCurrency(m.calledCapital)}</td>
+    <td class="number">${formatCurrency(m.distributions)}</td>
+    <td class="number">${formatCurrency(m.nav)}</td>
+    <td class="number ${investmentReturn >= 0 ? 'positive' : 'negative'}">${formatCurrency(investmentReturn)}</td>
+    <td class="number">${formatMOIC(m.moic)}</td>
+    <td class="number ${m.irr !== null && m.irr >= 0 ? 'positive' : 'negative'}">${formatIRR(m.irr)}</td>
+    <td class="number">${formatCurrency(m.outstandingCommitment)}</td>
+    <td class="center">
+      <button class="btn-icon fund-actions-btn" data-fund-id="${fund.id}" title="Actions" aria-label="Actions for ${escapeHtml(fund.fundName)}">⚙</button>
+    </td>
+  `;
+}
+
+/**
+ * Calculate aggregate totals for a list of funds
+ */
+export function calculateTotals(
+  fundsWithMetrics: FundWithMetrics[],
+  cutoffDate?: Date
+): {
+  commitment: number;
+  calledCapital: number;
+  distributions: number;
+  nav: number;
+  investmentReturn: number;
+  outstandingCommitment: number;
+  aggregateIRR: number | null;
+  aggregateMOIC: number | null;
+  aggregateDPI: number | null;
+  aggregateRVPI: number | null;
+  aggregateTVPI: number | null;
+} {
+  const totals = {
+    commitment: 0,
+    calledCapital: 0,
+    distributions: 0,
+    nav: 0,
+    investmentReturn: 0,
+    outstandingCommitment: 0,
+    aggregateFlows: [] as { date: string; amount: number }[],
+  };
+
+  fundsWithMetrics.forEach((fund) => {
+    const m = fund.metrics;
+    totals.commitment += m.commitment || 0;
+    totals.calledCapital += m.calledCapital;
+    totals.distributions += m.distributions;
+    totals.nav += m.nav;
+    totals.investmentReturn += m.investmentReturn ?? (m.distributions + m.nav - m.calledCapital);
+    totals.outstandingCommitment += m.outstandingCommitment;
+
+    const flows = parseCashFlowsForIRR(fund, cutoffDate);
+    totals.aggregateFlows.push(...flows);
+  });
+
+  const aggregateIRR = calculateIRR(totals.aggregateFlows);
+  const aggregateMOIC = calculateMOIC(totals.aggregateFlows);
+
+  // Calculate aggregate DPI, RVPI, TVPI
+  const aggregateDPI = totals.calledCapital > 0 ? totals.distributions / totals.calledCapital : null;
+  const aggregateRVPI = totals.calledCapital > 0 ? totals.nav / totals.calledCapital : null;
+  const aggregateTVPI =
+    totals.calledCapital > 0 ? (totals.distributions + totals.nav) / totals.calledCapital : null;
+
+  return {
+    commitment: totals.commitment,
+    calledCapital: totals.calledCapital,
+    distributions: totals.distributions,
+    nav: totals.nav,
+    investmentReturn: totals.investmentReturn,
+    outstandingCommitment: totals.outstandingCommitment,
+    aggregateIRR,
+    aggregateMOIC,
+    aggregateDPI,
+    aggregateRVPI,
+    aggregateTVPI,
+  };
+}
+
+/**
+ * Render totals row HTML
+ */
+export function renderTotalsRow(
+  totals: ReturnType<typeof calculateTotals>
+): string {
+  return `
+    <td><strong>Total</strong></td>
+    <td></td>
+    <td></td>
+    <td class="number"><strong>${formatCurrency(totals.commitment)}</strong></td>
+    <td class="number"><strong>${formatCurrency(totals.calledCapital)}</strong></td>
+    <td class="number"><strong>${formatCurrency(totals.distributions)}</strong></td>
+    <td class="number"><strong>${formatCurrency(totals.nav)}</strong></td>
+    <td class="number ${totals.investmentReturn >= 0 ? 'positive' : 'negative'}"><strong>${formatCurrency(totals.investmentReturn)}</strong></td>
+    <td class="number"><strong>${formatMOIC(totals.aggregateMOIC)}</strong></td>
+    <td class="number ${totals.aggregateIRR !== null && totals.aggregateIRR >= 0 ? 'positive' : 'negative'}"><strong>${formatIRR(totals.aggregateIRR)}</strong></td>
+    <td class="number"><strong>${formatCurrency(totals.outstandingCommitment)}</strong></td>
+    <td></td>
+  `;
+}
+
+/**
+ * Update portfolio summary statistics
+ */
+export function updatePortfolioSummary(
+  fundsWithMetrics: FundWithMetrics[],
+  cutoffDate?: Date
+): void {
+  const totals = calculateTotals(fundsWithMetrics, cutoffDate);
+  const uniqueFunds = new Set(fundsWithMetrics.map((f) => f.fundName));
+
+  // Update DOM elements
+  const setElement = (id: string, value: string) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
+
+  setElement('summaryInvestmentCount', fundsWithMetrics.length.toString());
+  setElement('summaryFundCount', uniqueFunds.size.toString());
+  setElement('summaryCommitment', formatCurrency(totals.commitment));
+  setElement('summaryNav', formatCurrency(totals.nav));
+  setElement('summaryIRR', formatIRR(totals.aggregateIRR));
+  setElement('summaryMOIC', formatMOIC(totals.aggregateMOIC));
+  setElement('summaryDPI', totals.aggregateDPI !== null ? totals.aggregateDPI.toFixed(2) + 'x' : 'N/A');
+  setElement('summaryRVPI', totals.aggregateRVPI !== null ? totals.aggregateRVPI.toFixed(2) + 'x' : 'N/A');
+  setElement('summaryTVPI', totals.aggregateTVPI !== null ? totals.aggregateTVPI.toFixed(2) + 'x' : 'N/A');
+}
+
+/**
+ * Update sort indicator in table headers
+ */
+export function updateSortIndicators(sortColumns: SortColumn[]): void {
+  // Clear existing indicators
+  document.querySelectorAll('#fundsTable th').forEach((th) => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    const indicator = th.querySelector('.sort-indicator');
+    if (indicator) indicator.remove();
+  });
+
+  // Add indicators for current sort columns
+  sortColumns.forEach(({ column, direction }, index) => {
+    const th = document.querySelector(`#fundsTable th[data-sort="${column}"]`);
+    if (th) {
+      th.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
+      const indicator = document.createElement('span');
+      indicator.className = 'sort-indicator';
+      indicator.textContent = direction === 'asc' ? ' ▲' : ' ▼';
+      if (sortColumns.length > 1) {
+        indicator.textContent += ` (${index + 1})`;
+      }
+      th.appendChild(indicator);
+    }
+  });
+}
