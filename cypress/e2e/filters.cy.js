@@ -33,6 +33,9 @@ describe('Multi-Select Filters', () => {
       // Close dropdown
       cy.get('#mainContent').click();
 
+      // Wait for debounced filter to apply (300ms debounce + render time)
+      cy.wait(500);
+
       // Should show only Alpha Fund
       cy.contains('#fundsTableBody tr', 'Alpha Fund').should('exist');
       // Others should be hidden (either not exist or not be visible)
@@ -109,6 +112,9 @@ describe('Multi-Select Filters', () => {
       cy.get('#fundFilter .multi-select-trigger').click();
       cy.get('#fundFilter .multi-select-dropdown').contains('Alpha Fund').click();
       cy.get('#mainContent').click();
+
+      // Wait for debounced filter to apply (300ms debounce + render time)
+      cy.wait(500);
 
       // Active filters indicator should be visible
       cy.get('#activeFiltersIndicator').should('be.visible');
@@ -208,6 +214,9 @@ describe('Portfolio Summary with Filters', () => {
     cy.get('#fundFilter .multi-select-dropdown').contains('Fund One').click();
     cy.get('#mainContent').click();
 
+    // Wait for debounced filter to apply (300ms debounce + render time)
+    cy.wait(500);
+
     // Summary should update to show 1 investment
     cy.get('#summaryInvestmentCount').should('contain', '1');
   });
@@ -217,6 +226,9 @@ describe('Portfolio Summary with Filters', () => {
     cy.get('#fundFilter .multi-select-trigger').click();
     cy.get('#fundFilter .multi-select-dropdown').contains('Fund Two').click();
     cy.get('#mainContent').click();
+
+    // Wait for debounced filter to apply (300ms debounce + render time)
+    cy.wait(500);
 
     // Should show only Fund Two's commitment
     cy.get('#summaryCommitment').should('contain', '500,000');
