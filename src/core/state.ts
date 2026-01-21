@@ -1,0 +1,187 @@
+import type {
+  Fund,
+  FundMetrics,
+  FundNameData,
+  Group,
+  SortColumn,
+  MetricsCacheEntry,
+} from '../types';
+import { CONFIG } from './config';
+
+/**
+ * Centralized application state management
+ */
+class AppStateClass {
+  // Data
+  currentFunds: Fund[] = [];
+  fundNames: Set<string> = new Set();
+  fundNameData: Map<string, FundNameData> = new Map();
+  groups: Group[] = [];
+  groupsMap: Map<number, Group> = new Map();
+
+  // UI State
+  currentGroupDescendants: number[] | null = null;
+  sortColumns: SortColumn[] = [];
+  currentActionFundId: number | null = null;
+  currentDetailsFundId: number | null = null;
+  hasUnsavedChanges = false;
+  isResizingColumn = false;
+  lastMousedownOnResizer = false;
+
+  // Cache
+  metricsCache: Map<string, MetricsCacheEntry> = new Map();
+  groupDescendantsCache: Map<number, number[]> = new Map();
+  ancestorCache: Map<number, number[]> = new Map();
+
+  // Performance
+  abortController: AbortController | null = null;
+
+  // Getters
+  getFunds(): Fund[] {
+    return this.currentFunds;
+  }
+
+  getGroups(): Group[] {
+    return this.groups;
+  }
+
+  // Cache management
+  clearMetricsCache(): void {
+    this.metricsCache.clear();
+  }
+
+  getMetricsFromCache(fundId: number, cutoffDate: string): FundMetrics | null {
+    const key = `${fundId}-${cutoffDate}`;
+    const cached = this.metricsCache.get(key);
+    if (cached && Date.now() - cached.timestamp < CONFIG.METRICS_CACHE_TTL) {
+      return cached.metrics;
+    }
+    return null;
+  }
+
+  setMetricsCache(fundId: number, cutoffDate: string, metrics: FundMetrics): void {
+    const key = `${fundId}-${cutoffDate}`;
+    this.metricsCache.set(key, { metrics, timestamp: Date.now() });
+  }
+
+  // State setters
+  setFunds(funds: Fund[]): void {
+    this.currentFunds = funds;
+  }
+
+  setGroups(groupList: Group[]): void {
+    this.groups = groupList;
+    // Update O(1) lookup map
+    this.groupsMap.clear();
+    groupList.forEach((g) => this.groupsMap.set(g.id, g));
+    // Clear caches since groups changed
+    this.ancestorCache.clear();
+    this.groupDescendantsCache.clear();
+  }
+
+  // O(1) group lookup by ID
+  getGroupByIdSync(groupId: number): Group | undefined {
+    return this.groupsMap.get(groupId);
+  }
+
+  // Get direct child group IDs
+  getDirectChildIds(groupId: number): number[] {
+    const children: number[] = [];
+    for (const [id, group] of this.groupsMap) {
+      if (group.parentGroupId === groupId) {
+        children.push(id);
+      }
+    }
+    return children;
+  }
+
+  // Get ancestor group IDs with memoization
+  getAncestorIds(groupId: number): number[] {
+    const cached = this.ancestorCache.get(groupId);
+    if (cached) {
+      return cached;
+    }
+
+    const ancestors: number[] = [];
+    let currentId: number | null = groupId;
+
+    while (currentId != null) {
+      const group = this.groupsMap.get(currentId);
+      if (!group) break;
+      ancestors.push(group.id);
+      currentId = group.parentGroupId;
+    }
+
+    this.ancestorCache.set(groupId, ancestors);
+    return ancestors;
+  }
+
+  // Get descendant group IDs with memoization
+  getDescendantIds(groupId: number): number[] {
+    const cached = this.groupDescendantsCache.get(groupId);
+    if (cached) {
+      return cached;
+    }
+
+    const descendants: number[] = [groupId];
+
+    for (const [id, group] of this.groupsMap) {
+      if (group.parentGroupId === groupId) {
+        const childDescendants = this.getDescendantIds(id);
+        // Skip first element (the child itself is the first in its descendants)
+        descendants.push(...childDescendants.slice(1));
+        descendants.push(id);
+      }
+    }
+
+    this.groupDescendantsCache.set(groupId, descendants);
+    return descendants;
+  }
+
+  // Clear descendant cache
+  clearDescendantCache(): void {
+    this.groupDescendantsCache.clear();
+  }
+
+  setUnsavedChanges(value: boolean): void {
+    this.hasUnsavedChanges = value;
+  }
+
+  setFundNames(names: Set<string>): void {
+    this.fundNames = names;
+  }
+
+  setFundNameData(data: Map<string, FundNameData>): void {
+    this.fundNameData = data;
+  }
+
+  setSortColumns(columns: SortColumn[]): void {
+    this.sortColumns = columns;
+  }
+
+  setCurrentGroupDescendants(descendants: number[] | null): void {
+    this.currentGroupDescendants = descendants;
+  }
+
+  setCurrentActionFundId(fundId: number | null): void {
+    this.currentActionFundId = fundId;
+  }
+
+  setCurrentDetailsFundId(fundId: number | null): void {
+    this.currentDetailsFundId = fundId;
+  }
+
+  setIsResizingColumn(value: boolean): void {
+    this.isResizingColumn = value;
+  }
+
+  setLastMousedownOnResizer(value: boolean): void {
+    this.lastMousedownOnResizer = value;
+  }
+
+  setAbortController(controller: AbortController | null): void {
+    this.abortController = controller;
+  }
+}
+
+export const AppState = new AppStateClass();
