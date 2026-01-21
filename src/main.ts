@@ -2,17 +2,1014 @@
  * PE Fund Manager - Main Entry Point
  *
  * This file initializes the application and sets up event listeners.
- * The full UI migration from index.html will happen incrementally.
  */
 
-// Re-export core modules for use in the application
-export { CONFIG, AppState } from './core';
-export * from './core/db';
-export * from './types';
-export * from './calculations';
-export * from './utils';
-
-// For now, import the styles (will be inlined by Vite)
 import './styles.css';
 
-console.log('PE Fund Manager TypeScript modules loaded');
+// Core imports
+import { CONFIG } from './core/config';
+import { AppState } from './core/state';
+import {
+  initDB,
+  getAllFunds,
+  getAllGroups,
+  getAllFundNameObjects,
+  clearAllData,
+} from './core/db';
+import type { FundWithMetrics, FundNameData } from './types';
+
+// Calculation imports
+import { calculateMetrics } from './calculations';
+
+// App imports
+import {
+  sortData,
+  renderFundRow,
+  calculateTotals,
+  renderTotalsRow,
+  updatePortfolioSummary,
+  updateSortIndicators,
+} from './app/table';
+
+import {
+  getMultiSelectValues,
+  updateMultiSelectDisplay,
+  filterMultiSelectOptions,
+  clearMultiSelectSearch,
+  applyCurrentFilters,
+  resetFilters,
+  updateActiveFiltersIndicator,
+  handleGroupFilterCascade,
+  updateFilterDropdowns,
+} from './app/filters';
+
+import {
+  showStatus,
+  showLoading,
+  hideLoading,
+  showConfirm,
+  openModal,
+  closeModal,
+  populateGroupDropdown,
+  showAddFundModal,
+  showEditFundModal,
+  showDuplicateFundModal,
+  saveFundFromModal,
+  deleteFund,
+  showDetailsModal,
+  addCashFlowRow,
+  addNavRow,
+  saveDetailsFromModal,
+  showManageFundsModal,
+  showManageGroupsModal,
+  saveGroupFromModal,
+  deleteGroupById,
+  setCurrentActionFundId,
+  getCurrentActionFundId,
+} from './app/modals';
+
+// ===========================
+// Utility Functions
+// ===========================
+
+/**
+ * Debounce function
+ */
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout>;
+  return function executedFunction(...args: Parameters<T>) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+/**
+ * Show/hide filter loading indicator
+ */
+function setFilterLoading(show: boolean): void {
+  const indicator = document.getElementById('filterLoading');
+  if (indicator) {
+    indicator.classList.toggle('show', show);
+  }
+}
+
+/**
+ * Announce to screen readers
+ */
+function announceToScreenReader(message: string): void {
+  const announcer = document.getElementById('srAnnounce');
+  if (announcer) {
+    announcer.textContent = message;
+    setTimeout(() => {
+      announcer.textContent = '';
+    }, 1000);
+  }
+}
+
+// ===========================
+// Main Render Function
+// ===========================
+
+/**
+ * Render the main funds table
+ */
+async function renderTable(): Promise<void> {
+  try {
+    const funds = await getAllFunds();
+    AppState.setFunds(funds);
+
+    // Apply filters
+    let filtered = applyCurrentFilters(funds);
+
+    // Apply sorting
+    if (AppState.sortColumns.length > 0) {
+      filtered = sortData(filtered, AppState.sortColumns);
+    }
+
+    // Update filter dropdowns
+    updateFilterDropdowns(funds);
+    updateActiveFiltersIndicator();
+
+    // Get cutoff date
+    const cutoffDateInput = document.getElementById('cutoffDate') as HTMLInputElement;
+    const cutoffDateValue = cutoffDateInput?.value;
+    const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue) : undefined;
+
+    // Calculate metrics for each fund
+    const fundsWithMetrics: FundWithMetrics[] = filtered.map((fund) => ({
+      ...fund,
+      metrics: calculateMetrics(fund, cutoffDate),
+    }));
+
+    // Update portfolio summary
+    updatePortfolioSummary(fundsWithMetrics, cutoffDate);
+
+    // Render table body
+    const tbody = document.getElementById('fundsTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    if (fundsWithMetrics.length === 0) {
+      const hasFilters =
+        getMultiSelectValues('fundFilter').length > 0 ||
+        getMultiSelectValues('accountFilter').length > 0 ||
+        getMultiSelectValues('groupFilter').length > 0 ||
+        getMultiSelectValues('tagFilter').length > 0 ||
+        getMultiSelectValues('vintageFilter').length > 0;
+
+      const hasAnyFunds = funds.length > 0;
+
+      let emptyStateHtml: string;
+      if (hasFilters && hasAnyFunds) {
+        emptyStateHtml = `
+          <tr>
+            <td colspan="12" class="empty-state">
+              <div style="padding: 40px;">
+                <h3 style="margin-bottom: 10px;">No matching investments</h3>
+                <p style="margin-bottom: 15px;">No investments match your current filters.</p>
+                <button type="button" class="btn-secondary" id="clearFiltersBtn">Clear All Filters</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      } else {
+        emptyStateHtml = `
+          <tr>
+            <td colspan="12" class="empty-state">
+              <div style="padding: 40px;">
+                <h3 style="margin-bottom: 10px;">No investments yet</h3>
+                <p style="margin-bottom: 15px;">Add your first investment to start tracking your portfolio.</p>
+                <button type="button" class="btn-primary" id="addFirstInvestmentBtn">Add Investment</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+      tbody.innerHTML = emptyStateHtml;
+
+      // Attach event listeners for empty state buttons
+      const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+      if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', () => {
+          resetFilters();
+          applyFilters();
+        });
+      }
+
+      const addFirstBtn = document.getElementById('addFirstInvestmentBtn');
+      if (addFirstBtn) {
+        addFirstBtn.addEventListener('click', showAddFundModal);
+      }
+
+      return;
+    }
+
+    const showTags = (document.getElementById('sidebarShowTagsCheckbox') as HTMLInputElement)?.checked ?? true;
+
+    fundsWithMetrics.forEach((fund, index) => {
+      const row = document.createElement('tr');
+      row.setAttribute('tabindex', '0');
+      row.setAttribute('data-fund-id', fund.id?.toString() || '');
+      row.setAttribute('role', 'row');
+      row.setAttribute('aria-rowindex', (index + 2).toString());
+      row.innerHTML = renderFundRow(fund, index, showTags);
+      tbody.appendChild(row);
+    });
+
+    // Add totals row
+    const totals = calculateTotals(fundsWithMetrics, cutoffDate);
+    const totalRow = document.createElement('tr');
+    totalRow.innerHTML = renderTotalsRow(totals);
+    tbody.appendChild(totalRow);
+  } catch (err) {
+    console.error('Error rendering table:', err);
+    showStatus('Error loading data: ' + (err as Error).message, 'error');
+  }
+}
+
+/**
+ * Apply filters with debouncing and race condition protection
+ */
+async function applyFilters(): Promise<void> {
+  if (AppState.abortController) {
+    AppState.abortController.abort();
+  }
+
+  AppState.setAbortController(new AbortController());
+  const signal = AppState.abortController!.signal;
+
+  setFilterLoading(true);
+
+  try {
+    if (signal.aborted) return;
+    updateHeader();
+    if (signal.aborted) return;
+    await renderTable();
+
+    const investmentCount = document.getElementById('summaryInvestmentCount')?.textContent || '0';
+    announceToScreenReader(`Filter applied. Showing ${investmentCount} investments.`);
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') return;
+    console.error('Error applying filters:', err);
+    showStatus('Error applying filters: ' + (err as Error).message, 'error');
+  } finally {
+    setFilterLoading(false);
+    if (AppState.abortController && !AppState.abortController.signal.aborted) {
+      AppState.setAbortController(null);
+    }
+  }
+}
+
+const applyFiltersDebounced = debounce(applyFilters, CONFIG.DEBOUNCE_FILTER);
+
+/**
+ * Update header based on selected groups
+ */
+function updateHeader(): void {
+  const groupFilterValues = getMultiSelectValues('groupFilter');
+  const headerTitle = document.getElementById('headerTitle');
+  const headerSubtitle = document.getElementById('headerSubtitle');
+
+  if (!headerTitle || !headerSubtitle) return;
+
+  if (groupFilterValues.length === 1 && groupFilterValues[0]) {
+    const groupId = parseInt(groupFilterValues[0]);
+    const group = AppState.getGroupByIdSync(groupId);
+
+    if (group) {
+      headerTitle.textContent = group.name;
+      if (group.parentGroupId) {
+        const parentGroup = AppState.getGroupByIdSync(group.parentGroupId);
+        headerSubtitle.textContent = parentGroup?.name || group.type || 'Account Group';
+      } else {
+        headerSubtitle.textContent = '';
+      }
+    }
+  } else if (groupFilterValues.length > 1) {
+    // Check if all selected groups share a parent
+    const selectedGroups = groupFilterValues.map((id) => AppState.getGroupByIdSync(parseInt(id)));
+    const parentIds = new Set(selectedGroups.map((g) => g?.parentGroupId).filter((id) => id != null));
+
+    if (parentIds.size === 1) {
+      const parentId = Array.from(parentIds)[0];
+      const parentGroup = AppState.getGroupByIdSync(parentId as number);
+      if (parentGroup) {
+        headerTitle.textContent = parentGroup.name;
+        headerSubtitle.textContent = 'Multiple Groups Selected';
+      } else {
+        headerTitle.textContent = 'PE Fund Manager';
+        headerSubtitle.textContent = 'Multiple Groups Selected';
+      }
+    } else {
+      headerTitle.textContent = 'PE Fund Manager';
+      headerSubtitle.textContent = 'Multiple Groups Selected';
+    }
+  } else {
+    headerTitle.textContent = 'PE Fund Manager';
+    headerSubtitle.textContent = 'Private Equity Fund Analytics & Management Tool';
+  }
+}
+
+// ===========================
+// Event Handlers
+// ===========================
+
+/**
+ * Handle header click for sorting
+ */
+function handleHeaderClick(event: Event): void {
+  const target = event.target as HTMLElement;
+  const th = target.closest('th[data-sort]') as HTMLElement;
+  if (!th) return;
+
+  const column = th.dataset.sort;
+  if (!column) return;
+
+  const shiftKey = (event as MouseEvent).shiftKey;
+
+  if (shiftKey) {
+    // Multi-column sort
+    const existingIndex = AppState.sortColumns.findIndex((s) => s.column === column);
+    if (existingIndex !== -1) {
+      // Toggle direction or remove
+      const current = AppState.sortColumns[existingIndex]!;
+      if (current.direction === 'asc') {
+        AppState.sortColumns[existingIndex] = { column, direction: 'desc' };
+      } else {
+        AppState.sortColumns.splice(existingIndex, 1);
+      }
+    } else {
+      AppState.sortColumns.push({ column, direction: 'asc' });
+    }
+  } else {
+    // Single column sort
+    const existing = AppState.sortColumns.find((s) => s.column === column);
+    if (existing) {
+      if (existing.direction === 'asc') {
+        AppState.setSortColumns([{ column, direction: 'desc' }]);
+      } else {
+        AppState.setSortColumns([]);
+      }
+    } else {
+      AppState.setSortColumns([{ column, direction: 'asc' }]);
+    }
+  }
+
+  updateSortIndicators(AppState.sortColumns);
+  renderTable();
+}
+
+/**
+ * Handle action button click
+ */
+function handleActionButtonClick(event: Event): void {
+  const target = event.target as HTMLElement;
+  const button = target.closest('.fund-actions-btn') as HTMLElement;
+  if (!button) return;
+
+  event.stopPropagation();
+  const fundId = parseInt(button.dataset.fundId || '0');
+  if (!fundId) return;
+
+  setCurrentActionFundId(fundId);
+
+  const dropdown = document.getElementById('actionDropdown');
+  if (!dropdown) return;
+
+  // Position dropdown
+  const rect = button.getBoundingClientRect();
+  dropdown.style.top = `${rect.bottom + window.scrollY}px`;
+  dropdown.style.left = `${rect.left + window.scrollX}px`;
+  dropdown.classList.add('show');
+}
+
+/**
+ * Handle table row click
+ */
+function handleTableRowClick(event: Event): void {
+  const target = event.target as HTMLElement;
+
+  // Skip if clicking on action button
+  if (target.closest('.fund-actions-btn')) return;
+
+  const row = target.closest('tr[data-fund-id]') as HTMLElement;
+  if (!row) return;
+
+  const fundId = parseInt(row.dataset.fundId || '0');
+  if (fundId) {
+    showDetailsModal(fundId, renderTable);
+  }
+}
+
+/**
+ * Handle keyboard navigation in table
+ */
+function handleTableKeydown(event: KeyboardEvent): void {
+  const target = event.target as HTMLElement;
+  const row = target.closest('tr[data-fund-id]') as HTMLElement;
+  if (!row) return;
+
+  const fundId = parseInt(row.dataset.fundId || '0');
+  if (!fundId) return;
+
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    showDetailsModal(fundId, renderTable);
+  }
+}
+
+// ===========================
+// Sidebar Functions
+// ===========================
+
+function openSidebar(): void {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  if (sidebar) sidebar.classList.add('open');
+  if (overlay) overlay.classList.add('show');
+}
+
+function closeSidebar(): void {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  if (sidebar) sidebar.classList.remove('open');
+  if (overlay) overlay.classList.remove('show');
+}
+
+// ===========================
+// Dark Mode
+// ===========================
+
+function initializeDarkMode(): void {
+  const checkbox = document.getElementById('sidebarDarkModeCheckbox') as HTMLInputElement;
+  if (!checkbox) return;
+
+  // Check saved preference or system preference
+  const savedTheme = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  checkbox.checked = isDark;
+
+  checkbox.addEventListener('change', () => {
+    const theme = checkbox.checked ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  });
+}
+
+// ===========================
+// Multi-Select Initialization
+// ===========================
+
+function initMultiSelectDropdowns(): void {
+  const multiSelects = document.querySelectorAll('.multi-select');
+
+  multiSelects.forEach((container) => {
+    const trigger = container.querySelector('.multi-select-trigger');
+    const dropdown = container.querySelector('.multi-select-dropdown');
+
+    if (!trigger || !dropdown) return;
+
+    // Toggle dropdown
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wasOpen = container.classList.contains('open');
+
+      // Close all others
+      document.querySelectorAll('.multi-select.open').forEach((ms) => {
+        ms.classList.remove('open');
+        ms.querySelector('.multi-select-trigger')?.setAttribute('aria-expanded', 'false');
+        clearMultiSelectSearch(ms as HTMLElement);
+      });
+
+      if (!wasOpen) {
+        container.classList.add('open');
+        trigger.setAttribute('aria-expanded', 'true');
+        setTimeout(() => {
+          const searchInput = dropdown.querySelector('.multi-select-search input') as HTMLInputElement;
+          if (searchInput) searchInput.focus();
+        }, 0);
+      }
+    });
+
+    // Keyboard navigation
+    trigger.addEventListener('keydown', (e) => {
+      const event = e as KeyboardEvent;
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        (trigger as HTMLElement).click();
+      } else if (event.key === 'Escape') {
+        container.classList.remove('open');
+        trigger.setAttribute('aria-expanded', 'false');
+        clearMultiSelectSearch(container as HTMLElement);
+      }
+    });
+
+    // Handle search input
+    dropdown.addEventListener('input', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.matches('.multi-select-search input')) {
+        filterMultiSelectOptions(container as HTMLElement, (target as HTMLInputElement).value);
+      }
+    });
+
+    // Handle dropdown keyboard
+    dropdown.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Escape') {
+        container.classList.remove('open');
+        trigger.setAttribute('aria-expanded', 'false');
+        clearMultiSelectSearch(container as HTMLElement);
+        (trigger as HTMLElement).focus();
+      }
+    });
+
+    // Handle option clicks
+    dropdown.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.multi-select-search')) {
+        e.stopPropagation();
+        return;
+      }
+
+      const option = target.closest('.multi-select-option') as HTMLElement;
+      if (option) {
+        e.stopPropagation();
+        option.classList.toggle('selected');
+        const checkbox = option.querySelector('input[type="checkbox"]') as HTMLInputElement;
+        if (checkbox) checkbox.checked = option.classList.contains('selected');
+        option.setAttribute('aria-selected', option.classList.contains('selected').toString());
+
+        // Handle cascading for group filter
+        if (container.id === 'groupFilter') {
+          const groupId = parseInt(option.getAttribute('data-value') || '0');
+          const isNowSelected = option.classList.contains('selected');
+          handleGroupFilterCascade(container as HTMLElement, groupId, isNowSelected);
+        }
+
+        updateMultiSelectDisplay(container.id);
+        applyFiltersDebounced();
+      }
+    });
+  });
+
+  // Close all dropdowns on outside click
+  document.addEventListener('click', (e) => {
+    if (!(e.target as HTMLElement).closest('.multi-select')) {
+      document.querySelectorAll('.multi-select.open').forEach((ms) => {
+        ms.classList.remove('open');
+        ms.querySelector('.multi-select-trigger')?.setAttribute('aria-expanded', 'false');
+        clearMultiSelectSearch(ms as HTMLElement);
+      });
+    }
+  });
+}
+
+// ===========================
+// Event Listener Setup
+// ===========================
+
+function initializeEventListeners(): void {
+  // Table header click (sorting)
+  const tableHeader = document.querySelector('#fundsTable thead');
+  if (tableHeader) {
+    tableHeader.addEventListener('click', handleHeaderClick);
+  }
+
+  // Table body clicks
+  const tableBody = document.getElementById('fundsTableBody');
+  if (tableBody) {
+    tableBody.addEventListener('click', (e) => {
+      handleActionButtonClick(e);
+      handleTableRowClick(e);
+    });
+    tableBody.addEventListener('keydown', handleTableKeydown);
+  }
+
+  // Close action dropdown on outside click
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('actionDropdown');
+    const target = e.target as HTMLElement;
+    if (dropdown && !target.closest('#actionDropdown') && !target.closest('.fund-actions-btn')) {
+      dropdown.classList.remove('show');
+    }
+  });
+
+  // Action dropdown actions
+  const actionEdit = document.getElementById('actionEdit');
+  const actionDuplicate = document.getElementById('actionDuplicate');
+  const actionViewDetails = document.getElementById('actionViewDetails');
+  const actionDelete = document.getElementById('actionDelete');
+
+  if (actionEdit) {
+    actionEdit.addEventListener('click', (e) => {
+      e.preventDefault();
+      const fundId = getCurrentActionFundId();
+      if (fundId) {
+        showEditFundModal(fundId);
+      }
+      document.getElementById('actionDropdown')?.classList.remove('show');
+    });
+  }
+
+  if (actionDuplicate) {
+    actionDuplicate.addEventListener('click', (e) => {
+      e.preventDefault();
+      const fundId = getCurrentActionFundId();
+      if (fundId) {
+        showDuplicateFundModal(fundId);
+      }
+      document.getElementById('actionDropdown')?.classList.remove('show');
+    });
+  }
+
+  if (actionViewDetails) {
+    actionViewDetails.addEventListener('click', (e) => {
+      e.preventDefault();
+      const fundId = getCurrentActionFundId();
+      if (fundId) {
+        showDetailsModal(fundId, renderTable);
+      }
+      document.getElementById('actionDropdown')?.classList.remove('show');
+    });
+  }
+
+  if (actionDelete) {
+    actionDelete.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const fundId = getCurrentActionFundId();
+      if (fundId) {
+        await deleteFund(fundId, renderTable);
+      }
+      document.getElementById('actionDropdown')?.classList.remove('show');
+    });
+  }
+
+  // Fund modal
+  const fundForm = document.getElementById('fundForm');
+  if (fundForm) {
+    fundForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await saveFundFromModal(renderTable);
+    });
+  }
+
+  const closeFundModalBtn = document.getElementById('closeFundModalBtn');
+  const cancelFundModalBtn = document.getElementById('cancelFundModalBtn');
+  [closeFundModalBtn, cancelFundModalBtn].forEach((btn) => {
+    if (btn) {
+      btn.addEventListener('click', () => closeModal('fundModal'));
+    }
+  });
+
+  // Fund name dropdown - handle "Add new" option
+  const fundNameSelect = document.getElementById('fundName');
+  if (fundNameSelect) {
+    fundNameSelect.addEventListener('change', (e) => {
+      const value = (e.target as HTMLSelectElement).value;
+      const newNameContainer = document.getElementById('newFundNameContainer');
+      if (value === '__new__' && newNameContainer) {
+        newNameContainer.style.display = 'block';
+        (document.getElementById('newFundNameInline') as HTMLInputElement)?.focus();
+      } else if (newNameContainer) {
+        newNameContainer.style.display = 'none';
+      }
+    });
+  }
+
+  // Details modal
+  const addCashFlowRowBtn = document.getElementById('addCashFlowRowBtn');
+  const addNavRowBtn = document.getElementById('addNavRowBtn');
+  const saveDetailsChangesBtn = document.getElementById('saveDetailsChangesBtn');
+  const cancelDetailsModalBtn = document.getElementById('cancelDetailsModalBtn');
+  const closeDetailsModalBtn = document.getElementById('closeDetailsModalBtn');
+
+  if (addCashFlowRowBtn) {
+    addCashFlowRowBtn.addEventListener('click', addCashFlowRow);
+  }
+
+  if (addNavRowBtn) {
+    addNavRowBtn.addEventListener('click', addNavRow);
+  }
+
+  if (saveDetailsChangesBtn) {
+    saveDetailsChangesBtn.addEventListener('click', () => saveDetailsFromModal(renderTable));
+  }
+
+  [cancelDetailsModalBtn, closeDetailsModalBtn].forEach((btn) => {
+    if (btn) {
+      btn.addEventListener('click', async () => {
+        if (AppState.hasUnsavedChanges) {
+          const confirmed = await showConfirm('You have unsaved changes. Discard them?', {
+            title: 'Unsaved Changes',
+            confirmText: 'Discard',
+            cancelText: 'Keep Editing',
+          });
+          if (!confirmed) return;
+        }
+        AppState.setUnsavedChanges(false);
+        closeModal('detailsModal');
+      });
+    }
+  });
+
+  // Handle delete buttons in details modal
+  const cashFlowsTable = document.getElementById('cashFlowsTable');
+  const navTable = document.getElementById('navTable');
+
+  [cashFlowsTable, navTable].forEach((table) => {
+    if (table) {
+      table.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const deleteBtn = target.closest('.delete-row-btn') as HTMLElement;
+        if (deleteBtn) {
+          const row = deleteBtn.closest('tr');
+          if (row) {
+            row.remove();
+            AppState.setUnsavedChanges(true);
+          }
+        }
+      });
+
+      // Mark unsaved changes when inputs change
+      table.addEventListener('input', () => {
+        AppState.setUnsavedChanges(true);
+      });
+    }
+  });
+
+  // Manage funds modal
+  const sidebarManageFunds = document.getElementById('sidebarManageFunds');
+  if (sidebarManageFunds) {
+    sidebarManageFunds.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSidebar();
+      showManageFundsModal();
+    });
+  }
+
+  const closeManageFundsModalBtn = document.getElementById('closeManageFundsModalBtn');
+  const closeManageFundsModal2Btn = document.getElementById('closeManageFundsModal2Btn');
+  [closeManageFundsModalBtn, closeManageFundsModal2Btn].forEach((btn) => {
+    if (btn) {
+      btn.addEventListener('click', () => closeModal('manageFundNamesModal'));
+    }
+  });
+
+  // Manage groups modal
+  const sidebarManageGroups = document.getElementById('sidebarManageGroups');
+  if (sidebarManageGroups) {
+    sidebarManageGroups.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSidebar();
+      showManageGroupsModal();
+    });
+  }
+
+  const closeManageGroupsModalBtn = document.getElementById('closeManageGroupsModalBtn');
+  const closeManageGroupsModal2Btn = document.getElementById('closeManageGroupsModal2Btn');
+  [closeManageGroupsModalBtn, closeManageGroupsModal2Btn].forEach((btn) => {
+    if (btn) {
+      btn.addEventListener('click', () => closeModal('manageGroupsModal'));
+    }
+  });
+
+  const saveGroupBtn = document.getElementById('saveGroupBtn');
+  if (saveGroupBtn) {
+    saveGroupBtn.addEventListener('click', () => saveGroupFromModal(renderTable));
+  }
+
+  // Handle group actions in manage groups modal
+  const groupsList = document.getElementById('groupsList');
+  if (groupsList) {
+    groupsList.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      const btn = target.closest('button') as HTMLElement;
+      if (!btn) return;
+
+      const action = btn.dataset.action;
+      const id = parseInt(btn.dataset.id || '0');
+
+      if (action === 'editGroup' && id) {
+        const group = AppState.getGroupByIdSync(id);
+        if (group) {
+          const editGroupId = document.getElementById('editGroupId') as HTMLInputElement;
+          const newGroupName = document.getElementById('newGroupName') as HTMLInputElement;
+          const newGroupParent = document.getElementById('newGroupParent') as HTMLSelectElement;
+          const newGroupType = document.getElementById('newGroupType') as HTMLInputElement;
+          const saveGroupBtn = document.getElementById('saveGroupBtn');
+          const cancelEditBtn = document.getElementById('cancelEditBtn');
+          const groupFormTitle = document.getElementById('groupFormTitle');
+
+          if (editGroupId) editGroupId.value = id.toString();
+          if (newGroupName) newGroupName.value = group.name;
+          if (newGroupType) newGroupType.value = group.type || '';
+          if (saveGroupBtn) saveGroupBtn.textContent = 'Update Group';
+          if (cancelEditBtn) cancelEditBtn.style.display = 'inline-block';
+          if (groupFormTitle) groupFormTitle.textContent = 'Edit Group';
+
+          // Populate parent dropdown excluding this group and its descendants
+          populateGroupDropdown('newGroupParent', id);
+          if (newGroupParent) newGroupParent.value = group.parentGroupId?.toString() || '';
+        }
+      } else if (action === 'deleteGroup' && id) {
+        await deleteGroupById(id, renderTable);
+      }
+    });
+  }
+
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  if (cancelEditBtn) {
+    cancelEditBtn.addEventListener('click', () => {
+      const editGroupId = document.getElementById('editGroupId') as HTMLInputElement;
+      const newGroupName = document.getElementById('newGroupName') as HTMLInputElement;
+      const newGroupParent = document.getElementById('newGroupParent') as HTMLSelectElement;
+      const newGroupType = document.getElementById('newGroupType') as HTMLInputElement;
+      const saveGroupBtn = document.getElementById('saveGroupBtn');
+      const groupFormTitle = document.getElementById('groupFormTitle');
+
+      if (editGroupId) editGroupId.value = '';
+      if (newGroupName) newGroupName.value = '';
+      if (newGroupType) newGroupType.value = '';
+      if (newGroupParent) newGroupParent.value = '';
+      if (saveGroupBtn) saveGroupBtn.textContent = 'Add Group';
+      if (groupFormTitle) groupFormTitle.textContent = 'Add New Group';
+      cancelEditBtn.style.display = 'none';
+
+      populateGroupDropdown('newGroupParent');
+    });
+  }
+
+  // Sidebar
+  const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+  const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+  if (toggleSidebarBtn) {
+    toggleSidebarBtn.addEventListener('click', openSidebar);
+  }
+
+  if (closeSidebarBtn) {
+    closeSidebarBtn.addEventListener('click', closeSidebar);
+  }
+
+  if (sidebarOverlay) {
+    sidebarOverlay.addEventListener('click', closeSidebar);
+  }
+
+  // Sidebar - New Investment
+  const sidebarNewInvestment = document.getElementById('sidebarNewInvestment');
+  if (sidebarNewInvestment) {
+    sidebarNewInvestment.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSidebar();
+      showAddFundModal();
+    });
+  }
+
+  // Sidebar - Show Tags checkbox
+  const sidebarShowTagsCheckbox = document.getElementById('sidebarShowTagsCheckbox');
+  if (sidebarShowTagsCheckbox) {
+    sidebarShowTagsCheckbox.addEventListener('change', () => {
+      const checked = (sidebarShowTagsCheckbox as HTMLInputElement).checked;
+      localStorage.setItem('showTags', checked.toString());
+      renderTable();
+    });
+
+    // Restore saved preference
+    const savedShowTags = localStorage.getItem('showTags');
+    if (savedShowTags !== null) {
+      (sidebarShowTagsCheckbox as HTMLInputElement).checked = savedShowTags === 'true';
+    }
+  }
+
+  // Sidebar - Clear Database
+  const sidebarClearDatabase = document.getElementById('sidebarClearDatabase');
+  if (sidebarClearDatabase) {
+    sidebarClearDatabase.addEventListener('click', async (e) => {
+      e.preventDefault();
+      closeSidebar();
+
+      const confirmed = await showConfirm(
+        'Are you sure you want to clear ALL data? This action cannot be undone!',
+        { title: 'Clear Database', confirmText: 'Clear All Data', cancelText: 'Cancel' }
+      );
+
+      if (confirmed) {
+        try {
+          showLoading('Clearing database...');
+          await clearAllData();
+          AppState.clearMetricsCache();
+          AppState.setFunds([]);
+          AppState.setGroups([]);
+          showStatus('Database cleared successfully');
+          await renderTable();
+        } catch (err) {
+          console.error('Error clearing database:', err);
+          showStatus('Error clearing database: ' + (err as Error).message, 'error');
+        } finally {
+          hideLoading();
+        }
+      }
+    });
+  }
+
+  // Cutoff date change
+  const cutoffDate = document.getElementById('cutoffDate');
+  if (cutoffDate) {
+    cutoffDate.addEventListener('change', applyFiltersDebounced);
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Ignore if typing in an input
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+      return;
+    }
+
+    if (e.ctrlKey && e.key === 'n') {
+      e.preventDefault();
+      showAddFundModal();
+    } else if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+      openModal('shortcutsModal');
+    } else if (e.key === 'Escape') {
+      // Close any open modal or sidebar
+      closeSidebar();
+      document.querySelectorAll('.modal.show').forEach((modal) => {
+        closeModal(modal.id);
+      });
+    }
+  });
+
+  // Close shortcuts modal
+  const closeShortcutsModalBtn = document.getElementById('closeShortcutsModalBtn');
+  const closeShortcutsModal2Btn = document.getElementById('closeShortcutsModal2Btn');
+  [closeShortcutsModalBtn, closeShortcutsModal2Btn].forEach((btn) => {
+    if (btn) {
+      btn.addEventListener('click', () => closeModal('shortcutsModal'));
+    }
+  });
+}
+
+// ===========================
+// Initialization
+// ===========================
+
+async function init(): Promise<void> {
+  try {
+    showLoading('Initializing...');
+
+    // Initialize database
+    await initDB();
+
+    // Load initial data
+    const funds = await getAllFunds();
+    AppState.setFunds(funds);
+
+    const groups = await getAllGroups();
+    AppState.setGroups(groups);
+
+    const fundNameObjects = await getAllFundNameObjects();
+    const fundNameDataMap = new Map<string, FundNameData>();
+    fundNameObjects.forEach((obj) => fundNameDataMap.set(obj.name, obj));
+    AppState.setFundNameData(fundNameDataMap);
+    AppState.setFundNames(new Set(fundNameObjects.map((obj) => obj.name)));
+
+    // Initialize UI components
+    initializeDarkMode();
+    initMultiSelectDropdowns();
+    initializeEventListeners();
+
+    // Initial render
+    await renderTable();
+
+    hideLoading();
+    console.log('PE Fund Manager initialized successfully');
+  } catch (err) {
+    console.error('Error initializing application:', err);
+    hideLoading();
+    showStatus('Error initializing application: ' + (err as Error).message, 'error');
+  }
+}
+
+// Expose functions to window for inline handlers (if needed)
+(window as any).showAddFundModal = showAddFundModal;
+(window as any).showManageFundsModal = showManageFundsModal;
+(window as any).resetFilters = resetFilters;
+
+// Start the application
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}

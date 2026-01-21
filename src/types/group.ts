@@ -5,6 +5,7 @@ export interface Group {
   id: number;
   name: string;
   parentGroupId: number | null;
+  type?: string;
   description?: string;
 }
 
