@@ -201,12 +201,49 @@ export function saveFundToDB(fundData: Fund): Promise<number> {
   });
 }
 
-export function getAllFunds(): Promise<Fund[]> {
-  return transaction(CONFIG.FUNDS_STORE, 'readonly', (store) => store.getAll());
+/**
+ * Normalize a fund object to ensure all fields have correct types
+ * This handles data that may have been stored in older formats
+ */
+function normalizeFund(fund: any): Fund {
+  // Ensure cashFlows is an array with proper structure
+  const cashFlows = Array.isArray(fund.cashFlows)
+    ? fund.cashFlows.map((cf: any) => ({
+        date: cf.date || '',
+        amount: typeof cf.amount === 'number' ? cf.amount : parseFloat(cf.amount) || 0,
+        type: cf.type || (cf.amount < 0 ? 'Contribution' : 'Distribution'),
+        affectsCommitment: cf.affectsCommitment !== undefined ? cf.affectsCommitment : true,
+      }))
+    : [];
+
+  // Ensure monthlyNav is an array with proper structure
+  const monthlyNav = Array.isArray(fund.monthlyNav)
+    ? fund.monthlyNav.map((nav: any) => ({
+        date: nav.date || '',
+        amount: typeof nav.amount === 'number' ? nav.amount : parseFloat(nav.amount) || 0,
+      }))
+    : [];
+
+  return {
+    id: fund.id,
+    fundName: fund.fundName || '',
+    accountNumber: fund.accountNumber || '',
+    commitment: typeof fund.commitment === 'number' ? fund.commitment : parseFloat(fund.commitment) || 0,
+    groupId: fund.groupId ?? null,
+    cashFlows,
+    monthlyNav,
+    timestamp: fund.timestamp || new Date().toISOString(),
+  };
 }
 
-export function getFundById(id: number): Promise<Fund | undefined> {
-  return transaction(CONFIG.FUNDS_STORE, 'readonly', (store) => store.get(id));
+export async function getAllFunds(): Promise<Fund[]> {
+  const rawFunds = await transaction<any[]>(CONFIG.FUNDS_STORE, 'readonly', (store) => store.getAll());
+  return rawFunds.map(normalizeFund);
+}
+
+export async function getFundById(id: number): Promise<Fund | undefined> {
+  const rawFund = await transaction<any>(CONFIG.FUNDS_STORE, 'readonly', (store) => store.get(id));
+  return rawFund ? normalizeFund(rawFund) : undefined;
 }
 
 export function deleteFundFromDB(id: number): Promise<void> {
