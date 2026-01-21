@@ -6856,6 +6856,10 @@
                 document.getElementById('accountNumber').value = '';
                 document.getElementById('commitment').value = '';
 
+                // Reset group auto-fill state and remove any indicator
+                groupAutoFillState = { isAutoFilled: false, isAmbiguous: false, conflictingGroups: [] };
+                removeGroupAutoFillIndicator();
+
                 Modal.show('fundModal');
             } catch (err) {
                 showStatus('Error opening add investment modal: ' + err.message, 'error');
@@ -6884,6 +6888,10 @@
                 document.getElementById('accountNumber').value = fund.accountNumber;
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
 
+                // Reset group auto-fill state and remove any indicator (group is already set for edit)
+                groupAutoFillState = { isAutoFilled: false, isAmbiguous: false, conflictingGroups: [] };
+                removeGroupAutoFillIndicator();
+
                 Modal.show('fundModal');
             } catch (err) {
                 showStatus('Error loading fund: ' + err.message, 'error');
@@ -6909,6 +6917,10 @@
                 await populateFundGroupDropdown(fund.groupId);
                 document.getElementById('accountNumber').value = fund.accountNumber + ' (Copy)';
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
+
+                // Reset group auto-fill state and remove any indicator
+                groupAutoFillState = { isAutoFilled: false, isAmbiguous: false, conflictingGroups: [] };
+                removeGroupAutoFillIndicator();
 
                 Modal.show('fundModal');
             } catch (err) {
@@ -8329,6 +8341,243 @@
                 Debug.error('Error populating fund group dropdown:', err);
             }
         }
+
+        // ==================== Account-to-Group Lookup Functions ====================
+
+        /**
+         * Looks up group associations for a given account number across all existing funds.
+         * Returns an object with the group info and whether it's ambiguous.
+         *
+         * @param {string} accountNumber - The account number to look up
+         * @param {number|null} excludeFundId - Optional fund ID to exclude from lookup (for editing)
+         * @returns {Object} { groupId: number|null, groupName: string, isAmbiguous: boolean, conflictingGroups: Array }
+         */
+        async function lookupGroupForAccount(accountNumber, excludeFundId = null) {
+            if (!accountNumber || accountNumber.trim() === '') {
+                return { groupId: null, groupName: null, isAmbiguous: false, conflictingGroups: [] };
+            }
+
+            const normalizedAccount = accountNumber.trim().toLowerCase();
+            const allFunds = await getAllFunds();
+
+            // Find all funds with this account number (excluding the current fund if editing)
+            const matchingFunds = allFunds.filter(f => {
+                if (excludeFundId && f.id === excludeFundId) return false;
+                return f.accountNumber && f.accountNumber.trim().toLowerCase() === normalizedAccount;
+            });
+
+            if (matchingFunds.length === 0) {
+                return { groupId: null, groupName: null, isAmbiguous: false, conflictingGroups: [] };
+            }
+
+            // Collect all unique group IDs (treating null as a valid distinct value)
+            const groupIdMap = new Map();
+            matchingFunds.forEach(fund => {
+                const gId = fund.groupId || null;
+                if (!groupIdMap.has(gId)) {
+                    const groupName = gId ? (AppState.getGroupByIdSync(gId)?.name || 'Unknown Group') : 'No Group';
+                    groupIdMap.set(gId, { groupId: gId, groupName: groupName, count: 1 });
+                } else {
+                    groupIdMap.get(gId).count++;
+                }
+            });
+
+            const uniqueGroups = Array.from(groupIdMap.values());
+
+            if (uniqueGroups.length === 1) {
+                // Single consistent group association
+                return {
+                    groupId: uniqueGroups[0].groupId,
+                    groupName: uniqueGroups[0].groupName,
+                    isAmbiguous: false,
+                    conflictingGroups: []
+                };
+            }
+
+            // Multiple different groups - flag as ambiguous
+            // Sort by count (most common first)
+            uniqueGroups.sort((a, b) => b.count - a.count);
+
+            return {
+                groupId: null,
+                groupName: null,
+                isAmbiguous: true,
+                conflictingGroups: uniqueGroups
+            };
+        }
+
+        /**
+         * Enriches import data with group associations for known account numbers.
+         * Modifies the funds array in place, adding groupId where it can be determined.
+         *
+         * @param {Array} fundsToImport - Array of fund objects to enrich
+         * @returns {Object} { enrichedCount: number, ambiguousCount: number, ambiguousAccounts: Array }
+         */
+        async function enrichImportDataWithGroups(fundsToImport) {
+            const allFunds = await getAllFunds();
+
+            // Build account-to-group mapping from existing funds
+            const accountGroupMap = new Map();
+
+            allFunds.forEach(fund => {
+                const normalizedAccount = fund.accountNumber?.trim().toLowerCase();
+                if (!normalizedAccount) return;
+
+                if (!accountGroupMap.has(normalizedAccount)) {
+                    accountGroupMap.set(normalizedAccount, new Map());
+                }
+
+                const gId = fund.groupId || null;
+                const groupsForAccount = accountGroupMap.get(normalizedAccount);
+                if (!groupsForAccount.has(gId)) {
+                    groupsForAccount.set(gId, 1);
+                } else {
+                    groupsForAccount.set(gId, groupsForAccount.get(gId) + 1);
+                }
+            });
+
+            let enrichedCount = 0;
+            let ambiguousCount = 0;
+            const ambiguousAccounts = [];
+
+            fundsToImport.forEach(fund => {
+                // Skip if fund already has a groupId
+                if (fund.groupId !== undefined && fund.groupId !== null) return;
+
+                const normalizedAccount = fund.accountNumber?.trim().toLowerCase();
+                if (!normalizedAccount) return;
+
+                const groupsForAccount = accountGroupMap.get(normalizedAccount);
+                if (!groupsForAccount) return;
+
+                const uniqueGroups = Array.from(groupsForAccount.entries());
+
+                if (uniqueGroups.length === 1) {
+                    // Single consistent group - auto-assign
+                    fund.groupId = uniqueGroups[0][0]; // The group ID
+                    fund._groupAutoFilled = true;
+                    enrichedCount++;
+                } else if (uniqueGroups.length > 1) {
+                    // Ambiguous - flag it
+                    fund._groupAmbiguous = true;
+                    fund._conflictingGroups = uniqueGroups.map(([gId, count]) => ({
+                        groupId: gId,
+                        groupName: gId ? (AppState.getGroupByIdSync(gId)?.name || 'Unknown') : 'No Group',
+                        count: count
+                    }));
+                    ambiguousCount++;
+                    if (!ambiguousAccounts.includes(fund.accountNumber)) {
+                        ambiguousAccounts.push(fund.accountNumber);
+                    }
+                }
+            });
+
+            return { enrichedCount, ambiguousCount, ambiguousAccounts };
+        }
+
+        // Track auto-fill state for the current fund modal
+        let groupAutoFillState = {
+            isAutoFilled: false,
+            isAmbiguous: false,
+            conflictingGroups: []
+        };
+
+        /**
+         * Handles account number input change and auto-fills group if applicable.
+         */
+        async function handleAccountNumberChange() {
+            const accountInput = document.getElementById('accountNumber');
+            const groupSelect = document.getElementById('fundGroup');
+            const fundIdInput = document.getElementById('fundId');
+
+            const accountNumber = accountInput.value.trim();
+            const excludeFundId = fundIdInput.value ? parseInt(fundIdInput.value) : null;
+
+            // Remove any existing auto-fill indicator
+            removeGroupAutoFillIndicator();
+
+            if (!accountNumber) {
+                groupAutoFillState = { isAutoFilled: false, isAmbiguous: false, conflictingGroups: [] };
+                return;
+            }
+
+            const result = await lookupGroupForAccount(accountNumber, excludeFundId);
+
+            if (result.isAmbiguous) {
+                // Show ambiguous indicator
+                groupAutoFillState = {
+                    isAutoFilled: false,
+                    isAmbiguous: true,
+                    conflictingGroups: result.conflictingGroups
+                };
+                showGroupAutoFillIndicator('ambiguous', result.conflictingGroups);
+            } else if (result.groupId !== null || result.groupName === 'No Group') {
+                // Auto-fill the group
+                groupSelect.value = result.groupId || '';
+                groupAutoFillState = {
+                    isAutoFilled: true,
+                    isAmbiguous: false,
+                    conflictingGroups: []
+                };
+                showGroupAutoFillIndicator('auto-filled', [], result.groupName);
+            } else {
+                // No existing association found
+                groupAutoFillState = { isAutoFilled: false, isAmbiguous: false, conflictingGroups: [] };
+            }
+        }
+
+        /**
+         * Shows an indicator below the group dropdown about auto-fill status.
+         */
+        function showGroupAutoFillIndicator(type, conflictingGroups = [], groupName = '') {
+            removeGroupAutoFillIndicator();
+
+            const groupFormGroup = document.getElementById('fundGroup').closest('.form-group');
+            const indicator = document.createElement('div');
+            indicator.id = 'groupAutoFillIndicator';
+            indicator.style.cssText = 'margin-top: 6px; font-size: 12px; display: flex; align-items: flex-start; gap: 6px;';
+
+            if (type === 'auto-filled') {
+                indicator.innerHTML = `
+                    <span style="color: var(--color-success); display: flex; align-items: center; gap: 4px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Auto-filled from existing investor data
+                    </span>
+                    <span style="color: var(--color-text-light);">(${escapeHtml(groupName)})</span>
+                `;
+            } else if (type === 'ambiguous') {
+                const groupsList = conflictingGroups
+                    .map(g => `${escapeHtml(g.groupName)} (${g.count})`)
+                    .join(', ');
+                indicator.innerHTML = `
+                    <span style="color: var(--color-warning); display: flex; align-items: center; gap: 4px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        Multiple groups found for this account
+                    </span>
+                    <span style="color: var(--color-text-light); font-size: 11px;">(${groupsList})</span>
+                `;
+            }
+
+            groupFormGroup.appendChild(indicator);
+        }
+
+        /**
+         * Removes the auto-fill indicator from the group form group.
+         */
+        function removeGroupAutoFillIndicator() {
+            const existing = document.getElementById('groupAutoFillIndicator');
+            if (existing) {
+                existing.remove();
+            }
+        }
+
+        // ==================== End Account-to-Group Lookup Functions ====================
 
         // ==================== Bulk Cash Flow Functions ====================
 
@@ -9874,6 +10123,9 @@
                     fundNameData.set(name, fundNameObj);
                 }
 
+                // Enrich import data with group associations for known account numbers
+                const enrichmentResult = await enrichImportDataWithGroups(fundsToImport);
+
                 const totalFunds = fundsToImport.length;
                 const failedImports = [];
                 const skippedDuplicates = [];
@@ -9914,9 +10166,16 @@
                         }));
 
                         // Map old groupId to new groupId if applicable
+                        // Also use groupId set by enrichment (for known account numbers)
                         let groupId = null;
-                        if (fund.groupId && oldGroupIdToNew[fund.groupId]) {
-                            groupId = oldGroupIdToNew[fund.groupId];
+                        if (fund.groupId != null) {
+                            if (fund._groupAutoFilled) {
+                                // Group was auto-filled by enrichment - use it directly
+                                groupId = fund.groupId;
+                            } else if (oldGroupIdToNew[fund.groupId]) {
+                                // Map old groupId to new groupId from import mapping
+                                groupId = oldGroupIdToNew[fund.groupId];
+                            }
                         }
 
                         const fundData = {
@@ -9950,13 +10209,28 @@
                         messages.push(`${failedImports.length} failed`);
                         Debug.error('Failed imports:', failedImports);
                     }
+                    if (enrichmentResult.enrichedCount > 0) {
+                        messages.push(`${enrichmentResult.enrichedCount} groups auto-filled`);
+                    }
+                    if (enrichmentResult.ambiguousCount > 0) {
+                        messages.push(`${enrichmentResult.ambiguousCount} ambiguous groups`);
+                        Debug.log('Ambiguous account groups:', enrichmentResult.ambiguousAccounts);
+                    }
                     const status = failedImports.length > 0 ? 'error' : 'success';
                     showStatus(`Import complete: ${messages.join(', ')} (see console for details)`, status);
                     if (failedImports.length === 0) {
                         event.target.value = '';
                     }
                 } else {
-                    showStatus(`Successfully imported ${imported} fund(s)`);
+                    let successMsg = `Successfully imported ${imported} fund(s)`;
+                    if (enrichmentResult.enrichedCount > 0) {
+                        successMsg += ` (${enrichmentResult.enrichedCount} groups auto-filled)`;
+                    }
+                    if (enrichmentResult.ambiguousCount > 0) {
+                        successMsg += ` (${enrichmentResult.ambiguousCount} accounts have ambiguous groups)`;
+                        Debug.log('Ambiguous account groups:', enrichmentResult.ambiguousAccounts);
+                    }
+                    showStatus(successMsg);
                     event.target.value = '';
                 }
             } catch (err) {
@@ -10416,6 +10690,17 @@
                 document.getElementById('closeFundModalBtn').addEventListener('click', closeFundModal);
                 document.getElementById('cancelFundModalBtn').addEventListener('click', closeFundModal);
                 document.getElementById('fundForm').addEventListener('submit', saveFund);
+
+                // Add account number change listener for group auto-fill
+                const accountInput = document.getElementById('accountNumber');
+                let debounceTimer = null;
+                accountInput.addEventListener('input', () => {
+                    // Debounce to avoid too many lookups while typing
+                    if (debounceTimer) clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(handleAccountNumberChange, 300);
+                });
+                // Also trigger on blur for immediate feedback
+                accountInput.addEventListener('blur', handleAccountNumberChange);
             },
 
             /** Action dropdown (edit, duplicate, details, delete) */
