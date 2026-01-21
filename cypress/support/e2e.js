@@ -15,10 +15,22 @@ Cypress.Commands.add('clearIndexedDB', () => {
 
 // Reload and wait for app to be ready
 Cypress.Commands.add('visitAndWait', () => {
+  // Set flag before visiting to prevent backup modal
+  cy.window().then((win) => {
+    win.localStorage.setItem('hideBackupWarning', 'true');
+    win.localStorage.setItem('backupWarningDismissed', 'true');
+    win.localStorage.setItem('dontShowBackupWarning', 'true');
+  });
   cy.visit('/');
   cy.get('#fundsTable').should('exist');
   // Wait for loading overlay to disappear
   cy.get('#loadingOverlay').should('not.be.visible');
+  // Dismiss backup modal if it appears anyway
+  cy.get('body').then($body => {
+    if ($body.find('#backupWarningModal:visible').length > 0) {
+      cy.get('#remindLaterBtn').click();
+    }
+  });
 });
 
 // Open sidebar
@@ -181,8 +193,14 @@ Cypress.Commands.add('getTableCell', (fundName, columnIndex) => {
   return cy.contains('#fundsTableBody tr', fundName).find('td').eq(columnIndex);
 });
 
-// Before each test, clear IndexedDB and localStorage
+// Before each test, clear IndexedDB and localStorage, then suppress backup warning
 beforeEach(() => {
   cy.clearIndexedDB();
   cy.clearLocalStorage();
+  // Suppress the backup warning modal
+  cy.window().then((win) => {
+    win.localStorage.setItem('hideBackupWarning', 'true');
+    win.localStorage.setItem('backupWarningDismissed', 'true');
+    win.localStorage.setItem('dontShowBackupWarning', 'true');
+  });
 });
