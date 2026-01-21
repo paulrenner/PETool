@@ -58,8 +58,10 @@ src/
 ### Building
 ```bash
 npm run build    # TypeScript check + Vite build
+cp dist/index.html index.html  # REQUIRED: Copy to root for deployment
 ```
-Output goes to `dist/index.html`. Copy to root `index.html` for deployment.
+
+**IMPORTANT**: After every build, you MUST copy `dist/index.html` to the root `index.html`. The root file is what gets deployed to GitHub Pages. Forgetting this step means your changes won't be visible to users.
 
 ### Testing
 ```bash
