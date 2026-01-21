@@ -1382,6 +1382,18 @@ function initializeEventListeners(): void {
     cutoffDate.addEventListener('change', applyFiltersDebounced);
   }
 
+  // Active filters indicator - clear button
+  const activeFiltersIndicator = document.getElementById('activeFiltersIndicator');
+  if (activeFiltersIndicator) {
+    activeFiltersIndicator.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('clear-filters')) {
+        resetFilters();
+        applyFilters();
+      }
+    });
+  }
+
   // Timeline panel toggle
   const timelineHeader = document.getElementById('timelineHeader');
   const timelinePanel = document.getElementById('timelinePanel');

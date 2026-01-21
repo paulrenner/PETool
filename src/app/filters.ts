@@ -307,9 +307,10 @@ export function updateActiveFiltersIndicator(): void {
   const totalActive = activeCount + (cutoffDate ? 1 : 0);
 
   if (totalActive > 0) {
-    indicator.textContent = `${totalActive} filter${totalActive > 1 ? 's' : ''} active`;
-    indicator.style.display = 'inline-block';
+    indicator.innerHTML = `${totalActive} filter${totalActive > 1 ? 's' : ''} active <button class="clear-filters" title="Clear all filters" aria-label="Clear all filters">&times;</button>`;
+    indicator.style.display = 'inline-flex';
   } else {
+    indicator.innerHTML = '';
     indicator.style.display = 'none';
   }
 }
