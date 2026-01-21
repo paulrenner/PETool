@@ -114,6 +114,7 @@
 
         [data-theme="dark"] .modal-content {
             background: #2D3748;
+            color: var(--color-text);
         }
 
         [data-theme="dark"] .sidebar {

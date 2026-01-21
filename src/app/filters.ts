@@ -175,7 +175,7 @@ export function clearMultiSelectSearch(container: HTMLElement): void {
 }
 
 /**
- * Build a tree structure from flat groups array
+ * Build a tree structure from flat groups array, sorted alphabetically
  */
 export function buildGroupsTree(
   groups: Group[],
@@ -183,6 +183,7 @@ export function buildGroupsTree(
 ): Array<Group & { children: Array<Group & { children: any[] }> }> {
   return groups
     .filter((g) => g.parentGroupId === parentId)
+    .sort((a, b) => a.name.localeCompare(b.name))
     .map((g) => ({
       ...g,
       children: buildGroupsTree(groups, g.id),
