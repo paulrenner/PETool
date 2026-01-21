@@ -461,14 +461,14 @@ function handleTableKeydown(event: KeyboardEvent): void {
 function openSidebar(): void {
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebarOverlay');
-  if (sidebar) sidebar.classList.add('open');
+  if (sidebar) sidebar.classList.add('show');
   if (overlay) overlay.classList.add('show');
 }
 
 function closeSidebar(): void {
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebarOverlay');
-  if (sidebar) sidebar.classList.remove('open');
+  if (sidebar) sidebar.classList.remove('show');
   if (overlay) overlay.classList.remove('show');
 }
 
