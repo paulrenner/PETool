@@ -2423,8 +2423,14 @@
                 </div>
             </div>
             <div class="control-group">
-                <label for="searchInput">Search</label>
-                <input type="text" id="searchInput" placeholder="Search funds..." title="Search by fund name, account number, or tag" aria-label="Search funds by name, account number, or tag">
+                <label>Filter by Tag</label>
+                <div class="multi-select" id="tagFilter" data-placeholder="All Tags">
+                    <div class="multi-select-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="multi-select-display"><span class="placeholder">All Tags</span></span>
+                        <span class="multi-select-arrow">▾</span>
+                    </div>
+                    <div class="multi-select-dropdown" role="listbox"></div>
+                </div>
             </div>
             <div class="control-group">
                 <label for="cutoffDate" title="Calculate all metrics (IRR, MOIC, NAV, etc.) as of this date">Cutoff Date</label>
@@ -2833,9 +2839,6 @@
             <div class="shortcuts-list">
                 <div class="shortcut-key"><kbd>?</kbd></div>
                 <div class="shortcut-desc">Show this help</div>
-
-                <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>F</kbd></div>
-                <div class="shortcut-desc">Focus search input</div>
 
                 <div class="shortcut-key"><kbd>Ctrl</kbd> + <kbd>N</kbd></div>
                 <div class="shortcut-desc">Add new investment</div>
@@ -4085,7 +4088,7 @@
                     return vintage && values.includes(vintage.toString());
                 }
             }
-            // Note: searchInput is handled separately in applyCurrentFilters to include tag matching
+            // Note: groupFilter and tagFilter are handled separately in applyCurrentFilters for special logic
         ];
 
         // ===========================
@@ -5510,7 +5513,7 @@
                     const hasFilters = getMultiSelectValues('fundFilter').length > 0 ||
                         getMultiSelectValues('accountFilter').length > 0 ||
                         getMultiSelectValues('groupFilter').length > 0 ||
-                        document.getElementById('searchInput').value ||
+                        getMultiSelectValues('tagFilter').length > 0 ||
                         getMultiSelectValues('vintageFilter').length > 0;
 
                     const hasAnyFunds = currentFunds.length > 0;
@@ -5647,12 +5650,12 @@
 
         function applyCurrentFilters(funds) {
             // Get filter values once (cached for all funds)
-            // Multi-select filters return arrays, regular inputs return strings
+            // Multi-select filters return arrays
             const filterValues = {
                 fundFilter: getMultiSelectValues('fundFilter'),
                 accountFilter: getMultiSelectValues('accountFilter'),
                 groupFilter: getMultiSelectValues('groupFilter'),
-                searchInput: document.getElementById('searchInput').value.toLowerCase().trim(),
+                tagFilter: getMultiSelectValues('tagFilter'),
                 vintageFilter: getMultiSelectValues('vintageFilter')
             };
 
@@ -5684,16 +5687,15 @@
                     if (!matchesGroup) return false;
                 }
 
-                // Search filter: matches fund name, account number, or tags
-                if (filterValues.searchInput) {
+                // Tag filter: matches funds that have any of the selected tags
+                if (filterValues.tagFilter.length > 0) {
                     const fundNameObj = fundNameData.get(fund.fundName);
                     const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
-                    const fundTags = tags.map(tag => tag.toLowerCase()).join(' ');
-                    if (!fund.fundName.toLowerCase().includes(filterValues.searchInput) &&
-                        !(fund.accountNumber && fund.accountNumber.toLowerCase().includes(filterValues.searchInput)) &&
-                        !fundTags.includes(filterValues.searchInput)) {
-                        return false;
-                    }
+                    // Check if fund has at least one of the selected tags
+                    const hasMatchingTag = filterValues.tagFilter.some(selectedTag =>
+                        tags.includes(selectedTag)
+                    );
+                    if (!hasMatchingTag) return false;
                 }
 
                 return true;
@@ -5706,6 +5708,7 @@
             const currentFundValues = getMultiSelectValues('fundFilter');
             const currentAccountValues = getMultiSelectValues('accountFilter');
             const currentVintageValues = getMultiSelectValues('vintageFilter');
+            const currentTagValues = getMultiSelectValues('tagFilter');
 
             // Helper function to filter funds by multiple groups
             const filterByGroups = (funds, groupIds) => {
@@ -5841,6 +5844,21 @@
                 sortedVintages.includes(parseInt(v))
             );
             populateMultiSelect('vintageFilter', vintageOptions, validVintageValues);
+
+            // 5. Update TAG dropdown (collect all unique tags from fund names)
+            const allTags = new Set();
+            fundNameData.forEach(fundNameObj => {
+                if (fundNameObj.tags) {
+                    fundNameObj.tags.forEach(tag => allTags.add(tag));
+                }
+            });
+            const sortedTags = Array.from(allTags).sort((a, b) => a.localeCompare(b));
+            const tagOptions = sortedTags.map(tag => ({
+                value: tag,
+                label: tag
+            }));
+            const validTagValues = currentTagValues.filter(v => sortedTags.includes(v));
+            populateMultiSelect('tagFilter', tagOptions, validTagValues);
         }
 
         // Helper function to get all ancestor group IDs (uses memoized AppState version)
@@ -6040,9 +6058,7 @@
             clearMultiSelect('accountFilter');
             clearMultiSelect('groupFilter');
             clearMultiSelect('vintageFilter');
-
-            // Clear search input
-            document.getElementById('searchInput').value = '';
+            clearMultiSelect('tagFilter');
 
             // Reset cutoff date to latest quarter end (same as page load)
             const quarterEnd = getLatestQuarterEnd();
@@ -6069,19 +6085,19 @@
             const accountFilter = getMultiSelectValues('accountFilter');
             const groupFilter = getMultiSelectValues('groupFilter');
             const vintageFilter = getMultiSelectValues('vintageFilter');
-            const searchInput = document.getElementById('searchInput').value.trim();
+            const tagFilter = getMultiSelectValues('tagFilter');
 
             // Count active filters (count each multi-select with selections as 1 filter)
             let filterCount = 0;
             if (fundFilter.length > 0) filterCount++;
             if (accountFilter.length > 0) filterCount++;
             if (groupFilter.length > 0) filterCount++;
-            if (searchInput) filterCount++;
+            if (tagFilter.length > 0) filterCount++;
             if (vintageFilter.length > 0) filterCount++;
 
             // Count total individual selections for display
             const totalSelections = fundFilter.length + accountFilter.length +
-                groupFilter.length + vintageFilter.length + (searchInput ? 1 : 0);
+                groupFilter.length + vintageFilter.length + tagFilter.length;
 
             const indicator = document.getElementById('activeFiltersIndicator');
 
@@ -9963,17 +9979,6 @@
                 return;
             }
 
-            // Ctrl/Cmd+F: Focus search input
-            if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
-                event.preventDefault();
-                const searchInput = document.getElementById('searchInput');
-                if (searchInput) {
-                    searchInput.focus();
-                    searchInput.select();
-                }
-                return;
-            }
-
             // Ctrl/Cmd+S: Save details if details modal is open
             if ((event.ctrlKey || event.metaKey) && event.key === 's') {
                 event.preventDefault();
@@ -10802,8 +10807,6 @@
                 // Initialize multi-select dropdowns (these trigger applyFilters on selection change)
                 initMultiSelectDropdowns();
 
-                // Search input uses debounced filtering
-                document.getElementById('searchInput').addEventListener('input', applyFiltersDebounced);
                 document.getElementById('cutoffDate').addEventListener('change', applyFilters);
                 document.getElementById('timelineHeader').addEventListener('click', toggleTimelinePanel);
                 document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
