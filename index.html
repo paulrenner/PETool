@@ -30,6 +30,7 @@
             /* Neutral Colors */
             --color-text: #2C3E50;
             --color-text-light: #95A5A6;
+            --color-muted: #95A5A6;
             --color-border: #E0E0E0;
             --color-border-input: #BDC3C7;
             --color-hover-bg: #F8F9FA;
@@ -76,6 +77,7 @@
 
             --color-text: #F7FAFC;
             --color-text-light: #CBD5E0;
+            --color-muted: #A0AEC0;
             --color-border: #4A5568;
             --color-border-input: #4A5568;
             --color-hover-bg: #374151;
@@ -236,6 +238,21 @@
 
         [data-theme="dark"] .multi-select-option.group-child {
             border-left-color: #63B3ED;
+        }
+
+        [data-theme="dark"] .multi-select-search {
+            background: var(--color-bg);
+            border-bottom-color: #4A5568;
+        }
+
+        [data-theme="dark"] .multi-select-search input {
+            background: #374151;
+            border-color: #4A5568;
+            color: var(--color-text);
+        }
+
+        [data-theme="dark"] .multi-select-search input:focus {
+            border-color: var(--color-action);
         }
 
         /* Portfolio Summary Stats */
@@ -908,6 +925,56 @@
             font-size: 12px;
         }
 
+        .multi-select-search {
+            padding: 8px;
+            border-bottom: 1px solid var(--color-border);
+            position: sticky;
+            top: 0;
+            background: var(--color-white);
+            z-index: 1;
+        }
+
+        .multi-select-search input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid var(--color-border-input);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            background: var(--color-white);
+            color: var(--color-text);
+        }
+
+        .multi-select-search input:focus {
+            outline: none;
+            border-color: var(--color-action);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .multi-select-search input::placeholder {
+            color: var(--color-muted);
+        }
+
+        .multi-select-options {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .multi-select-option.search-hidden {
+            display: none;
+        }
+
+        .multi-select-no-results {
+            padding: 12px;
+            text-align: center;
+            color: var(--color-muted);
+            font-size: 13px;
+            display: none;
+        }
+
+        .multi-select-no-results.visible {
+            display: block;
+        }
+
         button {
             padding: 9px 18px;
             border: none;
@@ -1298,6 +1365,19 @@
 
         tbody tr:last-child td {
             border-bottom: none;
+        }
+
+        /* Preview tables don't have summary rows */
+        table.no-summary-row tbody tr:last-child {
+            border-top: none;
+            border-bottom: 1px solid var(--color-border);
+            font-weight: normal;
+            background: transparent;
+        }
+
+        [data-theme="dark"] table.no-summary-row tbody tr:last-child {
+            border-color: var(--color-border);
+            background: transparent;
         }
 
         td.number {
@@ -2921,6 +3001,30 @@
         </div>
     </div>
 
+    <!-- Import Preview Modal -->
+    <div id="importPreviewModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <span class="close" id="closeImportPreviewModalBtn">&times;</span>
+            <h2>Import Preview</h2>
+            <p style="color: var(--color-text-light); margin-bottom: 20px; font-size: 14px;">
+                Review the data to be imported before confirming.
+            </p>
+
+            <div id="importPreviewContent" style="margin: 20px 0; padding: 15px; background: var(--color-alt-bg); border-radius: var(--radius-sm); max-height: 400px; overflow-y: auto;">
+                <p style="color: var(--color-text-light);">Select a JSON file to preview...</p>
+            </div>
+
+            <div class="form-actions">
+                <label for="importPreviewFileInput" class="btn-secondary" style="cursor: pointer; display: inline-block; padding: 9px 18px; min-width: 100px; text-align: center; box-sizing: border-box;">
+                    Choose File
+                </label>
+                <input type="file" id="importPreviewFileInput" accept=".json" style="display: none;">
+                <button type="button" class="btn-primary" id="applyImportBtn" disabled style="min-width: 100px;">Import</button>
+                <button type="button" class="btn-secondary" id="cancelImportPreviewBtn" style="min-width: 100px;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar Panel -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div id="sidebar" class="sidebar">
@@ -2995,10 +3099,9 @@
                     </a>
                 </div>
                 <div class="sidebar-item">
-                    <label for="sidebarImportFile" class="sidebar-import-label">
+                    <a href="#" id="sidebarImportJSON">
                         Import JSON
-                    </label>
-                    <input type="file" id="sidebarImportFile" accept=".json" style="display: none;">
+                    </a>
                 </div>
             </div>
 
@@ -3683,7 +3786,7 @@
             if (!dropdown) return;
 
             let seenTopLevelGroup = false;
-            dropdown.innerHTML = options.map(opt => {
+            const optionsHtml = options.map(opt => {
                 const isSelected = preserveValues.includes(opt.value);
                 const indentStyle = opt.indent ? `style="--indent-level: ${opt.indent}"` : '';
 
@@ -3716,7 +3819,140 @@
                 `;
             }).join('');
 
+            dropdown.innerHTML = `
+                <div class="multi-select-search">
+                    <input type="text" placeholder="Search..." aria-label="Search options">
+                </div>
+                <div class="multi-select-options">${optionsHtml}</div>
+                <div class="multi-select-no-results">No matches found</div>
+            `;
+
             updateMultiSelectDisplay(id);
+        }
+
+        /**
+         * Filter options in a multi-select dropdown based on search text
+         * @param {HTMLElement} container - The multi-select container element
+         * @param {string} searchText - The search text to filter by
+         */
+        function filterMultiSelectOptions(container, searchText) {
+            const optionsContainer = container.querySelector('.multi-select-options');
+            const noResults = container.querySelector('.multi-select-no-results');
+            if (!optionsContainer) return;
+
+            const options = optionsContainer.querySelectorAll('.multi-select-option');
+            const searchLower = searchText.toLowerCase().trim();
+            let visibleCount = 0;
+
+            options.forEach(option => {
+                const label = option.querySelector('label');
+                const text = label ? label.textContent.toLowerCase() : '';
+
+                if (searchLower === '' || text.includes(searchLower)) {
+                    option.classList.remove('search-hidden');
+                    visibleCount++;
+                } else {
+                    option.classList.add('search-hidden');
+                }
+            });
+
+            // Show/hide no results message
+            if (noResults) {
+                noResults.classList.toggle('visible', visibleCount === 0 && searchLower !== '');
+            }
+        }
+
+        /**
+         * Clear the search input and show all options in a multi-select dropdown
+         * @param {HTMLElement} container - The multi-select container element
+         */
+        function clearMultiSelectSearch(container) {
+            const searchInput = container.querySelector('.multi-select-search input');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            filterMultiSelectOptions(container, '');
+        }
+
+        /**
+         * Handle cascading selection for group filter dropdown
+         * - Selecting a parent selects all descendants
+         * - Deselecting a parent deselects all descendants
+         * - Selecting all children of a parent auto-selects the parent (cascades up)
+         * - Deselecting a child deselects the parent
+         * @param {HTMLElement} container - The multi-select container
+         * @param {number} clickedGroupId - The group ID that was clicked
+         * @param {boolean} isNowSelected - Whether the clicked item is now selected
+         */
+        function handleGroupFilterCascade(container, clickedGroupId, isNowSelected) {
+            const optionsContainer = container.querySelector('.multi-select-options');
+            if (!optionsContainer) return;
+
+            const setOptionSelected = (groupId, selected) => {
+                const option = optionsContainer.querySelector(`[data-value="${groupId}"]`);
+                if (option) {
+                    if (selected) {
+                        option.classList.add('selected');
+                    } else {
+                        option.classList.remove('selected');
+                    }
+                    const checkbox = option.querySelector('input[type="checkbox"]');
+                    if (checkbox) checkbox.checked = selected;
+                    option.setAttribute('aria-selected', selected.toString());
+                }
+            };
+
+            const isOptionSelected = (groupId) => {
+                const option = optionsContainer.querySelector(`[data-value="${groupId}"]`);
+                return option ? option.classList.contains('selected') : false;
+            };
+
+            if (isNowSelected) {
+                // Selecting: select all descendants
+                const descendants = AppState.getDescendantIds(clickedGroupId);
+                descendants.forEach(descId => {
+                    if (descId !== clickedGroupId) {
+                        setOptionSelected(descId, true);
+                    }
+                });
+
+                // Check if all siblings are now selected, if so select parent (cascade up)
+                let currentId = clickedGroupId;
+                while (currentId != null) {
+                    const group = AppState.getGroupByIdSync(currentId);
+                    if (!group || group.parentGroupId == null) break;
+
+                    const parentId = group.parentGroupId;
+                    const siblings = AppState.getDirectChildIds(parentId);
+                    const allSiblingsSelected = siblings.every(sibId => isOptionSelected(sibId));
+
+                    if (allSiblingsSelected) {
+                        setOptionSelected(parentId, true);
+                        currentId = parentId; // Continue checking up the tree
+                    } else {
+                        break;
+                    }
+                }
+            } else {
+                // Deselecting: deselect all descendants
+                const descendants = AppState.getDescendantIds(clickedGroupId);
+                descendants.forEach(descId => {
+                    if (descId !== clickedGroupId) {
+                        setOptionSelected(descId, false);
+                    }
+                });
+
+                // Deselect all ancestors (since not all their children are selected anymore)
+                const group = AppState.getGroupByIdSync(clickedGroupId);
+                if (group && group.parentGroupId != null) {
+                    let parentId = group.parentGroupId;
+                    while (parentId != null) {
+                        setOptionSelected(parentId, false);
+                        const parentGroup = AppState.getGroupByIdSync(parentId);
+                        parentId = parentGroup ? parentGroup.parentGroupId : null;
+                    }
+                }
+            }
         }
 
         /**
@@ -3734,16 +3970,22 @@
                     e.stopPropagation();
                     const wasOpen = container.classList.contains('open');
 
-                    // Close all other multi-selects
+                    // Close all other multi-selects (and clear their search)
                     document.querySelectorAll('.multi-select.open').forEach(ms => {
                         ms.classList.remove('open');
                         ms.querySelector('.multi-select-trigger').setAttribute('aria-expanded', 'false');
+                        clearMultiSelectSearch(ms);
                     });
 
                     // Toggle this one
                     if (!wasOpen) {
                         container.classList.add('open');
                         trigger.setAttribute('aria-expanded', 'true');
+                        // Focus the search input after opening
+                        setTimeout(() => {
+                            const searchInput = dropdown.querySelector('.multi-select-search input');
+                            if (searchInput) searchInput.focus();
+                        }, 0);
                     }
                 });
 
@@ -3755,11 +3997,33 @@
                     } else if (e.key === 'Escape') {
                         container.classList.remove('open');
                         trigger.setAttribute('aria-expanded', 'false');
+                        clearMultiSelectSearch(container);
                     }
                 });
 
-                // Handle option clicks (using event delegation)
+                // Handle search input (using event delegation since input is added dynamically)
+                dropdown.addEventListener('input', (e) => {
+                    if (e.target.matches('.multi-select-search input')) {
+                        filterMultiSelectOptions(container, e.target.value);
+                    }
+                });
+
+                // Handle keyboard events in dropdown (for search input)
+                dropdown.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        container.classList.remove('open');
+                        trigger.setAttribute('aria-expanded', 'false');
+                        clearMultiSelectSearch(container);
+                        trigger.focus();
+                    }
+                });
+
+                // Prevent clicks on search input from closing dropdown
                 dropdown.addEventListener('click', (e) => {
+                    if (e.target.closest('.multi-select-search')) {
+                        e.stopPropagation();
+                        return;
+                    }
                     const option = e.target.closest('.multi-select-option');
                     if (option) {
                         e.stopPropagation();
@@ -3767,6 +4031,14 @@
                         const checkbox = option.querySelector('input[type="checkbox"]');
                         if (checkbox) checkbox.checked = option.classList.contains('selected');
                         option.setAttribute('aria-selected', option.classList.contains('selected'));
+
+                        // Handle cascading selection for group filter
+                        if (container.id === 'groupFilter') {
+                            const groupId = parseInt(option.getAttribute('data-value'));
+                            const isNowSelected = option.classList.contains('selected');
+                            handleGroupFilterCascade(container, groupId, isNowSelected);
+                        }
+
                         updateMultiSelectDisplay(container.id);
                         applyFilters();
                     }
@@ -3779,6 +4051,7 @@
                     document.querySelectorAll('.multi-select.open').forEach(ms => {
                         ms.classList.remove('open');
                         ms.querySelector('.multi-select-trigger').setAttribute('aria-expanded', 'false');
+                        clearMultiSelectSearch(ms);
                     });
                 }
             });
@@ -3897,6 +4170,17 @@
             // O(1) group lookup by ID (synchronous)
             getGroupByIdSync(groupId) {
                 return this.groupsMap.get(groupId);
+            },
+
+            // Get direct child group IDs (synchronous)
+            getDirectChildIds(groupId) {
+                const children = [];
+                for (const [id, group] of this.groupsMap) {
+                    if (group.parentGroupId === groupId) {
+                        children.push(id);
+                    }
+                }
+                return children;
             },
 
             // Get ancestor group IDs with memoization
@@ -5699,9 +5983,50 @@
                     }
                 }
             } else if (groupFilterValues.length > 1) {
-                // Multiple groups selected
-                headerTitle.textContent = `${groupFilterValues.length} Groups Selected`;
-                headerSubtitle.textContent = 'Multiple investor groups';
+                // Multiple groups selected - check if they share a common parent
+                const selectedIds = groupFilterValues.map(v => parseInt(v));
+
+                // Find the "effective" parent: if one selected group is ancestor of all others, use it
+                // Otherwise, check if all selected groups share the same immediate parent
+                let effectiveGroup = null;
+
+                // First, check if one of the selected groups is an ancestor of all others
+                for (const id of selectedIds) {
+                    const descendants = AppState.getDescendantIds(id);
+                    if (selectedIds.every(selId => selId === id || descendants.includes(selId))) {
+                        // This group contains all other selected groups
+                        if (!effectiveGroup || descendants.length < AppState.getDescendantIds(effectiveGroup.id).length) {
+                            effectiveGroup = AppState.getGroupByIdSync(id);
+                        }
+                    }
+                }
+
+                // If no selected group is ancestor of all, check if all share the same parent
+                if (!effectiveGroup) {
+                    const parentIds = selectedIds.map(id => {
+                        const g = AppState.getGroupByIdSync(id);
+                        return g ? g.parentGroupId : null;
+                    });
+                    const uniqueParents = [...new Set(parentIds)];
+
+                    if (uniqueParents.length === 1 && uniqueParents[0] != null) {
+                        // All selected groups share the same parent
+                        effectiveGroup = AppState.getGroupByIdSync(uniqueParents[0]);
+                    }
+                }
+
+                if (effectiveGroup) {
+                    headerTitle.textContent = effectiveGroup.name;
+                    if (effectiveGroup.parentGroupId) {
+                        const grandparent = AppState.getGroupByIdSync(effectiveGroup.parentGroupId);
+                        headerSubtitle.textContent = grandparent ? grandparent.name : (effectiveGroup.type || 'Account Group');
+                    } else {
+                        headerSubtitle.textContent = '';
+                    }
+                } else {
+                    headerTitle.textContent = 'Multiple Groups Selected';
+                    headerSubtitle.textContent = 'Multiple investor groups';
+                }
             } else {
                 // Reset to default
                 headerTitle.textContent = 'PE Fund Manager';
@@ -6674,6 +6999,10 @@
                 document.getElementById('accountNumber').value = '';
                 document.getElementById('commitment').value = '';
 
+                // Reset group auto-fill state and remove any indicator
+                groupAutoFillState = { isAutoFilled: false, isAmbiguous: false, conflictingGroups: [] };
+                removeGroupAutoFillIndicator();
+
                 Modal.show('fundModal');
             } catch (err) {
                 showStatus('Error opening add investment modal: ' + err.message, 'error');
@@ -6702,6 +7031,10 @@
                 document.getElementById('accountNumber').value = fund.accountNumber;
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
 
+                // Reset group auto-fill state and remove any indicator (group is already set for edit)
+                groupAutoFillState = { isAutoFilled: false, isAmbiguous: false, conflictingGroups: [] };
+                removeGroupAutoFillIndicator();
+
                 Modal.show('fundModal');
             } catch (err) {
                 showStatus('Error loading fund: ' + err.message, 'error');
@@ -6727,6 +7060,10 @@
                 await populateFundGroupDropdown(fund.groupId);
                 document.getElementById('accountNumber').value = fund.accountNumber + ' (Copy)';
                 document.getElementById('commitment').value = formatCurrency(parseCurrency(fund.commitment) || 0);
+
+                // Reset group auto-fill state and remove any indicator
+                groupAutoFillState = { isAutoFilled: false, isAmbiguous: false, conflictingGroups: [] };
+                removeGroupAutoFillIndicator();
 
                 Modal.show('fundModal');
             } catch (err) {
@@ -8148,6 +8485,243 @@
             }
         }
 
+        // ==================== Account-to-Group Lookup Functions ====================
+
+        /**
+         * Looks up group associations for a given account number across all existing funds.
+         * Returns an object with the group info and whether it's ambiguous.
+         *
+         * @param {string} accountNumber - The account number to look up
+         * @param {number|null} excludeFundId - Optional fund ID to exclude from lookup (for editing)
+         * @returns {Object} { groupId: number|null, groupName: string, isAmbiguous: boolean, conflictingGroups: Array }
+         */
+        async function lookupGroupForAccount(accountNumber, excludeFundId = null) {
+            if (!accountNumber || accountNumber.trim() === '') {
+                return { groupId: null, groupName: null, isAmbiguous: false, conflictingGroups: [] };
+            }
+
+            const normalizedAccount = accountNumber.trim().toLowerCase();
+            const allFunds = await getAllFunds();
+
+            // Find all funds with this account number (excluding the current fund if editing)
+            const matchingFunds = allFunds.filter(f => {
+                if (excludeFundId && f.id === excludeFundId) return false;
+                return f.accountNumber && f.accountNumber.trim().toLowerCase() === normalizedAccount;
+            });
+
+            if (matchingFunds.length === 0) {
+                return { groupId: null, groupName: null, isAmbiguous: false, conflictingGroups: [] };
+            }
+
+            // Collect all unique group IDs (treating null as a valid distinct value)
+            const groupIdMap = new Map();
+            matchingFunds.forEach(fund => {
+                const gId = fund.groupId || null;
+                if (!groupIdMap.has(gId)) {
+                    const groupName = gId ? (AppState.getGroupByIdSync(gId)?.name || 'Unknown Group') : 'No Group';
+                    groupIdMap.set(gId, { groupId: gId, groupName: groupName, count: 1 });
+                } else {
+                    groupIdMap.get(gId).count++;
+                }
+            });
+
+            const uniqueGroups = Array.from(groupIdMap.values());
+
+            if (uniqueGroups.length === 1) {
+                // Single consistent group association
+                return {
+                    groupId: uniqueGroups[0].groupId,
+                    groupName: uniqueGroups[0].groupName,
+                    isAmbiguous: false,
+                    conflictingGroups: []
+                };
+            }
+
+            // Multiple different groups - flag as ambiguous
+            // Sort by count (most common first)
+            uniqueGroups.sort((a, b) => b.count - a.count);
+
+            return {
+                groupId: null,
+                groupName: null,
+                isAmbiguous: true,
+                conflictingGroups: uniqueGroups
+            };
+        }
+
+        /**
+         * Enriches import data with group associations for known account numbers.
+         * Modifies the funds array in place, adding groupId where it can be determined.
+         *
+         * @param {Array} fundsToImport - Array of fund objects to enrich
+         * @returns {Object} { enrichedCount: number, ambiguousCount: number, ambiguousAccounts: Array }
+         */
+        async function enrichImportDataWithGroups(fundsToImport) {
+            const allFunds = await getAllFunds();
+
+            // Build account-to-group mapping from existing funds
+            const accountGroupMap = new Map();
+
+            allFunds.forEach(fund => {
+                const normalizedAccount = fund.accountNumber?.trim().toLowerCase();
+                if (!normalizedAccount) return;
+
+                if (!accountGroupMap.has(normalizedAccount)) {
+                    accountGroupMap.set(normalizedAccount, new Map());
+                }
+
+                const gId = fund.groupId || null;
+                const groupsForAccount = accountGroupMap.get(normalizedAccount);
+                if (!groupsForAccount.has(gId)) {
+                    groupsForAccount.set(gId, 1);
+                } else {
+                    groupsForAccount.set(gId, groupsForAccount.get(gId) + 1);
+                }
+            });
+
+            let enrichedCount = 0;
+            let ambiguousCount = 0;
+            const ambiguousAccounts = [];
+
+            fundsToImport.forEach(fund => {
+                // Skip if fund already has a groupId
+                if (fund.groupId !== undefined && fund.groupId !== null) return;
+
+                const normalizedAccount = fund.accountNumber?.trim().toLowerCase();
+                if (!normalizedAccount) return;
+
+                const groupsForAccount = accountGroupMap.get(normalizedAccount);
+                if (!groupsForAccount) return;
+
+                const uniqueGroups = Array.from(groupsForAccount.entries());
+
+                if (uniqueGroups.length === 1) {
+                    // Single consistent group - auto-assign
+                    fund.groupId = uniqueGroups[0][0]; // The group ID
+                    fund._groupAutoFilled = true;
+                    enrichedCount++;
+                } else if (uniqueGroups.length > 1) {
+                    // Ambiguous - flag it
+                    fund._groupAmbiguous = true;
+                    fund._conflictingGroups = uniqueGroups.map(([gId, count]) => ({
+                        groupId: gId,
+                        groupName: gId ? (AppState.getGroupByIdSync(gId)?.name || 'Unknown') : 'No Group',
+                        count: count
+                    }));
+                    ambiguousCount++;
+                    if (!ambiguousAccounts.includes(fund.accountNumber)) {
+                        ambiguousAccounts.push(fund.accountNumber);
+                    }
+                }
+            });
+
+            return { enrichedCount, ambiguousCount, ambiguousAccounts };
+        }
+
+        // Track auto-fill state for the current fund modal
+        let groupAutoFillState = {
+            isAutoFilled: false,
+            isAmbiguous: false,
+            conflictingGroups: []
+        };
+
+        /**
+         * Handles account number input change and auto-fills group if applicable.
+         */
+        async function handleAccountNumberChange() {
+            const accountInput = document.getElementById('accountNumber');
+            const groupSelect = document.getElementById('fundGroup');
+            const fundIdInput = document.getElementById('fundId');
+
+            const accountNumber = accountInput.value.trim();
+            const excludeFundId = fundIdInput.value ? parseInt(fundIdInput.value) : null;
+
+            // Remove any existing auto-fill indicator
+            removeGroupAutoFillIndicator();
+
+            if (!accountNumber) {
+                groupAutoFillState = { isAutoFilled: false, isAmbiguous: false, conflictingGroups: [] };
+                return;
+            }
+
+            const result = await lookupGroupForAccount(accountNumber, excludeFundId);
+
+            if (result.isAmbiguous) {
+                // Show ambiguous indicator
+                groupAutoFillState = {
+                    isAutoFilled: false,
+                    isAmbiguous: true,
+                    conflictingGroups: result.conflictingGroups
+                };
+                showGroupAutoFillIndicator('ambiguous', result.conflictingGroups);
+            } else if (result.groupId !== null || result.groupName === 'No Group') {
+                // Auto-fill the group
+                groupSelect.value = result.groupId || '';
+                groupAutoFillState = {
+                    isAutoFilled: true,
+                    isAmbiguous: false,
+                    conflictingGroups: []
+                };
+                showGroupAutoFillIndicator('auto-filled', [], result.groupName);
+            } else {
+                // No existing association found
+                groupAutoFillState = { isAutoFilled: false, isAmbiguous: false, conflictingGroups: [] };
+            }
+        }
+
+        /**
+         * Shows an indicator below the group dropdown about auto-fill status.
+         */
+        function showGroupAutoFillIndicator(type, conflictingGroups = [], groupName = '') {
+            removeGroupAutoFillIndicator();
+
+            const groupFormGroup = document.getElementById('fundGroup').closest('.form-group');
+            const indicator = document.createElement('div');
+            indicator.id = 'groupAutoFillIndicator';
+            indicator.style.cssText = 'margin-top: 6px; font-size: 12px; display: flex; align-items: flex-start; gap: 6px;';
+
+            if (type === 'auto-filled') {
+                indicator.innerHTML = `
+                    <span style="color: var(--color-success); display: flex; align-items: center; gap: 4px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Auto-filled from existing investor data
+                    </span>
+                    <span style="color: var(--color-text-light);">(${escapeHtml(groupName)})</span>
+                `;
+            } else if (type === 'ambiguous') {
+                const groupsList = conflictingGroups
+                    .map(g => `${escapeHtml(g.groupName)} (${g.count})`)
+                    .join(', ');
+                indicator.innerHTML = `
+                    <span style="color: var(--color-warning); display: flex; align-items: center; gap: 4px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        Multiple groups found for this account
+                    </span>
+                    <span style="color: var(--color-text-light); font-size: 11px;">(${groupsList})</span>
+                `;
+            }
+
+            groupFormGroup.appendChild(indicator);
+        }
+
+        /**
+         * Removes the auto-fill indicator from the group form group.
+         */
+        function removeGroupAutoFillIndicator() {
+            const existing = document.getElementById('groupAutoFillIndicator');
+            if (existing) {
+                existing.remove();
+            }
+        }
+
+        // ==================== End Account-to-Group Lookup Functions ====================
+
         // ==================== Bulk Cash Flow Functions ====================
 
         async function showBulkCashFlowModal() {
@@ -8431,7 +9005,7 @@
                 // Build preview HTML
                 let previewHtml = `
                     <p style="margin-bottom: 10px; color: var(--color-text);"><strong>${matchingFunds.length}</strong> investor position(s) will be permanently removed:</p>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
+                    <table class="no-summary-row" style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
                         <thead>
                             <tr style="border-bottom: 1px solid var(--color-border);">
                                 <th style="text-align: left; padding: 5px;">Account</th>
@@ -8604,7 +9178,7 @@
                 // Build preview HTML
                 let previewHtml = `
                     <p style="margin-bottom: 10px; color: var(--color-text);"><strong>${matchingFunds.length}</strong> investment(s) will be assigned to <strong>${escapeHtml(targetGroupName)}</strong>:</p>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
+                    <table class="no-summary-row" style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">
                         <thead>
                             <tr style="border-bottom: 1px solid var(--color-border);">
                                 <th style="text-align: left; padding: 5px;">Fund Name</th>
@@ -8658,7 +9232,7 @@
                 ? (AppState.getGroupByIdSync(parseInt(targetGroupId))?.name || 'Unknown Group')
                 : 'No Group';
 
-            const confirmed = await showConfirmDialog(
+            const confirmed = await showConfirm(
                 `Are you sure you want to assign all ${fundIds.length} investment(s) for account "${accountNumber}" to "${targetGroupName}"?`,
                 {
                     title: 'Confirm Bulk Group Assignment',
@@ -8706,6 +9280,321 @@
         }
 
         // ==================== End Bulk Assign Group Functions ====================
+
+        // ==================== Import Preview Functions ====================
+
+        function showImportPreviewModal() {
+            // Reset the modal state
+            document.getElementById('importPreviewContent').innerHTML = '<p style="color: var(--color-text-light);">Select a JSON file to preview...</p>';
+            document.getElementById('applyImportBtn').disabled = true;
+            document.getElementById('importPreviewFileInput').value = '';
+            delete document.getElementById('importPreviewModal').dataset.importData;
+
+            document.getElementById('importPreviewModal').classList.add('show');
+        }
+
+        function closeImportPreviewModal() {
+            document.getElementById('importPreviewModal').classList.remove('show');
+            // Clear stored data
+            delete document.getElementById('importPreviewModal').dataset.importData;
+        }
+
+        async function previewImportFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const previewContent = document.getElementById('importPreviewContent');
+            const applyBtn = document.getElementById('applyImportBtn');
+
+            // Validate file size
+            if (file.size > CONFIG.MAX_FILE_SIZE) {
+                previewContent.innerHTML = `<p style="color: var(--color-danger);">File too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum size is ${CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB.</p>`;
+                applyBtn.disabled = true;
+                return;
+            }
+
+            try {
+                const text = await file.text();
+                const data = safeJSONParse(text);
+
+                // Analyze the import data
+                const analysis = await analyzeImportData(data);
+
+                // Store the parsed data for import
+                document.getElementById('importPreviewModal').dataset.importData = text;
+
+                // Generate preview HTML
+                const previewHtml = generateImportPreviewHtml(analysis, file.name);
+                previewContent.innerHTML = previewHtml;
+                applyBtn.disabled = false;
+
+            } catch (err) {
+                previewContent.innerHTML = `<p style="color: var(--color-danger);">Error reading file: ${escapeHtml(err.message)}</p>`;
+                applyBtn.disabled = true;
+                Debug.error('Error previewing import file:', err);
+            }
+        }
+
+        async function analyzeImportData(data) {
+            const analysis = {
+                groups: { count: 0, newCount: 0, existingCount: 0, items: [] },
+                fundNames: { count: 0, newCount: 0, existingCount: 0, items: [] },
+                funds: { count: 0, newCount: 0, duplicateCount: 0, items: [], duplicates: [] },
+                warnings: [],
+                exportDate: data.exportDate || null
+            };
+
+            // Analyze groups
+            if (data.groups && Array.isArray(data.groups)) {
+                analysis.groups.count = data.groups.length;
+
+                if (data.groups.length > CONFIG.MAX_IMPORT_GROUPS) {
+                    analysis.warnings.push(`Too many groups (${data.groups.length}). Maximum allowed is ${CONFIG.MAX_IMPORT_GROUPS}.`);
+                }
+
+                const existingGroups = await getAllGroups();
+                const existingGroupNames = new Set(existingGroups.map(g => g.name.toLowerCase()));
+
+                data.groups.forEach(group => {
+                    const isExisting = existingGroupNames.has(group.name.toLowerCase());
+                    if (isExisting) {
+                        analysis.groups.existingCount++;
+                    } else {
+                        analysis.groups.newCount++;
+                    }
+                    analysis.groups.items.push({
+                        name: group.name,
+                        isExisting: isExisting
+                    });
+                });
+            }
+
+            // Analyze fund names
+            if (data.fundNames && Array.isArray(data.fundNames)) {
+                analysis.fundNames.count = data.fundNames.length;
+
+                if (data.fundNames.length > CONFIG.MAX_IMPORT_FUNDNAMES) {
+                    analysis.warnings.push(`Too many fund names (${data.fundNames.length}). Maximum allowed is ${CONFIG.MAX_IMPORT_FUNDNAMES}.`);
+                }
+
+                data.fundNames.forEach(fundNameItem => {
+                    const name = typeof fundNameItem === 'string' ? fundNameItem : fundNameItem.name;
+                    const isExisting = fundNames.has(name);
+                    if (isExisting) {
+                        analysis.fundNames.existingCount++;
+                    } else {
+                        analysis.fundNames.newCount++;
+                    }
+                    analysis.fundNames.items.push({
+                        name: name,
+                        isExisting: isExisting
+                    });
+                });
+            }
+
+            // Analyze funds
+            const fundsToImport = data.funds || data;
+            if (Array.isArray(fundsToImport)) {
+                analysis.funds.count = fundsToImport.length;
+
+                if (fundsToImport.length > CONFIG.MAX_IMPORT_FUNDS) {
+                    analysis.warnings.push(`Too many funds (${fundsToImport.length}). Maximum allowed is ${CONFIG.MAX_IMPORT_FUNDS}.`);
+                }
+
+                // Build existing fund keys for duplicate detection
+                const existingFundKeys = new Set();
+                currentFunds.forEach(f => {
+                    const key = `${f.fundName}|${f.accountNumber}`.toLowerCase();
+                    existingFundKeys.add(key);
+                });
+
+                // Also track keys within the import batch
+                const importBatchKeys = new Set();
+
+                fundsToImport.forEach(fund => {
+                    const importKey = `${fund.fundName}|${fund.accountNumber}`.toLowerCase();
+                    const isDuplicate = existingFundKeys.has(importKey) || importBatchKeys.has(importKey);
+
+                    if (isDuplicate) {
+                        analysis.funds.duplicateCount++;
+                        analysis.funds.duplicates.push({
+                            fundName: fund.fundName,
+                            accountNumber: fund.accountNumber
+                        });
+                    } else {
+                        analysis.funds.newCount++;
+                        importBatchKeys.add(importKey);
+                    }
+
+                    analysis.funds.items.push({
+                        fundName: fund.fundName,
+                        accountNumber: fund.accountNumber,
+                        commitment: parseCurrency(fund.commitment),
+                        cashFlowCount: (fund.cashFlows || []).length,
+                        navCount: (fund.monthlyNav || []).length,
+                        isDuplicate: isDuplicate
+                    });
+                });
+            }
+
+            return analysis;
+        }
+
+        function generateImportPreviewHtml(analysis, fileName) {
+            let html = '';
+
+            // File info
+            html += `<div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border);">`;
+            html += `<p style="margin: 0 0 5px 0; color: var(--color-text);"><strong>File:</strong> ${escapeHtml(fileName)}</p>`;
+            if (analysis.exportDate) {
+                html += `<p style="margin: 0; color: var(--color-text-light); font-size: 13px;">Exported: ${escapeHtml(analysis.exportDate)}</p>`;
+            }
+            html += `</div>`;
+
+            // Warnings
+            if (analysis.warnings.length > 0) {
+                html += `<div style="margin-bottom: 15px; padding: 10px; background: var(--color-danger-light, #fee2e2); border-radius: var(--radius-sm); border: 1px solid var(--color-danger);">`;
+                html += `<p style="margin: 0 0 5px 0; color: var(--color-danger); font-weight: bold;">Warnings:</p>`;
+                analysis.warnings.forEach(warning => {
+                    html += `<p style="margin: 0; color: var(--color-danger); font-size: 13px;">• ${escapeHtml(warning)}</p>`;
+                });
+                html += `</div>`;
+            }
+
+            // Summary cards
+            html += `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px;">`;
+
+            // Groups summary
+            html += `<div style="padding: 10px; background: var(--color-bg); border-radius: var(--radius-sm); border: 1px solid var(--color-border);">`;
+            html += `<p style="margin: 0 0 5px 0; font-size: 12px; color: var(--color-text-light);">Groups</p>`;
+            html += `<p style="margin: 0; font-size: 18px; font-weight: bold; color: var(--color-text);">${analysis.groups.count}</p>`;
+            if (analysis.groups.count > 0) {
+                html += `<p style="margin: 5px 0 0 0; font-size: 11px; color: var(--color-text-light);">${analysis.groups.newCount} new, ${analysis.groups.existingCount} existing</p>`;
+            }
+            html += `</div>`;
+
+            // Fund names summary
+            html += `<div style="padding: 10px; background: var(--color-bg); border-radius: var(--radius-sm); border: 1px solid var(--color-border);">`;
+            html += `<p style="margin: 0 0 5px 0; font-size: 12px; color: var(--color-text-light);">Fund Names</p>`;
+            html += `<p style="margin: 0; font-size: 18px; font-weight: bold; color: var(--color-text);">${analysis.fundNames.count}</p>`;
+            if (analysis.fundNames.count > 0) {
+                html += `<p style="margin: 5px 0 0 0; font-size: 11px; color: var(--color-text-light);">${analysis.fundNames.newCount} new, ${analysis.fundNames.existingCount} existing</p>`;
+            }
+            html += `</div>`;
+
+            // Funds summary
+            html += `<div style="padding: 10px; background: var(--color-bg); border-radius: var(--radius-sm); border: 1px solid var(--color-border);">`;
+            html += `<p style="margin: 0 0 5px 0; font-size: 12px; color: var(--color-text-light);">Investments</p>`;
+            html += `<p style="margin: 0; font-size: 18px; font-weight: bold; color: var(--color-text);">${analysis.funds.count}</p>`;
+            if (analysis.funds.count > 0) {
+                html += `<p style="margin: 5px 0 0 0; font-size: 11px; color: var(--color-text-light);">${analysis.funds.newCount} to import`;
+                if (analysis.funds.duplicateCount > 0) {
+                    html += `, <span style="color: var(--color-warning);">${analysis.funds.duplicateCount} duplicates</span>`;
+                }
+                html += `</p>`;
+            }
+            html += `</div>`;
+
+            html += `</div>`;
+
+            // Funds table (show first 10)
+            if (analysis.funds.items.length > 0) {
+                const itemsToShow = analysis.funds.items.slice(0, 10);
+                const hasMore = analysis.funds.items.length > 10;
+
+                html += `<div style="margin-top: 15px;">`;
+                html += `<h4 style="margin: 0 0 10px 0; font-size: 14px; color: var(--color-text);">Investments to Import${hasMore ? ` (showing first 10 of ${analysis.funds.count})` : ''}</h4>`;
+                html += `<table style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--color-text);">`;
+                html += `<thead>`;
+                html += `<tr style="border-bottom: 1px solid var(--color-border);">`;
+                html += `<th style="text-align: left; padding: 5px; color: var(--color-text);">Fund Name</th>`;
+                html += `<th style="text-align: left; padding: 5px; color: var(--color-text);">Account</th>`;
+                html += `<th style="text-align: right; padding: 5px; color: var(--color-text);">Commitment</th>`;
+                html += `<th style="text-align: center; padding: 5px; color: var(--color-text);">CFs</th>`;
+                html += `<th style="text-align: center; padding: 5px; color: var(--color-text);">NAVs</th>`;
+                html += `<th style="text-align: center; padding: 5px; color: var(--color-text);">Status</th>`;
+                html += `</tr>`;
+                html += `</thead>`;
+                html += `<tbody>`;
+
+                itemsToShow.forEach(fund => {
+                    const rowStyle = fund.isDuplicate ? 'opacity: 0.6;' : '';
+                    const statusBadge = fund.isDuplicate
+                        ? '<span style="padding: 2px 6px; background: var(--color-warning-light, #fef3c7); color: var(--color-warning); border-radius: 3px; font-size: 11px;">Skip</span>'
+                        : '<span style="padding: 2px 6px; background: var(--color-success-light, #d1fae5); color: var(--color-success); border-radius: 3px; font-size: 11px;">New</span>';
+
+                    html += `<tr style="border-bottom: 1px solid var(--color-border); ${rowStyle}">`;
+                    html += `<td style="padding: 5px; color: var(--color-text);">${escapeHtml(fund.fundName)}</td>`;
+                    html += `<td style="padding: 5px; color: var(--color-text);">${escapeHtml(fund.accountNumber)}</td>`;
+                    html += `<td style="text-align: right; padding: 5px; color: var(--color-text);">${formatCurrency(fund.commitment)}</td>`;
+                    html += `<td style="text-align: center; padding: 5px; color: var(--color-text-light);">${fund.cashFlowCount}</td>`;
+                    html += `<td style="text-align: center; padding: 5px; color: var(--color-text-light);">${fund.navCount}</td>`;
+                    html += `<td style="text-align: center; padding: 5px;">${statusBadge}</td>`;
+                    html += `</tr>`;
+                });
+
+                html += `</tbody>`;
+                html += `</table>`;
+
+                if (hasMore) {
+                    html += `<p style="margin: 10px 0 0 0; font-size: 12px; color: var(--color-text-light); font-style: italic;">...and ${analysis.funds.items.length - 10} more investments</p>`;
+                }
+
+                html += `</div>`;
+            }
+
+            // Duplicates warning
+            if (analysis.funds.duplicateCount > 0) {
+                html += `<div style="margin-top: 15px; padding: 10px; background: var(--color-warning-light, #fef3c7); border-radius: var(--radius-sm); border: 1px solid var(--color-warning);">`;
+                html += `<p style="margin: 0; color: var(--color-warning-dark, #92400e); font-size: 13px;">`;
+                html += `<strong>${analysis.funds.duplicateCount} duplicate(s)</strong> will be skipped (same fund name + account number already exists).`;
+                html += `</p>`;
+                html += `</div>`;
+            }
+
+            return html;
+        }
+
+        async function applyImport() {
+            const modal = document.getElementById('importPreviewModal');
+            const importDataJson = modal.dataset.importData;
+
+            if (!importDataJson) {
+                showStatus('No import data available. Please select a file first.', 'error');
+                return;
+            }
+
+            const confirmed = await showConfirm(
+                'Are you sure you want to import this data? Existing data will not be overwritten, but new data will be added.',
+                {
+                    title: 'Confirm Import',
+                    confirmText: 'Import',
+                    cancelText: 'Cancel'
+                }
+            );
+
+            if (!confirmed) return;
+
+            closeImportPreviewModal();
+            closeSidebar();
+
+            // Create a fake event object for importDatabase
+            const fakeEvent = {
+                target: {
+                    files: [new Blob([importDataJson], { type: 'application/json' })],
+                    value: ''
+                }
+            };
+
+            // Use the File API to create a proper File object
+            const file = new File([importDataJson], 'import.json', { type: 'application/json' });
+            fakeEvent.target.files = [file];
+
+            // Call the existing importDatabase function
+            await importDatabase(fakeEvent);
+        }
+
+        // ==================== End Import Preview Functions ====================
 
         async function populateFundNamesDropdown(valueToSet = null) {
             const select = document.getElementById('fundName');
@@ -9377,6 +10266,9 @@
                     fundNameData.set(name, fundNameObj);
                 }
 
+                // Enrich import data with group associations for known account numbers
+                const enrichmentResult = await enrichImportDataWithGroups(fundsToImport);
+
                 const totalFunds = fundsToImport.length;
                 const failedImports = [];
                 const skippedDuplicates = [];
@@ -9417,9 +10309,16 @@
                         }));
 
                         // Map old groupId to new groupId if applicable
+                        // Also use groupId set by enrichment (for known account numbers)
                         let groupId = null;
-                        if (fund.groupId && oldGroupIdToNew[fund.groupId]) {
-                            groupId = oldGroupIdToNew[fund.groupId];
+                        if (fund.groupId != null) {
+                            if (fund._groupAutoFilled) {
+                                // Group was auto-filled by enrichment - use it directly
+                                groupId = fund.groupId;
+                            } else if (oldGroupIdToNew[fund.groupId]) {
+                                // Map old groupId to new groupId from import mapping
+                                groupId = oldGroupIdToNew[fund.groupId];
+                            }
                         }
 
                         const fundData = {
@@ -9453,13 +10352,28 @@
                         messages.push(`${failedImports.length} failed`);
                         Debug.error('Failed imports:', failedImports);
                     }
+                    if (enrichmentResult.enrichedCount > 0) {
+                        messages.push(`${enrichmentResult.enrichedCount} groups auto-filled`);
+                    }
+                    if (enrichmentResult.ambiguousCount > 0) {
+                        messages.push(`${enrichmentResult.ambiguousCount} ambiguous groups`);
+                        Debug.log('Ambiguous account groups:', enrichmentResult.ambiguousAccounts);
+                    }
                     const status = failedImports.length > 0 ? 'error' : 'success';
                     showStatus(`Import complete: ${messages.join(', ')} (see console for details)`, status);
                     if (failedImports.length === 0) {
                         event.target.value = '';
                     }
                 } else {
-                    showStatus(`Successfully imported ${imported} fund(s)`);
+                    let successMsg = `Successfully imported ${imported} fund(s)`;
+                    if (enrichmentResult.enrichedCount > 0) {
+                        successMsg += ` (${enrichmentResult.enrichedCount} groups auto-filled)`;
+                    }
+                    if (enrichmentResult.ambiguousCount > 0) {
+                        successMsg += ` (${enrichmentResult.ambiguousCount} accounts have ambiguous groups)`;
+                        Debug.log('Ambiguous account groups:', enrichmentResult.ambiguousAccounts);
+                    }
+                    showStatus(successMsg);
                     event.target.value = '';
                 }
             } catch (err) {
@@ -9919,6 +10833,17 @@
                 document.getElementById('closeFundModalBtn').addEventListener('click', closeFundModal);
                 document.getElementById('cancelFundModalBtn').addEventListener('click', closeFundModal);
                 document.getElementById('fundForm').addEventListener('submit', saveFund);
+
+                // Add account number change listener for group auto-fill
+                const accountInput = document.getElementById('accountNumber');
+                let debounceTimer = null;
+                accountInput.addEventListener('input', () => {
+                    // Debounce to avoid too many lookups while typing
+                    if (debounceTimer) clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(handleAccountNumberChange, 300);
+                });
+                // Also trigger on blur for immediate feedback
+                accountInput.addEventListener('blur', handleAccountNumberChange);
             },
 
             /** Action dropdown (edit, duplicate, details, delete) */
@@ -10065,6 +10990,7 @@
                     'sidebarExportCSV': exportToCSV,
                     'sidebarExportJSON': exportDatabase,
                     'sidebarExportPDF': exportToPDF,
+                    'sidebarImportJSON': showImportPreviewModal,
                     'sidebarLoadSampleData': loadSampleData,
                     'sidebarBulkRemoveFund': showBulkRemoveFundModal,
                     'sidebarClearDatabase': clearDatabase
@@ -10081,17 +11007,23 @@
                         }
                     });
                 });
-
-                document.getElementById('sidebarImportFile').addEventListener('change', async (e) => {
-                    await importDatabase(e);
-                    closeSidebar();
-                });
             },
 
             /** Keyboard shortcuts modal */
             setupShortcutsModal() {
                 document.getElementById('closeShortcutsModalBtn').addEventListener('click', closeShortcutsModal);
                 document.getElementById('closeShortcutsModal2Btn').addEventListener('click', closeShortcutsModal);
+            },
+
+            /** Import preview modal */
+            setupImportPreviewModal() {
+                const wrapAsync = (fn) => async (e) => {
+                    try { await fn(e); } catch (err) { Debug.error('Import preview modal error:', err); showStatus('An error occurred', 'error'); }
+                };
+                document.getElementById('closeImportPreviewModalBtn').addEventListener('click', closeImportPreviewModal);
+                document.getElementById('cancelImportPreviewBtn').addEventListener('click', closeImportPreviewModal);
+                document.getElementById('importPreviewFileInput').addEventListener('change', wrapAsync(previewImportFile));
+                document.getElementById('applyImportBtn').addEventListener('click', wrapAsync(applyImport));
             },
 
             /** Initialize all event listeners */
@@ -10105,6 +11037,7 @@
                 this.setupBulkCashFlowModal();
                 this.setupBulkRemoveFundModal();
                 this.setupBulkAssignGroupModal();
+                this.setupImportPreviewModal();
                 this.setupDetailsModal();
                 this.setupBackupWarning();
                 this.setupSidebar();
