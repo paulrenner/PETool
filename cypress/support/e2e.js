@@ -64,7 +64,9 @@ Cypress.Commands.add('addFund', (fundData) => {
     }
   });
 
-  cy.get('#accountNumber').clear().type(accountNumber);
+  // Wait for any dropdowns to close and click elsewhere to ensure focus
+  cy.wait(200);
+  cy.get('#accountNumber').click({ force: true }).clear().type(accountNumber);
   cy.get('#commitment').clear().type(commitment);
 
   cy.get('#saveFundBtn').click();
