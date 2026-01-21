@@ -357,19 +357,19 @@ async function renderTable(): Promise<void> {
     // Apply filters
     let filtered = applyCurrentFilters(funds);
 
-    // Apply sorting
+    // Get cutoff date (needed for consistent sorting and display)
+    const cutoffDateInput = document.getElementById('cutoffDate') as HTMLInputElement;
+    const cutoffDateValue = cutoffDateInput?.value;
+    const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue) : undefined;
+
+    // Apply sorting (with cutoffDate for consistent metrics calculation)
     if (AppState.sortColumns.length > 0) {
-      filtered = sortData(filtered, AppState.sortColumns);
+      filtered = sortData(filtered, AppState.sortColumns, cutoffDate);
     }
 
     // Update filter dropdowns
     updateFilterDropdowns(funds);
     updateActiveFiltersIndicator();
-
-    // Get cutoff date
-    const cutoffDateInput = document.getElementById('cutoffDate') as HTMLInputElement;
-    const cutoffDateValue = cutoffDateInput?.value;
-    const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue) : undefined;
 
     // Calculate metrics for each fund
     const fundsWithMetrics: FundWithMetrics[] = filtered.map((fund) => ({
@@ -554,7 +554,7 @@ function updateHeader(): void {
 /**
  * Handle header click for sorting
  */
-function handleHeaderClick(event: Event): void {
+async function handleHeaderClick(event: Event): Promise<void> {
   const target = event.target as HTMLElement;
 
   // Skip if clicking on resizer or currently resizing
@@ -571,18 +571,23 @@ function handleHeaderClick(event: Event): void {
   const shiftKey = (event as MouseEvent).shiftKey;
 
   if (shiftKey) {
-    // Multi-column sort
+    // Multi-column sort - use immutable update pattern
     const existingIndex = AppState.sortColumns.findIndex((s) => s.column === column);
     if (existingIndex !== -1) {
-      // Toggle direction or remove
       const current = AppState.sortColumns[existingIndex]!;
       if (current.direction === 'asc') {
-        AppState.sortColumns[existingIndex] = { column, direction: 'desc' };
+        // Toggle to desc
+        const newColumns = [...AppState.sortColumns];
+        newColumns[existingIndex] = { column, direction: 'desc' };
+        AppState.setSortColumns(newColumns);
       } else {
-        AppState.sortColumns.splice(existingIndex, 1);
+        // Remove from sort
+        const newColumns = AppState.sortColumns.filter((_, i) => i !== existingIndex);
+        AppState.setSortColumns(newColumns);
       }
     } else {
-      AppState.sortColumns.push({ column, direction: 'asc' });
+      // Add new sort column
+      AppState.setSortColumns([...AppState.sortColumns, { column, direction: 'asc' }]);
     }
   } else {
     // Single column sort
@@ -599,7 +604,7 @@ function handleHeaderClick(event: Event): void {
   }
 
   updateSortIndicators(AppState.sortColumns);
-  renderTable();
+  await renderTable();
 }
 
 /**
@@ -1221,10 +1226,10 @@ function initializeEventListeners(): void {
   // Sidebar - Show Tags checkbox
   const sidebarShowTagsCheckbox = document.getElementById('sidebarShowTagsCheckbox');
   if (sidebarShowTagsCheckbox) {
-    sidebarShowTagsCheckbox.addEventListener('change', () => {
+    sidebarShowTagsCheckbox.addEventListener('change', async () => {
       const checked = (sidebarShowTagsCheckbox as HTMLInputElement).checked;
       localStorage.setItem('showTags', checked.toString());
-      renderTable();
+      await renderTable();
     });
 
     // Restore saved preference

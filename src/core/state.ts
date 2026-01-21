@@ -25,8 +25,6 @@ class AppStateClass {
   currentActionFundId: number | null = null;
   currentDetailsFundId: number | null = null;
   hasUnsavedChanges = false;
-  isResizingColumn = false;
-  lastMousedownOnResizer = false;
 
   // Cache
   metricsCache: Map<string, MetricsCacheEntry> = new Map();
@@ -169,14 +167,6 @@ class AppStateClass {
 
   setCurrentDetailsFundId(fundId: number | null): void {
     this.currentDetailsFundId = fundId;
-  }
-
-  setIsResizingColumn(value: boolean): void {
-    this.isResizingColumn = value;
-  }
-
-  setLastMousedownOnResizer(value: boolean): void {
-    this.lastMousedownOnResizer = value;
   }
 
   setAbortController(controller: AbortController | null): void {

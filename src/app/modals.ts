@@ -21,9 +21,7 @@ import { escapeHtml } from '../utils/escaping';
 import { formatCurrency, parseCurrency, formatNumberWithCommas } from '../utils/formatting';
 import { buildGroupsTree } from './filters';
 
-// Modal state
-let currentActionFundId: number | null = null;
-let currentDetailsFundId: number | null = null;
+// Note: Modal state (currentActionFundId, currentDetailsFundId) is managed in AppState
 
 // ===========================
 // Group Auto-Fill Functions
@@ -643,7 +641,7 @@ export async function showDetailsModal(
     return;
   }
 
-  currentDetailsFundId = fundId;
+  AppState.setCurrentDetailsFundId(fundId);
 
   const modalTitle = document.getElementById('detailsModalTitle');
   const modalSubtitle = document.getElementById('detailsModalSubtitle');
@@ -784,9 +782,10 @@ export function addNavRow(): void {
 export async function saveDetailsFromModal(
   onSave: () => Promise<void>
 ): Promise<void> {
-  if (!currentDetailsFundId) return;
+  const detailsFundId = AppState.currentDetailsFundId;
+  if (!detailsFundId) return;
 
-  const fund = await getFundById(currentDetailsFundId);
+  const fund = await getFundById(detailsFundId);
   if (!fund) {
     showStatus('Fund not found', 'error');
     return;
@@ -1357,15 +1356,15 @@ export function cancelNewFundNameInline(): void {
   if (fundNameSelect) fundNameSelect.value = '';
 }
 
-// Export state accessors
+// Export state accessors (delegates to AppState for centralized state management)
 export function getCurrentDetailsFundId(): number | null {
-  return currentDetailsFundId;
+  return AppState.currentDetailsFundId;
 }
 
 export function setCurrentActionFundId(id: number | null): void {
-  currentActionFundId = id;
+  AppState.setCurrentActionFundId(id);
 }
 
 export function getCurrentActionFundId(): number | null {
-  return currentActionFundId;
+  return AppState.currentActionFundId;
 }

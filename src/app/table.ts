@@ -55,7 +55,7 @@ export function getInvestorCellHtml(fund: Fund): string {
 /**
  * Sort data by multiple columns
  */
-export function sortData(funds: Fund[], sortColumns: SortColumn[]): Fund[] {
+export function sortData(funds: Fund[], sortColumns: SortColumn[], cutoffDate?: Date): Fund[] {
   if (sortColumns.length === 0) return funds;
 
   return [...funds].sort((a, b) => {
@@ -63,9 +63,9 @@ export function sortData(funds: Fund[], sortColumns: SortColumn[]): Fund[] {
       const multiplier = direction === 'asc' ? 1 : -1;
       let comparison = 0;
 
-      // Get metrics for comparison
-      const metricsA = calculateMetrics(a);
-      const metricsB = calculateMetrics(b);
+      // Get metrics for comparison (with cutoffDate for consistency with displayed values)
+      const metricsA = calculateMetrics(a, cutoffDate);
+      const metricsB = calculateMetrics(b, cutoffDate);
 
       switch (column) {
         case 'fundName':
