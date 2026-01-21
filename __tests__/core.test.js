@@ -54,7 +54,6 @@ describe('AppState', () => {
         AppState.setSortColumns([]);
         AppState.setCurrentActionFundId(null);
         AppState.setCurrentDetailsFundId(null);
-        AppState.setCurrentGroupDescendants(null);
         AppState.clearMetricsCache();
     });
 
@@ -157,11 +156,6 @@ describe('AppState', () => {
         test('setCurrentDetailsFundId updates state', () => {
             AppState.setCurrentDetailsFundId(456);
             expect(AppState.currentDetailsFundId).toBe(456);
-        });
-
-        test('setCurrentGroupDescendants updates state', () => {
-            AppState.setCurrentGroupDescendants([1, 2, 3]);
-            expect(AppState.currentGroupDescendants).toEqual([1, 2, 3]);
         });
     });
 

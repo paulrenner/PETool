@@ -27,20 +27,18 @@ import { buildGroupsTree } from './filters';
 // Fund Modal Unsaved Changes
 // ===========================
 
-let fundModalHasUnsavedChanges = false;
-
 /**
  * Mark the fund modal as having unsaved changes
  */
 export function setFundModalUnsavedChanges(value: boolean): void {
-  fundModalHasUnsavedChanges = value;
+  AppState.setFundModalUnsavedChanges(value);
 }
 
 /**
  * Check if fund modal has unsaved changes
  */
 export function hasFundModalUnsavedChanges(): boolean {
-  return fundModalHasUnsavedChanges;
+  return AppState.fundModalHasUnsavedChanges;
 }
 
 /**
@@ -59,10 +57,10 @@ export function initFundFormChangeTracking(): void {
     const input = document.getElementById(id);
     if (input) {
       input.addEventListener('input', () => {
-        fundModalHasUnsavedChanges = true;
+        AppState.setFundModalUnsavedChanges(true);
       });
       input.addEventListener('change', () => {
-        fundModalHasUnsavedChanges = true;
+        AppState.setFundModalUnsavedChanges(true);
       });
     }
   });
@@ -72,7 +70,7 @@ export function initFundFormChangeTracking(): void {
  * Close fund modal with unsaved changes confirmation
  */
 export async function closeFundModalWithConfirm(): Promise<void> {
-  if (fundModalHasUnsavedChanges) {
+  if (AppState.fundModalHasUnsavedChanges) {
     const confirmed = await showConfirm('You have unsaved changes. Discard them?', {
       title: 'Unsaved Changes',
       confirmText: 'Discard',
@@ -80,7 +78,7 @@ export async function closeFundModalWithConfirm(): Promise<void> {
     });
     if (!confirmed) return;
   }
-  fundModalHasUnsavedChanges = false;
+  AppState.setFundModalUnsavedChanges(false);
   closeModal('fundModal');
 }
 
@@ -224,7 +222,15 @@ async function handleAccountNumberChange(): Promise<void> {
     return;
   }
 
+  // Track this request to prevent race conditions
+  const thisRequestId = ++accountLookupRequestId;
+
   const result = await lookupGroupForAccount(accountNumber, excludeFundId);
+
+  // Check if this request is still the most recent one
+  if (thisRequestId !== accountLookupRequestId) {
+    return; // A newer request has been made, ignore this result
+  }
 
   if (result.isAmbiguous) {
     // Show ambiguous indicator
@@ -244,6 +250,8 @@ async function handleAccountNumberChange(): Promise<void> {
 // Store the suggested group for comparison when user changes it
 let suggestedGroupId: number | null = null;
 let accountHasExistingGroups = false;
+// Request tracking to prevent race conditions in async lookups
+let accountLookupRequestId = 0;
 
 /**
  * Show warning when user changes group from the suggested value
@@ -556,7 +564,7 @@ export async function showAddFundModal(): Promise<void> {
   await populateFundNameDropdown();
   populateGroupDropdown('fundGroup');
 
-  fundModalHasUnsavedChanges = false;
+  AppState.setFundModalUnsavedChanges(false);
   openModal('fundModal');
 }
 
@@ -597,7 +605,7 @@ export async function showEditFundModal(fundId: number): Promise<void> {
   if (fundGroupSelect) fundGroupSelect.value = fund.groupId?.toString() || '';
   if (commitmentInput) commitmentInput.value = formatNumberWithCommas(fund.commitment);
 
-  fundModalHasUnsavedChanges = false;
+  AppState.setFundModalUnsavedChanges(false);
   openModal('fundModal');
 }
 
@@ -640,7 +648,7 @@ export async function showDuplicateFundModal(fundId: number): Promise<void> {
   if (fundGroupSelect) fundGroupSelect.value = fund.groupId?.toString() || '';
   if (commitmentInput) commitmentInput.value = formatNumberWithCommas(fund.commitment);
 
-  fundModalHasUnsavedChanges = false;
+  AppState.setFundModalUnsavedChanges(false);
   openModal('fundModal');
 }
 
@@ -758,7 +766,7 @@ export async function saveFundFromModal(
       }
     }
 
-    fundModalHasUnsavedChanges = false;
+    AppState.setFundModalUnsavedChanges(false);
     closeModal('fundModal');
     AppState.clearMetricsCache();
     await onSave();
@@ -1145,6 +1153,7 @@ export async function saveGroupFromModal(
     }
 
     await saveGroup(groupData);
+    AppState.clearMetricsCache();
     showStatus(editId ? 'Group updated successfully' : 'Group added successfully');
 
     // Reset form

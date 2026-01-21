@@ -5,26 +5,6 @@
 import { CONFIG } from '../core/config';
 
 /**
- * Debounce function to limit rate of function calls
- */
-export function debounce<T extends (...args: unknown[]) => void>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  return function executedFunction(...args: Parameters<T>): void {
-    const later = (): void => {
-      timeout = null;
-      func(...args);
-    };
-    if (timeout !== null) {
-      clearTimeout(timeout);
-    }
-    timeout = setTimeout(later, wait);
-  };
-}
-
-/**
  * Sanitize object to prevent prototype pollution attacks
  */
 export function sanitizeObject<T>(obj: T, depth = 0): T {
