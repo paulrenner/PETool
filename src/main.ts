@@ -21,9 +21,6 @@ import type { FundWithMetrics, FundNameData } from './types';
 // Calculation imports
 import { calculateMetrics } from './calculations';
 
-// Util imports
-import { formatCurrency } from './utils/formatting';
-
 // App imports
 import {
   sortData,
@@ -98,6 +95,8 @@ import {
   showBulkAssignGroupModal,
   initBulkOperationListeners,
 } from './app/bulk';
+
+import { renderTimeline } from './app/timeline';
 
 // ===========================
 // Utility Functions
@@ -264,82 +263,6 @@ async function renderTable(): Promise<void> {
     console.error('Error rendering table:', err);
     showStatus('Error loading data: ' + (err as Error).message, 'error');
   }
-}
-
-/**
- * Render the cash flow timeline
- */
-function renderTimeline(): void {
-  const container = document.getElementById('timelineTableContainer');
-  if (!container) return;
-
-  const funds = AppState.getFunds();
-  if (funds.length === 0) {
-    container.innerHTML = '<p class="timeline-no-data">No investments to display yet.</p>';
-    return;
-  }
-
-  // Aggregate cash flows by year
-  const yearData: Record<number, { contributions: number; distributions: number }> = {};
-
-  funds.forEach((fund) => {
-    (fund.cashFlows || []).forEach((cf) => {
-      if (!cf.date) return;
-      const year = new Date(cf.date + 'T00:00:00').getFullYear();
-      if (!yearData[year]) {
-        yearData[year] = { contributions: 0, distributions: 0 };
-      }
-      const amount = Math.abs(cf.amount || 0);
-      if (cf.type === 'Contribution') {
-        yearData[year].contributions += amount;
-      } else if (cf.type === 'Distribution') {
-        yearData[year].distributions += amount;
-      }
-    });
-  });
-
-  const years = Object.keys(yearData).map(Number).sort((a, b) => a - b);
-
-  if (years.length === 0) {
-    container.innerHTML = '<p class="timeline-no-data">No cash flows to display.</p>';
-    return;
-  }
-
-  // Build table
-  let html = '<table class="timeline-table"><thead><tr><th>Year</th>';
-  years.forEach((year) => {
-    html += `<th>${year}</th>`;
-  });
-  html += '</tr></thead><tbody>';
-
-  // Contributions row
-  html += '<tr class="row-calls"><td class="row-label">Contributions</td>';
-  years.forEach((year) => {
-    const amount = yearData[year]?.contributions || 0;
-    html += `<td>${amount > 0 ? formatCurrency(amount) : '-'}</td>`;
-  });
-  html += '</tr>';
-
-  // Distributions row
-  html += '<tr class="row-distributions"><td class="row-label">Distributions</td>';
-  years.forEach((year) => {
-    const amount = yearData[year]?.distributions || 0;
-    html += `<td>${amount > 0 ? formatCurrency(amount) : '-'}</td>`;
-  });
-  html += '</tr>';
-
-  // Net row
-  html += '<tr class="row-net"><td class="row-label">Net Cash Flow</td>';
-  years.forEach((year) => {
-    const data = yearData[year];
-    const net = (data?.distributions || 0) - (data?.contributions || 0);
-    const cssClass = net >= 0 ? 'positive' : 'negative';
-    html += `<td class="${cssClass}">${formatCurrency(net)}</td>`;
-  });
-  html += '</tr>';
-
-  html += '</tbody></table>';
-  container.innerHTML = html;
 }
 
 /**
