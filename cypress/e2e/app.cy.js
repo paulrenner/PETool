@@ -90,9 +90,12 @@ describe('Application Basics', () => {
       cy.toggleDarkMode();
       cy.get('html').should('have.attr', 'data-theme', 'dark');
 
-      // Reload page
+      // Reload page - localStorage persists so backup warning should not show
       cy.reload();
       cy.get('#fundsTable').should('exist');
+      cy.get('#loadingOverlay').should('not.be.visible');
+      // Wait for backup modal check (1 second delay in app)
+      cy.wait(1200);
 
       // Theme should be preserved
       cy.get('html').should('have.attr', 'data-theme', 'dark');
@@ -169,10 +172,12 @@ describe('Data Persistence', () => {
     cy.addFund({ name: 'Persistent Fund', accountNumber: 'ACC-001', commitment: '500000' });
     cy.contains('#fundsTableBody tr', 'Persistent Fund').should('exist');
 
-    // Reload the page (without clearing IndexedDB in beforeEach for this test)
+    // Reload the page - localStorage persists so backup warning should not show
     cy.visit('/');
     cy.get('#fundsTable').should('exist');
     cy.get('#loadingOverlay').should('not.be.visible');
+    // Wait for backup modal check (1 second delay in app)
+    cy.wait(1200);
 
     // Fund should still be there
     cy.contains('#fundsTableBody tr', 'Persistent Fund').should('exist');

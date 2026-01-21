@@ -25,8 +25,10 @@ Cypress.Commands.add('visitAndWait', () => {
   cy.get('#fundsTable').should('exist');
   // Wait for loading overlay to disappear
   cy.get('#loadingOverlay').should('not.be.visible');
-  // Extra safety: dismiss backup modal if it still appears
-  cy.wait(100);
+  // The backup modal check runs after 1000ms delay in the app,
+  // so we need to wait for that before proceeding
+  cy.wait(1200);
+  // Dismiss backup modal if it still appears (safety check)
   cy.get('body').then($body => {
     if ($body.find('#backupWarningModal').is(':visible')) {
       cy.get('#dontShowBackupWarning').check({ force: true });
@@ -160,7 +162,7 @@ Cypress.Commands.add('addNav', (fundName, navData) => {
 // Open action dropdown for a fund
 Cypress.Commands.add('openActionMenu', (fundName) => {
   cy.contains('#fundsTableBody tr', fundName).within(() => {
-    cy.get('td').last().find('button, .action-btn, [role="button"]').click();
+    cy.get('td').last().find('button.fund-actions-btn').click();
   });
   cy.get('#actionDropdown').should('be.visible');
 });
