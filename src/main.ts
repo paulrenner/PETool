@@ -57,6 +57,8 @@ import {
   saveFundFromModal,
   deleteFund,
   showDetailsModal,
+  initFundFormChangeTracking,
+  closeFundModalWithConfirm,
   addCashFlowRow,
   addNavRow,
   saveDetailsFromModal,
@@ -947,7 +949,7 @@ function initializeEventListeners(): void {
   const cancelFundModalBtn = document.getElementById('cancelFundModalBtn');
   [closeFundModalBtn, cancelFundModalBtn].forEach((btn) => {
     if (btn) {
-      btn.addEventListener('click', () => closeModal('fundModal'));
+      btn.addEventListener('click', () => closeFundModalWithConfirm());
     }
   });
 
@@ -1485,6 +1487,7 @@ async function init(): Promise<void> {
     initBackupWarningListeners();
     initColumnResizing();
     initAccountNumberAutoFill();
+    initFundFormChangeTracking();
 
     // Initial render
     await renderTable();

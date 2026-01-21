@@ -24,6 +24,67 @@ import { buildGroupsTree } from './filters';
 // Note: Modal state (currentActionFundId, currentDetailsFundId) is managed in AppState
 
 // ===========================
+// Fund Modal Unsaved Changes
+// ===========================
+
+let fundModalHasUnsavedChanges = false;
+
+/**
+ * Mark the fund modal as having unsaved changes
+ */
+export function setFundModalUnsavedChanges(value: boolean): void {
+  fundModalHasUnsavedChanges = value;
+}
+
+/**
+ * Check if fund modal has unsaved changes
+ */
+export function hasFundModalUnsavedChanges(): boolean {
+  return fundModalHasUnsavedChanges;
+}
+
+/**
+ * Initialize fund form change tracking
+ */
+export function initFundFormChangeTracking(): void {
+  const formInputs = [
+    'fundName',
+    'accountNumber',
+    'fundGroup',
+    'commitment',
+    'newFundNameInline',
+  ];
+
+  formInputs.forEach((id) => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('input', () => {
+        fundModalHasUnsavedChanges = true;
+      });
+      input.addEventListener('change', () => {
+        fundModalHasUnsavedChanges = true;
+      });
+    }
+  });
+}
+
+/**
+ * Close fund modal with unsaved changes confirmation
+ */
+export async function closeFundModalWithConfirm(): Promise<void> {
+  if (fundModalHasUnsavedChanges) {
+    const confirmed = await showConfirm('You have unsaved changes. Discard them?', {
+      title: 'Unsaved Changes',
+      confirmText: 'Discard',
+      cancelText: 'Keep Editing',
+    });
+    if (!confirmed) return;
+  }
+  fundModalHasUnsavedChanges = false;
+  closeModal('fundModal');
+}
+
+// ===========================
 // Group Auto-Fill Functions
 // ===========================
 
@@ -495,6 +556,7 @@ export async function showAddFundModal(): Promise<void> {
   await populateFundNameDropdown();
   populateGroupDropdown('fundGroup');
 
+  fundModalHasUnsavedChanges = false;
   openModal('fundModal');
 }
 
@@ -535,6 +597,7 @@ export async function showEditFundModal(fundId: number): Promise<void> {
   if (fundGroupSelect) fundGroupSelect.value = fund.groupId?.toString() || '';
   if (commitmentInput) commitmentInput.value = formatNumberWithCommas(fund.commitment);
 
+  fundModalHasUnsavedChanges = false;
   openModal('fundModal');
 }
 
@@ -577,6 +640,7 @@ export async function showDuplicateFundModal(fundId: number): Promise<void> {
   if (fundGroupSelect) fundGroupSelect.value = fund.groupId?.toString() || '';
   if (commitmentInput) commitmentInput.value = formatNumberWithCommas(fund.commitment);
 
+  fundModalHasUnsavedChanges = false;
   openModal('fundModal');
 }
 
@@ -683,6 +747,18 @@ export async function saveFundFromModal(
       showStatus('Investment added successfully');
     }
 
+    // Sync group across all investments with the same account number
+    if (accountNumber) {
+      const allFunds = await getAllFunds();
+      const fundsWithSameAccount = allFunds.filter(
+        (f) => f.accountNumber === accountNumber && f.groupId !== groupId
+      );
+      for (const fund of fundsWithSameAccount) {
+        await saveFundToDB({ ...fund, groupId });
+      }
+    }
+
+    fundModalHasUnsavedChanges = false;
     closeModal('fundModal');
     AppState.clearMetricsCache();
     await onSave();

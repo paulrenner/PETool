@@ -839,8 +839,6 @@
             border-radius: var(--radius-sm);
             box-shadow: var(--shadow-lg);
             z-index: 1000;
-            max-height: 400px;
-            overflow-y: auto;
             display: none;
         }
 

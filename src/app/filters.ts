@@ -304,11 +304,8 @@ export function updateActiveFiltersIndicator(): void {
     getMultiSelectValues('vintageFilter'),
   ].filter((v) => v.length > 0).length;
 
-  const cutoffDate = (document.getElementById('cutoffDate') as HTMLInputElement)?.value;
-  const totalActive = activeCount + (cutoffDate ? 1 : 0);
-
-  if (totalActive > 0) {
-    indicator.innerHTML = `${totalActive} filter${totalActive > 1 ? 's' : ''} active <button class="clear-filters" title="Clear all filters" aria-label="Clear all filters">&times;</button>`;
+  if (activeCount > 0) {
+    indicator.innerHTML = `${activeCount} filter${activeCount > 1 ? 's' : ''} active <button class="clear-filters" title="Clear all filters" aria-label="Clear all filters">&times;</button>`;
     indicator.style.display = 'inline-flex';
   } else {
     indicator.innerHTML = '';
