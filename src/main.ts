@@ -99,6 +99,204 @@ import {
 import { renderTimeline } from './app/timeline';
 
 // ===========================
+// Backup Reminder Functions
+// ===========================
+
+/**
+ * Show backup warning modal
+ */
+function showBackupWarning(): void {
+  const modal = document.getElementById('backupWarningModal');
+  if (modal) {
+    modal.classList.add('show');
+  }
+}
+
+/**
+ * Close backup warning modal
+ */
+function closeBackupWarning(): void {
+  const modal = document.getElementById('backupWarningModal');
+  if (modal) {
+    modal.classList.remove('show');
+  }
+}
+
+/**
+ * Update last backup timestamp
+ */
+function updateLastBackupTime(): void {
+  localStorage.setItem(CONFIG.STORAGE_LAST_BACKUP, new Date().toISOString());
+}
+
+/**
+ * Check if backup reminder should be shown
+ */
+function checkBackupReminder(): void {
+  const lastBackup = localStorage.getItem(CONFIG.STORAGE_LAST_BACKUP);
+  const warningDismissed = localStorage.getItem(CONFIG.STORAGE_BACKUP_WARNING);
+
+  // If warning was permanently dismissed, don't show
+  if (warningDismissed === 'true') {
+    return;
+  }
+
+  // If no backup has ever been made, show warning
+  if (!lastBackup) {
+    showBackupWarning();
+    return;
+  }
+
+  // Check if it's been more than BACKUP_REMINDER_DAYS since last backup
+  const daysSinceBackup = (Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24);
+  if (daysSinceBackup > CONFIG.BACKUP_REMINDER_DAYS) {
+    showBackupWarning();
+  }
+}
+
+/**
+ * Initialize backup warning event listeners
+ */
+function initBackupWarningListeners(): void {
+  const closeBtn = document.getElementById('closeBackupWarningBtn');
+  const exportNowBtn = document.getElementById('exportNowBtn');
+  const remindLaterBtn = document.getElementById('remindLaterBtn');
+  const dontShowCheckbox = document.getElementById('dontShowBackupWarning') as HTMLInputElement;
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeBackupWarning);
+  }
+
+  if (exportNowBtn) {
+    exportNowBtn.addEventListener('click', async () => {
+      closeBackupWarning();
+      await exportDatabase();
+      updateLastBackupTime();
+    });
+  }
+
+  if (remindLaterBtn) {
+    remindLaterBtn.addEventListener('click', () => {
+      if (dontShowCheckbox?.checked) {
+        localStorage.setItem(CONFIG.STORAGE_BACKUP_WARNING, 'true');
+      }
+      closeBackupWarning();
+    });
+  }
+}
+
+// ===========================
+// Column Resize Functions
+// ===========================
+
+let isResizingColumn = false;
+let lastMousedownOnResizer = false;
+
+/**
+ * Save column width to localStorage
+ */
+function saveColumnWidth(columnIndex: number, width: number): void {
+  const savedWidths = JSON.parse(localStorage.getItem(CONFIG.STORAGE_COLUMN_WIDTHS) || '{}');
+  savedWidths[columnIndex] = width;
+  localStorage.setItem(CONFIG.STORAGE_COLUMN_WIDTHS, JSON.stringify(savedWidths));
+}
+
+/**
+ * Restore column widths from localStorage
+ */
+function restoreColumnWidths(): void {
+  const table = document.getElementById('fundsTable') as HTMLTableElement;
+  if (!table) return;
+
+  const savedWidths = JSON.parse(localStorage.getItem(CONFIG.STORAGE_COLUMN_WIDTHS) || '{}');
+  const ths = table.querySelectorAll('thead th');
+
+  ths.forEach((th, index) => {
+    const savedWidth = savedWidths[index];
+    if (savedWidth) {
+      (th as HTMLElement).style.width = savedWidth + 'px';
+      (th as HTMLElement).style.minWidth = savedWidth + 'px';
+      (th as HTMLElement).style.maxWidth = savedWidth + 'px';
+    }
+  });
+}
+
+/**
+ * Initialize column resizing functionality
+ */
+function initColumnResizing(): void {
+  const table = document.getElementById('fundsTable') as HTMLTableElement;
+  if (!table) return;
+
+  const ths = table.querySelectorAll('thead th');
+
+  ths.forEach((th) => {
+    // Add resizer element (skip the last column - actions)
+    if (th.querySelector('.resizer') || !th.getAttribute('data-sort')) return;
+
+    const resizer = document.createElement('span');
+    resizer.className = 'resizer';
+    th.appendChild(resizer);
+    (th as HTMLElement).style.position = 'relative';
+
+    resizer.addEventListener('mousedown', (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const startX = e.pageX;
+      const startWidth = (th as HTMLElement).offsetWidth;
+
+      isResizingColumn = true;
+      lastMousedownOnResizer = true;
+      th.classList.add('resizing');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      const onMouseMove = (e: MouseEvent) => {
+        const diff = e.pageX - startX;
+        const newWidth = Math.max(CONFIG.MIN_COLUMN_WIDTH, startWidth + diff);
+        (th as HTMLElement).style.width = newWidth + 'px';
+        (th as HTMLElement).style.minWidth = newWidth + 'px';
+        (th as HTMLElement).style.maxWidth = newWidth + 'px';
+
+        // Also set width on corresponding td elements
+        const columnIndex = Array.from(ths).indexOf(th);
+        const tds = table.querySelectorAll(`tbody tr td:nth-child(${columnIndex + 1})`);
+        tds.forEach((td) => {
+          (td as HTMLElement).style.width = newWidth + 'px';
+          (td as HTMLElement).style.minWidth = newWidth + 'px';
+          (td as HTMLElement).style.maxWidth = newWidth + 'px';
+        });
+
+        // Save to localStorage
+        saveColumnWidth(columnIndex, newWidth);
+      };
+
+      const cleanup = () => {
+        th.classList.remove('resizing');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', cleanup);
+        window.removeEventListener('blur', cleanup);
+        // Reset flag after a short delay so click handler can check it
+        setTimeout(() => {
+          isResizingColumn = false;
+          lastMousedownOnResizer = false;
+        }, 50);
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', cleanup);
+      window.addEventListener('blur', cleanup);
+    });
+  });
+
+  // Restore saved column widths
+  restoreColumnWidths();
+}
+
+// ===========================
 // Utility Functions
 // ===========================
 
@@ -357,6 +555,12 @@ function updateHeader(): void {
  */
 function handleHeaderClick(event: Event): void {
   const target = event.target as HTMLElement;
+
+  // Skip if clicking on resizer or currently resizing
+  if (lastMousedownOnResizer || isResizingColumn || target.closest('.resizer')) {
+    return;
+  }
+
   const th = target.closest('th[data-sort]') as HTMLElement;
   if (!th) return;
 
@@ -411,13 +615,43 @@ function handleActionButtonClick(event: Event): void {
 
   setCurrentActionFundId(fundId);
 
-  const dropdown = document.getElementById('actionDropdown');
+  const dropdown = document.getElementById('actionDropdown') as HTMLElement;
   if (!dropdown) return;
 
-  // Position dropdown
   const rect = button.getBoundingClientRect();
-  dropdown.style.top = `${rect.bottom + window.scrollY}px`;
-  dropdown.style.left = `${rect.left + window.scrollX}px`;
+
+  // Get dropdown dimensions (temporarily show to measure)
+  dropdown.style.visibility = 'hidden';
+  dropdown.classList.add('show');
+  const dropdownWidth = dropdown.offsetWidth || 160;
+  const dropdownHeight = dropdown.offsetHeight || 200;
+  dropdown.classList.remove('show');
+  dropdown.style.visibility = '';
+
+  // Calculate position with viewport boundary checks
+  let top = rect.bottom + 2;
+  let left = rect.left - (dropdownWidth - rect.width);
+
+  // Check if dropdown would go below viewport
+  if (top + dropdownHeight > window.innerHeight) {
+    // Position above the button instead
+    top = rect.top - dropdownHeight - 2;
+  }
+
+  // Check if dropdown would go past left edge
+  if (left < 8) {
+    left = 8;
+  }
+
+  // Check if dropdown would go past right edge
+  if (left + dropdownWidth > window.innerWidth - 8) {
+    left = window.innerWidth - dropdownWidth - 8;
+  }
+
+  // Apply position (use fixed positioning for viewport-relative)
+  dropdown.style.position = 'fixed';
+  dropdown.style.top = `${top}px`;
+  dropdown.style.left = `${left}px`;
   dropdown.classList.add('show');
 }
 
@@ -1047,6 +1281,7 @@ function initializeEventListeners(): void {
       e.preventDefault();
       closeSidebar();
       await exportDatabase();
+      updateLastBackupTime();
     });
   }
 
@@ -1218,12 +1453,19 @@ async function init(): Promise<void> {
     initializeDarkMode();
     initMultiSelectDropdowns();
     initializeEventListeners();
+    initBackupWarningListeners();
+    initColumnResizing();
 
     // Initial render
     await renderTable();
 
     hideLoading();
     console.log('PE Fund Manager initialized successfully');
+
+    // Check backup reminder after a short delay (don't interfere with initial load)
+    setTimeout(() => {
+      checkBackupReminder();
+    }, 1000);
   } catch (err) {
     console.error('Error initializing application:', err);
     hideLoading();
