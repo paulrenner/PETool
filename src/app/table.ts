@@ -2,7 +2,7 @@
  * Table rendering and sorting functionality
  */
 
-import type { Fund, FundWithMetrics, SortColumn } from '../types';
+import type { Fund, FundMetrics, FundWithMetrics, SortColumn } from '../types';
 import { AppState } from '../core/state';
 import { calculateMetrics, calculateIRR, calculateMOIC, parseCashFlowsForIRR } from '../calculations';
 import { escapeHtml } from '../utils/escaping';
@@ -58,14 +58,22 @@ export function getInvestorCellHtml(fund: Fund): string {
 export function sortData(funds: Fund[], sortColumns: SortColumn[], cutoffDate?: Date): Fund[] {
   if (sortColumns.length === 0) return funds;
 
+  // Pre-calculate metrics for all funds to avoid redundant calculations during sort
+  const metricsMap = new Map<number, FundMetrics>();
+  for (const fund of funds) {
+    if (fund.id != null) {
+      metricsMap.set(fund.id, calculateMetrics(fund, cutoffDate));
+    }
+  }
+
   return [...funds].sort((a, b) => {
     for (const { column, direction } of sortColumns) {
       const multiplier = direction === 'asc' ? 1 : -1;
       let comparison = 0;
 
-      // Get metrics for comparison (with cutoffDate for consistency with displayed values)
-      const metricsA = calculateMetrics(a, cutoffDate);
-      const metricsB = calculateMetrics(b, cutoffDate);
+      // Use pre-calculated metrics
+      const metricsA = a.id != null ? metricsMap.get(a.id) : calculateMetrics(a, cutoffDate);
+      const metricsB = b.id != null ? metricsMap.get(b.id) : calculateMetrics(b, cutoffDate);
 
       switch (column) {
         case 'fundName':
@@ -75,33 +83,33 @@ export function sortData(funds: Fund[], sortColumns: SortColumn[], cutoffDate?: 
           comparison = getParentAccountDisplay(a).localeCompare(getParentAccountDisplay(b));
           break;
         case 'vintage':
-          const vintageA = metricsA.vintageYear || 0;
-          const vintageB = metricsB.vintageYear || 0;
+          const vintageA = metricsA?.vintageYear || 0;
+          const vintageB = metricsB?.vintageYear || 0;
           comparison = vintageA - vintageB;
           break;
         case 'commitment':
-          comparison = (metricsA.commitment || 0) - (metricsB.commitment || 0);
+          comparison = (metricsA?.commitment || 0) - (metricsB?.commitment || 0);
           break;
         case 'totalContributions':
-          comparison = (metricsA.calledCapital || 0) - (metricsB.calledCapital || 0);
+          comparison = (metricsA?.calledCapital || 0) - (metricsB?.calledCapital || 0);
           break;
         case 'totalDistributions':
-          comparison = (metricsA.distributions || 0) - (metricsB.distributions || 0);
+          comparison = (metricsA?.distributions || 0) - (metricsB?.distributions || 0);
           break;
         case 'nav':
-          comparison = (metricsA.nav || 0) - (metricsB.nav || 0);
+          comparison = (metricsA?.nav || 0) - (metricsB?.nav || 0);
           break;
         case 'investmentReturn':
-          comparison = (metricsA.investmentReturn || 0) - (metricsB.investmentReturn || 0);
+          comparison = (metricsA?.investmentReturn || 0) - (metricsB?.investmentReturn || 0);
           break;
         case 'moic':
-          comparison = (metricsA.moic || 0) - (metricsB.moic || 0);
+          comparison = (metricsA?.moic || 0) - (metricsB?.moic || 0);
           break;
         case 'irr':
-          comparison = (metricsA.irr || 0) - (metricsB.irr || 0);
+          comparison = (metricsA?.irr || 0) - (metricsB?.irr || 0);
           break;
         case 'outstandingCommitment':
-          comparison = (metricsA.outstandingCommitment || 0) - (metricsB.outstandingCommitment || 0);
+          comparison = (metricsA?.outstandingCommitment || 0) - (metricsB?.outstandingCommitment || 0);
           break;
         default:
           comparison = 0;

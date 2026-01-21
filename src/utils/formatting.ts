@@ -54,7 +54,9 @@ export function formatNumber(value: number | string): string {
  */
 export function formatDate(dateStr: string): string {
   if (!dateStr) return '';
-  const date = new Date(dateStr);
+  // Append time to force local timezone interpretation for date-only strings
+  const normalizedStr = dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00';
+  const date = new Date(normalizedStr);
   if (isNaN(date.getTime())) return '';
   return date.toLocaleDateString('en-US', {
     year: 'numeric',

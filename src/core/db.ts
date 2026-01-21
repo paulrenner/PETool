@@ -476,18 +476,25 @@ export function clearAllData(): Promise<void> {
     );
 
     let completed = 0;
+    let settled = false;
     const storeNames = [CONFIG.FUNDS_STORE, CONFIG.FUNDNAMES_STORE, CONFIG.GROUPS_STORE];
 
     storeNames.forEach((storeName) => {
       const store = tx.objectStore(storeName);
       const request = store.clear();
       request.onsuccess = () => {
+        if (settled) return;
         completed++;
         if (completed === storeNames.length) {
+          settled = true;
           resolve();
         }
       };
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        if (settled) return;
+        settled = true;
+        reject(request.error);
+      };
     });
   });
 }

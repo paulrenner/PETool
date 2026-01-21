@@ -20,7 +20,9 @@ export function calculateIRR(cashFlows: IRRCashFlow[], guess: number = CONFIG.IR
   const flows = [...cashFlows].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
-  const firstDate = new Date(flows[0]!.date);
+  const firstFlow = flows[0];
+  if (!firstFlow) return null; // Safety check (should never happen given length check above)
+  const firstDate = new Date(firstFlow.date);
 
   const npv = (rate: number): number =>
     flows.reduce((acc, cf) => {

@@ -13,6 +13,7 @@ import {
   saveFundName,
 } from '../core/db';
 import { parseCurrency } from '../utils/formatting';
+import { escapeHtml } from '../utils/escaping';
 import { showStatus, showLoading, hideLoading, openModal, closeModal } from './modals';
 
 // Import preview data storage
@@ -167,7 +168,7 @@ export async function handleImportFileSelect(event: Event): Promise<void> {
           <div>
             <strong>Sample funds:</strong>
             <ul style="margin: 10px 0 0 20px; font-size: 0.9em;">
-              ${(data.funds || data).slice(0, 5).map((f: any) => `<li>${f.fundName} (${f.accountNumber})</li>`).join('')}
+              ${(data.funds || data).slice(0, 5).map((f: any) => `<li>${escapeHtml(f.fundName || '')} (${escapeHtml(f.accountNumber || '')})</li>`).join('')}
               ${fundsCount > 5 ? `<li>... and ${fundsCount - 5} more</li>` : ''}
             </ul>
           </div>
@@ -239,6 +240,11 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
           }
         }
         if (remainingGroups.length === initialLength) {
+          // Circular reference detected - log and set orphaned groups to root level
+          console.warn(
+            `Import: ${remainingGroups.length} group(s) had circular parent references and were moved to root level:`,
+            remainingGroups.map((g) => g.name)
+          );
           remainingGroups.forEach((g) => {
             g.parentGroupId = null;
             sortedGroups.push(g);
@@ -286,6 +292,8 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
         throw new Error(`Too many fund names (${data.fundNames.length}). Maximum allowed is ${CONFIG.MAX_IMPORT_FUNDNAMES}.`);
       }
 
+      // Process all fund names first, then update AppState atomically
+      const processedFundNames: FundNameData[] = [];
       for (const fundNameItem of data.fundNames) {
         const fundNameObj: FundNameData =
           typeof fundNameItem === 'string'
@@ -298,6 +306,11 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
               };
 
         await saveFundName(fundNameObj);
+        processedFundNames.push(fundNameObj);
+      }
+
+      // Update AppState only after all saves succeeded
+      for (const fundNameObj of processedFundNames) {
         AppState.fundNames.add(fundNameObj.name);
         AppState.fundNameData.set(fundNameObj.name, fundNameObj);
       }
