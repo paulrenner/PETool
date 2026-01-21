@@ -74,6 +74,7 @@ import {
   addNewFundNameFromModal,
   addNewFundNameInline,
   cancelNewFundNameInline,
+  initAccountNumberAutoFill,
 } from './app/modals';
 
 import {
@@ -1455,6 +1456,7 @@ async function init(): Promise<void> {
     initializeEventListeners();
     initBackupWarningListeners();
     initColumnResizing();
+    initAccountNumberAutoFill();
 
     // Initial render
     await renderTable();

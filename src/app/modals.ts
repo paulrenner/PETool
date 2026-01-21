@@ -25,6 +25,174 @@ import { buildGroupsTree } from './filters';
 let currentActionFundId: number | null = null;
 let currentDetailsFundId: number | null = null;
 
+// ===========================
+// Group Auto-Fill Functions
+// ===========================
+
+/**
+ * Look up group for an account number based on existing funds
+ */
+async function lookupGroupForAccount(
+  accountNumber: string,
+  excludeFundId: number | null = null
+): Promise<{ groupId: number | null; groupName: string | null; isAmbiguous: boolean; conflictingGroups: { groupId: number | null; groupName: string; count: number }[] }> {
+  if (!accountNumber || accountNumber.trim() === '') {
+    return { groupId: null, groupName: null, isAmbiguous: false, conflictingGroups: [] };
+  }
+
+  const normalizedAccount = accountNumber.trim().toLowerCase();
+  const allFunds = await getAllFunds();
+
+  // Find all funds with this account number (excluding the current fund if editing)
+  const matchingFunds = allFunds.filter((f) => {
+    if (excludeFundId && f.id === excludeFundId) return false;
+    return f.accountNumber && f.accountNumber.trim().toLowerCase() === normalizedAccount;
+  });
+
+  if (matchingFunds.length === 0) {
+    return { groupId: null, groupName: null, isAmbiguous: false, conflictingGroups: [] };
+  }
+
+  // Collect all unique group IDs (treating null as a valid distinct value)
+  const groupIdMap = new Map<number | null, { groupId: number | null; groupName: string; count: number }>();
+  matchingFunds.forEach((fund) => {
+    const gId = fund.groupId || null;
+    if (!groupIdMap.has(gId)) {
+      const groupName = gId ? (AppState.getGroupByIdSync(gId)?.name || 'Unknown Group') : 'No Group';
+      groupIdMap.set(gId, { groupId: gId, groupName: groupName, count: 1 });
+    } else {
+      groupIdMap.get(gId)!.count++;
+    }
+  });
+
+  const uniqueGroups = Array.from(groupIdMap.values());
+
+  if (uniqueGroups.length === 1) {
+    // All matching funds have the same group - safe to auto-fill
+    return {
+      groupId: uniqueGroups[0]!.groupId,
+      groupName: uniqueGroups[0]!.groupName,
+      isAmbiguous: false,
+      conflictingGroups: [],
+    };
+  } else {
+    // Multiple different groups found - ambiguous
+    return {
+      groupId: null,
+      groupName: null,
+      isAmbiguous: true,
+      conflictingGroups: uniqueGroups,
+    };
+  }
+}
+
+/**
+ * Show auto-fill indicator below the group dropdown
+ */
+function showGroupAutoFillIndicator(
+  type: 'auto-filled' | 'ambiguous',
+  conflictingGroups: { groupId: number | null; groupName: string; count: number }[] = [],
+  groupName: string = ''
+): void {
+  removeGroupAutoFillIndicator();
+
+  const groupFormGroup = document.getElementById('fundGroup')?.closest('.form-group');
+  if (!groupFormGroup) return;
+
+  const indicator = document.createElement('div');
+  indicator.id = 'groupAutoFillIndicator';
+  indicator.style.cssText = 'margin-top: 6px; font-size: 12px; display: flex; align-items: flex-start; gap: 6px;';
+
+  if (type === 'auto-filled') {
+    indicator.innerHTML = `
+      <span style="color: var(--color-success); display: flex; align-items: center; gap: 4px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        Auto-filled from existing investor data
+      </span>
+      <span style="color: var(--color-text-light);">(${escapeHtml(groupName)})</span>
+    `;
+  } else if (type === 'ambiguous') {
+    const groupsList = conflictingGroups.map((g) => `${escapeHtml(g.groupName)} (${g.count})`).join(', ');
+    indicator.innerHTML = `
+      <span style="color: var(--color-warning); display: flex; align-items: center; gap: 4px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        Multiple groups found for this account
+      </span>
+      <span style="color: var(--color-text-light); font-size: 11px;">(${groupsList})</span>
+    `;
+  }
+
+  groupFormGroup.appendChild(indicator);
+}
+
+/**
+ * Remove auto-fill indicator
+ */
+function removeGroupAutoFillIndicator(): void {
+  const existing = document.getElementById('groupAutoFillIndicator');
+  if (existing) {
+    existing.remove();
+  }
+}
+
+/**
+ * Handle account number input change - auto-fill group if applicable
+ */
+async function handleAccountNumberChange(): Promise<void> {
+  const accountInput = document.getElementById('accountNumber') as HTMLInputElement;
+  const groupSelect = document.getElementById('fundGroup') as HTMLSelectElement;
+  const fundIdInput = document.getElementById('fundId') as HTMLInputElement;
+
+  if (!accountInput || !groupSelect) return;
+
+  const accountNumber = accountInput.value.trim();
+  const excludeFundId = fundIdInput?.value ? parseInt(fundIdInput.value) : null;
+
+  // Remove any existing auto-fill indicator
+  removeGroupAutoFillIndicator();
+
+  if (!accountNumber) {
+    return;
+  }
+
+  const result = await lookupGroupForAccount(accountNumber, excludeFundId);
+
+  if (result.isAmbiguous) {
+    // Show ambiguous indicator
+    showGroupAutoFillIndicator('ambiguous', result.conflictingGroups);
+  } else if (result.groupId !== null || result.groupName === 'No Group') {
+    // Auto-fill the group
+    groupSelect.value = result.groupId?.toString() || '';
+    showGroupAutoFillIndicator('auto-filled', [], result.groupName || 'No Group');
+  }
+  // If no existing association found, no indicator is shown
+}
+
+/**
+ * Initialize account number auto-fill listeners
+ */
+export function initAccountNumberAutoFill(): void {
+  const accountInput = document.getElementById('accountNumber');
+  if (!accountInput) return;
+
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  accountInput.addEventListener('input', () => {
+    // Debounce to avoid too many lookups while typing
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(handleAccountNumberChange, 300);
+  });
+
+  // Also trigger on blur for immediate feedback
+  accountInput.addEventListener('blur', handleAccountNumberChange);
+}
+
 /**
  * Show status message
  */
@@ -223,6 +391,9 @@ export async function showAddFundModal(): Promise<void> {
   const form = document.getElementById('fundForm') as HTMLFormElement;
   if (form) form.reset();
 
+  // Reset auto-fill indicator
+  removeGroupAutoFillIndicator();
+
   await populateFundNameDropdown();
   populateGroupDropdown('fundGroup');
 
@@ -254,6 +425,9 @@ export async function showEditFundModal(fundId: number): Promise<void> {
   if (isDuplicateInput) isDuplicateInput.value = '';
   if (saveFundBtn) saveFundBtn.textContent = 'Save';
   if (multiplierContainer) multiplierContainer.style.display = 'none';
+
+  // Reset auto-fill indicator (don't auto-fill when editing existing fund)
+  removeGroupAutoFillIndicator();
 
   await populateFundNameDropdown();
   populateGroupDropdown('fundGroup');
@@ -293,6 +467,9 @@ export async function showDuplicateFundModal(fundId: number): Promise<void> {
   if (saveFundBtn) saveFundBtn.textContent = 'Duplicate';
   if (multiplierContainer) multiplierContainer.style.display = 'block';
   if (duplicateMultiplierInput) duplicateMultiplierInput.value = '1';
+
+  // Reset auto-fill indicator (will trigger auto-fill when user enters account number)
+  removeGroupAutoFillIndicator();
 
   await populateFundNameDropdown();
   populateGroupDropdown('fundGroup');
