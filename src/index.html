@@ -497,6 +497,20 @@
         </div>
     </div>
 
+    <!-- Sync Account Groups Modal -->
+    <div id="syncAccountGroupsModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <span class="close" id="closeSyncAccountGroupsModalBtn">&times;</span>
+            <h2>Sync Account Groups</h2>
+            <p style="color: var(--color-text-light); margin-bottom: 20px; font-size: 14px;">Review account numbers with inconsistent group assignments. Apply sync to ensure all investments with the same account number share the same group.</p>
+            <div id="syncAccountGroupsContent" style="margin: 20px 0; max-height: 400px; overflow-y: auto;"></div>
+            <div class="form-actions">
+                <button type="button" class="btn-primary" id="applySyncAccountGroupsBtn" disabled style="min-width: 100px;">Apply Sync</button>
+                <button type="button" class="btn-secondary" id="cancelSyncAccountGroupsBtn" style="min-width: 100px;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar Panel -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div id="sidebar" class="sidebar">
@@ -526,7 +540,8 @@
                 <div class="sidebar-item"><a href="#" id="sidebarImportJSON">Import JSON</a></div>
             </div>
             <div class="sidebar-section">
-                <h4 class="sidebar-section-title">Temporary</h4>
+                <h4 class="sidebar-section-title">Admin</h4>
+                <div class="sidebar-item"><a href="#" id="sidebarSyncAccountGroups">Sync Account Groups</a></div>
                 <div class="sidebar-item"><a href="#" id="sidebarLoadSampleData">Load Sample Data</a></div>
                 <div class="sidebar-item"><a href="#" id="sidebarBulkRemoveFund" style="color: var(--color-danger);">Bulk Remove Fund</a></div>
                 <div class="sidebar-item"><a href="#" id="sidebarClearDatabase" style="color: var(--color-danger);">Clear Database</a></div>
