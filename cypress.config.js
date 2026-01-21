@@ -7,7 +7,7 @@ module.exports = defineConfig({
     specPattern: 'cypress/e2e/**/*.cy.{js,ts}',
     viewportWidth: 1280,
     viewportHeight: 720,
-    video: false,
+    video: true,
     screenshotOnRunFailure: true,
     defaultCommandTimeout: 10000,
     setupNodeEvents(on, config) {
