@@ -202,6 +202,62 @@ export function saveFundToDB(fundData: Fund): Promise<number> {
 }
 
 /**
+ * Normalize date to YYYY-MM-DD format
+ * Handles various input formats: YYYY-MM-DD, MM/DD/YYYY, YYYY/MM/DD, M/D/YYYY, etc.
+ */
+function normalizeDate(dateInput: any): string {
+  if (!dateInput) return '';
+
+  // Already in correct format
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+    return dateInput;
+  }
+
+  let dateStr = String(dateInput).trim();
+
+  // Try MM/DD/YYYY or M/D/YYYY format
+  const mdyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mdyMatch) {
+    const [, month, day, year] = mdyMatch;
+    return `${year}-${month!.padStart(2, '0')}-${day!.padStart(2, '0')}`;
+  }
+
+  // Try YYYY/MM/DD format
+  const ymdSlashMatch = dateStr.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (ymdSlashMatch) {
+    const [, year, month, day] = ymdSlashMatch;
+    return `${year}-${month!.padStart(2, '0')}-${day!.padStart(2, '0')}`;
+  }
+
+  // Try DD-MM-YYYY format (European)
+  const dmyMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (dmyMatch) {
+    const [, day, month, year] = dmyMatch;
+    return `${year}-${month!.padStart(2, '0')}-${day!.padStart(2, '0')}`;
+  }
+
+  // Try ISO format with time (2024-01-15T00:00:00.000Z)
+  const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return `${year}-${month}-${day}`;
+  }
+
+  // Try parsing as a Date object as fallback
+  const date = new Date(dateStr);
+  if (!isNaN(date.getTime())) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Return original if we can't parse it
+  console.warn('Could not normalize date:', dateInput);
+  return dateStr;
+}
+
+/**
  * Normalize cash flow type to proper case
  */
 function normalizeCashFlowType(type: any, amount: number): 'Contribution' | 'Distribution' | 'Adjustment' {
@@ -224,8 +280,9 @@ function normalizeFund(fund: any): Fund {
   const cashFlows = Array.isArray(fund.cashFlows)
     ? fund.cashFlows.map((cf: any) => {
         const amount = typeof cf.amount === 'number' ? cf.amount : parseFloat(cf.amount) || 0;
+        const normalizedDate = normalizeDate(cf.date);
         return {
-          date: cf.date || '',
+          date: normalizedDate,
           amount,
           type: normalizeCashFlowType(cf.type, amount),
           affectsCommitment: cf.affectsCommitment !== undefined ? cf.affectsCommitment : true,
@@ -236,10 +293,19 @@ function normalizeFund(fund: any): Fund {
   // Ensure monthlyNav is an array with proper structure
   const monthlyNav = Array.isArray(fund.monthlyNav)
     ? fund.monthlyNav.map((nav: any) => ({
-        date: nav.date || '',
+        date: normalizeDate(nav.date),
         amount: typeof nav.amount === 'number' ? nav.amount : parseFloat(nav.amount) || 0,
       }))
     : [];
+
+  // Debug logging for date normalization
+  if (fund.cashFlows?.length > 0 && cashFlows.length > 0) {
+    const originalDate = fund.cashFlows[0]?.date;
+    const normalizedDate = cashFlows[0]?.date;
+    if (originalDate !== normalizedDate) {
+      console.log('Date normalization:', { original: originalDate, normalized: normalizedDate });
+    }
+  }
 
   // Debug logging - remove in production
   if (fund.cashFlows?.length > 0 && cashFlows.length === 0) {
