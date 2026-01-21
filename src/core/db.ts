@@ -316,7 +316,7 @@ export function getAllGroups(): Promise<Group[]> {
   return transaction(CONFIG.GROUPS_STORE, 'readonly', (store) => store.getAll());
 }
 
-export function saveGroup(groupData: Group): Promise<number> {
+export function saveGroup(groupData: Omit<Group, 'id'> | Group): Promise<number> {
   return new Promise((resolve, reject) => {
     if (!db) {
       reject(new Error('Database not initialized'));

@@ -68,6 +68,19 @@ import {
   getCurrentActionFundId,
 } from './app/modals';
 
+import {
+  exportDatabase,
+  exportToCSV,
+  exportToPDF,
+} from './app/export';
+
+import {
+  showImportPreviewModal,
+  handleImportFileSelect,
+  applyImport,
+  loadSampleData,
+} from './app/import';
+
 // ===========================
 // Utility Functions
 // ===========================
@@ -922,6 +935,83 @@ function initializeEventListeners(): void {
       }
     });
   }
+
+  // Sidebar - Export CSV
+  const sidebarExportCSV = document.getElementById('sidebarExportCSV');
+  if (sidebarExportCSV) {
+    sidebarExportCSV.addEventListener('click', async (e) => {
+      e.preventDefault();
+      closeSidebar();
+      await exportToCSV();
+    });
+  }
+
+  // Sidebar - Export JSON
+  const sidebarExportJSON = document.getElementById('sidebarExportJSON');
+  if (sidebarExportJSON) {
+    sidebarExportJSON.addEventListener('click', async (e) => {
+      e.preventDefault();
+      closeSidebar();
+      await exportDatabase();
+    });
+  }
+
+  // Sidebar - Export PDF
+  const sidebarExportPDF = document.getElementById('sidebarExportPDF');
+  if (sidebarExportPDF) {
+    sidebarExportPDF.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSidebar();
+      exportToPDF();
+    });
+  }
+
+  // Sidebar - Import JSON
+  const sidebarImportJSON = document.getElementById('sidebarImportJSON');
+  if (sidebarImportJSON) {
+    sidebarImportJSON.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSidebar();
+      showImportPreviewModal();
+    });
+  }
+
+  // Sidebar - Load Sample Data
+  const sidebarLoadSampleData = document.getElementById('sidebarLoadSampleData');
+  if (sidebarLoadSampleData) {
+    sidebarLoadSampleData.addEventListener('click', async (e) => {
+      e.preventDefault();
+      closeSidebar();
+
+      const confirmed = await showConfirm(
+        'This will add sample data to your database. Existing data will not be deleted. Continue?',
+        { title: 'Load Sample Data', confirmText: 'Load Data', cancelText: 'Cancel' }
+      );
+
+      if (confirmed) {
+        await loadSampleData(renderTable);
+      }
+    });
+  }
+
+  // Import preview modal
+  const importFileInput = document.getElementById('importFileInput');
+  if (importFileInput) {
+    importFileInput.addEventListener('change', handleImportFileSelect);
+  }
+
+  const applyImportBtn = document.getElementById('applyImportBtn');
+  if (applyImportBtn) {
+    applyImportBtn.addEventListener('click', () => applyImport(renderTable));
+  }
+
+  const closeImportPreviewModalBtn = document.getElementById('closeImportPreviewModalBtn');
+  const cancelImportBtn = document.getElementById('cancelImportBtn');
+  [closeImportPreviewModalBtn, cancelImportBtn].forEach((btn) => {
+    if (btn) {
+      btn.addEventListener('click', () => closeModal('importPreviewModal'));
+    }
+  });
 
   // Cutoff date change
   const cutoffDate = document.getElementById('cutoffDate');
