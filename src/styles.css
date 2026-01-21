@@ -2059,8 +2059,27 @@
 
         /* Print Styles for PDF Export */
         @media print {
+            /* Force light mode for printing - override dark mode variables */
+            :root,
+            [data-theme="dark"] {
+                --color-primary: #2C3E50;
+                --color-primary-light: #34495E;
+                --color-background: #ECF0F1;
+                --color-white: #ffffff;
+                --color-action: #3498DB;
+                --color-success: #27AE60;
+                --color-danger: #E74C3C;
+                --color-text: #2C3E50;
+                --color-text-light: #95A5A6;
+                --color-muted: #95A5A6;
+                --color-border: #E0E0E0;
+                --color-hover-bg: #F8F9FA;
+                --color-alt-bg: #FAFAFA;
+            }
+
             body {
-                background: var(--color-white);
+                background: #ffffff !important;
+                color: #2C3E50 !important;
                 padding: 0;
             }
 
@@ -2076,10 +2095,18 @@
             }
 
             header {
-                background: var(--color-white);
-                color: var(--color-primary);
-                border-bottom: 2px solid var(--color-primary);
+                background: #ffffff !important;
+                color: #2C3E50 !important;
+                border-bottom: 2px solid #2C3E50 !important;
                 padding: 15px;
+            }
+
+            header h1 {
+                color: #2C3E50 !important;
+            }
+
+            header p {
+                color: #95A5A6 !important;
             }
 
             .content {
@@ -2101,9 +2128,14 @@
             }
 
             thead {
-                background: var(--color-primary) !important;
+                background: #2C3E50 !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+            }
+
+            thead th {
+                color: #ffffff !important;
+                background: #2C3E50 !important;
             }
 
             tr {
@@ -2114,6 +2146,33 @@
             th, td {
                 padding: 8px 6px;
                 font-size: 10px;
+                color: #2C3E50 !important;
+                background: #ffffff !important;
+            }
+
+            tbody tr:nth-child(even) td {
+                background: #f8f9fa !important;
+            }
+
+            .container {
+                background: #ffffff !important;
+            }
+
+            .content {
+                background: #ffffff !important;
+            }
+
+            .table-container {
+                background: #ffffff !important;
+            }
+
+            /* Override dark mode text colors for print */
+            .positive {
+                color: #27AE60 !important;
+            }
+
+            .negative {
+                color: #E74C3C !important;
             }
 
             /* Reset inline styles and set specific widths for print to fit landscape page */
