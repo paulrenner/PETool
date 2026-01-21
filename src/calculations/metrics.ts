@@ -22,7 +22,24 @@ export function getTotalByType(
   type: 'Contribution' | 'Distribution',
   cutoffDate?: Date
 ): number {
-  return (fund.cashFlows || [])
+  const flows = fund.cashFlows || [];
+
+  // Debug: Check why filtering might fail
+  if (flows.length > 0) {
+    const sample = flows[0];
+    console.log('getTotalByType Debug -', fund.fundName, {
+      type,
+      flowsCount: flows.length,
+      sampleFlow: sample,
+      sampleType: sample?.type,
+      sampleTypeMatch: sample?.type === type,
+      sampleDate: sample?.date,
+      sampleDateValid: isValidDate(sample?.date || ''),
+      sampleAmount: sample?.amount,
+    });
+  }
+
+  return flows
     .filter(
       (cf) =>
         cf.type === type &&
