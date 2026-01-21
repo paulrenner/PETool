@@ -66,6 +66,14 @@ import {
   deleteGroupById,
   setCurrentActionFundId,
   getCurrentActionFundId,
+  showEditFundNameModal,
+  addEditTag,
+  removeEditTag,
+  saveEditedFundName,
+  deleteFundNameByName,
+  addNewFundNameFromModal,
+  addNewFundNameInline,
+  cancelNewFundNameInline,
 } from './app/modals';
 
 import {
@@ -80,6 +88,13 @@ import {
   applyImport,
   loadSampleData,
 } from './app/import';
+
+import {
+  showBulkCashFlowModal,
+  showBulkRemoveFundModal,
+  showBulkAssignGroupModal,
+  initBulkOperationListeners,
+} from './app/bulk';
 
 // ===========================
 // Utility Functions
@@ -778,6 +793,83 @@ function initializeEventListeners(): void {
     }
   });
 
+  // Add new fund name button in manage funds modal
+  const addNewFundNameModalBtn = document.getElementById('addNewFundNameModalBtn');
+  if (addNewFundNameModalBtn) {
+    addNewFundNameModalBtn.addEventListener('click', () => addNewFundNameFromModal(renderTable));
+  }
+
+  // Fund names list actions (edit/delete)
+  const fundNamesList = document.getElementById('fundNamesList');
+  if (fundNamesList) {
+    fundNamesList.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      const btn = target.closest('button') as HTMLElement;
+      if (!btn) return;
+
+      const action = btn.dataset.action;
+      const name = btn.dataset.name;
+
+      if (action === 'editFundName' && name) {
+        showEditFundNameModal(name);
+      } else if (action === 'deleteFundName' && name) {
+        await deleteFundNameByName(name, renderTable);
+      }
+    });
+  }
+
+  // Edit fund name modal
+  const closeEditFundNameModalBtn = document.getElementById('closeEditFundNameModalBtn');
+  const cancelEditFundNameBtn = document.getElementById('cancelEditFundNameBtn');
+  [closeEditFundNameModalBtn, cancelEditFundNameBtn].forEach((btn) => {
+    if (btn) {
+      btn.addEventListener('click', () => closeModal('editFundNameModal'));
+    }
+  });
+
+  const saveEditedFundNameBtn = document.getElementById('saveEditedFundNameBtn');
+  if (saveEditedFundNameBtn) {
+    saveEditedFundNameBtn.addEventListener('click', () => saveEditedFundName(renderTable));
+  }
+
+  // Edit fund name tags input
+  const editFundTagsInput = document.getElementById('editFundTagsInput') as HTMLInputElement;
+  if (editFundTagsInput) {
+    editFundTagsInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const value = editFundTagsInput.value.trim();
+        if (value) {
+          addEditTag(value);
+          editFundTagsInput.value = '';
+        }
+      }
+    });
+  }
+
+  // Edit fund name tag remove handler
+  const editFundTagsContainer = document.getElementById('editFundTagsContainer');
+  if (editFundTagsContainer) {
+    editFundTagsContainer.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('tag-remove')) {
+        const index = parseInt(target.dataset.index || '0');
+        removeEditTag(index);
+      }
+    });
+  }
+
+  // Add new fund name inline (in fund modal)
+  const addNewFundNameBtn = document.getElementById('addNewFundNameBtn');
+  if (addNewFundNameBtn) {
+    addNewFundNameBtn.addEventListener('click', addNewFundNameInline);
+  }
+
+  const cancelNewFundNameBtn = document.getElementById('cancelNewFundNameBtn');
+  if (cancelNewFundNameBtn) {
+    cancelNewFundNameBtn.addEventListener('click', cancelNewFundNameInline);
+  }
+
   // Manage groups modal
   const sidebarManageGroups = document.getElementById('sidebarManageGroups');
   if (sidebarManageGroups) {
@@ -994,8 +1086,41 @@ function initializeEventListeners(): void {
     });
   }
 
+  // Sidebar - Bulk Cash Flow
+  const sidebarBulkCashFlow = document.getElementById('sidebarBulkCashFlow');
+  if (sidebarBulkCashFlow) {
+    sidebarBulkCashFlow.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSidebar();
+      showBulkCashFlowModal();
+    });
+  }
+
+  // Sidebar - Bulk Assign Group
+  const sidebarBulkAssignGroup = document.getElementById('sidebarBulkAssignGroup');
+  if (sidebarBulkAssignGroup) {
+    sidebarBulkAssignGroup.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSidebar();
+      showBulkAssignGroupModal();
+    });
+  }
+
+  // Sidebar - Bulk Remove Fund
+  const sidebarBulkRemoveFund = document.getElementById('sidebarBulkRemoveFund');
+  if (sidebarBulkRemoveFund) {
+    sidebarBulkRemoveFund.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSidebar();
+      showBulkRemoveFundModal();
+    });
+  }
+
+  // Initialize bulk operation modal listeners
+  initBulkOperationListeners(renderTable);
+
   // Import preview modal
-  const importFileInput = document.getElementById('importFileInput');
+  const importFileInput = document.getElementById('importPreviewFileInput');
   if (importFileInput) {
     importFileInput.addEventListener('change', handleImportFileSelect);
   }
@@ -1006,7 +1131,7 @@ function initializeEventListeners(): void {
   }
 
   const closeImportPreviewModalBtn = document.getElementById('closeImportPreviewModalBtn');
-  const cancelImportBtn = document.getElementById('cancelImportBtn');
+  const cancelImportBtn = document.getElementById('cancelImportPreviewBtn');
   [closeImportPreviewModalBtn, cancelImportBtn].forEach((btn) => {
     if (btn) {
       btn.addEventListener('click', () => closeModal('importPreviewModal'));
