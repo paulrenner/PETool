@@ -9,6 +9,14 @@ export interface IRRCashFlow {
 }
 
 /**
+ * Parse date string to timestamp, forcing local timezone interpretation.
+ * Appends T00:00:00 to prevent JavaScript from parsing date-only strings as UTC.
+ */
+function parseDateLocal(dateStr: string): number {
+  return new Date(dateStr + 'T00:00:00').getTime();
+}
+
+/**
  * Calculate IRR (Internal Rate of Return) using Newton-Raphson method
  * @param cashFlows - Array of {date, amount} objects
  * @param guess - Initial guess for IRR
@@ -18,23 +26,23 @@ export function calculateIRR(cashFlows: IRRCashFlow[], guess: number = CONFIG.IR
   if (!Array.isArray(cashFlows) || cashFlows.length < 2) return null;
 
   const flows = [...cashFlows].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    (a, b) => parseDateLocal(a.date) - parseDateLocal(b.date)
   );
   const firstFlow = flows[0];
   if (!firstFlow) return null; // Safety check (should never happen given length check above)
-  const firstDate = new Date(firstFlow.date);
+  const firstDateTime = parseDateLocal(firstFlow.date);
 
   const npv = (rate: number): number =>
     flows.reduce((acc, cf) => {
       const yearsDiff =
-        (new Date(cf.date).getTime() - firstDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+        (parseDateLocal(cf.date) - firstDateTime) / (365.25 * 24 * 60 * 60 * 1000);
       return acc + cf.amount / Math.pow(1 + rate, yearsDiff);
     }, 0);
 
   const dNpv = (rate: number): number =>
     flows.reduce((acc, cf) => {
       const yearsDiff =
-        (new Date(cf.date).getTime() - firstDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+        (parseDateLocal(cf.date) - firstDateTime) / (365.25 * 24 * 60 * 60 * 1000);
       if (yearsDiff === 0) return acc;
       return acc - (yearsDiff * cf.amount) / Math.pow(1 + rate, yearsDiff + 1);
     }, 0);
