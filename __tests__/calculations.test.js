@@ -65,6 +65,31 @@ describe('calculateIRR', () => {
         const irr = calculateIRR(cashFlows);
         expect(irr).toBeCloseTo(0.2, 2);
     });
+
+    test('handles dates at year boundary consistently (timezone safety)', () => {
+        // This test verifies that date parsing doesn't shift dates due to timezone issues.
+        // With incorrect UTC parsing, dates near year boundaries could be misinterpreted.
+        // Using a 1-year period that spans Dec 31 -> Dec 31 to test year boundary handling.
+        const cashFlows = [
+            { date: '2019-12-31', amount: -1000 },
+            { date: '2020-12-31', amount: 1200 }
+        ];
+        const irr = calculateIRR(cashFlows);
+        expect(irr).not.toBeNull();
+        // Exactly 1 year (or very close), 20% return
+        expect(irr).toBeCloseTo(0.2, 2);
+    });
+
+    test('handles mid-year dates without timezone drift', () => {
+        // Test dates that could be affected by DST transitions
+        const cashFlows = [
+            { date: '2020-03-15', amount: -1000 },  // Around DST transition
+            { date: '2020-11-15', amount: 1100 }   // After DST transition
+        ];
+        const irr = calculateIRR(cashFlows);
+        expect(irr).not.toBeNull();
+        expect(irr).toBeGreaterThan(0.1);  // Should be positive return
+    });
 });
 
 describe('calculateMOIC', () => {
