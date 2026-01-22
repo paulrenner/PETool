@@ -56,6 +56,7 @@ src/
     ├── import.ts    # Data import
     ├── export.ts    # Data export
     ├── timeline.ts  # Timeline visualization
+    ├── health-check.ts # Data integrity validation
     └── index.ts     # Re-exports
 ```
 
