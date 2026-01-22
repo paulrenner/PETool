@@ -131,6 +131,7 @@ The `isValidDate()` function in `src/utils/validation.ts` handles this correctly
 5. Update HTML in `src/index.html` if needed
 6. Run `npm test` and `npm run build`
 7. Copy `dist/index.html` to root and commit
+8. Update `review-playbook.md` phase scopes if adding new files (see below)
 
 ### Fixing a Bug
 1. Identify the root cause in the TypeScript source
@@ -167,3 +168,17 @@ Each directory has an `index.ts` that re-exports public functions. Import from t
 import { calculateMetrics, calculateIRR } from './calculations';
 import { formatCurrency, parseCurrency } from './utils/formatting';
 ```
+
+### Review Playbook Maintenance
+The `review-playbook.md` file defines a phased code review process with explicit file scopes per phase. **When adding new source files**, update the relevant phase scope:
+
+| File Type | Update Phase |
+|-----------|--------------|
+| `src/calculations/*.ts` | Phase 2 (Financial Engine) |
+| `src/core/*.ts` | Phase 3 (State/Persistence) |
+| `src/types/*.ts` | Phase 2 and Phase 5 |
+| `src/utils/*.ts` | Phase 4 (Security) |
+| `src/app/*.ts` | Phase 4 (Security/Performance) |
+| `__tests__/*.ts` | Phase 6 (Tests) |
+
+This ensures new code is included in future AI-assisted code reviews.
