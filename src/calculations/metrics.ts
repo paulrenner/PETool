@@ -36,6 +36,13 @@ export function getTotalByType(
 
 /**
  * Get latest NAV adjusted for subsequent cash flows
+ *
+ * NAV (Net Asset Value) represents the current market value of portfolio assets.
+ * When adjusting for cash flows after the NAV date:
+ * - Contributions ADD to NAV (fund receives cash, increasing assets)
+ * - Distributions SUBTRACT from NAV (fund pays out cash, decreasing assets)
+ *
+ * Note: This is an estimate. True NAV requires updated portfolio valuations.
  */
 export function getLatestNav(fund: Fund, cutoffDate?: Date): number {
   const navs = (fund.monthlyNav || [])
@@ -58,10 +65,13 @@ export function getLatestNav(fund: Fund, cutoffDate?: Date): number {
   subsequentFlows.forEach((cf) => {
     const amount = parseCurrency(cf.amount) || 0;
     if (cf.type === 'Contribution') {
-      navAmount -= Math.abs(amount);
-    } else if (cf.type === 'Distribution') {
+      // Contribution: fund receives cash → assets increase → NAV increases
       navAmount += Math.abs(amount);
+    } else if (cf.type === 'Distribution') {
+      // Distribution: fund pays out cash → assets decrease → NAV decreases
+      navAmount -= Math.abs(amount);
     }
+    // Adjustments don't affect NAV (they're accounting corrections, not cash movements)
   });
 
   return navAmount;
@@ -124,16 +134,16 @@ export function parseCashFlowsForIRR(fund: Fund, cutoffDate?: Date): IRRCashFlow
       };
     });
 
-  // Add NAV as final cash flow (include zero NAV for accurate IRR calculation)
+  // Add NAV as final cash flow for IRR/MOIC calculation
+  // IMPORTANT: Include negative NAV (unrealized losses) - excluding them inflates returns
   const nav = getLatestNav(fund, cutoffDate);
-  if (nav >= 0) {
-    const navs = (fund.monthlyNav || [])
-      .filter((n) => isValidDate(n.date) && (!cutoffDate || new Date(n.date) <= cutoffDate))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const navs = (fund.monthlyNav || [])
+    .filter((n) => isValidDate(n.date) && (!cutoffDate || new Date(n.date) <= cutoffDate))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    if (navs.length > 0) {
-      flows.push({ date: navs[0]!.date, amount: nav });
-    }
+  if (navs.length > 0) {
+    // NAV represents current portfolio value (can be negative for impaired funds)
+    flows.push({ date: navs[0]!.date, amount: nav });
   }
 
   return flows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

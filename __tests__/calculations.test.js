@@ -228,6 +228,7 @@ describe('getLatestNav', () => {
     });
 
     test('adjusts NAV for subsequent contributions', () => {
+        // Contribution: fund receives cash → assets increase → NAV increases
         const fund = {
             monthlyNav: [
                 { date: '2021-12-31', amount: 1500 }
@@ -236,10 +237,11 @@ describe('getLatestNav', () => {
                 { date: '2022-03-31', type: 'Contribution', amount: -500 }
             ]
         };
-        expect(getLatestNav(fund)).toBe(1000); // 1500 - 500
+        expect(getLatestNav(fund)).toBe(2000); // 1500 + 500 (fund received cash)
     });
 
     test('adjusts NAV for subsequent distributions', () => {
+        // Distribution: fund pays out cash → assets decrease → NAV decreases
         const fund = {
             monthlyNav: [
                 { date: '2021-12-31', amount: 1500 }
@@ -248,7 +250,7 @@ describe('getLatestNav', () => {
                 { date: '2022-03-31', type: 'Distribution', amount: 300 }
             ]
         };
-        expect(getLatestNav(fund)).toBe(1800); // 1500 + 300
+        expect(getLatestNav(fund)).toBe(1200); // 1500 - 300 (fund paid out cash)
     });
 
     test('respects cutoff date', () => {

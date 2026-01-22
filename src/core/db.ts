@@ -1,5 +1,6 @@
 import type { Fund, FundNameData, Group } from '../types';
 import { CONFIG } from './config';
+import { validateFund } from '../utils/validation';
 
 // Database instance
 let db: IDBDatabase | null = null;
@@ -178,8 +179,27 @@ async function transaction<T>(
 // Funds Operations
 // ===========================
 
+/**
+ * Save a fund to the database
+ *
+ * IMPORTANT: This function validates data before saving to prevent corruption.
+ * Invalid data (NaN amounts, malformed dates, etc.) will be rejected.
+ *
+ * @param fundData - The fund to save
+ * @returns Promise resolving to the fund ID
+ * @throws Error if validation fails or database error occurs
+ */
 export function saveFundToDB(fundData: Fund): Promise<number> {
   return new Promise((resolve, reject) => {
+    // Validate fund data before saving to prevent corruption
+    const validation = validateFund(fundData);
+    if (!validation.valid) {
+      const errorMsg = `Fund validation failed: ${validation.errors.join('; ')}`;
+      console.error(errorMsg, fundData);
+      reject(new Error(errorMsg));
+      return;
+    }
+
     if (!db) {
       reject(new Error('Database not initialized'));
       return;
