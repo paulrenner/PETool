@@ -311,17 +311,10 @@ function normalizeDate(dateInput: any): string {
     return `${year}-${month}-${day}`;
   }
 
-  // Try parsing as a Date object as fallback
-  const date = new Date(dateStr);
-  if (!isNaN(date.getTime())) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  // Return original if we can't parse it
-  console.warn('Could not normalize date:', dateInput);
+  // NOTE: We intentionally do NOT use new Date(dateStr) as a fallback here.
+  // The Date constructor has timezone issues that can shift dates by 1 day.
+  // Instead, preserve the original and let validation catch invalid formats.
+  console.warn('Could not normalize date format:', dateInput);
   return dateStr;
 }
 
