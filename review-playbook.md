@@ -188,7 +188,7 @@ Each issue must include:
 - `src/utils/escaping.ts` — HTML/CSV escaping
 - `src/utils/validation.ts` — Input validation
 - `src/app/table.ts` — Table rendering (XSS surface)
-- `src/app/modals.ts` — Modal dialogs (user input)
+- `src/app/modals/*.ts` — Modal dialogs (user input)
 - `src/app/import.ts` — File parsing (injection surface)
 - `src/app/filters.ts` — Filter functionality
 - `src/calculations/irr.ts` — Hot-path calculations

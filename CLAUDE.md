@@ -43,7 +43,13 @@ src/
 │   ├── utils.ts     # DOM utilities
 │   └── index.ts     # Re-exports
 └── app/             # Application modules
-    ├── modals.ts    # Fund/cash flow modal dialogs
+    ├── modals.ts    # Re-exports from modals/
+    ├── modals/      # Modal dialog modules
+    │   ├── common.ts      # Shared utilities (status, loading, confirm)
+    │   ├── fund-modal.ts  # Fund add/edit/details/duplicate
+    │   ├── group-modal.ts # Group management and sync
+    │   ├── fund-names-modal.ts # Fund name/tag management
+    │   └── index.ts       # Re-exports
     ├── table.ts     # Table rendering
     ├── filters.ts   # Filter functionality
     ├── bulk.ts      # Bulk operations
@@ -67,7 +73,7 @@ cp dist/index.html index.html  # REQUIRED: Copy to root for deployment
 ```bash
 npm test         # Run Jest tests
 ```
-- 265 tests across 7 test suites
+- 328 tests across 8 test suites
 - Tests import directly from `src/` TypeScript modules
 
 ### Development
@@ -179,6 +185,7 @@ The `review-playbook.md` file defines a phased code review process with explicit
 | `src/types/*.ts` | Phase 2 and Phase 5 |
 | `src/utils/*.ts` | Phase 4 (Security) |
 | `src/app/*.ts` | Phase 4 (Security/Performance) |
+| `src/app/modals/*.ts` | Phase 4 (Security/Performance) |
 | `__tests__/*.ts` | Phase 6 (Tests) |
 
 This ensures new code is included in future AI-assisted code reviews.
