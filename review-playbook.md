@@ -17,6 +17,7 @@
 | 5 | Architecture | Low | ~6 |
 | 6 | Tests | Medium | ~7 |
 | 7 | Synthesis | Low | Reports only |
+| 8 | Remediation | Medium | Fix list + targeted files |
 
 ---
 
@@ -265,7 +266,7 @@ Each issue must include:
 
 ## PHASE 7 — SYNTHESIS & ROADMAP
 
-**Goal:** Consolidate findings into actionable priorities.
+**Goal:** Consolidate findings into actionable priorities and generate executable fix list.
 
 **Prerequisites:** Phase 1-6 reports must exist in `reports/` directory.
 
@@ -282,6 +283,7 @@ Each issue must include:
 2. Extract all critical and high severity issues
 3. Identify patterns across phases
 4. Synthesize into final deliverables
+5. Generate structured fix list for Phase 8
 
 **Deliverables:**
 - Top 5 financial correctness risks
@@ -289,6 +291,95 @@ Each issue must include:
 - Prioritized remediation plan (immediate / short-term / long-term)
 - Architectural improvement plan
 - Ongoing validation checklist
+- **`reports/fix-list-YYYY-MM-DD.md`** — Structured task list (see format below)
+
+### Fix List Format
+
+The fix list must be self-contained and stateless. Each task should be executable without reading the phase reports.
+
+```markdown
+# Fix List — YYYY-MM-DD
+
+## Immediate (Critical/High)
+
+### FIX-001: [Short title]
+- **File:** `src/path/to/file.ts`
+- **Line:** 123-145
+- **Category:** correctness
+- **Problem:** [1-2 sentence description of what's wrong]
+- **Fix:** [Concrete instructions for what to change]
+- **Verification:** [How to confirm the fix worked — test command, manual check, etc.]
+
+### FIX-002: [Short title]
+...
+
+## Short-term (Medium)
+
+### FIX-010: [Short title]
+...
+
+## Long-term (Low / Refactoring)
+
+### FIX-020: [Short title]
+...
+
+## Test Gaps
+
+### TEST-001: [Test to add]
+- **File:** `__tests__/[name].test.ts`
+- **Coverage:** [What scenario or edge case to cover]
+- **Priority:** high | medium | low
+```
+
+---
+
+## PHASE 8 — REMEDIATION EXECUTION
+
+**Goal:** Execute fixes from the fix list in a stateless, trackable manner.
+
+**Prerequisites:** `reports/fix-list-*.md` must exist from Phase 7.
+
+**Input:** Read only the fix list, then read specific source files as needed.
+
+**Invocation:**
+```
+Execute Phase 8 of review-playbook.md.
+Work through reports/fix-list-YYYY-MM-DD.md starting from FIX-001.
+Stop after completing 5 fixes or if context grows large.
+```
+
+**Process:**
+1. Read `reports/fix-list-*.md` (most recent)
+2. For each fix in priority order:
+   a. Read the specified file and lines
+   b. Implement the fix as described
+   c. Run verification step
+   d. Mark complete in the fix list with date and commit hash
+3. Commit after each fix with message: `Fix FIX-XXX: [title]`
+4. Stop after 5 fixes or if context is growing large
+5. Update fix list with completion status
+
+**Completion tracking:**
+
+When a fix is complete, update the fix list entry:
+```markdown
+### FIX-001: [Short title] ✅
+- **Completed:** 2026-01-22
+- **Commit:** abc1234
+- **Notes:** [Any implementation notes]
+```
+
+**Stopping rules:**
+- Stop after 5 fixes to keep sessions focused
+- Stop if a fix requires architectural changes beyond the described scope
+- Stop if verification fails — note the failure and continue to next fix
+- Stop if context is growing large — note progress and resume in new session
+
+**Resume prompt:**
+```
+Resume Phase 8 of review-playbook.md.
+Continue from FIX-006 in reports/fix-list-YYYY-MM-DD.md.
+```
 
 ---
 
