@@ -489,11 +489,54 @@ function checkDuplicatePair(
 }
 
 /**
+ * Convert Roman numerals to Arabic numerals in a string
+ */
+function romanToArabic(str: string): string {
+  const romanNumerals: [RegExp, string][] = [
+    [/\bxxv\b/gi, '25'],
+    [/\bxxiv\b/gi, '24'],
+    [/\bxxiii\b/gi, '23'],
+    [/\bxxii\b/gi, '22'],
+    [/\bxxi\b/gi, '21'],
+    [/\bxx\b/gi, '20'],
+    [/\bxix\b/gi, '19'],
+    [/\bxviii\b/gi, '18'],
+    [/\bxvii\b/gi, '17'],
+    [/\bxvi\b/gi, '16'],
+    [/\bxv\b/gi, '15'],
+    [/\bxiv\b/gi, '14'],
+    [/\bxiii\b/gi, '13'],
+    [/\bxii\b/gi, '12'],
+    [/\bxi\b/gi, '11'],
+    [/\bx\b/gi, '10'],
+    [/\bix\b/gi, '9'],
+    [/\bviii\b/gi, '8'],
+    [/\bvii\b/gi, '7'],
+    [/\bvi\b/gi, '6'],
+    [/\bv\b/gi, '5'],
+    [/\biv\b/gi, '4'],
+    [/\biii\b/gi, '3'],
+    [/\bii\b/gi, '2'],
+    [/\bi\b/gi, '1'],
+  ];
+
+  let result = str;
+  for (const [pattern, replacement] of romanNumerals) {
+    result = result.replace(pattern, replacement);
+  }
+  return result;
+}
+
+/**
  * Normalize fund name for comparison
  */
 function normalizeName(name: string): string {
-  return name
-    .toLowerCase()
+  let normalized = name.toLowerCase();
+
+  // Convert Roman numerals to Arabic before removing non-alphanumeric
+  normalized = romanToArabic(normalized);
+
+  return normalized
     .replace(/[^a-z0-9]/g, '') // Remove non-alphanumeric
     .replace(/fund/g, '')
     .replace(/lp/g, '')
