@@ -137,7 +137,9 @@ The `isValidDate()` function in `src/utils/validation.ts` handles this correctly
 5. Update HTML in `src/index.html` if needed
 6. Run `npm test` and `npm run build`
 7. Copy `dist/index.html` to root and commit
-8. Update `review-playbook.md` phase scopes if adding new files (see below)
+8. Update documentation if structure changed:
+   - **CLAUDE.md**: Update "Directory Structure" section if adding new directories or files
+   - **review-playbook.md**: Update phase scopes if adding new files (see table below)
 
 ### Fixing a Bug
 1. Identify the root cause in the TypeScript source
