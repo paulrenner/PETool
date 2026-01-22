@@ -103,6 +103,16 @@ import {
 
 import { renderTimeline } from './app/timeline';
 
+import {
+  runHealthCheck,
+  getSeverityClass,
+  getSeverityLabel,
+  type HealthCheckResult,
+  type HealthIssue,
+} from './app/health-check';
+
+import { escapeHtml } from './utils/escaping';
+
 // ===========================
 // Backup Reminder Functions
 // ===========================
@@ -186,6 +196,113 @@ function initBackupWarningListeners(): void {
         localStorage.setItem(CONFIG.STORAGE_BACKUP_WARNING, 'true');
       }
       closeBackupWarning();
+    });
+  }
+}
+
+// ===========================
+// Health Check Functions
+// ===========================
+
+/**
+ * Show health check modal with results
+ */
+function showHealthCheckModal(): void {
+  const funds = AppState.getFunds();
+  const results = runHealthCheck(funds);
+  renderHealthCheckResults(results);
+  openModal('healthCheckModal');
+}
+
+/**
+ * Render health check results in modal
+ */
+function renderHealthCheckResults(results: HealthCheckResult): void {
+  const summaryDiv = document.getElementById('healthCheckSummary');
+  const resultsDiv = document.getElementById('healthCheckResults');
+
+  if (!summaryDiv || !resultsDiv) return;
+
+  // Render summary
+  summaryDiv.innerHTML = `
+    <div class="health-check-stat">
+      <div class="health-check-stat-value">${results.totalFunds}</div>
+      <div class="health-check-stat-label">Total Funds</div>
+    </div>
+    <div class="health-check-stat">
+      <div class="health-check-stat-value ${results.fundsWithIssues > 0 ? 'warning-count' : 'success-count'}">${results.fundsWithIssues}</div>
+      <div class="health-check-stat-label">With Issues</div>
+    </div>
+    <div class="health-check-stat">
+      <div class="health-check-stat-value error-count">${results.errorCount}</div>
+      <div class="health-check-stat-label">Errors</div>
+    </div>
+    <div class="health-check-stat">
+      <div class="health-check-stat-value warning-count">${results.warningCount}</div>
+      <div class="health-check-stat-label">Warnings</div>
+    </div>
+    <div class="health-check-stat">
+      <div class="health-check-stat-value info-count">${results.infoCount}</div>
+      <div class="health-check-stat-label">Info</div>
+    </div>
+  `;
+
+  // Render issues
+  if (results.issues.length === 0) {
+    resultsDiv.innerHTML = `
+      <div class="health-check-empty">
+        All funds passed health checks!
+      </div>
+    `;
+  } else {
+    resultsDiv.innerHTML = results.issues
+      .map((issue) => renderHealthIssue(issue))
+      .join('');
+  }
+}
+
+/**
+ * Render a single health issue
+ */
+function renderHealthIssue(issue: HealthIssue): string {
+  return `
+    <div class="health-issue" data-fund-id="${issue.fundId}">
+      <span class="health-issue-severity ${getSeverityClass(issue.severity)}">${getSeverityLabel(issue.severity)}</span>
+      <div class="health-issue-content">
+        <div class="health-issue-fund">${escapeHtml(issue.fundName)}</div>
+        <div class="health-issue-message">${escapeHtml(issue.message)}</div>
+        <div class="health-issue-category">${escapeHtml(issue.category)}</div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Initialize health check modal event listeners
+ */
+function initHealthCheckModal(): void {
+  const closeBtn = document.getElementById('closeHealthCheckModalBtn');
+  const closeBtn2 = document.getElementById('closeHealthCheckModal2Btn');
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => closeModal('healthCheckModal'));
+  }
+  if (closeBtn2) {
+    closeBtn2.addEventListener('click', () => closeModal('healthCheckModal'));
+  }
+
+  // Click on issue to open fund details
+  const resultsDiv = document.getElementById('healthCheckResults');
+  if (resultsDiv) {
+    resultsDiv.addEventListener('click', (e) => {
+      const issueEl = (e.target as HTMLElement).closest('.health-issue');
+      if (issueEl) {
+        const fundId = parseInt(issueEl.getAttribute('data-fund-id') || '0', 10);
+        if (fundId > 0) {
+          closeModal('healthCheckModal');
+          showDetailsModal(fundId, renderTable);
+        }
+      }
     });
   }
 }
@@ -1344,6 +1461,16 @@ function initializeEventListeners(): void {
     });
   }
 
+  // Sidebar - Health Check
+  const sidebarHealthCheck = document.getElementById('sidebarHealthCheck');
+  if (sidebarHealthCheck) {
+    sidebarHealthCheck.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSidebar();
+      showHealthCheckModal();
+    });
+  }
+
   // Sidebar - Sync Account Groups
   const sidebarSyncAccountGroups = document.getElementById('sidebarSyncAccountGroups');
   if (sidebarSyncAccountGroups) {
@@ -1512,6 +1639,7 @@ async function init(): Promise<void> {
     initMultiSelectDropdowns();
     initializeEventListeners();
     initBackupWarningListeners();
+    initHealthCheckModal();
     initColumnResizing();
     initAccountNumberAutoFill();
     initFundFormChangeTracking();
