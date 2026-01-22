@@ -754,6 +754,87 @@
             margin-top: 4px;
         }
 
+        .health-check-section-header {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--color-secondary-hover);
+            padding: 12px 12px 8px;
+            border-bottom: 1px solid var(--color-border);
+            background: var(--color-alt-bg);
+        }
+
+        .duplicate-pair {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .duplicate-pair:last-child {
+            border-bottom: none;
+        }
+
+        .duplicate-pair:hover {
+            background: var(--color-hover-bg);
+        }
+
+        .duplicate-confidence {
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .confidence-high {
+            background: rgba(231, 76, 60, 0.15);
+            color: var(--color-danger);
+        }
+
+        .confidence-medium {
+            background: rgba(241, 196, 15, 0.15);
+            color: var(--color-warning);
+        }
+
+        .confidence-low {
+            background: rgba(52, 152, 219, 0.15);
+            color: var(--color-action);
+        }
+
+        .duplicate-content {
+            flex: 1;
+        }
+
+        .duplicate-funds {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 4px;
+        }
+
+        .duplicate-fund-link {
+            font-weight: 600;
+            color: var(--color-action);
+            cursor: pointer;
+        }
+
+        .duplicate-fund-link:hover {
+            text-decoration: underline;
+        }
+
+        .duplicate-separator {
+            color: var(--color-secondary-hover);
+        }
+
+        .duplicate-reason {
+            font-size: 14px;
+            color: var(--color-text);
+        }
+
         @media (max-width: 768px) {
             .portfolio-summary {
                 gap: 8px;

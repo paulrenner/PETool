@@ -107,8 +107,10 @@ import {
   runHealthCheck,
   getSeverityClass,
   getSeverityLabel,
+  getConfidenceClass,
   type HealthCheckResult,
   type HealthIssue,
+  type DuplicatePair,
 } from './app/health-check';
 
 import { escapeHtml } from './utils/escaping';
@@ -223,6 +225,8 @@ function renderHealthCheckResults(results: HealthCheckResult): void {
 
   if (!summaryDiv || !resultsDiv) return;
 
+  const duplicateCount = results.duplicates.length;
+
   // Render summary
   summaryDiv.innerHTML = `
     <div class="health-check-stat">
@@ -232,6 +236,10 @@ function renderHealthCheckResults(results: HealthCheckResult): void {
     <div class="health-check-stat">
       <div class="health-check-stat-value ${results.fundsWithIssues > 0 ? 'warning-count' : 'success-count'}">${results.fundsWithIssues}</div>
       <div class="health-check-stat-label">With Issues</div>
+    </div>
+    <div class="health-check-stat">
+      <div class="health-check-stat-value ${duplicateCount > 0 ? 'warning-count' : 'success-count'}">${duplicateCount}</div>
+      <div class="health-check-stat-label">Duplicates</div>
     </div>
     <div class="health-check-stat">
       <div class="health-check-stat-value error-count">${results.errorCount}</div>
@@ -247,18 +255,33 @@ function renderHealthCheckResults(results: HealthCheckResult): void {
     </div>
   `;
 
-  // Render issues
-  if (results.issues.length === 0) {
-    resultsDiv.innerHTML = `
+  // Build results HTML
+  let html = '';
+
+  // Render duplicates section if any
+  if (results.duplicates.length > 0) {
+    html += `<div class="health-check-section-header">Potential Duplicates</div>`;
+    html += results.duplicates.map((dup) => renderDuplicatePair(dup)).join('');
+  }
+
+  // Render issues section
+  if (results.issues.length > 0) {
+    if (results.duplicates.length > 0) {
+      html += `<div class="health-check-section-header">Data Issues</div>`;
+    }
+    html += results.issues.map((issue) => renderHealthIssue(issue)).join('');
+  }
+
+  // Show empty state if no issues and no duplicates
+  if (results.issues.length === 0 && results.duplicates.length === 0) {
+    html = `
       <div class="health-check-empty">
         All funds passed health checks!
       </div>
     `;
-  } else {
-    resultsDiv.innerHTML = results.issues
-      .map((issue) => renderHealthIssue(issue))
-      .join('');
   }
+
+  resultsDiv.innerHTML = html;
 }
 
 /**
@@ -278,6 +301,25 @@ function renderHealthIssue(issue: HealthIssue): string {
 }
 
 /**
+ * Render a duplicate fund pair
+ */
+function renderDuplicatePair(dup: DuplicatePair): string {
+  return `
+    <div class="duplicate-pair">
+      <span class="duplicate-confidence ${getConfidenceClass(dup.confidence)}">${dup.confidence}</span>
+      <div class="duplicate-content">
+        <div class="duplicate-funds">
+          <span class="duplicate-fund-link" data-fund-id="${dup.fund1Id}">${escapeHtml(dup.fund1Name)}</span>
+          <span class="duplicate-separator">&harr;</span>
+          <span class="duplicate-fund-link" data-fund-id="${dup.fund2Id}">${escapeHtml(dup.fund2Name)}</span>
+        </div>
+        <div class="duplicate-reason">${escapeHtml(dup.reason)}</div>
+      </div>
+    </div>
+  `;
+}
+
+/**
  * Initialize health check modal event listeners
  */
 function initHealthCheckModal(): void {
@@ -291,13 +333,27 @@ function initHealthCheckModal(): void {
     closeBtn2.addEventListener('click', () => closeModal('healthCheckModal'));
   }
 
-  // Click on issue to open fund details
+  // Click on issue or duplicate to open fund details
   const resultsDiv = document.getElementById('healthCheckResults');
   if (resultsDiv) {
     resultsDiv.addEventListener('click', (e) => {
-      const issueEl = (e.target as HTMLElement).closest('.health-issue');
+      const target = e.target as HTMLElement;
+
+      // Check for health issue click
+      const issueEl = target.closest('.health-issue');
       if (issueEl) {
         const fundId = parseInt(issueEl.getAttribute('data-fund-id') || '0', 10);
+        if (fundId > 0) {
+          closeModal('healthCheckModal');
+          showDetailsModal(fundId, renderTable);
+        }
+        return;
+      }
+
+      // Check for duplicate fund link click
+      const dupLinkEl = target.closest('.duplicate-fund-link');
+      if (dupLinkEl) {
+        const fundId = parseInt(dupLinkEl.getAttribute('data-fund-id') || '0', 10);
         if (fundId > 0) {
           closeModal('healthCheckModal');
           showDetailsModal(fundId, renderTable);
