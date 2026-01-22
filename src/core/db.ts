@@ -1,5 +1,7 @@
-import type { Fund, FundNameData, Group } from '../types';
+import type { Fund, FundNameData, Group, AuditLogEntry, AuditLogFilter, AuditEntityType } from '../types';
+import { generateChangeSummary, formatChangeSummary } from '../types/audit';
 import { CONFIG } from './config';
+import { validateFund } from '../utils/validation';
 
 // Database instance
 let db: IDBDatabase | null = null;
@@ -47,6 +49,18 @@ export function initDB(): Promise<IDBDatabase> {
         });
         groupsStore.createIndex('parentGroupId', 'parentGroupId', { unique: false });
         groupsStore.createIndex('name', 'name', { unique: false });
+      }
+
+      // Audit log store (v11+)
+      if (!database.objectStoreNames.contains(CONFIG.AUDIT_STORE)) {
+        const auditStore = database.createObjectStore(CONFIG.AUDIT_STORE, {
+          keyPath: 'id',
+          autoIncrement: true,
+        });
+        auditStore.createIndex('timestamp', 'timestamp', { unique: false });
+        auditStore.createIndex('operation', 'operation', { unique: false });
+        auditStore.createIndex('entityType', 'entityType', { unique: false });
+        auditStore.createIndex('entityId', 'entityId', { unique: false });
       }
 
       console.log(`Database upgrade from v${oldVersion} to v${CONFIG.DB_VERSION}`);
@@ -178,26 +192,80 @@ async function transaction<T>(
 // Funds Operations
 // ===========================
 
+/**
+ * Save a fund to the database
+ *
+ * IMPORTANT: This function validates data before saving to prevent corruption.
+ * Invalid data (NaN amounts, malformed dates, etc.) will be rejected.
+ *
+ * @param fundData - The fund to save
+ * @returns Promise resolving to the fund ID
+ * @throws Error if validation fails or database error occurs
+ */
 export function saveFundToDB(fundData: Fund): Promise<number> {
   return new Promise((resolve, reject) => {
+    // Validate fund data before saving to prevent corruption
+    const validation = validateFund(fundData);
+    if (!validation.valid) {
+      const errorMsg = `Fund validation failed: ${validation.errors.join('; ')}`;
+      console.error(errorMsg, fundData);
+      reject(new Error(errorMsg));
+      return;
+    }
+
     if (!db) {
       reject(new Error('Database not initialized'));
       return;
     }
 
-    const tx = db.transaction([CONFIG.FUNDS_STORE], 'readwrite');
-    const objectStore = tx.objectStore(CONFIG.FUNDS_STORE);
+    const isUpdate = !!fundData.id;
+    let previousFund: Fund | undefined;
 
-    let request: IDBRequest<IDBValidKey>;
-    if (fundData.id) {
-      request = objectStore.put(fundData);
+    // For updates, get the previous state for audit logging
+    if (isUpdate) {
+      const getRequest = db.transaction([CONFIG.FUNDS_STORE], 'readonly')
+        .objectStore(CONFIG.FUNDS_STORE)
+        .get(fundData.id!);
+
+      getRequest.onsuccess = () => {
+        previousFund = getRequest.result ? normalizeFund(getRequest.result) : undefined;
+        performSave();
+      };
+      getRequest.onerror = () => {
+        // Continue without previous state if lookup fails
+        performSave();
+      };
     } else {
-      const { id: _, ...dataWithoutId } = fundData;
-      request = objectStore.add(dataWithoutId);
+      performSave();
     }
 
-    request.onsuccess = () => resolve(request.result as number);
-    request.onerror = () => reject(request.error);
+    function performSave() {
+      const tx = db!.transaction([CONFIG.FUNDS_STORE], 'readwrite');
+      const objectStore = tx.objectStore(CONFIG.FUNDS_STORE);
+
+      let request: IDBRequest<IDBValidKey>;
+      if (fundData.id) {
+        request = objectStore.put(fundData);
+      } else {
+        const { id: _, ...dataWithoutId } = fundData;
+        request = objectStore.add(dataWithoutId);
+      }
+
+      request.onsuccess = () => {
+        const savedId = request.result as number;
+
+        // Log audit entry (async, don't wait)
+        const savedFund = { ...fundData, id: savedId };
+        logFundModification(
+          isUpdate ? 'UPDATE' : 'CREATE',
+          savedFund,
+          previousFund
+        ).catch(console.error);
+
+        resolve(savedId);
+      };
+      request.onerror = () => reject(request.error);
+    }
   });
 }
 
@@ -243,17 +311,10 @@ function normalizeDate(dateInput: any): string {
     return `${year}-${month}-${day}`;
   }
 
-  // Try parsing as a Date object as fallback
-  const date = new Date(dateStr);
-  if (!isNaN(date.getTime())) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  // Return original if we can't parse it
-  console.warn('Could not normalize date:', dateInput);
+  // NOTE: We intentionally do NOT use new Date(dateStr) as a fallback here.
+  // The Date constructor has timezone issues that can shift dates by 1 day.
+  // Instead, preserve the original and let validation catch invalid formats.
+  console.warn('Could not normalize date format:', dateInput);
   return dateStr;
 }
 
@@ -327,12 +388,37 @@ export function deleteFundFromDB(id: number): Promise<void> {
       return;
     }
 
-    const tx = db.transaction([CONFIG.FUNDS_STORE], 'readwrite');
-    const objectStore = tx.objectStore(CONFIG.FUNDS_STORE);
-    const request = objectStore.delete(id);
+    // Get the fund data before deleting for audit log
+    const getRequest = db.transaction([CONFIG.FUNDS_STORE], 'readonly')
+      .objectStore(CONFIG.FUNDS_STORE)
+      .get(id);
 
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
+    getRequest.onsuccess = () => {
+      const fundToDelete = getRequest.result ? normalizeFund(getRequest.result) : null;
+
+      const tx = db!.transaction([CONFIG.FUNDS_STORE], 'readwrite');
+      const objectStore = tx.objectStore(CONFIG.FUNDS_STORE);
+      const deleteRequest = objectStore.delete(id);
+
+      deleteRequest.onsuccess = () => {
+        // Log audit entry (async, don't wait)
+        if (fundToDelete) {
+          logFundModification('DELETE', fundToDelete).catch(console.error);
+        }
+        resolve();
+      };
+      deleteRequest.onerror = () => reject(deleteRequest.error);
+    };
+
+    getRequest.onerror = () => {
+      // Still try to delete even if get fails
+      const tx = db!.transaction([CONFIG.FUNDS_STORE], 'readwrite');
+      const objectStore = tx.objectStore(CONFIG.FUNDS_STORE);
+      const deleteRequest = objectStore.delete(id);
+
+      deleteRequest.onsuccess = () => resolve();
+      deleteRequest.onerror = () => reject(deleteRequest.error);
+    };
   });
 }
 
@@ -476,18 +562,199 @@ export function clearAllData(): Promise<void> {
     );
 
     let completed = 0;
+    let settled = false;
     const storeNames = [CONFIG.FUNDS_STORE, CONFIG.FUNDNAMES_STORE, CONFIG.GROUPS_STORE];
 
     storeNames.forEach((storeName) => {
       const store = tx.objectStore(storeName);
       const request = store.clear();
       request.onsuccess = () => {
+        if (settled) return;
         completed++;
         if (completed === storeNames.length) {
+          settled = true;
+          // Log the clear operation
+          logAuditEntry({
+            operation: 'CLEAR_ALL',
+            entityType: 'System',
+            entityId: null,
+            entityName: null,
+            summary: 'Cleared all data (funds, groups, fund names)',
+          }).catch(console.error);
           resolve();
         }
       };
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        if (settled) return;
+        settled = true;
+        reject(request.error);
+      };
     });
+  });
+}
+
+// ===========================
+// Audit Log Operations
+// ===========================
+
+/**
+ * Log an audit entry
+ *
+ * Audit logs track all data modifications for compliance and debugging.
+ * Entries are append-only and include timestamp, operation type, and change details.
+ */
+export function logAuditEntry(
+  entry: Omit<AuditLogEntry, 'id' | 'timestamp'>
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      // If DB not ready, just log to console and resolve
+      console.warn('[AUDIT] DB not ready, logging to console:', entry);
+      resolve(-1);
+      return;
+    }
+
+    // Check if audit store exists (for backward compatibility)
+    if (!db.objectStoreNames.contains(CONFIG.AUDIT_STORE)) {
+      console.warn('[AUDIT] Audit store not available, logging to console:', entry);
+      resolve(-1);
+      return;
+    }
+
+    const auditEntry: AuditLogEntry = {
+      ...entry,
+      timestamp: new Date().toISOString(),
+    };
+
+    const tx = db.transaction([CONFIG.AUDIT_STORE], 'readwrite');
+    const store = tx.objectStore(CONFIG.AUDIT_STORE);
+    const request = store.add(auditEntry);
+
+    request.onsuccess = () => resolve(request.result as number);
+    request.onerror = () => {
+      console.error('[AUDIT] Failed to log entry:', request.error);
+      reject(request.error);
+    };
+  });
+}
+
+/**
+ * Get audit log entries with optional filtering
+ */
+export function getAuditLog(filter?: AuditLogFilter): Promise<AuditLogEntry[]> {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      reject(new Error('Database not initialized'));
+      return;
+    }
+
+    if (!db.objectStoreNames.contains(CONFIG.AUDIT_STORE)) {
+      resolve([]);
+      return;
+    }
+
+    const tx = db.transaction([CONFIG.AUDIT_STORE], 'readonly');
+    const store = tx.objectStore(CONFIG.AUDIT_STORE);
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      let entries: AuditLogEntry[] = request.result;
+
+      // Apply filters
+      if (filter) {
+        if (filter.operation) {
+          entries = entries.filter((e) => e.operation === filter.operation);
+        }
+        if (filter.entityType) {
+          entries = entries.filter((e) => e.entityType === filter.entityType);
+        }
+        if (filter.entityId !== undefined) {
+          entries = entries.filter((e) => e.entityId === filter.entityId);
+        }
+        if (filter.startDate) {
+          entries = entries.filter((e) => e.timestamp >= filter.startDate!);
+        }
+        if (filter.endDate) {
+          entries = entries.filter((e) => e.timestamp <= filter.endDate!);
+        }
+      }
+
+      // Sort by timestamp descending (most recent first)
+      entries.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+      // Apply limit
+      if (filter?.limit && entries.length > filter.limit) {
+        entries = entries.slice(0, filter.limit);
+      }
+
+      resolve(entries);
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+/**
+ * Get audit history for a specific entity
+ */
+export async function getEntityAuditHistory(
+  entityType: AuditEntityType,
+  entityId: number | string
+): Promise<AuditLogEntry[]> {
+  return getAuditLog({ entityType, entityId });
+}
+
+/**
+ * Log a fund modification with change tracking
+ */
+export async function logFundModification(
+  operation: 'CREATE' | 'UPDATE' | 'DELETE',
+  fund: Fund,
+  previousFund?: Fund
+): Promise<void> {
+  const changes = generateChangeSummary(
+    (previousFund as unknown) as Record<string, unknown> | null,
+    operation === 'DELETE' ? null : (fund as unknown as Record<string, unknown>)
+  );
+
+  await logAuditEntry({
+    operation,
+    entityType: 'Fund',
+    entityId: fund.id ?? null,
+    entityName: fund.fundName,
+    summary: formatChangeSummary(changes),
+    previousValue: previousFund,
+    newValue: operation === 'DELETE' ? undefined : fund,
+  });
+}
+
+/**
+ * Log a bulk import operation
+ */
+export async function logBulkImport(
+  entityType: AuditEntityType,
+  recordCount: number,
+  summary: string
+): Promise<void> {
+  await logAuditEntry({
+    operation: 'IMPORT',
+    entityType,
+    entityId: null,
+    entityName: null,
+    summary,
+    recordCount,
+  });
+}
+
+/**
+ * Log an export operation
+ */
+export async function logExport(format: string, recordCount: number): Promise<void> {
+  await logAuditEntry({
+    operation: 'EXPORT',
+    entityType: 'System',
+    entityId: null,
+    entityName: null,
+    summary: `Exported ${recordCount} records as ${format}`,
+    recordCount,
   });
 }

@@ -13,6 +13,8 @@ import {
   saveFundName,
 } from '../core/db';
 import { parseCurrency } from '../utils/formatting';
+import { escapeHtml } from '../utils/escaping';
+import { validateFund } from '../utils/validation';
 import { showStatus, showLoading, hideLoading, openModal, closeModal } from './modals';
 
 // Import preview data storage
@@ -167,7 +169,7 @@ export async function handleImportFileSelect(event: Event): Promise<void> {
           <div>
             <strong>Sample funds:</strong>
             <ul style="margin: 10px 0 0 20px; font-size: 0.9em;">
-              ${(data.funds || data).slice(0, 5).map((f: any) => `<li>${f.fundName} (${f.accountNumber})</li>`).join('')}
+              ${(data.funds || data).slice(0, 5).map((f: any) => `<li>${escapeHtml(f.fundName || '')} (${escapeHtml(f.accountNumber || '')})</li>`).join('')}
               ${fundsCount > 5 ? `<li>... and ${fundsCount - 5} more</li>` : ''}
             </ul>
           </div>
@@ -239,6 +241,11 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
           }
         }
         if (remainingGroups.length === initialLength) {
+          // Circular reference detected - log and set orphaned groups to root level
+          console.warn(
+            `Import: ${remainingGroups.length} group(s) had circular parent references and were moved to root level:`,
+            remainingGroups.map((g) => g.name)
+          );
           remainingGroups.forEach((g) => {
             g.parentGroupId = null;
             sortedGroups.push(g);
@@ -286,6 +293,8 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
         throw new Error(`Too many fund names (${data.fundNames.length}). Maximum allowed is ${CONFIG.MAX_IMPORT_FUNDNAMES}.`);
       }
 
+      // Process all fund names first, then update AppState atomically
+      const processedFundNames: FundNameData[] = [];
       for (const fundNameItem of data.fundNames) {
         const fundNameObj: FundNameData =
           typeof fundNameItem === 'string'
@@ -298,6 +307,11 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
               };
 
         await saveFundName(fundNameObj);
+        processedFundNames.push(fundNameObj);
+      }
+
+      // Update AppState only after all saves succeeded
+      for (const fundNameObj of processedFundNames) {
         AppState.fundNames.add(fundNameObj.name);
         AppState.fundNameData.set(fundNameObj.name, fundNameObj);
       }
@@ -341,6 +355,62 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
 
     const skippedDuplicates: any[] = [];
     const failedImports: any[] = [];
+
+    // Pre-validation pass: validate all funds before saving any
+    // This prevents partial imports that leave inconsistent state
+    const preValidationErrors: Array<{ index: number; name: string; errors: string[] }> = [];
+    for (let i = 0; i < fundsToImport.length; i++) {
+      const fund = fundsToImport[i];
+      const importKey = `${fund.fundName}|${fund.accountNumber}`.toLowerCase();
+
+      // Skip duplicates in pre-validation (they'll be handled in main loop)
+      if (existingFundKeys.has(importKey)) {
+        continue;
+      }
+
+      // Build fund data for validation
+      const cashFlows: CashFlow[] = (fund.cashFlows || []).map((cf: any) => ({
+        date: cf.date,
+        amount: parseCurrency(cf.amount),
+        type: cf.type || (cf.amount < 0 ? 'Contribution' : 'Distribution'),
+        affectsCommitment: cf.affectsCommitment !== undefined ? cf.affectsCommitment : true,
+      }));
+
+      const monthlyNav: Nav[] = (fund.monthlyNav || []).map((nav: any) => ({
+        date: nav.date,
+        amount: parseCurrency(nav.amount),
+      }));
+
+      const fundDataForValidation = {
+        fundName: fund.fundName,
+        accountNumber: (fund.accountNumber || '').replace(/\s/g, ''),
+        commitment: parseCurrency(fund.commitment),
+        cashFlows,
+        monthlyNav,
+      };
+
+      const validationResult = validateFund(fundDataForValidation);
+      if (!validationResult.valid) {
+        preValidationErrors.push({
+          index: i,
+          name: fund.fundName || fund.accountNumber || `Fund ${i + 1}`,
+          errors: validationResult.errors,
+        });
+      }
+    }
+
+    // If any funds fail validation, abort the entire import
+    if (preValidationErrors.length > 0) {
+      const errorSummary = preValidationErrors.slice(0, 5).map((e) =>
+        `• ${e.name}: ${e.errors.slice(0, 2).join('; ')}`
+      ).join('\n');
+      const moreText = preValidationErrors.length > 5
+        ? `\n...and ${preValidationErrors.length - 5} more`
+        : '';
+      throw new Error(
+        `Import aborted: ${preValidationErrors.length} fund(s) failed validation.\n\n${errorSummary}${moreText}`
+      );
+    }
 
     for (let i = 0; i < fundsToImport.length; i++) {
       const fund = fundsToImport[i];

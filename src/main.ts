@@ -364,7 +364,8 @@ async function renderTable(): Promise<void> {
     // Get cutoff date (needed for consistent sorting and display)
     const cutoffDateInput = document.getElementById('cutoffDate') as HTMLInputElement;
     const cutoffDateValue = cutoffDateInput?.value;
-    const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue) : undefined;
+    // Append time to force local timezone interpretation (see CLAUDE.md)
+    const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue + 'T00:00:00') : undefined;
 
     // Apply sorting (with cutoffDate for consistent metrics calculation)
     if (AppState.sortColumns.length > 0) {

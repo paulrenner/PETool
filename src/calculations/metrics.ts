@@ -1,4 +1,5 @@
 import type { Fund, FundMetrics } from '../types';
+import { AppState } from '../core/state';
 import { isValidDate } from '../utils/validation';
 import { parseCurrency } from '../utils/formatting';
 import { calculateIRR, calculateMOIC, type IRRCashFlow } from './irr';
@@ -36,6 +37,13 @@ export function getTotalByType(
 
 /**
  * Get latest NAV adjusted for subsequent cash flows
+ *
+ * NAV (Net Asset Value) represents the current market value of portfolio assets.
+ * When adjusting for cash flows after the NAV date:
+ * - Contributions ADD to NAV (fund receives cash, increasing assets)
+ * - Distributions SUBTRACT from NAV (fund pays out cash, decreasing assets)
+ *
+ * Note: This is an estimate. True NAV requires updated portfolio valuations.
  */
 export function getLatestNav(fund: Fund, cutoffDate?: Date): number {
   const navs = (fund.monthlyNav || [])
@@ -58,10 +66,13 @@ export function getLatestNav(fund: Fund, cutoffDate?: Date): number {
   subsequentFlows.forEach((cf) => {
     const amount = parseCurrency(cf.amount) || 0;
     if (cf.type === 'Contribution') {
-      navAmount -= Math.abs(amount);
-    } else if (cf.type === 'Distribution') {
+      // Contribution: fund receives cash → assets increase → NAV increases
       navAmount += Math.abs(amount);
+    } else if (cf.type === 'Distribution') {
+      // Distribution: fund pays out cash → assets decrease → NAV decreases
+      navAmount -= Math.abs(amount);
     }
+    // Adjustments don't affect NAV (they're accounting corrections, not cash movements)
   });
 
   return navAmount;
@@ -96,7 +107,15 @@ export function getOutstandingCommitment(fund: Fund, cutoffDate?: Date): number 
         const amount = parseCurrency(cf.amount) || 0;
         outstanding -= Math.abs(amount);
       } else if (cf.type === 'Distribution') {
-        // Recallable distribution - adds back to remaining commitment
+        // NOTE: This implements RECALLABLE distributions where returned capital
+        // can be called again by the fund. This is unusual - most PE funds have
+        // non-recallable distributions that don't restore unfunded commitment.
+        //
+        // For standard (non-recallable) distributions, set `affectsCommitment: false`
+        // on the cash flow to prevent it from adding back to outstanding commitment.
+        //
+        // The filter above (cf.affectsCommitment !== false) already excludes
+        // distributions marked as non-recallable.
         const amount = parseCurrency(cf.amount) || 0;
         outstanding += Math.abs(amount);
       }
@@ -124,16 +143,16 @@ export function parseCashFlowsForIRR(fund: Fund, cutoffDate?: Date): IRRCashFlow
       };
     });
 
-  // Add NAV as final cash flow (include zero NAV for accurate IRR calculation)
+  // Add NAV as final cash flow for IRR/MOIC calculation
+  // IMPORTANT: Include negative NAV (unrealized losses) - excluding them inflates returns
   const nav = getLatestNav(fund, cutoffDate);
-  if (nav >= 0) {
-    const navs = (fund.monthlyNav || [])
-      .filter((n) => isValidDate(n.date) && (!cutoffDate || new Date(n.date) <= cutoffDate))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const navs = (fund.monthlyNav || [])
+    .filter((n) => isValidDate(n.date) && (!cutoffDate || new Date(n.date) <= cutoffDate))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    if (navs.length > 0) {
-      flows.push({ date: navs[0]!.date, amount: nav });
-    }
+  if (navs.length > 0) {
+    // NAV represents current portfolio value (can be negative for impaired funds)
+    flows.push({ date: navs[0]!.date, amount: nav });
   }
 
   return flows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -180,4 +199,35 @@ export function calculateMetrics(fund: Fund, cutoffDate?: Date): FundMetrics {
     investmentReturn,
     vintage: vintageYear,
   };
+}
+
+/**
+ * Calculate metrics with caching support
+ *
+ * Uses AppState's metrics cache for performance. Cache entries expire
+ * based on METRICS_CACHE_TTL (default 5 seconds).
+ *
+ * @param fund - The fund to calculate metrics for
+ * @param cutoffDate - Optional cutoff date for historical analysis
+ * @returns Calculated metrics (from cache if available)
+ */
+export function calculateMetricsCached(fund: Fund, cutoffDate?: Date): FundMetrics {
+  // Funds without IDs cannot be cached
+  if (fund.id == null) {
+    return calculateMetrics(fund, cutoffDate);
+  }
+
+  const cutoffStr = cutoffDate?.toISOString() ?? 'current';
+
+  // Check cache first
+  const cached = AppState.getMetricsFromCache(fund.id, cutoffStr);
+  if (cached) {
+    return cached;
+  }
+
+  // Calculate and cache
+  const metrics = calculateMetrics(fund, cutoffDate);
+  AppState.setMetricsCache(fund.id, cutoffStr, metrics);
+
+  return metrics;
 }

@@ -20,11 +20,11 @@ class AppStateClass {
   groupsMap: Map<number, Group> = new Map();
 
   // UI State
-  currentGroupDescendants: number[] | null = null;
   sortColumns: SortColumn[] = [];
   currentActionFundId: number | null = null;
   currentDetailsFundId: number | null = null;
-  hasUnsavedChanges = false;
+  hasUnsavedChanges = false; // For details modal
+  fundModalHasUnsavedChanges = false; // For fund (add/edit) modal
 
   // Cache
   metricsCache: Map<string, MetricsCacheEntry> = new Map();
@@ -114,7 +114,7 @@ class AppStateClass {
     return ancestors;
   }
 
-  // Get descendant group IDs with memoization
+  // Get descendant group IDs with memoization (depth-first order)
   getDescendantIds(groupId: number): number[] {
     const cached = this.groupDescendantsCache.get(groupId);
     if (cached) {
@@ -125,10 +125,9 @@ class AppStateClass {
 
     for (const [id, group] of this.groupsMap) {
       if (group.parentGroupId === groupId) {
+        // Add child and all its descendants (proper depth-first order)
         const childDescendants = this.getDescendantIds(id);
-        // Skip first element (the child itself is the first in its descendants)
-        descendants.push(...childDescendants.slice(1));
-        descendants.push(id);
+        descendants.push(...childDescendants);
       }
     }
 
@@ -145,6 +144,10 @@ class AppStateClass {
     this.hasUnsavedChanges = value;
   }
 
+  setFundModalUnsavedChanges(value: boolean): void {
+    this.fundModalHasUnsavedChanges = value;
+  }
+
   setFundNames(names: Set<string>): void {
     this.fundNames = names;
   }
@@ -155,10 +158,6 @@ class AppStateClass {
 
   setSortColumns(columns: SortColumn[]): void {
     this.sortColumns = columns;
-  }
-
-  setCurrentGroupDescendants(descendants: number[] | null): void {
-    this.currentGroupDescendants = descendants;
   }
 
   setCurrentActionFundId(fundId: number | null): void {

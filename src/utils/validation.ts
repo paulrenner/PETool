@@ -161,3 +161,307 @@ export function validateNavEntry(nav: unknown, index: number): ValidationResult 
 
   return { valid: true, error: null };
 }
+
+/**
+ * Validation errors collection
+ */
+export interface FundValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+/**
+ * Validate a fund before saving to database
+ *
+ * This ensures data integrity by checking:
+ * - Required fields are present
+ * - Numeric values are valid (not NaN, Infinity)
+ * - Dates are in correct format
+ * - Cash flow types are valid
+ *
+ * IMPORTANT: This validation prevents financial data corruption.
+ * Invalid data should NEVER be persisted to the database.
+ */
+export function validateFund(fund: unknown): FundValidationResult {
+  const errors: string[] = [];
+
+  if (!fund || typeof fund !== 'object') {
+    return { valid: false, errors: ['Fund data is required'] };
+  }
+
+  const f = fund as Record<string, unknown>;
+
+  // Required string fields
+  if (!f.fundName || typeof f.fundName !== 'string' || !f.fundName.trim()) {
+    errors.push('Fund name is required');
+  }
+
+  if (!f.accountNumber || typeof f.accountNumber !== 'string' || !f.accountNumber.trim()) {
+    errors.push('Account number is required');
+  }
+
+  // Commitment validation (critical for financial calculations)
+  if (typeof f.commitment !== 'number') {
+    errors.push('Commitment must be a number');
+  } else if (isNaN(f.commitment)) {
+    errors.push('Commitment is NaN (invalid number)');
+  } else if (!isFinite(f.commitment)) {
+    errors.push('Commitment must be a finite number');
+  } else if (f.commitment < 0) {
+    errors.push('Commitment cannot be negative');
+  }
+
+  // Cash flows validation
+  if (f.cashFlows !== undefined) {
+    if (!Array.isArray(f.cashFlows)) {
+      errors.push('Cash flows must be an array');
+    } else {
+      f.cashFlows.forEach((cf: unknown, i: number) => {
+        if (!cf || typeof cf !== 'object') {
+          errors.push(`Cash flow at index ${i} is invalid`);
+          return;
+        }
+
+        const cashFlow = cf as Record<string, unknown>;
+
+        // Amount validation (critical - prevents NaN corruption)
+        if (typeof cashFlow.amount !== 'number') {
+          errors.push(`Cash flow ${i}: amount must be a number`);
+        } else if (isNaN(cashFlow.amount)) {
+          errors.push(`Cash flow ${i}: amount is NaN (invalid number)`);
+        } else if (!isFinite(cashFlow.amount)) {
+          errors.push(`Cash flow ${i}: amount must be finite`);
+        }
+
+        // Date validation
+        if (!cashFlow.date || typeof cashFlow.date !== 'string') {
+          errors.push(`Cash flow ${i}: date is required`);
+        } else if (!isValidDate(cashFlow.date)) {
+          errors.push(`Cash flow ${i}: invalid date format (expected YYYY-MM-DD)`);
+        }
+
+        // Type validation
+        if (!cashFlow.type) {
+          errors.push(`Cash flow ${i}: type is required`);
+        } else if (!['Contribution', 'Distribution', 'Adjustment'].includes(cashFlow.type as string)) {
+          errors.push(`Cash flow ${i}: invalid type "${cashFlow.type}"`);
+        }
+      });
+    }
+  }
+
+  // NAV entries validation
+  if (f.monthlyNav !== undefined) {
+    if (!Array.isArray(f.monthlyNav)) {
+      errors.push('Monthly NAV must be an array');
+    } else {
+      f.monthlyNav.forEach((nav: unknown, i: number) => {
+        if (!nav || typeof nav !== 'object') {
+          errors.push(`NAV entry at index ${i} is invalid`);
+          return;
+        }
+
+        const navEntry = nav as Record<string, unknown>;
+
+        // Amount validation
+        if (typeof navEntry.amount !== 'number') {
+          errors.push(`NAV ${i}: amount must be a number`);
+        } else if (isNaN(navEntry.amount)) {
+          errors.push(`NAV ${i}: amount is NaN (invalid number)`);
+        } else if (!isFinite(navEntry.amount)) {
+          errors.push(`NAV ${i}: amount must be finite`);
+        }
+
+        // Date validation
+        if (!navEntry.date || typeof navEntry.date !== 'string') {
+          errors.push(`NAV ${i}: date is required`);
+        } else if (!isValidDate(navEntry.date)) {
+          errors.push(`NAV ${i}: invalid date format (expected YYYY-MM-DD)`);
+        }
+      });
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Cross-field validation warnings for imported funds
+ *
+ * These are non-blocking warnings that alert users to potential data issues
+ * without preventing import. Useful for catching data quality problems.
+ */
+export interface CrossFieldWarning {
+  field: string;
+  warning: string;
+  severity: 'info' | 'warning' | 'error';
+}
+
+/**
+ * Validate cross-field relationships in fund data
+ *
+ * Checks for logical inconsistencies that may indicate data quality issues:
+ * - Distributions before any contributions
+ * - NAV dates in far future
+ * - Cash flows exceeding commitment
+ * - Negative outstanding commitment
+ */
+export function validateFundCrossField(fund: unknown): CrossFieldWarning[] {
+  const warnings: CrossFieldWarning[] = [];
+
+  if (!fund || typeof fund !== 'object') {
+    return warnings;
+  }
+
+  const f = fund as Record<string, unknown>;
+  const cashFlows = Array.isArray(f.cashFlows) ? f.cashFlows : [];
+  const monthlyNav = Array.isArray(f.monthlyNav) ? f.monthlyNav : [];
+  const commitment = typeof f.commitment === 'number' ? f.commitment : 0;
+
+  // Get contribution and distribution dates
+  const contributions = cashFlows.filter(
+    (cf: unknown) => cf && typeof cf === 'object' && (cf as Record<string, unknown>).type === 'Contribution' && (cf as Record<string, unknown>).date
+  );
+  const distributions = cashFlows.filter(
+    (cf: unknown) => cf && typeof cf === 'object' && (cf as Record<string, unknown>).type === 'Distribution' && (cf as Record<string, unknown>).date
+  );
+
+  // Check: Distributions before first contribution
+  if (contributions.length > 0 && distributions.length > 0) {
+    const firstContributionDate = contributions
+      .map((cf: unknown) => (cf as Record<string, unknown>).date as string)
+      .sort()[0];
+    const earlyDistributions = distributions.filter(
+      (cf: unknown) => ((cf as Record<string, unknown>).date as string) < firstContributionDate!
+    );
+
+    if (earlyDistributions.length > 0) {
+      warnings.push({
+        field: 'cashFlows',
+        warning: `${earlyDistributions.length} distribution(s) dated before first contribution (${firstContributionDate})`,
+        severity: 'warning',
+      });
+    }
+  }
+
+  // Check: NAV without any contributions
+  if (monthlyNav.length > 0 && contributions.length === 0) {
+    warnings.push({
+      field: 'monthlyNav',
+      warning: 'NAV entries exist but no contributions recorded',
+      severity: 'info',
+    });
+  }
+
+  // Check: Dates in far future (more than 2 years from now)
+  const twoYearsFromNow = new Date();
+  twoYearsFromNow.setFullYear(twoYearsFromNow.getFullYear() + 2);
+  const futureDateStr = twoYearsFromNow.toISOString().split('T')[0];
+
+  const futureCashFlows = cashFlows.filter(
+    (cf: unknown) => cf && typeof cf === 'object' && (cf as Record<string, unknown>).date && ((cf as Record<string, unknown>).date as string) > futureDateStr!
+  );
+  if (futureCashFlows.length > 0) {
+    warnings.push({
+      field: 'cashFlows',
+      warning: `${futureCashFlows.length} cash flow(s) dated more than 2 years in the future`,
+      severity: 'warning',
+    });
+  }
+
+  const futureNavs = monthlyNav.filter(
+    (nav: unknown) => nav && typeof nav === 'object' && (nav as Record<string, unknown>).date && ((nav as Record<string, unknown>).date as string) > futureDateStr!
+  );
+  if (futureNavs.length > 0) {
+    warnings.push({
+      field: 'monthlyNav',
+      warning: `${futureNavs.length} NAV entry(ies) dated more than 2 years in the future`,
+      severity: 'warning',
+    });
+  }
+
+  // Check: Total contributions exceed commitment significantly (>150%)
+  if (commitment > 0 && contributions.length > 0) {
+    const totalContributions = contributions.reduce((sum: number, cf: unknown) => {
+      const amount = typeof (cf as Record<string, unknown>).amount === 'number'
+        ? Math.abs((cf as Record<string, unknown>).amount as number)
+        : 0;
+      return sum + amount;
+    }, 0);
+
+    if (totalContributions > commitment * 1.5) {
+      warnings.push({
+        field: 'cashFlows',
+        warning: `Total contributions (${totalContributions.toLocaleString()}) exceed commitment (${commitment.toLocaleString()}) by more than 50%`,
+        severity: 'warning',
+      });
+    }
+  }
+
+  // Check: Very old dates (before 1980)
+  const veryOldCashFlows = cashFlows.filter(
+    (cf: unknown) => cf && typeof cf === 'object' && (cf as Record<string, unknown>).date && ((cf as Record<string, unknown>).date as string) < '1980-01-01'
+  );
+  if (veryOldCashFlows.length > 0) {
+    warnings.push({
+      field: 'cashFlows',
+      warning: `${veryOldCashFlows.length} cash flow(s) dated before 1980`,
+      severity: 'info',
+    });
+  }
+
+  // Check: Duplicate dates in NAV (might indicate data error)
+  const navDates = monthlyNav
+    .filter((nav: unknown) => nav && typeof nav === 'object' && (nav as Record<string, unknown>).date)
+    .map((nav: unknown) => (nav as Record<string, unknown>).date as string);
+  const uniqueNavDates = new Set(navDates);
+  if (navDates.length !== uniqueNavDates.size) {
+    warnings.push({
+      field: 'monthlyNav',
+      warning: `Duplicate NAV dates detected (${navDates.length - uniqueNavDates.size} duplicates)`,
+      severity: 'warning',
+    });
+  }
+
+  // Check: Very large amounts (>$10B) that might indicate unit errors
+  const veryLargeAmounts = cashFlows.filter((cf: unknown) => {
+    const amount = typeof (cf as Record<string, unknown>).amount === 'number'
+      ? Math.abs((cf as Record<string, unknown>).amount as number)
+      : 0;
+    return amount > 10_000_000_000; // $10 billion
+  });
+  if (veryLargeAmounts.length > 0) {
+    warnings.push({
+      field: 'cashFlows',
+      warning: `${veryLargeAmounts.length} cash flow(s) exceed $10 billion - verify units`,
+      severity: 'warning',
+    });
+  }
+
+  return warnings;
+}
+
+/**
+ * Validate an array of funds and aggregate warnings
+ */
+export function validateImportBatch(
+  funds: unknown[]
+): { validFunds: number; invalidFunds: number; warnings: CrossFieldWarning[] } {
+  let validFunds = 0;
+  let invalidFunds = 0;
+  const allWarnings: CrossFieldWarning[] = [];
+
+  for (const fund of funds) {
+    const validation = validateFund(fund);
+    if (validation.valid) {
+      validFunds++;
+      // Only check cross-field for valid funds
+      const crossFieldWarnings = validateFundCrossField(fund);
+      allWarnings.push(...crossFieldWarnings);
+    } else {
+      invalidFunds++;
+    }
+  }
+
+  return { validFunds, invalidFunds, warnings: allWarnings };
+}

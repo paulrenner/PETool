@@ -7,4 +7,5 @@ export {
   getOutstandingCommitment,
   parseCashFlowsForIRR,
   calculateMetrics,
+  calculateMetricsCached,
 } from './metrics';

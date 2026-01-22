@@ -43,7 +43,13 @@ src/
 │   ├── utils.ts     # DOM utilities
 │   └── index.ts     # Re-exports
 └── app/             # Application modules
-    ├── modals.ts    # Fund/cash flow modal dialogs
+    ├── modals.ts    # Re-exports from modals/
+    ├── modals/      # Modal dialog modules
+    │   ├── common.ts      # Shared utilities (status, loading, confirm)
+    │   ├── fund-modal.ts  # Fund add/edit/details/duplicate
+    │   ├── group-modal.ts # Group management and sync
+    │   ├── fund-names-modal.ts # Fund name/tag management
+    │   └── index.ts       # Re-exports
     ├── table.ts     # Table rendering
     ├── filters.ts   # Filter functionality
     ├── bulk.ts      # Bulk operations
@@ -67,7 +73,7 @@ cp dist/index.html index.html  # REQUIRED: Copy to root for deployment
 ```bash
 npm test         # Run Jest tests
 ```
-- 265 tests across 7 test suites
+- 328 tests across 8 test suites
 - Tests import directly from `src/` TypeScript modules
 
 ### Development
@@ -131,6 +137,9 @@ The `isValidDate()` function in `src/utils/validation.ts` handles this correctly
 5. Update HTML in `src/index.html` if needed
 6. Run `npm test` and `npm run build`
 7. Copy `dist/index.html` to root and commit
+8. Update documentation if structure changed:
+   - **CLAUDE.md**: Update "Directory Structure" section if adding new directories or files
+   - **review-playbook.md**: Update phase scopes if adding new files (see table below)
 
 ### Fixing a Bug
 1. Identify the root cause in the TypeScript source
@@ -167,3 +176,18 @@ Each directory has an `index.ts` that re-exports public functions. Import from t
 import { calculateMetrics, calculateIRR } from './calculations';
 import { formatCurrency, parseCurrency } from './utils/formatting';
 ```
+
+### Review Playbook Maintenance
+The `review-playbook.md` file defines a phased code review process with explicit file scopes per phase. **When adding new source files**, update the relevant phase scope:
+
+| File Type | Update Phase |
+|-----------|--------------|
+| `src/calculations/*.ts` | Phase 2 (Financial Engine) |
+| `src/core/*.ts` | Phase 3 (State/Persistence) |
+| `src/types/*.ts` | Phase 2 and Phase 5 |
+| `src/utils/*.ts` | Phase 4 (Security) |
+| `src/app/*.ts` | Phase 4 (Security/Performance) |
+| `src/app/modals/*.ts` | Phase 4 (Security/Performance) |
+| `__tests__/*.ts` | Phase 6 (Tests) |
+
+This ensures new code is included in future AI-assisted code reviews.

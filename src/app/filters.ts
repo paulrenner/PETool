@@ -8,6 +8,35 @@ import { getVintageYear } from '../calculations/metrics';
 import { escapeHtml } from '../utils/escaping';
 
 /**
+ * Get the most recent quarter-end date as a YYYY-MM-DD string
+ * Quarter-ends are: March 31, June 30, September 30, December 31
+ */
+function getDefaultCutoffDateString(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+
+  const quarterEnds = [
+    new Date(year, 2, 31),  // March 31
+    new Date(year, 5, 30),  // June 30
+    new Date(year, 8, 30),  // September 30
+    new Date(year, 11, 31), // December 31
+  ];
+
+  let quarterEnd = new Date(year - 1, 11, 31); // Default to last year's Q4
+  for (let i = quarterEnds.length - 1; i >= 0; i--) {
+    if (quarterEnds[i]! <= today) {
+      quarterEnd = quarterEnds[i]!;
+      break;
+    }
+  }
+
+  const y = quarterEnd.getFullYear();
+  const m = String(quarterEnd.getMonth() + 1).padStart(2, '0');
+  const d = String(quarterEnd.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
  * Get selected values from a multi-select dropdown
  */
 export function getMultiSelectValues(id: string): string[] {
@@ -276,7 +305,7 @@ export function applyCurrentFilters(funds: Fund[]): Fund[] {
 }
 
 /**
- * Reset all filters to default (no selection)
+ * Reset all filters to default (no selection, cutoff date to most recent quarter-end)
  */
 export function resetFilters(): void {
   clearMultiSelect('fundFilter');
@@ -286,7 +315,7 @@ export function resetFilters(): void {
   clearMultiSelect('vintageFilter');
 
   const cutoffDate = document.getElementById('cutoffDate') as HTMLInputElement;
-  if (cutoffDate) cutoffDate.value = '';
+  if (cutoffDate) cutoffDate.value = getDefaultCutoffDateString();
 }
 
 /**

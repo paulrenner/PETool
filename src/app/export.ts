@@ -110,10 +110,10 @@ export async function exportToCSV(): Promise<void> {
       filtered = sortData(filtered, AppState.sortColumns);
     }
 
-    // Get cutoff date
+    // Get cutoff date (append time to force local timezone interpretation)
     const cutoffDateInput = document.getElementById('cutoffDate') as HTMLInputElement;
     const cutoffDateValue = cutoffDateInput?.value;
-    const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue) : undefined;
+    const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue + 'T00:00:00') : undefined;
 
     // Calculate metrics for each fund
     const fundsWithMetrics: FundWithMetrics[] = filtered.map((fund) => ({
