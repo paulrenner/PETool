@@ -14,6 +14,7 @@ import {
 } from '../core/db';
 import { parseCurrency } from '../utils/formatting';
 import { escapeHtml } from '../utils/escaping';
+import { validateFund } from '../utils/validation';
 import { showStatus, showLoading, hideLoading, openModal, closeModal } from './modals';
 
 // Import preview data storage
@@ -354,6 +355,62 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
 
     const skippedDuplicates: any[] = [];
     const failedImports: any[] = [];
+
+    // Pre-validation pass: validate all funds before saving any
+    // This prevents partial imports that leave inconsistent state
+    const preValidationErrors: Array<{ index: number; name: string; errors: string[] }> = [];
+    for (let i = 0; i < fundsToImport.length; i++) {
+      const fund = fundsToImport[i];
+      const importKey = `${fund.fundName}|${fund.accountNumber}`.toLowerCase();
+
+      // Skip duplicates in pre-validation (they'll be handled in main loop)
+      if (existingFundKeys.has(importKey)) {
+        continue;
+      }
+
+      // Build fund data for validation
+      const cashFlows: CashFlow[] = (fund.cashFlows || []).map((cf: any) => ({
+        date: cf.date,
+        amount: parseCurrency(cf.amount),
+        type: cf.type || (cf.amount < 0 ? 'Contribution' : 'Distribution'),
+        affectsCommitment: cf.affectsCommitment !== undefined ? cf.affectsCommitment : true,
+      }));
+
+      const monthlyNav: Nav[] = (fund.monthlyNav || []).map((nav: any) => ({
+        date: nav.date,
+        amount: parseCurrency(nav.amount),
+      }));
+
+      const fundDataForValidation = {
+        fundName: fund.fundName,
+        accountNumber: (fund.accountNumber || '').replace(/\s/g, ''),
+        commitment: parseCurrency(fund.commitment),
+        cashFlows,
+        monthlyNav,
+      };
+
+      const validationResult = validateFund(fundDataForValidation);
+      if (!validationResult.valid) {
+        preValidationErrors.push({
+          index: i,
+          name: fund.fundName || fund.accountNumber || `Fund ${i + 1}`,
+          errors: validationResult.errors,
+        });
+      }
+    }
+
+    // If any funds fail validation, abort the entire import
+    if (preValidationErrors.length > 0) {
+      const errorSummary = preValidationErrors.slice(0, 5).map((e) =>
+        `• ${e.name}: ${e.errors.slice(0, 2).join('; ')}`
+      ).join('\n');
+      const moreText = preValidationErrors.length > 5
+        ? `\n...and ${preValidationErrors.length - 5} more`
+        : '';
+      throw new Error(
+        `Import aborted: ${preValidationErrors.length} fund(s) failed validation.\n\n${errorSummary}${moreText}`
+      );
+    }
 
     for (let i = 0; i < fundsToImport.length; i++) {
       const fund = fundsToImport[i];
