@@ -107,7 +107,15 @@ export function getOutstandingCommitment(fund: Fund, cutoffDate?: Date): number 
         const amount = parseCurrency(cf.amount) || 0;
         outstanding -= Math.abs(amount);
       } else if (cf.type === 'Distribution') {
-        // Recallable distribution - adds back to remaining commitment
+        // NOTE: This implements RECALLABLE distributions where returned capital
+        // can be called again by the fund. This is unusual - most PE funds have
+        // non-recallable distributions that don't restore unfunded commitment.
+        //
+        // For standard (non-recallable) distributions, set `affectsCommitment: false`
+        // on the cash flow to prevent it from adding back to outstanding commitment.
+        //
+        // The filter above (cf.affectsCommitment !== false) already excludes
+        // distributions marked as non-recallable.
         const amount = parseCurrency(cf.amount) || 0;
         outstanding += Math.abs(amount);
       }
