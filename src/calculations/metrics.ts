@@ -1,4 +1,5 @@
 import type { Fund, FundMetrics } from '../types';
+import { AppState } from '../core/state';
 import { isValidDate } from '../utils/validation';
 import { parseCurrency } from '../utils/formatting';
 import { calculateIRR, calculateMOIC, type IRRCashFlow } from './irr';
@@ -190,4 +191,35 @@ export function calculateMetrics(fund: Fund, cutoffDate?: Date): FundMetrics {
     investmentReturn,
     vintage: vintageYear,
   };
+}
+
+/**
+ * Calculate metrics with caching support
+ *
+ * Uses AppState's metrics cache for performance. Cache entries expire
+ * based on METRICS_CACHE_TTL (default 5 seconds).
+ *
+ * @param fund - The fund to calculate metrics for
+ * @param cutoffDate - Optional cutoff date for historical analysis
+ * @returns Calculated metrics (from cache if available)
+ */
+export function calculateMetricsCached(fund: Fund, cutoffDate?: Date): FundMetrics {
+  // Funds without IDs cannot be cached
+  if (fund.id == null) {
+    return calculateMetrics(fund, cutoffDate);
+  }
+
+  const cutoffStr = cutoffDate?.toISOString() ?? 'current';
+
+  // Check cache first
+  const cached = AppState.getMetricsFromCache(fund.id, cutoffStr);
+  if (cached) {
+    return cached;
+  }
+
+  // Calculate and cache
+  const metrics = calculateMetrics(fund, cutoffDate);
+  AppState.setMetricsCache(fund.id, cutoffStr, metrics);
+
+  return metrics;
 }

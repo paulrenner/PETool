@@ -4,7 +4,7 @@
 
 import type { Fund, FundMetrics, FundWithMetrics, SortColumn } from '../types';
 import { AppState } from '../core/state';
-import { calculateMetrics, calculateIRR, calculateMOIC, parseCashFlowsForIRR } from '../calculations';
+import { calculateMetricsCached, calculateIRR, calculateMOIC, parseCashFlowsForIRR } from '../calculations';
 import { escapeHtml } from '../utils/escaping';
 import { formatCurrency } from '../utils/formatting';
 
@@ -58,11 +58,11 @@ export function getInvestorCellHtml(fund: Fund): string {
 export function sortData(funds: Fund[], sortColumns: SortColumn[], cutoffDate?: Date): Fund[] {
   if (sortColumns.length === 0) return funds;
 
-  // Pre-calculate metrics for all funds to avoid redundant calculations during sort
+  // Pre-calculate metrics for all funds using cache to avoid redundant calculations
   const metricsMap = new Map<number, FundMetrics>();
   for (const fund of funds) {
     if (fund.id != null) {
-      metricsMap.set(fund.id, calculateMetrics(fund, cutoffDate));
+      metricsMap.set(fund.id, calculateMetricsCached(fund, cutoffDate));
     }
   }
 
@@ -71,9 +71,9 @@ export function sortData(funds: Fund[], sortColumns: SortColumn[], cutoffDate?: 
       const multiplier = direction === 'asc' ? 1 : -1;
       let comparison = 0;
 
-      // Use pre-calculated metrics
-      const metricsA = a.id != null ? metricsMap.get(a.id) : calculateMetrics(a, cutoffDate);
-      const metricsB = b.id != null ? metricsMap.get(b.id) : calculateMetrics(b, cutoffDate);
+      // Use pre-calculated metrics (already cached)
+      const metricsA = a.id != null ? metricsMap.get(a.id) : calculateMetricsCached(a, cutoffDate);
+      const metricsB = b.id != null ? metricsMap.get(b.id) : calculateMetricsCached(b, cutoffDate);
 
       switch (column) {
         case 'fundName':
