@@ -400,6 +400,19 @@
         </div>
     </div>
 
+    <!-- Health Check Modal -->
+    <div id="healthCheckModal" class="modal health-check-modal">
+        <div class="modal-content health-check-content">
+            <span class="close" id="closeHealthCheckModalBtn">&times;</span>
+            <h2>Data Health Check</h2>
+            <div id="healthCheckSummary" class="health-check-summary"></div>
+            <div id="healthCheckResults" class="health-check-results"></div>
+            <div class="form-actions">
+                <button class="btn-secondary" id="closeHealthCheckModal2Btn">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Keyboard Shortcuts Modal -->
     <div id="shortcutsModal" class="modal shortcuts-modal">
         <div class="modal-content">
@@ -541,6 +554,7 @@
             </div>
             <div class="sidebar-section">
                 <h4 class="sidebar-section-title">Admin</h4>
+                <div class="sidebar-item"><a href="#" id="sidebarHealthCheck">Data Health Check</a></div>
                 <div class="sidebar-item"><a href="#" id="sidebarSyncAccountGroups">Sync Account Groups</a></div>
                 <div class="sidebar-item"><a href="#" id="sidebarLoadSampleData">Load Sample Data</a></div>
                 <div class="sidebar-item"><a href="#" id="sidebarBulkRemoveFund" style="color: var(--color-danger);">Bulk Remove Fund</a></div>

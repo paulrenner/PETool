@@ -629,6 +629,212 @@
             font-size: 14px;
         }
 
+        /* Health Check Modal */
+        .health-check-modal .modal-content {
+            max-width: 700px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .health-check-summary {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 16px;
+            background: var(--color-alt-bg);
+            border-radius: var(--radius-sm);
+            margin-bottom: 16px;
+        }
+
+        .health-check-stat {
+            text-align: center;
+            padding: 8px 16px;
+            min-width: 80px;
+        }
+
+        .health-check-stat-value {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .health-check-stat-label {
+            font-size: 12px;
+            color: var(--color-secondary-hover);
+            text-transform: uppercase;
+        }
+
+        .health-check-stat-value.error-count {
+            color: var(--color-danger);
+        }
+
+        .health-check-stat-value.warning-count {
+            color: var(--color-warning);
+        }
+
+        .health-check-stat-value.info-count {
+            color: var(--color-action);
+        }
+
+        .health-check-stat-value.success-count {
+            color: var(--color-success);
+        }
+
+        .health-check-results {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+
+        .health-check-empty {
+            text-align: center;
+            padding: 40px;
+            color: var(--color-success);
+            font-size: 16px;
+        }
+
+        .health-issue {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .health-issue:last-child {
+            border-bottom: none;
+        }
+
+        .health-issue:hover {
+            background: var(--color-hover-bg);
+        }
+
+        .health-issue-severity {
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .severity-error {
+            background: rgba(231, 76, 60, 0.15);
+            color: var(--color-danger);
+        }
+
+        .severity-warning {
+            background: rgba(241, 196, 15, 0.15);
+            color: var(--color-warning);
+        }
+
+        .severity-info {
+            background: rgba(52, 152, 219, 0.15);
+            color: var(--color-action);
+        }
+
+        .health-issue-content {
+            flex: 1;
+        }
+
+        .health-issue-fund {
+            font-weight: 600;
+            color: var(--color-primary);
+            margin-bottom: 4px;
+        }
+
+        .health-issue-message {
+            font-size: 14px;
+            color: var(--color-text);
+        }
+
+        .health-issue-category {
+            font-size: 12px;
+            color: var(--color-secondary-hover);
+            margin-top: 4px;
+        }
+
+        .health-check-section-header {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--color-secondary-hover);
+            padding: 12px 12px 8px;
+            border-bottom: 1px solid var(--color-border);
+            background: var(--color-alt-bg);
+        }
+
+        .duplicate-pair {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .duplicate-pair:last-child {
+            border-bottom: none;
+        }
+
+        .duplicate-pair:hover {
+            background: var(--color-hover-bg);
+        }
+
+        .duplicate-confidence {
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .confidence-high {
+            background: rgba(231, 76, 60, 0.15);
+            color: var(--color-danger);
+        }
+
+        .confidence-medium {
+            background: rgba(241, 196, 15, 0.15);
+            color: var(--color-warning);
+        }
+
+        .confidence-low {
+            background: rgba(52, 152, 219, 0.15);
+            color: var(--color-action);
+        }
+
+        .duplicate-content {
+            flex: 1;
+        }
+
+        .duplicate-funds {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 4px;
+        }
+
+        .duplicate-fund-link {
+            font-weight: 600;
+            color: var(--color-action);
+            cursor: pointer;
+        }
+
+        .duplicate-fund-link:hover {
+            text-decoration: underline;
+        }
+
+        .duplicate-separator {
+            color: var(--color-secondary-hover);
+        }
+
+        .duplicate-reason {
+            font-size: 14px;
+            color: var(--color-text);
+        }
+
         @media (max-width: 768px) {
             .portfolio-summary {
                 gap: 8px;
