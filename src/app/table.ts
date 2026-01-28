@@ -333,26 +333,31 @@ export function consolidateFundsByName(
   const consolidated: ConsolidatedFund[] = [];
 
   for (const [fundName, funds] of fundGroups) {
-    // Merge all cash flows
+    // Merge all cash flows and sum NAVs from pre-calculated metrics
     const allCashFlows: CashFlow[] = [];
-    const allNavs: Nav[] = [];
     let totalCommitment = 0;
-    let minVintageDate: string | null = null;
+    let totalNav = 0;
+    let latestNavDate: string | null = null;
 
     for (const fund of funds) {
       allCashFlows.push(...fund.cashFlows);
-      allNavs.push(...fund.monthlyNav);
       totalCommitment += fund.commitment;
 
-      // Track earliest contribution for vintage
-      for (const cf of fund.cashFlows) {
-        if (cf.type.toLowerCase() === 'contribution') {
-          if (!minVintageDate || cf.date < minVintageDate) {
-            minVintageDate = cf.date;
-          }
+      // Sum each fund's NAV (already correctly calculated in metrics)
+      totalNav += fund.metrics.nav;
+
+      // Track the latest NAV date across all funds
+      if (fund.metrics.navDate) {
+        if (!latestNavDate || fund.metrics.navDate > latestNavDate) {
+          latestNavDate = fund.metrics.navDate;
         }
       }
     }
+
+    // Create a synthetic NAV entry with the summed total
+    // This ensures getLatestNav returns the correct consolidated value
+    const syntheticNavDate = latestNavDate || new Date().toISOString().split('T')[0];
+    const syntheticNav: Nav[] = [{ date: syntheticNavDate!, amount: totalNav }];
 
     // Create a synthetic fund for metrics calculation
     const syntheticFund: Fund = {
@@ -360,7 +365,7 @@ export function consolidateFundsByName(
       accountNumber: `${funds.length} investor${funds.length !== 1 ? 's' : ''}`,
       commitment: totalCommitment,
       cashFlows: allCashFlows,
-      monthlyNav: allNavs,
+      monthlyNav: syntheticNav,
       groupId: null,
       timestamp: new Date().toISOString(),
     };
