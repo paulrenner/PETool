@@ -25,10 +25,12 @@ import { calculateMetrics } from './calculations';
 import {
   sortData,
   renderFundRow,
+  renderGroupedFundRow,
   calculateTotals,
   renderTotalsRow,
   updatePortfolioSummary,
   updateSortIndicators,
+  consolidateFundsByName,
 } from './app/table';
 
 import {
@@ -620,22 +622,45 @@ async function renderTable(): Promise<void> {
     }
 
     const showTags = (document.getElementById('sidebarShowTagsCheckbox') as HTMLInputElement)?.checked ?? true;
+    const groupByFund = (document.getElementById('sidebarGroupByFundCheckbox') as HTMLInputElement)?.checked ?? false;
 
-    fundsWithMetrics.forEach((fund, index) => {
-      const row = document.createElement('tr');
-      row.setAttribute('tabindex', '0');
-      row.setAttribute('data-fund-id', fund.id?.toString() || '');
-      row.setAttribute('role', 'row');
-      row.setAttribute('aria-rowindex', (index + 2).toString());
-      row.innerHTML = renderFundRow(fund, index, showTags);
-      tbody.appendChild(row);
-    });
+    if (groupByFund) {
+      // Render consolidated view (grouped by fund name)
+      const consolidatedFunds = consolidateFundsByName(fundsWithMetrics, cutoffDate);
 
-    // Add totals row
-    const totals = calculateTotals(fundsWithMetrics, cutoffDate);
-    const totalRow = document.createElement('tr');
-    totalRow.innerHTML = renderTotalsRow(totals);
-    tbody.appendChild(totalRow);
+      consolidatedFunds.forEach((fund, index) => {
+        const row = document.createElement('tr');
+        row.classList.add('grouped-fund-row');
+        row.setAttribute('tabindex', '0');
+        row.setAttribute('role', 'row');
+        row.setAttribute('aria-rowindex', (index + 2).toString());
+        row.innerHTML = renderGroupedFundRow(fund, index, showTags);
+        tbody.appendChild(row);
+      });
+
+      // Add totals row (use same totals from original funds)
+      const totals = calculateTotals(fundsWithMetrics, cutoffDate);
+      const totalRow = document.createElement('tr');
+      totalRow.innerHTML = renderTotalsRow(totals);
+      tbody.appendChild(totalRow);
+    } else {
+      // Render normal view (individual fund rows)
+      fundsWithMetrics.forEach((fund, index) => {
+        const row = document.createElement('tr');
+        row.setAttribute('tabindex', '0');
+        row.setAttribute('data-fund-id', fund.id?.toString() || '');
+        row.setAttribute('role', 'row');
+        row.setAttribute('aria-rowindex', (index + 2).toString());
+        row.innerHTML = renderFundRow(fund, index, showTags);
+        tbody.appendChild(row);
+      });
+
+      // Add totals row
+      const totals = calculateTotals(fundsWithMetrics, cutoffDate);
+      const totalRow = document.createElement('tr');
+      totalRow.innerHTML = renderTotalsRow(totals);
+      tbody.appendChild(totalRow);
+    }
   } catch (err) {
     console.error('Error rendering table:', err);
     showStatus('Error loading data: ' + (err as Error).message, 'error');
@@ -1424,6 +1449,40 @@ function initializeEventListeners(): void {
     const savedShowTags = localStorage.getItem('showTags');
     if (savedShowTags !== null) {
       (sidebarShowTagsCheckbox as HTMLInputElement).checked = savedShowTags === 'true';
+    }
+  }
+
+  // Sidebar - Group by Fund checkbox
+  const sidebarGroupByFundCheckbox = document.getElementById('sidebarGroupByFundCheckbox');
+  if (sidebarGroupByFundCheckbox) {
+    sidebarGroupByFundCheckbox.addEventListener('change', async () => {
+      const checked = (sidebarGroupByFundCheckbox as HTMLInputElement).checked;
+      localStorage.setItem(CONFIG.STORAGE_GROUP_BY_FUND, checked.toString());
+      await renderTable();
+    });
+
+    // Restore saved preference
+    const savedGroupByFund = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND);
+    if (savedGroupByFund !== null) {
+      (sidebarGroupByFundCheckbox as HTMLInputElement).checked = savedGroupByFund === 'true';
+    }
+  }
+
+  // Sidebar - Mask Accounts checkbox
+  const sidebarMaskAccountsCheckbox = document.getElementById('sidebarMaskAccountsCheckbox');
+  if (sidebarMaskAccountsCheckbox) {
+    sidebarMaskAccountsCheckbox.addEventListener('change', () => {
+      const checked = (sidebarMaskAccountsCheckbox as HTMLInputElement).checked;
+      localStorage.setItem(CONFIG.STORAGE_MASK_ACCOUNTS, checked.toString());
+      document.documentElement.setAttribute('data-mask-accounts', checked.toString());
+    });
+
+    // Restore saved preference
+    const savedMaskAccounts = localStorage.getItem(CONFIG.STORAGE_MASK_ACCOUNTS);
+    if (savedMaskAccounts !== null) {
+      const isMasked = savedMaskAccounts === 'true';
+      (sidebarMaskAccountsCheckbox as HTMLInputElement).checked = isMasked;
+      document.documentElement.setAttribute('data-mask-accounts', isMasked.toString());
     }
   }
 

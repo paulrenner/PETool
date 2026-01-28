@@ -52,6 +52,8 @@ export const CONFIG = {
   // LocalStorage keys
   STORAGE_COLUMN_WIDTHS: 'columnWidths',
   STORAGE_SHOW_TAGS: 'showTags',
+  STORAGE_GROUP_BY_FUND: 'groupByFund',
+  STORAGE_MASK_ACCOUNTS: 'maskAccounts',
   STORAGE_BACKUP_WARNING: 'backupWarningShown',
   STORAGE_LAST_BACKUP: 'lastBackupDate',
 

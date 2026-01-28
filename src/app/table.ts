@@ -2,11 +2,19 @@
  * Table rendering and sorting functionality
  */
 
-import type { Fund, FundMetrics, FundWithMetrics, SortColumn } from '../types';
+import type { Fund, FundMetrics, FundWithMetrics, SortColumn, CashFlow, Nav } from '../types';
 import { AppState } from '../core/state';
-import { calculateMetricsCached, calculateIRR, calculateMOIC, parseCashFlowsForIRR } from '../calculations';
+import { calculateMetricsCached, calculateIRR, calculateMOIC, parseCashFlowsForIRR, calculateMetrics } from '../calculations';
 import { escapeHtml } from '../utils/escaping';
 import { formatCurrency } from '../utils/formatting';
+
+/**
+ * Represents a consolidated fund (grouped by fund name across multiple investors)
+ */
+export interface ConsolidatedFund extends Fund {
+  investorCount: number;
+  consolidatedMetrics: FundMetrics;
+}
 
 /**
  * Format MOIC for display
@@ -302,4 +310,114 @@ export function updateSortIndicators(sortColumns: SortColumn[]): void {
       th.appendChild(indicator);
     }
   });
+}
+
+/**
+ * Consolidate funds by fund name, aggregating metrics from all investors
+ */
+export function consolidateFundsByName(
+  fundsWithMetrics: FundWithMetrics[],
+  cutoffDate?: Date
+): ConsolidatedFund[] {
+  const fundGroups = new Map<string, FundWithMetrics[]>();
+
+  // Group funds by fundName
+  for (const fund of fundsWithMetrics) {
+    const existing = fundGroups.get(fund.fundName) || [];
+    existing.push(fund);
+    fundGroups.set(fund.fundName, existing);
+  }
+
+  // Create consolidated funds
+  const consolidated: ConsolidatedFund[] = [];
+
+  for (const [fundName, funds] of fundGroups) {
+    // Merge all cash flows
+    const allCashFlows: CashFlow[] = [];
+    const allNavs: Nav[] = [];
+    let totalCommitment = 0;
+    let minVintageDate: string | null = null;
+
+    for (const fund of funds) {
+      allCashFlows.push(...fund.cashFlows);
+      allNavs.push(...fund.monthlyNav);
+      totalCommitment += fund.commitment;
+
+      // Track earliest contribution for vintage
+      for (const cf of fund.cashFlows) {
+        if (cf.type.toLowerCase() === 'contribution') {
+          if (!minVintageDate || cf.date < minVintageDate) {
+            minVintageDate = cf.date;
+          }
+        }
+      }
+    }
+
+    // Create a synthetic fund for metrics calculation
+    const syntheticFund: Fund = {
+      fundName,
+      accountNumber: `${funds.length} investor${funds.length !== 1 ? 's' : ''}`,
+      commitment: totalCommitment,
+      cashFlows: allCashFlows,
+      monthlyNav: allNavs,
+      groupId: null,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Calculate consolidated metrics
+    const consolidatedMetrics = calculateMetrics(syntheticFund, cutoffDate);
+
+    // Use the fund name object for tags from the first fund
+    const firstFundId = funds[0]?.id;
+    const consolidatedFund: ConsolidatedFund = {
+      ...syntheticFund,
+      id: firstFundId, // Use first fund's ID for fund name lookup
+      investorCount: funds.length,
+      consolidatedMetrics,
+    };
+
+    consolidated.push(consolidatedFund);
+  }
+
+  // Sort by fund name by default
+  consolidated.sort((a, b) => a.fundName.localeCompare(b.fundName));
+
+  return consolidated;
+}
+
+/**
+ * Render a consolidated (grouped) fund row
+ */
+export function renderGroupedFundRow(
+  fund: ConsolidatedFund,
+  _index: number,
+  showTags: boolean = false
+): string {
+  const m = fund.consolidatedMetrics;
+  const fundNameObj = AppState.fundNameData.get(fund.fundName);
+  const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
+  const tagsHtml =
+    showTags && tags.length > 0
+      ? `<div class="table-tags">${tags.map((tag) => `<span class="table-tag">${escapeHtml(tag)}</span>`).join('')}</div>`
+      : '';
+
+  const investmentReturn = m.investmentReturn ?? (m.distributions + m.nav - m.calledCapital);
+
+  return `
+    <td>
+      <div>${escapeHtml(fund.fundName)}</div>
+      ${tagsHtml}
+    </td>
+    <td class="center"><span class="investor-count">${fund.investorCount} investor${fund.investorCount !== 1 ? 's' : ''}</span></td>
+    <td class="center">${m.vintageYear || 'N/A'}</td>
+    <td class="number">${formatCurrency(m.commitment || 0)}</td>
+    <td class="number">${formatCurrency(m.calledCapital)}</td>
+    <td class="number">${formatCurrency(m.distributions)}</td>
+    <td class="number">${formatCurrency(m.nav)}</td>
+    <td class="number ${investmentReturn >= 0 ? 'positive' : 'negative'}">${formatCurrency(investmentReturn)}</td>
+    <td class="number">${formatMOIC(m.moic)}</td>
+    <td class="number ${m.irr !== null && m.irr >= 0 ? 'positive' : 'negative'}">${formatIRR(m.irr)}</td>
+    <td class="number">${formatCurrency(m.outstandingCommitment)}</td>
+    <td></td>
+  `;
 }
