@@ -40,6 +40,7 @@ export const CONFIG = {
   // Performance
   METRICS_CACHE_TTL: 5000, // 5 seconds
   LAZY_RENDER_TIMELINE: true, // Only render timeline when expanded
+  TABLE_LOADING_DELAY: 150, // Show loading indicator after this delay (ms)
 
   // Validation & Security
   ALLOWED_FUND_NAME_PATTERN: /^[a-zA-Z0-9\s\-_.,&']+$/,

@@ -529,6 +529,23 @@ function announceToScreenReader(message: string): void {
  * Render the main funds table
  */
 async function renderTable(): Promise<void> {
+  // Set up debounced loading indicator
+  const tbody = document.getElementById('fundsTableBody');
+  const loadingTimeout = setTimeout(() => {
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr class="table-loading-row">
+          <td colspan="12">
+            <div class="table-loading-content">
+              <div class="table-loading-spinner"></div>
+              <div class="table-loading-text">Loading investments...</div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+  }, CONFIG.TABLE_LOADING_DELAY);
+
   try {
     const funds = await getAllFunds();
     AppState.setFunds(funds);
@@ -560,8 +577,8 @@ async function renderTable(): Promise<void> {
     // Update portfolio summary
     updatePortfolioSummary(fundsWithMetrics, cutoffDate);
 
-    // Render table body
-    const tbody = document.getElementById('fundsTableBody');
+    // Clear loading timeout and render table body
+    clearTimeout(loadingTimeout);
     if (!tbody) return;
 
     tbody.innerHTML = '';
@@ -662,6 +679,7 @@ async function renderTable(): Promise<void> {
       tbody.appendChild(totalRow);
     }
   } catch (err) {
+    clearTimeout(loadingTimeout);
     console.error('Error rendering table:', err);
     showStatus('Error loading data: ' + (err as Error).message, 'error');
   }
