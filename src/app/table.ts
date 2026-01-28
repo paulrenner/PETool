@@ -317,7 +317,8 @@ export function updateSortIndicators(sortColumns: SortColumn[]): void {
  */
 export function consolidateFundsByName(
   fundsWithMetrics: FundWithMetrics[],
-  cutoffDate?: Date
+  cutoffDate?: Date,
+  sortColumns: SortColumn[] = []
 ): ConsolidatedFund[] {
   const fundGroups = new Map<string, FundWithMetrics[]>();
 
@@ -379,8 +380,65 @@ export function consolidateFundsByName(
     consolidated.push(consolidatedFund);
   }
 
-  // Sort by fund name by default
-  consolidated.sort((a, b) => a.fundName.localeCompare(b.fundName));
+  // Sort consolidated funds
+  if (sortColumns.length > 0) {
+    consolidated.sort((a, b) => {
+      for (const { column, direction } of sortColumns) {
+        const multiplier = direction === 'asc' ? 1 : -1;
+        let comparison = 0;
+
+        const metricsA = a.consolidatedMetrics;
+        const metricsB = b.consolidatedMetrics;
+
+        switch (column) {
+          case 'fundName':
+            comparison = a.fundName.localeCompare(b.fundName);
+            break;
+          case 'accountNumber':
+            // Sort by investor count when grouped
+            comparison = a.investorCount - b.investorCount;
+            break;
+          case 'vintage':
+            comparison = (metricsA.vintageYear || 0) - (metricsB.vintageYear || 0);
+            break;
+          case 'commitment':
+            comparison = (metricsA.commitment || 0) - (metricsB.commitment || 0);
+            break;
+          case 'totalContributions':
+            comparison = metricsA.calledCapital - metricsB.calledCapital;
+            break;
+          case 'totalDistributions':
+            comparison = metricsA.distributions - metricsB.distributions;
+            break;
+          case 'nav':
+            comparison = metricsA.nav - metricsB.nav;
+            break;
+          case 'investmentReturn':
+            comparison = (metricsA.investmentReturn || 0) - (metricsB.investmentReturn || 0);
+            break;
+          case 'moic':
+            comparison = (metricsA.moic || 0) - (metricsB.moic || 0);
+            break;
+          case 'irr':
+            comparison = (metricsA.irr || 0) - (metricsB.irr || 0);
+            break;
+          case 'outstandingCommitment':
+            comparison = metricsA.outstandingCommitment - metricsB.outstandingCommitment;
+            break;
+          default:
+            comparison = 0;
+        }
+
+        if (comparison !== 0) {
+          return comparison * multiplier;
+        }
+      }
+      return 0;
+    });
+  } else {
+    // Default sort by fund name
+    consolidated.sort((a, b) => a.fundName.localeCompare(b.fundName));
+  }
 
   return consolidated;
 }

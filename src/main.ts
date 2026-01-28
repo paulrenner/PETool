@@ -626,7 +626,7 @@ async function renderTable(): Promise<void> {
 
     if (groupByFund) {
       // Render consolidated view (grouped by fund name)
-      const consolidatedFunds = consolidateFundsByName(fundsWithMetrics, cutoffDate);
+      const consolidatedFunds = consolidateFundsByName(fundsWithMetrics, cutoffDate, AppState.sortColumns);
 
       consolidatedFunds.forEach((fund, index) => {
         const row = document.createElement('tr');
