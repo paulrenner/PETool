@@ -66,7 +66,7 @@ async function enrichImportDataWithGroups(
   // Build mapping of account numbers to group IDs
   existingFunds.forEach((fund) => {
     if (fund.groupId) {
-      const key = fund.accountNumber.toLowerCase();
+      const key = fund.accountNumber.replace(/\s/g, '').toLowerCase();
       if (!accountToGroup.has(key)) {
         accountToGroup.set(key, []);
       }
@@ -84,7 +84,7 @@ async function enrichImportDataWithGroups(
   // Enrich funds without group assignments
   for (const fund of fundsToImport) {
     if (fund.groupId == null && fund.accountNumber) {
-      const key = fund.accountNumber.toLowerCase();
+      const key = fund.accountNumber.replace(/\s/g, '').toLowerCase();
       const matchingGroups = accountToGroup.get(key);
 
       if (matchingGroups && matchingGroups.length === 1) {
