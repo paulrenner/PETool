@@ -1,5 +1,12 @@
 # Claude Code Instructions
 
+## Allowed
+
+- git commands
+- gh commands
+- npm test
+- npm run build
+
 ## Project Architecture
 
 This is a Private Equity fund management application built with **TypeScript** and **Vite**. The source code is in `src/` and builds to a single `index.html` file for deployment.
