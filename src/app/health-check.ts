@@ -540,12 +540,22 @@ function checkDuplicatePair(
   }
 
   // Check 3: Very similar names + same account = possible typo/duplicate
+  // BUT: If vintage years are different, they're likely a fund series (e.g., "Fund X" and "Fund XI")
   const similarity = calculateNameSimilarity(fund1.fundName, fund2.fundName);
   if (similarity >= 0.85 && sameAccountNumber) {
-    return {
-      reason: `Same account with similar fund names (${Math.round(similarity * 100)}% match)`,
-      confidence: 'medium',
-    };
+    const metrics1 = calculateMetrics(fund1);
+    const metrics2 = calculateMetrics(fund2);
+    const vintage1 = metrics1.vintageYear;
+    const vintage2 = metrics2.vintageYear;
+    const differentVintageYears = vintage1 != null && vintage2 != null && vintage1 !== vintage2;
+
+    // Fund series with different vintage years are not duplicates
+    if (!differentVintageYears) {
+      return {
+        reason: `Same account with similar fund names (${Math.round(similarity * 100)}% match)`,
+        confidence: 'medium',
+      };
+    }
   }
 
   return null;
