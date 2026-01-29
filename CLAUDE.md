@@ -4,8 +4,10 @@
 
 - git commands
 - gh commands
+- npm install
 - npm test
 - npm run build
+- cp dist/index.html index.html
 
 ## Workflow
 
