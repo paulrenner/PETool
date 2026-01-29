@@ -33,8 +33,8 @@ class AppStateClass {
   lastExportReminderTime = 0; // Timestamp of last export reminder
 
   // Pagination
-  displayLimit = 100; // Number of funds to show initially
-  displayLimitIncrement = 100; // How many more to show on "Load More"
+  displayLimit = 50; // Number of funds to show initially
+  displayLimitIncrement = 50; // How many more to show on "Load More"
 
   // Cache
   metricsCache: Map<string, MetricsCacheEntry> = new Map();
@@ -212,7 +212,7 @@ class AppStateClass {
 
   // Pagination methods
   resetDisplayLimit(): void {
-    this.displayLimit = 100;
+    this.displayLimit = 50;
   }
 
   loadMore(): void {
