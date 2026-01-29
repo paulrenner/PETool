@@ -83,6 +83,13 @@ export function runHealthCheck(
     }
   }
 
+  // Check for proportionality issues (funds with non-proportional cash flows vs others in same fund)
+  const proportionalityIssues = checkProportionalityIssues(funds);
+  for (const issue of proportionalityIssues) {
+    issues.push(issue);
+    fundsWithIssuesSet.add(issue.fundId);
+  }
+
   // Check for duplicate funds
   let duplicates = findDuplicateFunds(funds);
 
@@ -468,6 +475,90 @@ export function getConfidenceClass(confidence: 'high' | 'medium' | 'low'): strin
 }
 
 // ===========================
+// Proportionality Check
+// ===========================
+
+/**
+ * Check for funds with non-proportional cash flows compared to other investments in the same fund.
+ *
+ * Instead of pairwise comparisons (which generate N-1 alerts for one outlier among N funds),
+ * this groups funds by name and identifies outliers based on deviation from the group average.
+ * This generates ONE alert per outlier fund.
+ */
+function checkProportionalityIssues(funds: Fund[]): HealthIssue[] {
+  const issues: HealthIssue[] = [];
+
+  // Group funds by normalized name
+  const fundGroups = new Map<string, Fund[]>();
+  for (const fund of funds) {
+    if (fund.id == null || fund.commitment <= 0) continue;
+    const key = normalizeName(fund.fundName);
+    if (!fundGroups.has(key)) {
+      fundGroups.set(key, []);
+    }
+    fundGroups.get(key)!.push(fund);
+  }
+
+  // Check each group with multiple funds
+  for (const [, groupFunds] of fundGroups) {
+    if (groupFunds.length < 2) continue;
+
+    // Calculate metrics for each fund
+    const fundMetrics = groupFunds.map((fund) => ({
+      fund,
+      metrics: calculateMetrics(fund),
+    }));
+
+    // Calculate group totals
+    const totalCommitment = fundMetrics.reduce((sum, f) => sum + f.fund.commitment, 0);
+    const totalContributions = fundMetrics.reduce((sum, f) => sum + f.metrics.calledCapital, 0);
+    const totalDistributions = fundMetrics.reduce((sum, f) => sum + f.metrics.distributions, 0);
+
+    // Skip if no contributions or no distributions to compare
+    if (totalContributions === 0 && totalDistributions === 0) continue;
+
+    // Check each fund for proportionality deviation
+    for (const { fund, metrics } of fundMetrics) {
+      const expectedContributions = (fund.commitment / totalCommitment) * totalContributions;
+      const expectedDistributions = (fund.commitment / totalCommitment) * totalDistributions;
+
+      // Check contributions (if fund and group have contributions)
+      if (metrics.calledCapital > 0 && totalContributions > 0) {
+        const deviation = Math.abs(metrics.calledCapital - expectedContributions) / expectedContributions;
+        if (deviation > 0.10) {
+          const otherCount = groupFunds.length - 1;
+          issues.push({
+            fundId: fund.id!,
+            fundName: fund.fundName,
+            severity: 'info',
+            category: 'Data Anomaly',
+            message: `Contributions not proportional to commitment (${Math.round(deviation * 100)}% deviation vs ${otherCount} other investment${otherCount > 1 ? 's' : ''} in same fund)`,
+          });
+          continue; // Only one issue per fund
+        }
+      }
+
+      // Check distributions (if fund and group have distributions)
+      if (metrics.distributions > 0 && totalDistributions > 0) {
+        const deviation = Math.abs(metrics.distributions - expectedDistributions) / expectedDistributions;
+        if (deviation > 0.10) {
+          const otherCount = groupFunds.length - 1;
+          issues.push({
+            fundId: fund.id!,
+            fundName: fund.fundName,
+            severity: 'info',
+            category: 'Data Anomaly',
+            message: `Distributions not proportional to commitment (${Math.round(deviation * 100)}% deviation vs ${otherCount} other investment${otherCount > 1 ? 's' : ''} in same fund)`,
+          });
+        }
+      }
+    }
+  }
+
+  return issues;
+}
+
+// ===========================
 // Duplicate Detection
 // ===========================
 
@@ -532,14 +623,10 @@ function checkDuplicatePair(
     return { reason: 'Identical fund name and account number', confidence: 'high' };
   }
 
-  // Check 2: Same fund, different accounts - check if cash flows are proportional to commitment
-  // (if not proportional, there may be a data issue)
-  const proportionalityCheck = checkCashFlowProportionality(fund1, fund2);
-  if (proportionalityCheck) {
-    return proportionalityCheck;
-  }
+  // Note: Proportionality check is now done separately via checkProportionalityIssues()
+  // to avoid N-1 pairwise alerts when one fund has non-proportional cash flows
 
-  // Check 3: Very similar names + same account = possible typo/duplicate
+  // Check 2: Very similar names + same account = possible typo/duplicate
   // BUT: If vintage years are different, they're likely a fund series (e.g., "Fund X" and "Fund XI")
   const similarity = calculateNameSimilarity(fund1.fundName, fund2.fundName);
   if (similarity >= 0.85 && sameAccountNumber) {
@@ -553,62 +640,6 @@ function checkDuplicatePair(
     if (!differentVintageYears) {
       return {
         reason: `Same account with similar fund names (${Math.round(similarity * 100)}% match)`,
-        confidence: 'medium',
-      };
-    }
-  }
-
-  return null;
-}
-
-/**
- * Check if cash flows are proportional to commitment for same-fund investors
- *
- * For two investors in the same fund, their cash flows should be proportional
- * to their commitment amounts. E.g., if Investor A has 2x the commitment of
- * Investor B, they should have ~2x the distributions/contributions.
- *
- * Flags when the deviation exceeds 10%.
- */
-function checkCashFlowProportionality(
-  fund1: Fund,
-  fund2: Fund
-): { reason: string; confidence: 'medium' } | null {
-  // Only check same-fund investments (different accounts in same fund)
-  if (normalizeName(fund1.fundName) !== normalizeName(fund2.fundName)) {
-    return null;
-  }
-
-  // Need both to have commitment > 0
-  if (fund1.commitment <= 0 || fund2.commitment <= 0) {
-    return null;
-  }
-
-  const metrics1 = calculateMetrics(fund1);
-  const metrics2 = calculateMetrics(fund2);
-  const commitmentRatio = fund1.commitment / fund2.commitment;
-
-  // Check contributions proportionality (if both have contributions)
-  if (metrics1.calledCapital > 0 && metrics2.calledCapital > 0) {
-    const contributionRatio = metrics1.calledCapital / metrics2.calledCapital;
-    const contributionDeviation = Math.abs(contributionRatio - commitmentRatio) / commitmentRatio;
-
-    if (contributionDeviation > 0.10) {
-      return {
-        reason: `Same fund: contributions not proportional to commitment (${Math.round(contributionDeviation * 100)}% deviation)`,
-        confidence: 'medium',
-      };
-    }
-  }
-
-  // Check distributions proportionality (if both have distributions)
-  if (metrics1.distributions > 0 && metrics2.distributions > 0) {
-    const distRatio = metrics1.distributions / metrics2.distributions;
-    const distDeviation = Math.abs(distRatio - commitmentRatio) / commitmentRatio;
-
-    if (distDeviation > 0.10) {
-      return {
-        reason: `Same fund: distributions not proportional to commitment (${Math.round(distDeviation * 100)}% deviation)`,
         confidence: 'medium',
       };
     }
