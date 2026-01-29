@@ -162,14 +162,18 @@ export async function handleImportFileSelect(event: Event): Promise<void> {
 
     const duplicates: Array<{ fundName: string; accountNumber: string }> = [];
     const newFunds: Array<{ fundName: string; accountNumber: string }> = [];
+    const seenInFileKeys = new Set<string>();
 
     if (Array.isArray(fundsToImport)) {
       for (const fund of fundsToImport) {
-        const key = `${fund.fundName}|${fund.accountNumber}`.toLowerCase();
-        if (existingFundKeys.has(key)) {
+        // Normalize accountNumber (strip whitespace) to match how it's stored in DB
+        const normalizedAccount = (fund.accountNumber || '').replace(/\s/g, '');
+        const key = `${fund.fundName}|${normalizedAccount}`.toLowerCase();
+        if (existingFundKeys.has(key) || seenInFileKeys.has(key)) {
           duplicates.push({ fundName: fund.fundName, accountNumber: fund.accountNumber });
         } else {
           newFunds.push({ fundName: fund.fundName, accountNumber: fund.accountNumber });
+          seenInFileKeys.add(key); // Track duplicates within the same file
         }
       }
     }
@@ -436,7 +440,9 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
     const preValidationErrors: Array<{ index: number; name: string; errors: string[] }> = [];
     for (let i = 0; i < fundsToImport.length; i++) {
       const fund = fundsToImport[i];
-      const importKey = `${fund.fundName}|${fund.accountNumber}`.toLowerCase();
+      // Normalize accountNumber (strip whitespace) to match how it's stored in DB
+      const normalizedAccount = (fund.accountNumber || '').replace(/\s/g, '');
+      const importKey = `${fund.fundName}|${normalizedAccount}`.toLowerCase();
 
       // Skip duplicates in pre-validation (they'll be handled in main loop)
       if (existingFundKeys.has(importKey)) {
@@ -489,7 +495,9 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
 
     for (let i = 0; i < fundsToImport.length; i++) {
       const fund = fundsToImport[i];
-      const importKey = `${fund.fundName}|${fund.accountNumber}`.toLowerCase();
+      // Normalize accountNumber (strip whitespace) to match how it's stored in DB
+      const normalizedAccount = (fund.accountNumber || '').replace(/\s/g, '');
+      const importKey = `${fund.fundName}|${normalizedAccount}`.toLowerCase();
 
       if (existingFundKeys.has(importKey)) {
         skippedDuplicates.push({ index: i, name: fund.fundName, account: fund.accountNumber });
