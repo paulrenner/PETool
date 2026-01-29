@@ -1652,7 +1652,35 @@
 
         .table-container {
             overflow-x: auto;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        /* Table pagination */
+        .table-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--color-alt-bg);
+            border: 1px solid var(--color-border);
+            border-top: none;
+            border-radius: 0 0 var(--radius-sm) var(--radius-sm);
             margin-bottom: var(--spacing-xl);
+        }
+
+        .pagination-info {
+            color: var(--color-text-light);
+            font-size: 14px;
+        }
+
+        .pagination-info strong {
+            color: var(--color-text);
+        }
+
+        .load-more-btn {
+            padding: 8px 24px;
+            font-size: 14px;
         }
 
         /* Consolidated table styles - removed duplicate definition */

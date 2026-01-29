@@ -674,6 +674,57 @@ function announceToScreenReader(message: string): void {
 }
 
 // ===========================
+// Pagination Functions
+// ===========================
+
+/**
+ * Update the pagination UI (showing X of Y indicator and Load More button)
+ */
+function updatePaginationUI(displayedCount: number, totalCount: number): void {
+  // Get or create pagination container
+  let paginationContainer = document.getElementById('tablePaginationContainer');
+  if (!paginationContainer) {
+    // Create container after the table
+    const tableContainer = document.querySelector('.table-container');
+    if (tableContainer) {
+      paginationContainer = document.createElement('div');
+      paginationContainer.id = 'tablePaginationContainer';
+      paginationContainer.className = 'table-pagination';
+      tableContainer.after(paginationContainer);
+    }
+  }
+
+  if (!paginationContainer) return;
+
+  // If all items are displayed, hide the pagination container
+  if (displayedCount >= totalCount) {
+    paginationContainer.innerHTML = '';
+    paginationContainer.style.display = 'none';
+    return;
+  }
+
+  // Show pagination info and Load More button
+  paginationContainer.style.display = 'flex';
+  paginationContainer.innerHTML = `
+    <div class="pagination-info">
+      Showing <strong>${displayedCount}</strong> of <strong>${totalCount}</strong> investments
+    </div>
+    <button type="button" class="btn-secondary load-more-btn" id="loadMoreBtn">
+      Load More
+    </button>
+  `;
+
+  // Attach click handler
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', async () => {
+      AppState.loadMore();
+      await renderTable();
+    });
+  }
+}
+
+// ===========================
 // Main Render Function
 // ===========================
 
@@ -793,11 +844,17 @@ async function renderTable(): Promise<void> {
     const showTags = (document.getElementById('sidebarShowTagsCheckbox') as HTMLInputElement)?.checked ?? true;
     const groupByFund = (document.getElementById('sidebarGroupByFundCheckbox') as HTMLInputElement)?.checked ?? false;
 
+    // Calculate totals from ALL filtered funds (before pagination)
+    const totals = calculateTotals(fundsWithMetrics, cutoffDate);
+    const totalCount = fundsWithMetrics.length;
+    const displayLimit = AppState.displayLimit;
+
     if (groupByFund) {
       // Render consolidated view (grouped by fund name)
       const consolidatedFunds = consolidateFundsByName(fundsWithMetrics, cutoffDate, AppState.sortColumns);
+      const displayedConsolidated = consolidatedFunds.slice(0, displayLimit);
 
-      consolidatedFunds.forEach((fund, index) => {
+      displayedConsolidated.forEach((fund, index) => {
         const row = document.createElement('tr');
         row.classList.add('grouped-fund-row');
         row.setAttribute('tabindex', '0');
@@ -807,14 +864,18 @@ async function renderTable(): Promise<void> {
         tbody.appendChild(row);
       });
 
-      // Add totals row (use same totals from original funds)
-      const totals = calculateTotals(fundsWithMetrics, cutoffDate);
+      // Add totals row (calculated from ALL funds, not just displayed)
       const totalRow = document.createElement('tr');
       totalRow.innerHTML = renderTotalsRow(totals);
       tbody.appendChild(totalRow);
+
+      // Update pagination UI for grouped view
+      updatePaginationUI(displayedConsolidated.length, consolidatedFunds.length);
     } else {
-      // Render normal view (individual fund rows)
-      fundsWithMetrics.forEach((fund, index) => {
+      // Render normal view (individual fund rows) with pagination
+      const displayedFunds = fundsWithMetrics.slice(0, displayLimit);
+
+      displayedFunds.forEach((fund, index) => {
         const row = document.createElement('tr');
         row.setAttribute('tabindex', '0');
         row.setAttribute('data-fund-id', fund.id?.toString() || '');
@@ -824,11 +885,13 @@ async function renderTable(): Promise<void> {
         tbody.appendChild(row);
       });
 
-      // Add totals row
-      const totals = calculateTotals(fundsWithMetrics, cutoffDate);
+      // Add totals row (calculated from ALL funds, not just displayed)
       const totalRow = document.createElement('tr');
       totalRow.innerHTML = renderTotalsRow(totals);
       tbody.appendChild(totalRow);
+
+      // Update pagination UI
+      updatePaginationUI(displayedFunds.length, totalCount);
     }
   } catch (err) {
     clearTimeout(loadingTimeout);
@@ -844,6 +907,9 @@ async function applyFilters(): Promise<void> {
   if (AppState.abortController) {
     AppState.abortController.abort();
   }
+
+  // Reset pagination when filters change
+  AppState.resetDisplayLimit();
 
   AppState.setAbortController(new AbortController());
   const signal = AppState.abortController!.signal;
