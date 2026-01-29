@@ -144,6 +144,7 @@ export async function exportToCSV(): Promise<void> {
 
       headers = [
         'Fund Name',
+        'Vintage',
         'Investor Count',
         'Total Commitment',
         'Total Contributions',
@@ -160,6 +161,7 @@ export async function exportToCSV(): Promise<void> {
         const investmentReturn = m.investmentReturn ?? m.distributions + m.nav - m.calledCapital;
         return [
           escapeCSV(fund.fundName),
+          escapeCSV(m.vintageYear?.toString() || ''),
           sanitizeForCSV(fund.investorCount.toString()),
           sanitizeForCSV(formatNumberForCSV(m.commitment)),
           sanitizeForCSV(formatNumberForCSV(m.calledCapital)),
