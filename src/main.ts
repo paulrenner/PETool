@@ -113,6 +113,7 @@ import {
   type HealthCheckResult,
   type HealthIssue,
   type DuplicatePair,
+  type GroupIssue,
 } from './app/health-check';
 
 import { escapeHtml } from './utils/escaping';
@@ -212,10 +213,29 @@ function initBackupWarningListeners(): void {
  * Show health check modal with results
  */
 function showHealthCheckModal(): void {
-  const funds = AppState.getFunds();
-  const results = runHealthCheck(funds);
-  renderHealthCheckResults(results);
+  const summaryDiv = document.getElementById('healthCheckSummary');
+  const resultsDiv = document.getElementById('healthCheckResults');
+
+  // Show loading state
+  if (summaryDiv) summaryDiv.innerHTML = '';
+  if (resultsDiv) {
+    resultsDiv.innerHTML = `
+      <div class="health-check-loading">
+        <div class="loading-spinner"></div>
+        <p>Running health checks...</p>
+      </div>
+    `;
+  }
+
   openModal('healthCheckModal');
+
+  // Run health check after modal is visible (allows spinner to render)
+  setTimeout(() => {
+    const funds = AppState.getFunds();
+    const groups = AppState.getGroups();
+    const results = runHealthCheck(funds, groups);
+    renderHealthCheckResults(results);
+  }, 50);
 }
 
 /**
@@ -259,26 +279,36 @@ function renderHealthCheckResults(results: HealthCheckResult): void {
 
   // Build results HTML
   let html = '';
+  let hasSections = false;
+
+  // Render group issues section if any (show first as they're critical)
+  if (results.groupIssues.length > 0) {
+    html += `<div class="health-check-section-header">Group Issues</div>`;
+    html += results.groupIssues.map((issue) => renderGroupIssue(issue)).join('');
+    hasSections = true;
+  }
 
   // Render duplicates section if any
   if (results.duplicates.length > 0) {
     html += `<div class="health-check-section-header">Potential Duplicates</div>`;
     html += results.duplicates.map((dup) => renderDuplicatePair(dup)).join('');
+    hasSections = true;
   }
 
   // Render issues section
   if (results.issues.length > 0) {
-    if (results.duplicates.length > 0) {
+    if (hasSections) {
       html += `<div class="health-check-section-header">Data Issues</div>`;
     }
     html += results.issues.map((issue) => renderHealthIssue(issue)).join('');
+    hasSections = true;
   }
 
-  // Show empty state if no issues and no duplicates
-  if (results.issues.length === 0 && results.duplicates.length === 0) {
+  // Show empty state if no issues, no duplicates, and no group issues
+  if (!hasSections) {
     html = `
       <div class="health-check-empty">
-        All funds passed health checks!
+        All funds and groups passed health checks!
       </div>
     `;
   }
@@ -316,6 +346,21 @@ function renderDuplicatePair(dup: DuplicatePair): string {
           <span class="duplicate-fund-link" data-fund-id="${dup.fund2Id}">${escapeHtml(dup.fund2Name)}</span>
         </div>
         <div class="duplicate-reason">${escapeHtml(dup.reason)}</div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render a group issue
+ */
+function renderGroupIssue(issue: GroupIssue): string {
+  return `
+    <div class="health-issue group-issue">
+      <span class="health-issue-severity ${getSeverityClass(issue.severity)}">${getSeverityLabel(issue.severity)}</span>
+      <div class="health-issue-content">
+        <div class="health-issue-fund">Group: ${escapeHtml(issue.groupName)}</div>
+        <div class="health-issue-message">${escapeHtml(issue.message)}</div>
       </div>
     </div>
   `;

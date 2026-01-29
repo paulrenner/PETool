@@ -1,8 +1,8 @@
 /**
- * Data Health Check - validates data integrity across all funds
+ * Data Health Check - validates data integrity across all funds and groups
  */
 
-import type { Fund } from '../types';
+import type { Fund, Group } from '../types';
 import { calculateMetrics, getTotalByType } from '../calculations';
 import { isValidDate } from '../utils/validation';
 
@@ -35,6 +35,16 @@ export interface DuplicatePair {
 }
 
 /**
+ * A group-related issue
+ */
+export interface GroupIssue {
+  groupId: number;
+  groupName: string;
+  severity: IssueSeverity;
+  message: string;
+}
+
+/**
  * Health check results summary
  */
 export interface HealthCheckResult {
@@ -42,6 +52,7 @@ export interface HealthCheckResult {
   fundsWithIssues: number;
   issues: HealthIssue[];
   duplicates: DuplicatePair[];
+  groupIssues: GroupIssue[];
   errorCount: number;
   warningCount: number;
   infoCount: number;
@@ -49,9 +60,9 @@ export interface HealthCheckResult {
 }
 
 /**
- * Run all health checks on a list of funds
+ * Run all health checks on a list of funds and groups
  */
-export function runHealthCheck(funds: Fund[]): HealthCheckResult {
+export function runHealthCheck(funds: Fund[], groups: Group[] = []): HealthCheckResult {
   const issues: HealthIssue[] = [];
   const fundsWithIssuesSet = new Set<number>();
 
@@ -68,6 +79,9 @@ export function runHealthCheck(funds: Fund[]): HealthCheckResult {
   // Check for duplicate funds
   const duplicates = findDuplicateFunds(funds);
 
+  // Check for group issues
+  const groupIssues = checkGroups(groups);
+
   // Sort by severity (errors first, then warnings, then info)
   const severityOrder: Record<IssueSeverity, number> = { error: 0, warning: 1, info: 2 };
   issues.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
@@ -77,11 +91,33 @@ export function runHealthCheck(funds: Fund[]): HealthCheckResult {
     fundsWithIssues: fundsWithIssuesSet.size,
     issues,
     duplicates,
-    errorCount: issues.filter((i) => i.severity === 'error').length,
-    warningCount: issues.filter((i) => i.severity === 'warning').length,
-    infoCount: issues.filter((i) => i.severity === 'info').length,
+    groupIssues,
+    errorCount: issues.filter((i) => i.severity === 'error').length + groupIssues.filter((i) => i.severity === 'error').length,
+    warningCount: issues.filter((i) => i.severity === 'warning').length + groupIssues.filter((i) => i.severity === 'warning').length,
+    infoCount: issues.filter((i) => i.severity === 'info').length + groupIssues.filter((i) => i.severity === 'info').length,
     timestamp: new Date().toISOString(),
   };
+}
+
+/**
+ * Check groups for issues (e.g., ID 0 indicating a creation bug)
+ */
+function checkGroups(groups: Group[]): GroupIssue[] {
+  const issues: GroupIssue[] = [];
+
+  for (const group of groups) {
+    // Check for groups with ID 0 (indicates a bug from previous version)
+    if (group.id === 0) {
+      issues.push({
+        groupId: group.id,
+        groupName: group.name,
+        severity: 'error',
+        message: 'Group has ID 0 (data corruption). Delete and recreate this group.',
+      });
+    }
+  }
+
+  return issues;
 }
 
 /**
@@ -411,33 +447,36 @@ function findDuplicateFunds(funds: Fund[]): DuplicatePair[] {
 
 /**
  * Check if two funds are potential duplicates
+ *
+ * Note: Multiple investments can legitimately share the same fund name
+ * (different investors in the same PE fund). Only flag as duplicate if
+ * there's evidence of accidental duplication (same account, same data).
  */
 function checkDuplicatePair(
   fund1: Fund,
   fund2: Fund
 ): { reason: string; confidence: 'high' | 'medium' | 'low' } | null {
-  // Check 1: Exact name match (case-insensitive)
-  if (normalizeName(fund1.fundName) === normalizeName(fund2.fundName)) {
-    return { reason: 'Identical fund names', confidence: 'high' };
+  const metrics1 = calculateMetrics(fund1);
+  const metrics2 = calculateMetrics(fund2);
+  const sameAccountNumber =
+    fund1.accountNumber &&
+    fund2.accountNumber &&
+    normalizeAccountNumber(fund1.accountNumber) === normalizeAccountNumber(fund2.accountNumber);
+
+  // Check 1: Same name + same account number = likely duplicate
+  if (normalizeName(fund1.fundName) === normalizeName(fund2.fundName) && sameAccountNumber) {
+    return { reason: 'Identical fund name and account number', confidence: 'high' };
   }
 
   // Check 2: Same investor + same commitment + same vintage
-  const metrics1 = calculateMetrics(fund1);
-  const metrics2 = calculateMetrics(fund2);
-
-  if (
-    fund1.accountNumber &&
-    fund2.accountNumber &&
-    normalizeAccountNumber(fund1.accountNumber) === normalizeAccountNumber(fund2.accountNumber)
-  ) {
-    // Same investor - check for more similarity
+  if (sameAccountNumber) {
     if (
       fund1.commitment === fund2.commitment &&
       metrics1.vintageYear === metrics2.vintageYear &&
       metrics1.vintageYear !== null
     ) {
       return {
-        reason: `Same investor, commitment, and vintage year (${metrics1.vintageYear})`,
+        reason: `Same account, commitment, and vintage year (${metrics1.vintageYear})`,
         confidence: 'high',
       };
     }
@@ -447,40 +486,46 @@ function checkDuplicatePair(
       const ratio = fund1.commitment / fund2.commitment;
       if (ratio >= 0.95 && ratio <= 1.05) {
         return {
-          reason: 'Same investor with nearly identical commitment',
+          reason: 'Same account with nearly identical commitment',
           confidence: 'medium',
         };
       }
     }
   }
 
-  // Check 3: Very similar names (fuzzy match)
-  const similarity = calculateNameSimilarity(fund1.fundName, fund2.fundName);
-  if (similarity >= 0.85) {
-    return {
-      reason: `Very similar fund names (${Math.round(similarity * 100)}% match)`,
-      confidence: 'medium',
-    };
-  }
-
-  // Check 4: Significant cash flow overlap
+  // Check 3: Significant cash flow overlap (regardless of name)
   const cashFlowOverlap = calculateCashFlowOverlap(fund1, fund2);
   if (cashFlowOverlap >= 0.8) {
     return {
       reason: `${Math.round(cashFlowOverlap * 100)}% of cash flows are identical`,
       confidence: 'high',
     };
-  } else if (cashFlowOverlap >= 0.5) {
+  } else if (cashFlowOverlap >= 0.5 && sameAccountNumber) {
     return {
-      reason: `${Math.round(cashFlowOverlap * 100)}% of cash flows are identical`,
+      reason: `Same account with ${Math.round(cashFlowOverlap * 100)}% identical cash flows`,
       confidence: 'medium',
     };
   }
 
-  // Check 5: Similar names with same vintage
-  if (similarity >= 0.7 && metrics1.vintageYear === metrics2.vintageYear && metrics1.vintageYear !== null) {
+  // Check 4: Very similar names + same account = possible typo/duplicate
+  const similarity = calculateNameSimilarity(fund1.fundName, fund2.fundName);
+  if (similarity >= 0.85 && sameAccountNumber) {
     return {
-      reason: `Similar names with same vintage year (${metrics1.vintageYear})`,
+      reason: `Same account with similar fund names (${Math.round(similarity * 100)}% match)`,
+      confidence: 'medium',
+    };
+  }
+
+  // Check 5: Similar names with same vintage + same commitment (without account match)
+  if (
+    similarity >= 0.85 &&
+    metrics1.vintageYear === metrics2.vintageYear &&
+    metrics1.vintageYear !== null &&
+    fund1.commitment === fund2.commitment &&
+    fund1.commitment > 0
+  ) {
+    return {
+      reason: `Similar names with same vintage (${metrics1.vintageYear}) and commitment`,
       confidence: 'low',
     };
   }

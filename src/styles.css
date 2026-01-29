@@ -693,6 +693,21 @@
             font-size: 16px;
         }
 
+        .health-check-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            gap: 16px;
+            color: var(--color-text-light);
+        }
+
+        .health-check-loading .loading-spinner {
+            width: 32px;
+            height: 32px;
+        }
+
         .health-issue {
             display: flex;
             align-items: flex-start;
