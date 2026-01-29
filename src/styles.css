@@ -211,7 +211,7 @@
 
         [data-theme="dark"] .multi-select-option:hover,
         [data-theme="dark"] .multi-select-option.highlighted {
-            background: #374151;
+            background: #3B5068;
         }
 
         [data-theme="dark"] .multi-select-option.selected {
@@ -1098,7 +1098,7 @@
 
         .multi-select-option:hover,
         .multi-select-option.highlighted {
-            background: var(--color-alt-bg);
+            background: #E8F4FC;
             outline: none;
         }
 
@@ -1325,7 +1325,7 @@
         }
 
         .searchable-select-option.highlighted {
-            background: var(--color-hover-bg);
+            background: #E8F4FC;
             outline: none;
         }
 
@@ -1377,7 +1377,7 @@
         }
 
         [data-theme="dark"] .searchable-select-option.highlighted {
-            background: #374151;
+            background: #3B5068;
         }
 
         [data-theme="dark"] .searchable-select-search {
