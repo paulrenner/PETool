@@ -400,12 +400,20 @@ export async function populateFundNameDropdown(): Promise<void> {
 }
 
 /**
- * Populate group dropdown
+ * Populate group dropdown (supports both regular select and searchable-select)
  */
 export function populateGroupDropdown(
   selectId: string,
   excludeGroupId?: number
 ): void {
+  // Check if it's a searchable-select container
+  const container = document.getElementById(selectId + 'Container');
+  if (container?.classList.contains('searchable-select')) {
+    populateSearchableGroupDropdown(selectId, excludeGroupId);
+    return;
+  }
+
+  // Standard select element
   const select = document.getElementById(selectId) as HTMLSelectElement;
   if (!select) return;
 
@@ -434,6 +442,82 @@ export function populateGroupDropdown(
   };
 
   addGroupOptions(tree, 0);
+}
+
+/**
+ * Populate searchable group dropdown
+ */
+export function populateSearchableGroupDropdown(
+  inputId: string,
+  excludeGroupId?: number
+): void {
+  const container = document.getElementById(inputId + 'Container');
+  const hiddenInput = document.getElementById(inputId) as HTMLInputElement;
+  const optionsContainer = container?.querySelector('.searchable-select-options');
+
+  if (!container || !hiddenInput || !optionsContainer) return;
+
+  const groups = AppState.getGroups();
+  const tree = buildGroupsTree(groups, null);
+  const placeholder = container.dataset.placeholder || 'Select...';
+
+  // Build options HTML
+  let optionsHtml = `<div class="searchable-select-option" data-value="" data-indent="0">
+    ${escapeHtml(placeholder)}
+  </div>`;
+
+  const addGroupOptions = (
+    nodes: Array<Group & { children: any[] }>,
+    level: number
+  ) => {
+    nodes.forEach((node) => {
+      if (excludeGroupId !== undefined && node.id === excludeGroupId) return;
+
+      const prefix = level > 0 ? '–'.repeat(level) + ' ' : '';
+      optionsHtml += `<div class="searchable-select-option" data-value="${node.id}" data-indent="${level}">
+        ${escapeHtml(prefix + node.name)}
+      </div>`;
+
+      if (node.children && node.children.length > 0) {
+        addGroupOptions(node.children, level + 1);
+      }
+    });
+  };
+
+  addGroupOptions(tree, 0);
+  optionsContainer.innerHTML = optionsHtml;
+
+  // Reset to placeholder
+  hiddenInput.value = '';
+  const display = container.querySelector('.searchable-select-display');
+  if (display) display.textContent = placeholder;
+}
+
+/**
+ * Set searchable select value
+ */
+export function setSearchableSelectValue(inputId: string, value: string): void {
+  const container = document.getElementById(inputId + 'Container');
+  const hiddenInput = document.getElementById(inputId) as HTMLInputElement;
+  if (!container || !hiddenInput) return;
+
+  hiddenInput.value = value;
+
+  // Update display
+  const display = container.querySelector('.searchable-select-display');
+  const options = container.querySelectorAll('.searchable-select-option');
+  let displayText = container.dataset.placeholder || 'Select...';
+
+  options.forEach((opt) => {
+    const optEl = opt as HTMLElement;
+    optEl.classList.remove('selected');
+    if (optEl.dataset.value === value) {
+      optEl.classList.add('selected');
+      displayText = optEl.textContent?.trim() || displayText;
+    }
+  });
+
+  if (display) display.textContent = displayText;
 }
 
 // ===========================

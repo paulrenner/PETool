@@ -77,12 +77,12 @@ export async function saveGroupFromModal(
 ): Promise<void> {
   const editGroupIdInput = document.getElementById('editGroupId') as HTMLInputElement;
   const nameInput = document.getElementById('newGroupName') as HTMLInputElement;
-  const parentSelect = document.getElementById('newGroupParent') as HTMLSelectElement;
-  const typeInput = document.getElementById('newGroupType') as HTMLInputElement;
+  const parentSelect = document.getElementById('newGroupParent') as HTMLInputElement;
+  const typeSelect = document.getElementById('newGroupType') as HTMLSelectElement;
 
   const name = nameInput?.value?.trim() || '';
   const parentGroupId = parentSelect?.value ? parseInt(parentSelect.value) : null;
-  const type = typeInput?.value?.trim() || '';
+  const type = typeSelect?.value || '';
   const editId = editGroupIdInput?.value ? parseInt(editGroupIdInput.value) : null;
 
   if (!name) {
@@ -120,7 +120,7 @@ export async function saveGroupFromModal(
 
     // Reset form
     if (nameInput) nameInput.value = '';
-    if (typeInput) typeInput.value = '';
+    if (typeSelect) typeSelect.value = '';
     if (parentSelect) parentSelect.value = '';
     if (editGroupIdInput) editGroupIdInput.value = '';
 

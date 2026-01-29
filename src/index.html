@@ -318,14 +318,33 @@
                 <small style="color: var(--color-text-light); font-size: 0.85em; margin-top: 4px; display: block;">Use groups to organize by account holder or entity</small>
             </div>
             <div class="form-group">
-                <label for="newGroupParent">Parent Group (optional)</label>
-                <select id="newGroupParent">
-                    <option value="">None (Top Level)</option>
-                </select>
+                <label>Parent Group (optional)</label>
+                <div class="searchable-select" id="newGroupParentContainer" data-placeholder="None (Top Level)">
+                    <input type="hidden" id="newGroupParent" value="">
+                    <div class="searchable-select-trigger" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="searchable-select-display">None (Top Level)</span>
+                        <span class="searchable-select-arrow"></span>
+                    </div>
+                    <div class="searchable-select-dropdown">
+                        <div class="searchable-select-search">
+                            <input type="text" placeholder="Search groups..." aria-label="Search groups">
+                        </div>
+                        <div class="searchable-select-options"></div>
+                        <div class="searchable-select-no-results">No matches found</div>
+                    </div>
+                </div>
             </div>
             <div class="form-group">
                 <label for="newGroupType">Type (optional)</label>
-                <input type="text" id="newGroupType" placeholder="e.g., Client, Trust, Account">
+                <select id="newGroupType">
+                    <option value="">Select type...</option>
+                    <option value="Household">Household</option>
+                    <option value="Client">Client</option>
+                    <option value="Revocable Trust">Revocable Trust</option>
+                    <option value="Irrevocable Trust">Irrevocable Trust</option>
+                    <option value="Retirement Account">Retirement Account</option>
+                    <option value="Other">Other</option>
+                </select>
             </div>
             <div style="display: flex; gap: 10px;">
                 <button id="saveGroupBtn" class="btn-primary">Add Group</button>

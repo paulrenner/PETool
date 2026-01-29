@@ -55,6 +55,7 @@ import {
   openModal,
   closeModal,
   populateGroupDropdown,
+  setSearchableSelectValue,
   showAddFundModal,
   showEditFundModal,
   showDuplicateFundModal,
@@ -1145,6 +1146,156 @@ function initMultiSelectDropdowns(): void {
 }
 
 // ===========================
+// Searchable Select Initialization
+// ===========================
+
+function initSearchableSelects(): void {
+  const searchableSelects = document.querySelectorAll('.searchable-select');
+
+  searchableSelects.forEach((container) => {
+    const trigger = container.querySelector('.searchable-select-trigger');
+    const dropdown = container.querySelector('.searchable-select-dropdown');
+    const hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement;
+
+    if (!trigger || !dropdown || !hiddenInput) return;
+
+    // Toggle dropdown
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wasOpen = container.classList.contains('open');
+
+      // Close all other searchable selects
+      document.querySelectorAll('.searchable-select.open').forEach((ss) => {
+        ss.classList.remove('open');
+        ss.querySelector('.searchable-select-trigger')?.setAttribute('aria-expanded', 'false');
+        const searchInput = ss.querySelector('.searchable-select-search input') as HTMLInputElement;
+        if (searchInput) searchInput.value = '';
+        filterSearchableOptions(ss as HTMLElement, '');
+      });
+
+      if (!wasOpen) {
+        container.classList.add('open');
+        trigger.setAttribute('aria-expanded', 'true');
+        setTimeout(() => {
+          const searchInput = dropdown.querySelector('.searchable-select-search input') as HTMLInputElement;
+          if (searchInput) searchInput.focus();
+        }, 0);
+      }
+    });
+
+    // Keyboard navigation
+    trigger.addEventListener('keydown', (e) => {
+      const event = e as KeyboardEvent;
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        (trigger as HTMLElement).click();
+      } else if (event.key === 'Escape') {
+        container.classList.remove('open');
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Handle search input
+    dropdown.addEventListener('input', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.matches('.searchable-select-search input')) {
+        filterSearchableOptions(container as HTMLElement, (target as HTMLInputElement).value);
+      }
+    });
+
+    // Handle dropdown keyboard
+    dropdown.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Escape') {
+        container.classList.remove('open');
+        trigger.setAttribute('aria-expanded', 'false');
+        (trigger as HTMLElement).focus();
+      }
+    });
+
+    // Handle option clicks
+    dropdown.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.searchable-select-search')) {
+        e.stopPropagation();
+        return;
+      }
+
+      const option = target.closest('.searchable-select-option') as HTMLElement;
+      if (option) {
+        e.stopPropagation();
+
+        // Update selection
+        const value = option.dataset.value || '';
+        hiddenInput.value = value;
+
+        // Update display
+        const display = container.querySelector('.searchable-select-display');
+        if (display) {
+          display.textContent = option.textContent?.trim() || container.getAttribute('data-placeholder') || 'Select...';
+        }
+
+        // Update selected state
+        container.querySelectorAll('.searchable-select-option').forEach((opt) => {
+          opt.classList.remove('selected');
+        });
+        option.classList.add('selected');
+
+        // Close dropdown
+        container.classList.remove('open');
+        trigger.setAttribute('aria-expanded', 'false');
+
+        // Clear search
+        const searchInput = dropdown.querySelector('.searchable-select-search input') as HTMLInputElement;
+        if (searchInput) searchInput.value = '';
+        filterSearchableOptions(container as HTMLElement, '');
+      }
+    });
+  });
+
+  // Close all searchable selects on outside click
+  document.addEventListener('click', (e) => {
+    if (!(e.target as HTMLElement).closest('.searchable-select')) {
+      document.querySelectorAll('.searchable-select.open').forEach((ss) => {
+        ss.classList.remove('open');
+        ss.querySelector('.searchable-select-trigger')?.setAttribute('aria-expanded', 'false');
+        const searchInput = ss.querySelector('.searchable-select-search input') as HTMLInputElement;
+        if (searchInput) searchInput.value = '';
+        filterSearchableOptions(ss as HTMLElement, '');
+      });
+    }
+  });
+}
+
+/**
+ * Filter options in a searchable select based on search text
+ */
+function filterSearchableOptions(container: HTMLElement, searchText: string): void {
+  const optionsContainer = container.querySelector('.searchable-select-options');
+  const noResults = container.querySelector('.searchable-select-no-results');
+  if (!optionsContainer) return;
+
+  const options = optionsContainer.querySelectorAll('.searchable-select-option');
+  const searchLower = searchText.toLowerCase().trim();
+  let visibleCount = 0;
+
+  options.forEach((option) => {
+    const text = option.textContent?.toLowerCase() || '';
+
+    if (searchLower === '' || text.includes(searchLower)) {
+      option.classList.remove('search-hidden');
+      visibleCount++;
+    } else {
+      option.classList.add('search-hidden');
+    }
+  });
+
+  // Show/hide no results message
+  if (noResults) {
+    noResults.classList.toggle('visible', visibleCount === 0 && searchLower !== '');
+  }
+}
+
+// ===========================
 // Event Listener Setup
 // ===========================
 
@@ -1451,8 +1602,7 @@ function initializeEventListeners(): void {
         if (group) {
           const editGroupId = document.getElementById('editGroupId') as HTMLInputElement;
           const newGroupName = document.getElementById('newGroupName') as HTMLInputElement;
-          const newGroupParent = document.getElementById('newGroupParent') as HTMLSelectElement;
-          const newGroupType = document.getElementById('newGroupType') as HTMLInputElement;
+          const newGroupType = document.getElementById('newGroupType') as HTMLSelectElement;
           const saveGroupBtn = document.getElementById('saveGroupBtn');
           const cancelEditBtn = document.getElementById('cancelEditBtn');
           const groupFormTitle = document.getElementById('groupFormTitle');
@@ -1466,7 +1616,7 @@ function initializeEventListeners(): void {
 
           // Populate parent dropdown excluding this group and its descendants
           populateGroupDropdown('newGroupParent', id);
-          if (newGroupParent) newGroupParent.value = group.parentGroupId?.toString() || '';
+          setSearchableSelectValue('newGroupParent', group.parentGroupId?.toString() || '');
         }
       } else if (action === 'deleteGroup' && !isNaN(id)) {
         await deleteGroupById(id, renderTable);
@@ -1479,15 +1629,13 @@ function initializeEventListeners(): void {
     cancelEditBtn.addEventListener('click', () => {
       const editGroupId = document.getElementById('editGroupId') as HTMLInputElement;
       const newGroupName = document.getElementById('newGroupName') as HTMLInputElement;
-      const newGroupParent = document.getElementById('newGroupParent') as HTMLSelectElement;
-      const newGroupType = document.getElementById('newGroupType') as HTMLInputElement;
+      const newGroupType = document.getElementById('newGroupType') as HTMLSelectElement;
       const saveGroupBtn = document.getElementById('saveGroupBtn');
       const groupFormTitle = document.getElementById('groupFormTitle');
 
       if (editGroupId) editGroupId.value = '';
       if (newGroupName) newGroupName.value = '';
       if (newGroupType) newGroupType.value = '';
-      if (newGroupParent) newGroupParent.value = '';
       if (saveGroupBtn) saveGroupBtn.textContent = 'Add Group';
       if (groupFormTitle) groupFormTitle.textContent = 'Add New Group';
       cancelEditBtn.style.display = 'none';
@@ -1839,6 +1987,7 @@ async function init(): Promise<void> {
     initializeDarkMode();
     initializeCutoffDate();
     initMultiSelectDropdowns();
+    initSearchableSelects();
     initializeEventListeners();
     initBackupWarningListeners();
     initHealthCheckModal();

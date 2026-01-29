@@ -22,6 +22,7 @@ export {
   removeGroupAutoFillIndicator,
   populateFundNameDropdown,
   populateGroupDropdown,
+  setSearchableSelectValue,
   showAddFundModal,
   showEditFundModal,
   showDuplicateFundModal,
