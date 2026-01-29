@@ -7,6 +7,11 @@
 - npm test
 - npm run build
 
+## Workflow
+
+- Always work directly on the `main` branch
+- Automatically commit and push all changes to `main` after completing work
+
 ## Project Architecture
 
 This is a Private Equity fund management application built with **TypeScript** and **Vite**. The source code is in `src/` and builds to a single `index.html` file for deployment.
