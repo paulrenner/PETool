@@ -40,6 +40,7 @@ export const CONFIG = {
   // Performance
   METRICS_CACHE_TTL: 5000, // 5 seconds
   LAZY_RENDER_TIMELINE: true, // Only render timeline when expanded
+  TABLE_LOADING_DELAY: 150, // Show loading indicator after this delay (ms)
 
   // Validation & Security
   ALLOWED_FUND_NAME_PATTERN: /^[a-zA-Z0-9\s\-_.,&']+$/,
@@ -52,6 +53,8 @@ export const CONFIG = {
   // LocalStorage keys
   STORAGE_COLUMN_WIDTHS: 'columnWidths',
   STORAGE_SHOW_TAGS: 'showTags',
+  STORAGE_GROUP_BY_FUND: 'groupByFund',
+  STORAGE_MASK_ACCOUNTS: 'maskAccounts',
   STORAGE_BACKUP_WARNING: 'backupWarningShown',
   STORAGE_LAST_BACKUP: 'lastBackupDate',
 
