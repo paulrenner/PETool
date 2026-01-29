@@ -758,7 +758,7 @@ export async function showDetailsModal(
   if (cashFlowsBody) {
     cashFlowsBody.innerHTML = '';
     const sortedCashFlows = [...fund.cashFlows].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
     sortedCashFlows.forEach((cf, index) => {
@@ -788,7 +788,7 @@ export async function showDetailsModal(
   if (navBody) {
     navBody.innerHTML = '';
     const sortedNavs = [...fund.monthlyNav].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
     sortedNavs.forEach((nav, index) => {
