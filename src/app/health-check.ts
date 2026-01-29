@@ -355,6 +355,67 @@ function checkFund(fund: Fund): HealthIssue[] {
   // Metrics-based checks
   const metrics = calculateMetrics(fund);
 
+  // Check: Short holding period - IRR may not be meaningful
+  const sortedDates = (fund.cashFlows || [])
+    .filter((cf) => isValidDate(cf.date))
+    .map((cf) => cf.date)
+    .concat((fund.monthlyNav || []).filter((n) => isValidDate(n.date)).map((n) => n.date))
+    .sort();
+  if (sortedDates.length >= 2) {
+    const firstDate = new Date(sortedDates[0]! + 'T00:00:00').getTime();
+    const lastDate = new Date(sortedDates[sortedDates.length - 1]! + 'T00:00:00').getTime();
+    const daysDiff = (lastDate - firstDate) / (24 * 60 * 60 * 1000);
+    if (daysDiff > 0 && daysDiff < 30) {
+      issues.push({
+        fundId,
+        fundName,
+        severity: 'info',
+        category: 'Calculation Note',
+        message: `Short holding period (${Math.round(daysDiff)} days) - IRR not calculated for periods under 30 days`,
+      });
+    }
+  }
+
+  // Check: Has NAV but no cash flows - incomplete data for IRR/MOIC
+  if (fund.monthlyNav && fund.monthlyNav.length > 0 && (!fund.cashFlows || fund.cashFlows.length === 0)) {
+    issues.push({
+      fundId,
+      fundName,
+      severity: 'info',
+      category: 'Incomplete Data',
+      message: 'Has NAV but no cash flows - IRR and MOIC cannot be calculated',
+    });
+  }
+
+  // Check: Has distributions but no contributions - unusual pattern
+  if (fund.cashFlows && fund.cashFlows.length > 0) {
+    const hasContributions = fund.cashFlows.some((cf) => cf.type === 'Contribution');
+    const hasDistributions = fund.cashFlows.some((cf) => cf.type === 'Distribution');
+    if (hasDistributions && !hasContributions) {
+      issues.push({
+        fundId,
+        fundName,
+        severity: 'warning',
+        category: 'Data Anomaly',
+        message: 'Has distributions but no contributions - MOIC cannot be calculated',
+      });
+    }
+  }
+
+  // Check: Has cash flows but no NAV - may be missing current valuation
+  if (fund.cashFlows && fund.cashFlows.length > 0 && (!fund.monthlyNav || fund.monthlyNav.length === 0)) {
+    // Only flag if there's still outstanding commitment (fund isn't fully realized)
+    if (metrics.outstandingCommitment > 0) {
+      issues.push({
+        fundId,
+        fundName,
+        severity: 'info',
+        category: 'Incomplete Data',
+        message: 'No NAV recorded - investment return may be understated if fund holds unrealized value',
+      });
+    }
+  }
+
   // Check: Very high IRR (>500%) - possible data error
   if (metrics.irr !== null && metrics.irr > 5) {
     issues.push({

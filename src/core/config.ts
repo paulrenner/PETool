@@ -23,6 +23,7 @@ export const CONFIG = {
   IRR_GUESS: 0.1,
   IRR_MIN_RATE: -0.99,
   IRR_MAX_RATE: 10.0,
+  IRR_MIN_DAYS: 30, // Minimum days between first and last cash flow for meaningful IRR
 
   // Date format validation
   DATE_FORMAT: /^\d{4}-\d{2}-\d{2}$/,

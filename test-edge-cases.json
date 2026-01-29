@@ -1,0 +1,157 @@
+{
+  "funds": [
+    {
+      "fundName": "Edge Case 1 - Same Day Contribution and NAV",
+      "accountNumber": "EDGE-001",
+      "commitment": 100000,
+      "cashFlows": [
+        { "date": "2025-12-31", "type": "Contribution", "amount": 90000, "affectsCommitment": true }
+      ],
+      "monthlyNav": [
+        { "date": "2025-12-31", "value": 90000 }
+      ]
+    },
+    {
+      "fundName": "Edge Case 2 - Short Holding Period (15 days)",
+      "accountNumber": "EDGE-002",
+      "commitment": 100000,
+      "cashFlows": [
+        { "date": "2025-12-01", "type": "Contribution", "amount": 50000, "affectsCommitment": true }
+      ],
+      "monthlyNav": [
+        { "date": "2025-12-15", "value": 55000 }
+      ]
+    },
+    {
+      "fundName": "Edge Case 3 - NAV Only No Cash Flows",
+      "accountNumber": "EDGE-003",
+      "commitment": 100000,
+      "cashFlows": [],
+      "monthlyNav": [
+        { "date": "2025-06-30", "value": 75000 },
+        { "date": "2025-12-31", "value": 80000 }
+      ]
+    },
+    {
+      "fundName": "Edge Case 4 - Distributions Only",
+      "accountNumber": "EDGE-004",
+      "commitment": 100000,
+      "cashFlows": [
+        { "date": "2025-06-15", "type": "Distribution", "amount": 25000, "affectsCommitment": false },
+        { "date": "2025-12-15", "type": "Distribution", "amount": 30000, "affectsCommitment": false }
+      ],
+      "monthlyNav": [
+        { "date": "2025-12-31", "value": 50000 }
+      ]
+    },
+    {
+      "fundName": "Edge Case 5 - Cash Flows No NAV (Not Realized)",
+      "accountNumber": "EDGE-005",
+      "commitment": 200000,
+      "cashFlows": [
+        { "date": "2024-03-15", "type": "Contribution", "amount": 50000, "affectsCommitment": true },
+        { "date": "2024-09-15", "type": "Contribution", "amount": 50000, "affectsCommitment": true },
+        { "date": "2025-06-15", "type": "Distribution", "amount": 20000, "affectsCommitment": false }
+      ],
+      "monthlyNav": []
+    },
+    {
+      "fundName": "Edge Case 6 - Zero Commitment",
+      "accountNumber": "EDGE-006",
+      "commitment": 0,
+      "cashFlows": [
+        { "date": "2025-01-15", "type": "Contribution", "amount": 10000, "affectsCommitment": true }
+      ],
+      "monthlyNav": [
+        { "date": "2025-12-31", "value": 12000 }
+      ]
+    },
+    {
+      "fundName": "Edge Case 7 - Negative Commitment",
+      "accountNumber": "EDGE-007",
+      "commitment": -50000,
+      "cashFlows": [],
+      "monthlyNav": []
+    },
+    {
+      "fundName": "Edge Case 8 - Distribution Before Contribution",
+      "accountNumber": "EDGE-008",
+      "commitment": 100000,
+      "cashFlows": [
+        { "date": "2024-06-01", "type": "Distribution", "amount": 5000, "affectsCommitment": false },
+        { "date": "2024-12-01", "type": "Contribution", "amount": 50000, "affectsCommitment": true }
+      ],
+      "monthlyNav": [
+        { "date": "2025-12-31", "value": 55000 }
+      ]
+    },
+    {
+      "fundName": "Edge Case 9 - Contributions Exceed Commitment",
+      "accountNumber": "EDGE-009",
+      "commitment": 50000,
+      "cashFlows": [
+        { "date": "2024-01-15", "type": "Contribution", "amount": 50000, "affectsCommitment": true },
+        { "date": "2024-06-15", "type": "Contribution", "amount": 30000, "affectsCommitment": true }
+      ],
+      "monthlyNav": [
+        { "date": "2025-12-31", "value": 90000 }
+      ]
+    },
+    {
+      "fundName": "Edge Case 10 - Normal Fund (Control)",
+      "accountNumber": "EDGE-010",
+      "commitment": 100000,
+      "cashFlows": [
+        { "date": "2023-03-15", "type": "Contribution", "amount": 25000, "affectsCommitment": true },
+        { "date": "2023-09-15", "type": "Contribution", "amount": 25000, "affectsCommitment": true },
+        { "date": "2024-03-15", "type": "Contribution", "amount": 25000, "affectsCommitment": true },
+        { "date": "2024-09-15", "type": "Contribution", "amount": 15000, "affectsCommitment": true },
+        { "date": "2025-03-15", "type": "Distribution", "amount": 30000, "affectsCommitment": false }
+      ],
+      "monthlyNav": [
+        { "date": "2023-12-31", "value": 55000 },
+        { "date": "2024-12-31", "value": 85000 },
+        { "date": "2025-12-31", "value": 95000 }
+      ]
+    },
+    {
+      "fundName": "Proportionality Test Fund",
+      "accountNumber": "PROP-001",
+      "commitment": 100000,
+      "cashFlows": [
+        { "date": "2024-01-15", "type": "Contribution", "amount": 50000, "affectsCommitment": true },
+        { "date": "2024-06-15", "type": "Contribution", "amount": 25000, "affectsCommitment": true }
+      ],
+      "monthlyNav": [
+        { "date": "2025-12-31", "value": 90000 }
+      ]
+    },
+    {
+      "fundName": "Proportionality Test Fund",
+      "accountNumber": "PROP-002",
+      "commitment": 200000,
+      "cashFlows": [
+        { "date": "2024-01-15", "type": "Contribution", "amount": 100000, "affectsCommitment": true },
+        { "date": "2024-06-15", "type": "Contribution", "amount": 50000, "affectsCommitment": true }
+      ],
+      "monthlyNav": [
+        { "date": "2025-12-31", "value": 180000 }
+      ]
+    },
+    {
+      "fundName": "Proportionality Test Fund",
+      "accountNumber": "PROP-003",
+      "commitment": 50000,
+      "cashFlows": [
+        { "date": "2024-01-15", "type": "Contribution", "amount": 30000, "affectsCommitment": true },
+        { "date": "2024-06-15", "type": "Contribution", "amount": 5000, "affectsCommitment": true }
+      ],
+      "monthlyNav": [
+        { "date": "2025-12-31", "value": 40000 }
+      ]
+    }
+  ],
+  "fundNames": [],
+  "groups": [],
+  "exportDate": "2025-01-29T00:00:00.000Z"
+}
