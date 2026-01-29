@@ -9,7 +9,7 @@ import { calculateMetrics } from '../calculations';
 import { escapeCSV } from '../utils/escaping';
 import { showStatus, showLoading, hideLoading } from './modals';
 import { applyCurrentFilters } from './filters';
-import { sortData } from './table';
+import { sortData, consolidateFundsByName } from './table';
 
 /**
  * Format number for CSV export
@@ -123,39 +123,80 @@ export async function exportToCSV(): Promise<void> {
       metrics: calculateMetrics(fund, cutoffDate),
     }));
 
-    // Create CSV header
-    const headers = [
-      'Fund Name',
-      'Account Number',
-      'Vintage',
-      'Commitment',
-      'Total Contributions',
-      'Total Distributions',
-      'NAV',
-      'Investment Return',
-      'MOIC',
-      'IRR',
-      'Outstanding Commitment',
-    ];
+    // Check if "group by fund" toggle is enabled
+    const groupByFundCheckbox = document.getElementById('sidebarGroupByFundCheckbox') as HTMLInputElement;
+    const groupByFund = groupByFundCheckbox?.checked ?? false;
 
-    // Create CSV rows
-    const rows = fundsWithMetrics.map((fund) => {
-      const m = fund.metrics;
-      const investmentReturn = m.investmentReturn ?? m.distributions + m.nav - m.calledCapital;
-      return [
-        escapeCSV(fund.fundName),
-        escapeCSV(fund.accountNumber),
-        escapeCSV(m.vintageYear?.toString() || ''),
-        sanitizeForCSV(formatNumberForCSV(m.commitment)),
-        sanitizeForCSV(formatNumberForCSV(m.calledCapital)),
-        sanitizeForCSV(formatNumberForCSV(m.distributions)),
-        sanitizeForCSV(formatNumberForCSV(m.nav)),
-        sanitizeForCSV(formatNumberForCSV(investmentReturn)),
-        sanitizeForCSV(m.moic !== null && isFinite(m.moic) ? m.moic.toFixed(2) : ''),
-        sanitizeForCSV(m.irr !== null ? (m.irr * 100).toFixed(2) : ''),
-        sanitizeForCSV(formatNumberForCSV(m.outstandingCommitment)),
-      ].join(',');
-    });
+    let headers: string[];
+    let rows: string[];
+
+    if (groupByFund) {
+      // Export consolidated view (grouped by fund name)
+      const consolidatedFunds = consolidateFundsByName(fundsWithMetrics, cutoffDate, AppState.sortColumns);
+
+      headers = [
+        'Fund Name',
+        'Investor Count',
+        'Total Commitment',
+        'Total Contributions',
+        'Total Distributions',
+        'Total NAV',
+        'Investment Return',
+        'MOIC',
+        'IRR',
+        'Outstanding Commitment',
+      ];
+
+      rows = consolidatedFunds.map((fund) => {
+        const m = fund.consolidatedMetrics;
+        const investmentReturn = m.investmentReturn ?? m.distributions + m.nav - m.calledCapital;
+        return [
+          escapeCSV(fund.fundName),
+          sanitizeForCSV(fund.investorCount.toString()),
+          sanitizeForCSV(formatNumberForCSV(m.commitment)),
+          sanitizeForCSV(formatNumberForCSV(m.calledCapital)),
+          sanitizeForCSV(formatNumberForCSV(m.distributions)),
+          sanitizeForCSV(formatNumberForCSV(m.nav)),
+          sanitizeForCSV(formatNumberForCSV(investmentReturn)),
+          sanitizeForCSV(m.moic !== null && isFinite(m.moic) ? m.moic.toFixed(2) : ''),
+          sanitizeForCSV(m.irr !== null ? (m.irr * 100).toFixed(2) : ''),
+          sanitizeForCSV(formatNumberForCSV(m.outstandingCommitment)),
+        ].join(',');
+      });
+    } else {
+      // Export individual fund view
+      headers = [
+        'Fund Name',
+        'Account Number',
+        'Vintage',
+        'Commitment',
+        'Total Contributions',
+        'Total Distributions',
+        'NAV',
+        'Investment Return',
+        'MOIC',
+        'IRR',
+        'Outstanding Commitment',
+      ];
+
+      rows = fundsWithMetrics.map((fund) => {
+        const m = fund.metrics;
+        const investmentReturn = m.investmentReturn ?? m.distributions + m.nav - m.calledCapital;
+        return [
+          escapeCSV(fund.fundName),
+          escapeCSV(fund.accountNumber),
+          escapeCSV(m.vintageYear?.toString() || ''),
+          sanitizeForCSV(formatNumberForCSV(m.commitment)),
+          sanitizeForCSV(formatNumberForCSV(m.calledCapital)),
+          sanitizeForCSV(formatNumberForCSV(m.distributions)),
+          sanitizeForCSV(formatNumberForCSV(m.nav)),
+          sanitizeForCSV(formatNumberForCSV(investmentReturn)),
+          sanitizeForCSV(m.moic !== null && isFinite(m.moic) ? m.moic.toFixed(2) : ''),
+          sanitizeForCSV(m.irr !== null ? (m.irr * 100).toFixed(2) : ''),
+          sanitizeForCSV(formatNumberForCSV(m.outstandingCommitment)),
+        ].join(',');
+      });
+    }
 
     // Combine header and rows
     const csv = [headers.join(','), ...rows].join('\n');
