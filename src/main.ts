@@ -1399,7 +1399,7 @@ function initializeEventListeners(): void {
           populateGroupDropdown('newGroupParent', id);
           if (newGroupParent) newGroupParent.value = group.parentGroupId?.toString() || '';
         }
-      } else if (action === 'deleteGroup' && id) {
+      } else if (action === 'deleteGroup' && !isNaN(id)) {
         await deleteGroupById(id, renderTable);
       }
     });
