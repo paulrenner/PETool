@@ -8,7 +8,8 @@ export const CONFIG = {
   FUNDNAMES_STORE: 'fundNames',
   GROUPS_STORE: 'groups',
   AUDIT_STORE: 'auditLog',
-  DB_VERSION: 11,
+  DISMISSED_ISSUES_STORE: 'dismissedHealthIssues',
+  DB_VERSION: 12,
 
   // Currency formatting
   CURRENCY_FORMAT: 'en-US',

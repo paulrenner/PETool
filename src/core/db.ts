@@ -1,4 +1,4 @@
-import type { Fund, FundNameData, Group, AuditLogEntry, AuditLogFilter, AuditEntityType } from '../types';
+import type { Fund, FundNameData, Group, AuditLogEntry, AuditLogFilter, AuditEntityType, DismissedHealthIssue } from '../types';
 import { generateChangeSummary, formatChangeSummary } from '../types/audit';
 import { CONFIG } from './config';
 import { validateFund } from '../utils/validation';
@@ -61,6 +61,17 @@ export function initDB(): Promise<IDBDatabase> {
         auditStore.createIndex('operation', 'operation', { unique: false });
         auditStore.createIndex('entityType', 'entityType', { unique: false });
         auditStore.createIndex('entityId', 'entityId', { unique: false });
+      }
+
+      // Dismissed health issues store (v12+)
+      if (!database.objectStoreNames.contains(CONFIG.DISMISSED_ISSUES_STORE)) {
+        const dismissedStore = database.createObjectStore(CONFIG.DISMISSED_ISSUES_STORE, {
+          keyPath: 'id',
+          autoIncrement: true,
+        });
+        // Compound index for quick lookup by fund pair (order-independent)
+        dismissedStore.createIndex('fund1Id', 'fund1Id', { unique: false });
+        dismissedStore.createIndex('fund2Id', 'fund2Id', { unique: false });
       }
 
       console.log(`Database upgrade from v${oldVersion} to v${CONFIG.DB_VERSION}`);
@@ -757,4 +768,123 @@ export async function logExport(format: string, recordCount: number): Promise<vo
     summary: `Exported ${recordCount} records as ${format}`,
     recordCount,
   });
+}
+
+// ===========================
+// Dismissed Health Issues Operations
+// ===========================
+
+/**
+ * Get all dismissed health issues
+ */
+export function getDismissedHealthIssues(): Promise<DismissedHealthIssue[]> {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      reject(new Error('Database not initialized'));
+      return;
+    }
+
+    if (!db.objectStoreNames.contains(CONFIG.DISMISSED_ISSUES_STORE)) {
+      resolve([]);
+      return;
+    }
+
+    const tx = db.transaction([CONFIG.DISMISSED_ISSUES_STORE], 'readonly');
+    const store = tx.objectStore(CONFIG.DISMISSED_ISSUES_STORE);
+    const request = store.getAll();
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+/**
+ * Dismiss a health check issue (add to dismissed list)
+ * Fund IDs are normalized so (1,2) and (2,1) are treated as the same pair
+ */
+export function dismissHealthIssue(fund1Id: number, fund2Id: number, reason: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      reject(new Error('Database not initialized'));
+      return;
+    }
+
+    if (!db.objectStoreNames.contains(CONFIG.DISMISSED_ISSUES_STORE)) {
+      reject(new Error('Dismissed issues store not available'));
+      return;
+    }
+
+    // Normalize fund IDs so order doesn't matter
+    const normalizedFund1Id = Math.min(fund1Id, fund2Id);
+    const normalizedFund2Id = Math.max(fund1Id, fund2Id);
+
+    const dismissedIssue: Omit<DismissedHealthIssue, 'id'> = {
+      fund1Id: normalizedFund1Id,
+      fund2Id: normalizedFund2Id,
+      reason,
+      dismissedAt: new Date().toISOString(),
+    };
+
+    const tx = db.transaction([CONFIG.DISMISSED_ISSUES_STORE], 'readwrite');
+    const store = tx.objectStore(CONFIG.DISMISSED_ISSUES_STORE);
+    const request = store.add(dismissedIssue);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+/**
+ * Undismiss a health check issue (remove from dismissed list)
+ */
+export function undismissHealthIssue(fund1Id: number, fund2Id: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      reject(new Error('Database not initialized'));
+      return;
+    }
+
+    if (!db.objectStoreNames.contains(CONFIG.DISMISSED_ISSUES_STORE)) {
+      resolve();
+      return;
+    }
+
+    // Normalize fund IDs so order doesn't matter
+    const normalizedFund1Id = Math.min(fund1Id, fund2Id);
+    const normalizedFund2Id = Math.max(fund1Id, fund2Id);
+
+    const tx = db.transaction([CONFIG.DISMISSED_ISSUES_STORE], 'readwrite');
+    const store = tx.objectStore(CONFIG.DISMISSED_ISSUES_STORE);
+    const request = store.openCursor();
+
+    request.onsuccess = (event) => {
+      const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+      if (cursor) {
+        const issue = cursor.value as DismissedHealthIssue;
+        if (issue.fund1Id === normalizedFund1Id && issue.fund2Id === normalizedFund2Id) {
+          cursor.delete();
+          resolve();
+          return;
+        }
+        cursor.continue();
+      } else {
+        // Not found, still resolve
+        resolve();
+      }
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+/**
+ * Check if a health issue is dismissed
+ */
+export async function isHealthIssueDismissed(fund1Id: number, fund2Id: number): Promise<boolean> {
+  const dismissed = await getDismissedHealthIssues();
+  const normalizedFund1Id = Math.min(fund1Id, fund2Id);
+  const normalizedFund2Id = Math.max(fund1Id, fund2Id);
+
+  return dismissed.some(
+    (d) => d.fund1Id === normalizedFund1Id && d.fund2Id === normalizedFund2Id
+  );
 }

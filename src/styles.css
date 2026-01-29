@@ -850,6 +850,25 @@
             color: var(--color-text);
         }
 
+        .btn-dismiss-issue {
+            padding: 4px 10px;
+            font-size: 12px;
+            background: transparent;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            color: var(--color-text-light);
+            cursor: pointer;
+            flex-shrink: 0;
+            align-self: center;
+            transition: all 0.15s ease;
+        }
+
+        .btn-dismiss-issue:hover {
+            background: var(--color-hover-bg);
+            border-color: var(--color-secondary-hover);
+            color: var(--color-text);
+        }
+
         @media (max-width: 768px) {
             .portfolio-summary {
                 gap: 8px;

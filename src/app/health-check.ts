@@ -2,7 +2,7 @@
  * Data Health Check - validates data integrity across all funds and groups
  */
 
-import type { Fund, Group } from '../types';
+import type { Fund, Group, DismissedHealthIssue } from '../types';
 import { calculateMetrics, getTotalByType } from '../calculations';
 import { isValidDate } from '../utils/validation';
 
@@ -61,8 +61,15 @@ export interface HealthCheckResult {
 
 /**
  * Run all health checks on a list of funds and groups
+ * @param funds - List of funds to check
+ * @param groups - List of groups to check
+ * @param dismissedPairs - List of dismissed health issues to filter out
  */
-export function runHealthCheck(funds: Fund[], groups: Group[] = []): HealthCheckResult {
+export function runHealthCheck(
+  funds: Fund[],
+  groups: Group[] = [],
+  dismissedPairs: DismissedHealthIssue[] = []
+): HealthCheckResult {
   const issues: HealthIssue[] = [];
   const fundsWithIssuesSet = new Set<number>();
 
@@ -77,7 +84,18 @@ export function runHealthCheck(funds: Fund[], groups: Group[] = []): HealthCheck
   }
 
   // Check for duplicate funds
-  const duplicates = findDuplicateFunds(funds);
+  let duplicates = findDuplicateFunds(funds);
+
+  // Filter out dismissed pairs
+  if (dismissedPairs.length > 0) {
+    duplicates = duplicates.filter((dup) => {
+      const normalizedId1 = Math.min(dup.fund1Id, dup.fund2Id);
+      const normalizedId2 = Math.max(dup.fund1Id, dup.fund2Id);
+      return !dismissedPairs.some(
+        (d) => d.fund1Id === normalizedId1 && d.fund2Id === normalizedId2
+      );
+    });
+  }
 
   // Check for group issues
   const groupIssues = checkGroups(groups);
@@ -462,14 +480,15 @@ function checkDuplicatePair(
     fund1.accountNumber &&
     fund2.accountNumber &&
     normalizeAccountNumber(fund1.accountNumber) === normalizeAccountNumber(fund2.accountNumber);
+  const sameFundName = normalizeName(fund1.fundName) === normalizeName(fund2.fundName);
 
   // Check 1: Same name + same account number = likely duplicate
-  if (normalizeName(fund1.fundName) === normalizeName(fund2.fundName) && sameAccountNumber) {
+  if (sameFundName && sameAccountNumber) {
     return { reason: 'Identical fund name and account number', confidence: 'high' };
   }
 
-  // Check 2: Same investor + same commitment + same vintage
-  if (sameAccountNumber) {
+  // Check 2: Same investor + same commitment + same vintage (different funds)
+  if (sameAccountNumber && !sameFundName) {
     if (
       fund1.commitment === fund2.commitment &&
       metrics1.vintageYear === metrics2.vintageYear &&
@@ -480,31 +499,13 @@ function checkDuplicatePair(
         confidence: 'high',
       };
     }
-
-    // Same investor with similar commitment (within 5%)
-    if (fund1.commitment > 0 && fund2.commitment > 0) {
-      const ratio = fund1.commitment / fund2.commitment;
-      if (ratio >= 0.95 && ratio <= 1.05) {
-        return {
-          reason: 'Same account with nearly identical commitment',
-          confidence: 'medium',
-        };
-      }
-    }
   }
 
-  // Check 3: Significant cash flow overlap (regardless of name)
-  const cashFlowOverlap = calculateCashFlowOverlap(fund1, fund2);
-  if (cashFlowOverlap >= 0.8) {
-    return {
-      reason: `${Math.round(cashFlowOverlap * 100)}% of cash flows are identical`,
-      confidence: 'high',
-    };
-  } else if (cashFlowOverlap >= 0.5 && sameAccountNumber) {
-    return {
-      reason: `Same account with ${Math.round(cashFlowOverlap * 100)}% identical cash flows`,
-      confidence: 'medium',
-    };
+  // Check 3: Same fund, different accounts - check if cash flows are proportional to commitment
+  // (if not proportional, there may be a data issue)
+  const proportionalityCheck = checkCashFlowProportionality(fund1, fund2);
+  if (proportionalityCheck) {
+    return proportionalityCheck;
   }
 
   // Check 4: Very similar names + same account = possible typo/duplicate
@@ -516,18 +517,60 @@ function checkDuplicatePair(
     };
   }
 
-  // Check 5: Similar names with same vintage + same commitment (without account match)
-  if (
-    similarity >= 0.85 &&
-    metrics1.vintageYear === metrics2.vintageYear &&
-    metrics1.vintageYear !== null &&
-    fund1.commitment === fund2.commitment &&
-    fund1.commitment > 0
-  ) {
-    return {
-      reason: `Similar names with same vintage (${metrics1.vintageYear}) and commitment`,
-      confidence: 'low',
-    };
+  return null;
+}
+
+/**
+ * Check if cash flows are proportional to commitment for same-fund investors
+ *
+ * For two investors in the same fund, their cash flows should be proportional
+ * to their commitment amounts. E.g., if Investor A has 2x the commitment of
+ * Investor B, they should have ~2x the distributions/contributions.
+ *
+ * Flags when the deviation exceeds 10%.
+ */
+function checkCashFlowProportionality(
+  fund1: Fund,
+  fund2: Fund
+): { reason: string; confidence: 'medium' } | null {
+  // Only check same-fund investments (different accounts in same fund)
+  if (normalizeName(fund1.fundName) !== normalizeName(fund2.fundName)) {
+    return null;
+  }
+
+  // Need both to have commitment > 0
+  if (fund1.commitment <= 0 || fund2.commitment <= 0) {
+    return null;
+  }
+
+  const metrics1 = calculateMetrics(fund1);
+  const metrics2 = calculateMetrics(fund2);
+  const commitmentRatio = fund1.commitment / fund2.commitment;
+
+  // Check contributions proportionality (if both have contributions)
+  if (metrics1.calledCapital > 0 && metrics2.calledCapital > 0) {
+    const contributionRatio = metrics1.calledCapital / metrics2.calledCapital;
+    const contributionDeviation = Math.abs(contributionRatio - commitmentRatio) / commitmentRatio;
+
+    if (contributionDeviation > 0.10) {
+      return {
+        reason: `Same fund: contributions not proportional to commitment (${Math.round(contributionDeviation * 100)}% deviation)`,
+        confidence: 'medium',
+      };
+    }
+  }
+
+  // Check distributions proportionality (if both have distributions)
+  if (metrics1.distributions > 0 && metrics2.distributions > 0) {
+    const distRatio = metrics1.distributions / metrics2.distributions;
+    const distDeviation = Math.abs(distRatio - commitmentRatio) / commitmentRatio;
+
+    if (distDeviation > 0.10) {
+      return {
+        reason: `Same fund: distributions not proportional to commitment (${Math.round(distDeviation * 100)}% deviation)`,
+        confidence: 'medium',
+      };
+    }
   }
 
   return null;
@@ -644,27 +687,3 @@ function levenshteinDistance(s1: string, s2: string): number {
   return dp[m]![n]!;
 }
 
-/**
- * Calculate cash flow overlap between two funds
- * Returns ratio of matching cash flows to total unique cash flows
- */
-function calculateCashFlowOverlap(fund1: Fund, fund2: Fund): number {
-  const cf1 = fund1.cashFlows || [];
-  const cf2 = fund2.cashFlows || [];
-
-  if (cf1.length === 0 || cf2.length === 0) return 0;
-
-  // Create sets of cash flow signatures
-  const sig1 = new Set(cf1.map((cf) => `${cf.date}|${cf.type}|${cf.amount}`));
-  const sig2 = new Set(cf2.map((cf) => `${cf.date}|${cf.type}|${cf.amount}`));
-
-  // Count matches
-  let matches = 0;
-  for (const sig of sig1) {
-    if (sig2.has(sig)) matches++;
-  }
-
-  // Return ratio of matches to smaller set
-  const minSize = Math.min(sig1.size, sig2.size);
-  return minSize > 0 ? matches / minSize : 0;
-}

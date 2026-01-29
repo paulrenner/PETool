@@ -15,6 +15,8 @@ import {
   getAllGroups,
   getAllFundNameObjects,
   clearAllData,
+  getDismissedHealthIssues,
+  dismissHealthIssue,
 } from './core/db';
 import type { FundWithMetrics, FundNameData } from './types';
 
@@ -230,10 +232,11 @@ function showHealthCheckModal(): void {
   openModal('healthCheckModal');
 
   // Run health check after modal is visible (allows spinner to render)
-  setTimeout(() => {
+  setTimeout(async () => {
     const funds = AppState.getFunds();
     const groups = AppState.getGroups();
-    const results = runHealthCheck(funds, groups);
+    const dismissedPairs = await getDismissedHealthIssues();
+    const results = runHealthCheck(funds, groups, dismissedPairs);
     renderHealthCheckResults(results);
   }, 50);
 }
@@ -347,6 +350,7 @@ function renderDuplicatePair(dup: DuplicatePair): string {
         </div>
         <div class="duplicate-reason">${escapeHtml(dup.reason)}</div>
       </div>
+      <button class="btn-dismiss-issue" data-fund1-id="${dup.fund1Id}" data-fund2-id="${dup.fund2Id}" data-reason="${escapeHtml(dup.reason)}" title="Dismiss this issue">Dismiss</button>
     </div>
   `;
 }
@@ -383,8 +387,28 @@ function initHealthCheckModal(): void {
   // Click on issue or duplicate to open fund details
   const resultsDiv = document.getElementById('healthCheckResults');
   if (resultsDiv) {
-    resultsDiv.addEventListener('click', (e) => {
+    resultsDiv.addEventListener('click', async (e) => {
       const target = e.target as HTMLElement;
+
+      // Check for dismiss button click
+      const dismissBtn = target.closest('.btn-dismiss-issue') as HTMLElement;
+      if (dismissBtn) {
+        e.stopPropagation();
+        const fund1Id = parseInt(dismissBtn.getAttribute('data-fund1-id') || '0', 10);
+        const fund2Id = parseInt(dismissBtn.getAttribute('data-fund2-id') || '0', 10);
+        const reason = dismissBtn.getAttribute('data-reason') || '';
+
+        if (fund1Id > 0 && fund2Id > 0) {
+          try {
+            await dismissHealthIssue(fund1Id, fund2Id, reason);
+            // Refresh the health check modal
+            showHealthCheckModal();
+          } catch (err) {
+            console.error('Error dismissing health issue:', err);
+          }
+        }
+        return;
+      }
 
       // Check for health issue click
       const issueEl = target.closest('.health-issue');
