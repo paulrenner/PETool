@@ -23,10 +23,18 @@ function formatNumberForCSV(value: number | null | undefined): string {
 
 /**
  * Sanitize value for CSV to prevent formula injection
+ * Note: Negative numbers are safe and should not be quoted
  */
 function sanitizeForCSV(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '';
   const str = String(value);
+
+  // If it's a valid number (including negative), don't add quote prefix
+  if (!isNaN(Number(str)) && str.trim() !== '') {
+    return str;
+  }
+
+  // For non-numeric strings, prevent formula injection
   const firstChar = str.charAt(0);
   if (str.length > 0 && ['=', '+', '-', '@', '\t', '\r'].includes(firstChar)) {
     return "'" + str;
