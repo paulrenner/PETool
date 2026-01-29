@@ -1321,6 +1321,11 @@
             font-weight: 500;
         }
 
+        .searchable-select-option.highlighted {
+            background: var(--color-hover-bg);
+            outline: none;
+        }
+
         .searchable-select-option.search-hidden {
             display: none;
         }
@@ -1366,6 +1371,10 @@
 
         [data-theme="dark"] .searchable-select-option.selected {
             background: rgba(99, 179, 237, 0.2);
+        }
+
+        [data-theme="dark"] .searchable-select-option.highlighted {
+            background: #374151;
         }
 
         [data-theme="dark"] .searchable-select-search {

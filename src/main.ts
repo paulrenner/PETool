@@ -1200,15 +1200,36 @@ function initSearchableSelects(): void {
       const target = e.target as HTMLElement;
       if (target.matches('.searchable-select-search input')) {
         filterSearchableOptions(container as HTMLElement, (target as HTMLInputElement).value);
+        // Reset highlight when search changes
+        clearSearchableHighlight(container as HTMLElement);
       }
     });
 
-    // Handle dropdown keyboard
+    // Handle dropdown keyboard (arrow navigation + enter to select)
     dropdown.addEventListener('keydown', (e) => {
-      if ((e as KeyboardEvent).key === 'Escape') {
+      const event = e as KeyboardEvent;
+
+      if (event.key === 'Escape') {
         container.classList.remove('open');
         trigger.setAttribute('aria-expanded', 'false');
+        clearSearchableHighlight(container as HTMLElement);
         (trigger as HTMLElement).focus();
+        return;
+      }
+
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        navigateSearchableOptions(container as HTMLElement, event.key === 'ArrowDown' ? 1 : -1);
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const highlighted = container.querySelector('.searchable-select-option.highlighted') as HTMLElement;
+        if (highlighted && !highlighted.classList.contains('search-hidden')) {
+          selectSearchableOption(container as HTMLElement, highlighted, hiddenInput, trigger as HTMLElement);
+        }
+        return;
       }
     });
 
@@ -1223,31 +1244,16 @@ function initSearchableSelects(): void {
       const option = target.closest('.searchable-select-option') as HTMLElement;
       if (option) {
         e.stopPropagation();
+        selectSearchableOption(container as HTMLElement, option, hiddenInput, trigger as HTMLElement);
+      }
+    });
 
-        // Update selection
-        const value = option.dataset.value || '';
-        hiddenInput.value = value;
-
-        // Update display
-        const display = container.querySelector('.searchable-select-display');
-        if (display) {
-          display.textContent = option.textContent?.trim() || container.getAttribute('data-placeholder') || 'Select...';
-        }
-
-        // Update selected state
-        container.querySelectorAll('.searchable-select-option').forEach((opt) => {
-          opt.classList.remove('selected');
-        });
-        option.classList.add('selected');
-
-        // Close dropdown
-        container.classList.remove('open');
-        trigger.setAttribute('aria-expanded', 'false');
-
-        // Clear search
-        const searchInput = dropdown.querySelector('.searchable-select-search input') as HTMLInputElement;
-        if (searchInput) searchInput.value = '';
-        filterSearchableOptions(container as HTMLElement, '');
+    // Handle mouseover to update highlight
+    dropdown.addEventListener('mouseover', (e) => {
+      const option = (e.target as HTMLElement).closest('.searchable-select-option') as HTMLElement;
+      if (option && !option.classList.contains('search-hidden')) {
+        clearSearchableHighlight(container as HTMLElement);
+        option.classList.add('highlighted');
       }
     });
   });
@@ -1293,6 +1299,81 @@ function filterSearchableOptions(container: HTMLElement, searchText: string): vo
   if (noResults) {
     noResults.classList.toggle('visible', visibleCount === 0 && searchLower !== '');
   }
+}
+
+/**
+ * Clear highlight from all options in a searchable select
+ */
+function clearSearchableHighlight(container: HTMLElement): void {
+  container.querySelectorAll('.searchable-select-option.highlighted').forEach((opt) => {
+    opt.classList.remove('highlighted');
+  });
+}
+
+/**
+ * Navigate through searchable select options with arrow keys
+ */
+function navigateSearchableOptions(container: HTMLElement, direction: number): void {
+  const options = Array.from(
+    container.querySelectorAll('.searchable-select-option:not(.search-hidden)')
+  ) as HTMLElement[];
+
+  if (options.length === 0) return;
+
+  const currentHighlight = container.querySelector('.searchable-select-option.highlighted') as HTMLElement;
+  let currentIndex = currentHighlight ? options.indexOf(currentHighlight) : -1;
+
+  // Clear current highlight
+  clearSearchableHighlight(container);
+
+  // Calculate new index
+  let newIndex = currentIndex + direction;
+  if (newIndex < 0) newIndex = options.length - 1;
+  if (newIndex >= options.length) newIndex = 0;
+
+  // Apply new highlight
+  const newOption = options[newIndex];
+  if (newOption) {
+    newOption.classList.add('highlighted');
+    // Scroll into view if needed
+    newOption.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+/**
+ * Select an option in a searchable select
+ */
+function selectSearchableOption(
+  container: HTMLElement,
+  option: HTMLElement,
+  hiddenInput: HTMLInputElement,
+  trigger: HTMLElement
+): void {
+  // Update hidden input value
+  const value = option.dataset.value || '';
+  hiddenInput.value = value;
+
+  // Update display
+  const display = container.querySelector('.searchable-select-display');
+  if (display) {
+    display.textContent = option.textContent?.trim() || container.getAttribute('data-placeholder') || 'Select...';
+  }
+
+  // Update selected state
+  container.querySelectorAll('.searchable-select-option').forEach((opt) => {
+    opt.classList.remove('selected');
+  });
+  option.classList.add('selected');
+
+  // Close dropdown
+  container.classList.remove('open');
+  trigger.setAttribute('aria-expanded', 'false');
+
+  // Clear search and highlight
+  const searchInput = container.querySelector('.searchable-select-search input') as HTMLInputElement;
+  if (searchInput) searchInput.value = '';
+  filterSearchableOptions(container, '');
+  clearSearchableHighlight(container);
 }
 
 // ===========================
