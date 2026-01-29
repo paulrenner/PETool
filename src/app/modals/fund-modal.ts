@@ -10,6 +10,7 @@ import {
   saveFundToDB,
   deleteFundFromDB,
   getAllFundNameObjects,
+  saveFundName,
 } from '../../core/db';
 import { calculateMetrics } from '../../calculations';
 import { escapeHtml } from '../../utils/escaping';
@@ -567,15 +568,55 @@ export async function saveFundFromModal(
   const commitmentInput = document.getElementById('commitment') as HTMLInputElement;
   const duplicateMultiplierInput = document.getElementById('duplicateMultiplier') as HTMLInputElement;
 
-  const fundName = fundNameSelect?.value || '';
+  let fundName = fundNameSelect?.value || '';
   const accountNumber = accountNumberInput?.value?.trim() || '';
   const groupId = fundGroupSelect?.value ? parseInt(fundGroupSelect.value) : null;
   const commitment = parseCurrency(commitmentInput?.value || '0');
   const isDuplicate = isDuplicateInput?.value === 'true';
   const multiplier = parseFloat(duplicateMultiplierInput?.value || '1') || 1;
 
+  // Handle inline new fund name creation
+  if (fundName === '__new__') {
+    const newFundNameInput = document.getElementById('newFundNameInline') as HTMLInputElement;
+    const newName = newFundNameInput?.value?.trim();
+
+    if (!newName) {
+      showStatus('Please enter a fund name', 'error');
+      return;
+    }
+
+    if (AppState.fundNames.has(newName)) {
+      showStatus('A fund with this name already exists. Please select it from the dropdown.', 'error');
+      return;
+    }
+
+    // Create the new fund name
+    try {
+      const fundNameData: FundNameData = {
+        name: newName,
+        tags: [],
+        investmentTermStartDate: null,
+        investmentTermYears: null,
+      };
+      await saveFundName(fundNameData);
+      AppState.fundNames.add(newName);
+      AppState.fundNameData.set(newName, fundNameData);
+      fundName = newName;
+
+      // Update dropdown and hide container
+      await populateFundNameDropdown();
+      if (fundNameSelect) fundNameSelect.value = newName;
+      const container = document.getElementById('newFundNameContainer');
+      if (container) container.style.display = 'none';
+      if (newFundNameInput) newFundNameInput.value = '';
+    } catch (err) {
+      showStatus('Error creating fund name: ' + (err as Error).message, 'error');
+      return;
+    }
+  }
+
   // Validation
-  if (!fundName || fundName === '__new__') {
+  if (!fundName) {
     showStatus('Please select a fund name', 'error');
     return;
   }
