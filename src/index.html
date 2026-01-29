@@ -211,9 +211,20 @@
                 </div>
                 <div class="form-group">
                     <label for="fundGroup">Group (optional)</label>
-                    <select id="fundGroup">
-                        <option value="">No Group</option>
-                    </select>
+                    <div class="searchable-select" id="fundGroupContainer" data-placeholder="No Group">
+                        <input type="hidden" id="fundGroup" value="">
+                        <div class="searchable-select-trigger" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+                            <span class="searchable-select-display">No Group</span>
+                            <span class="searchable-select-arrow"></span>
+                        </div>
+                        <div class="searchable-select-dropdown">
+                            <div class="searchable-select-search">
+                                <input type="text" placeholder="Search groups..." aria-label="Search groups">
+                            </div>
+                            <div class="searchable-select-options"></div>
+                            <div class="searchable-select-no-results">No matches found</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="commitment">Commitment (USD) *</label>

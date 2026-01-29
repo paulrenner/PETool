@@ -205,10 +205,10 @@ export function removeGroupAutoFillIndicator(): void {
  */
 async function handleAccountNumberChange(): Promise<void> {
   const accountInput = document.getElementById('accountNumber') as HTMLInputElement;
-  const groupSelect = document.getElementById('fundGroup') as HTMLSelectElement;
+  const groupInput = document.getElementById('fundGroup') as HTMLInputElement;
   const fundIdInput = document.getElementById('fundId') as HTMLInputElement;
 
-  if (!accountInput || !groupSelect) return;
+  if (!accountInput || !groupInput) return;
 
   const accountNumber = accountInput.value.trim();
   const excludeFundId = fundIdInput?.value ? parseInt(fundIdInput.value) : null;
@@ -239,12 +239,12 @@ async function handleAccountNumberChange(): Promise<void> {
     showGroupAutoFillIndicator('ambiguous', result.conflictingGroups);
     accountHasExistingGroups = true;
   } else if (result.groupId !== null || result.groupName === 'No Group') {
-    // Auto-fill the group
-    groupSelect.value = result.groupId?.toString() || '';
-    showGroupAutoFillIndicator('auto-filled', [], result.groupName || 'No Group');
-    // Store the suggested group for comparison when user changes it
+    // Store the suggested group BEFORE setting value (change event will fire)
     suggestedGroupId = result.groupId;
     accountHasExistingGroups = true;
+    // Auto-fill the group using searchable-select
+    setSearchableSelectValue('fundGroup', result.groupId?.toString() || '');
+    showGroupAutoFillIndicator('auto-filled', [], result.groupName || 'No Group');
   }
   // If no existing association found, no indicator is shown
 }
@@ -282,15 +282,15 @@ function showGroupChangeWarning(conflictingGroups: { groupId: number | null; gro
  * Handle group dropdown change - show warning if different from suggested
  */
 async function handleGroupChange(): Promise<void> {
-  const groupSelect = document.getElementById('fundGroup') as HTMLSelectElement;
+  const groupInput = document.getElementById('fundGroup') as HTMLInputElement;
   const accountInput = document.getElementById('accountNumber') as HTMLInputElement;
 
-  if (!groupSelect || !accountInput || !accountHasExistingGroups) return;
+  if (!groupInput || !accountInput || !accountHasExistingGroups) return;
 
   const accountNumber = accountInput.value.trim();
   if (!accountNumber) return;
 
-  const selectedGroupId = groupSelect.value ? parseInt(groupSelect.value) : null;
+  const selectedGroupId = groupInput.value ? parseInt(groupInput.value) : null;
 
   // If user changed to a different group than suggested
   if (selectedGroupId !== suggestedGroupId) {
@@ -335,7 +335,7 @@ async function handleGroupChange(): Promise<void> {
  */
 export function initAccountNumberAutoFill(): void {
   const accountInput = document.getElementById('accountNumber');
-  const groupSelect = document.getElementById('fundGroup');
+  const groupInput = document.getElementById('fundGroup');
 
   if (!accountInput) return;
 
@@ -350,9 +350,9 @@ export function initAccountNumberAutoFill(): void {
   // Also trigger on blur for immediate feedback
   accountInput.addEventListener('blur', handleAccountNumberChange);
 
-  // Listen for group dropdown changes
-  if (groupSelect) {
-    groupSelect.addEventListener('change', handleGroupChange);
+  // Listen for group changes (works for both native select and searchable-select hidden input)
+  if (groupInput) {
+    groupInput.addEventListener('change', handleGroupChange);
   }
 }
 
@@ -569,7 +569,6 @@ export async function showEditFundModal(fundId: number): Promise<void> {
   const isDuplicateInput = document.getElementById('isDuplicate') as HTMLInputElement;
   const fundNameSelect = document.getElementById('fundName') as HTMLSelectElement;
   const accountNumberInput = document.getElementById('accountNumber') as HTMLInputElement;
-  const fundGroupSelect = document.getElementById('fundGroup') as HTMLSelectElement;
   const commitmentInput = document.getElementById('commitment') as HTMLInputElement;
   const saveFundBtn = document.getElementById('saveFundBtn');
   const multiplierContainer = document.getElementById('duplicateMultiplierContainer');
@@ -588,7 +587,7 @@ export async function showEditFundModal(fundId: number): Promise<void> {
 
   if (fundNameSelect) fundNameSelect.value = fund.fundName;
   if (accountNumberInput) accountNumberInput.value = fund.accountNumber;
-  if (fundGroupSelect) fundGroupSelect.value = fund.groupId?.toString() || '';
+  setSearchableSelectValue('fundGroup', fund.groupId?.toString() || '');
   if (commitmentInput) commitmentInput.value = formatNumberWithCommas(fund.commitment);
 
   AppState.setFundModalUnsavedChanges(false);
@@ -610,7 +609,6 @@ export async function showDuplicateFundModal(fundId: number): Promise<void> {
   const isDuplicateInput = document.getElementById('isDuplicate') as HTMLInputElement;
   const fundNameSelect = document.getElementById('fundName') as HTMLSelectElement;
   const accountNumberInput = document.getElementById('accountNumber') as HTMLInputElement;
-  const fundGroupSelect = document.getElementById('fundGroup') as HTMLSelectElement;
   const commitmentInput = document.getElementById('commitment') as HTMLInputElement;
   const duplicateMultiplierInput = document.getElementById('duplicateMultiplier') as HTMLInputElement;
   const saveFundBtn = document.getElementById('saveFundBtn');
@@ -631,7 +629,7 @@ export async function showDuplicateFundModal(fundId: number): Promise<void> {
 
   if (fundNameSelect) fundNameSelect.value = fund.fundName;
   if (accountNumberInput) accountNumberInput.value = '';
-  if (fundGroupSelect) fundGroupSelect.value = fund.groupId?.toString() || '';
+  setSearchableSelectValue('fundGroup', fund.groupId?.toString() || '');
   if (commitmentInput) commitmentInput.value = formatNumberWithCommas(fund.commitment);
 
   AppState.setFundModalUnsavedChanges(false);
@@ -648,13 +646,13 @@ export async function saveFundFromModal(
   const isDuplicateInput = document.getElementById('isDuplicate') as HTMLInputElement;
   const fundNameSelect = document.getElementById('fundName') as HTMLSelectElement;
   const accountNumberInput = document.getElementById('accountNumber') as HTMLInputElement;
-  const fundGroupSelect = document.getElementById('fundGroup') as HTMLSelectElement;
+  const fundGroupInput = document.getElementById('fundGroup') as HTMLInputElement;
   const commitmentInput = document.getElementById('commitment') as HTMLInputElement;
   const duplicateMultiplierInput = document.getElementById('duplicateMultiplier') as HTMLInputElement;
 
   let fundName = fundNameSelect?.value || '';
   const accountNumber = (accountNumberInput?.value || '').replace(/\s/g, '');
-  const groupId = fundGroupSelect?.value ? parseInt(fundGroupSelect.value) : null;
+  const groupId = fundGroupInput?.value ? parseInt(fundGroupInput.value) : null;
   const commitment = parseCurrency(commitmentInput?.value || '0');
   const isDuplicate = isDuplicateInput?.value === 'true';
   const multiplier = parseFloat(duplicateMultiplierInput?.value || '1') || 1;

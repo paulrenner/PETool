@@ -1519,6 +1519,9 @@ function selectSearchableOption(
   const value = option.dataset.value || '';
   hiddenInput.value = value;
 
+  // Dispatch change event so listeners can react
+  hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+
   // Update display
   const display = container.querySelector('.searchable-select-display');
   if (display) {
