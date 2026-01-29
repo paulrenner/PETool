@@ -5,14 +5,34 @@ import { parseCurrency } from '../utils/formatting';
 import { calculateIRR, calculateMOIC, type IRRCashFlow } from './irr';
 
 /**
+ * Parse currency with logging for failures.
+ * Logs a warning if parseCurrency returns null on non-empty input.
+ */
+function safeParseCurrency(value: unknown, context: string): number {
+  const result = parseCurrency(value);
+  if (result === null && value != null && value !== '' && value !== 0) {
+    console.warn(`Currency parse failed (${context}):`, value);
+  }
+  return result || 0;
+}
+
+/**
+ * Parse date string to timestamp, forcing local timezone interpretation.
+ * Appends T00:00:00 to prevent JavaScript from parsing date-only strings as UTC.
+ */
+function parseDateLocal(dateStr: string): Date {
+  return new Date(dateStr + 'T00:00:00');
+}
+
+/**
  * Get vintage year (first contribution year)
  */
 export function getVintageYear(fund: Fund): number | null {
   const contributions = (fund.cashFlows || [])
     .filter((cf) => cf.type === 'Contribution' && isValidDate(cf.date))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .sort((a, b) => parseDateLocal(a.date).getTime() - parseDateLocal(b.date).getTime());
 
-  return contributions.length > 0 ? new Date(contributions[0]!.date + 'T00:00:00').getFullYear() : null;
+  return contributions.length > 0 ? parseDateLocal(contributions[0]!.date).getFullYear() : null;
 }
 
 /**
@@ -30,9 +50,9 @@ export function getTotalByType(
       (cf) =>
         cf.type === type &&
         isValidDate(cf.date) &&
-        (!cutoffDate || new Date(cf.date) <= cutoffDate)
+        (!cutoffDate || parseDateLocal(cf.date) <= cutoffDate)
     )
-    .reduce((sum, cf) => sum + Math.abs(parseCurrency(cf.amount) || 0), 0);
+    .reduce((sum, cf) => sum + Math.abs(safeParseCurrency(cf.amount, 'cash flow amount')), 0);
 }
 
 /**
@@ -47,24 +67,24 @@ export function getTotalByType(
  */
 export function getLatestNav(fund: Fund, cutoffDate?: Date): number {
   const navs = (fund.monthlyNav || [])
-    .filter((n) => isValidDate(n.date) && (!cutoffDate || new Date(n.date) <= cutoffDate))
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .filter((n) => isValidDate(n.date) && (!cutoffDate || parseDateLocal(n.date) <= cutoffDate))
+    .sort((a, b) => parseDateLocal(b.date).getTime() - parseDateLocal(a.date).getTime());
 
   if (navs.length === 0) return 0;
 
   const latestNav = navs[0]!;
-  let navAmount = parseCurrency(latestNav.amount) || 0;
-  const navDate = new Date(latestNav.date);
+  let navAmount = safeParseCurrency(latestNav.amount, 'NAV amount');
+  const navDate = parseDateLocal(latestNav.date);
 
   // Adjust for cash flows after NAV date
   const subsequentFlows = (fund.cashFlows || []).filter((cf) => {
     if (!isValidDate(cf.date)) return false;
-    const cfDate = new Date(cf.date);
+    const cfDate = parseDateLocal(cf.date);
     return cfDate > navDate && (!cutoffDate || cfDate <= cutoffDate);
   });
 
   subsequentFlows.forEach((cf) => {
-    const amount = parseCurrency(cf.amount) || 0;
+    const amount = safeParseCurrency(cf.amount, 'cash flow amount');
     if (cf.type === 'Contribution') {
       // Contribution: fund receives cash → assets increase → NAV increases
       navAmount += Math.abs(amount);
@@ -83,8 +103,8 @@ export function getLatestNav(fund: Fund, cutoffDate?: Date): number {
  */
 export function getLatestNavDate(fund: Fund, cutoffDate?: Date): string | null {
   const navs = (fund.monthlyNav || [])
-    .filter((n) => isValidDate(n.date) && (!cutoffDate || new Date(n.date) <= cutoffDate))
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .filter((n) => isValidDate(n.date) && (!cutoffDate || parseDateLocal(n.date) <= cutoffDate))
+    .sort((a, b) => parseDateLocal(b.date).getTime() - parseDateLocal(a.date).getTime());
 
   return navs.length > 0 ? navs[0]!.date : null;
 }
@@ -93,18 +113,18 @@ export function getLatestNavDate(fund: Fund, cutoffDate?: Date): string | null {
  * Calculate outstanding commitment
  */
 export function getOutstandingCommitment(fund: Fund, cutoffDate?: Date): number {
-  let outstanding = parseCurrency(fund.commitment) || 0;
+  let outstanding = safeParseCurrency(fund.commitment, 'commitment');
 
   (fund.cashFlows || [])
     .filter(
       (cf) =>
         isValidDate(cf.date) &&
-        (!cutoffDate || new Date(cf.date) <= cutoffDate) &&
+        (!cutoffDate || parseDateLocal(cf.date) <= cutoffDate) &&
         cf.affectsCommitment !== false
     )
     .forEach((cf) => {
+      const amount = safeParseCurrency(cf.amount, 'cash flow amount');
       if (cf.type === 'Contribution') {
-        const amount = parseCurrency(cf.amount) || 0;
         outstanding -= Math.abs(amount);
       } else if (cf.type === 'Distribution') {
         // NOTE: This implements RECALLABLE distributions where returned capital
@@ -116,8 +136,11 @@ export function getOutstandingCommitment(fund: Fund, cutoffDate?: Date): number 
         //
         // The filter above (cf.affectsCommitment !== false) already excludes
         // distributions marked as non-recallable.
-        const amount = parseCurrency(cf.amount) || 0;
         outstanding += Math.abs(amount);
+      } else if (cf.type === 'Adjustment') {
+        // Adjustments that affect commitment reduce outstanding (like contributions).
+        // Use case: Correcting for additional capital deployed outside normal calls.
+        outstanding -= Math.abs(amount);
       }
     });
 
@@ -132,11 +155,11 @@ export function parseCashFlowsForIRR(fund: Fund, cutoffDate?: Date): IRRCashFlow
     .filter(
       (cf) =>
         isValidDate(cf.date) &&
-        (!cutoffDate || new Date(cf.date) <= cutoffDate) &&
+        (!cutoffDate || parseDateLocal(cf.date) <= cutoffDate) &&
         cf.type !== 'Adjustment' // Adjustments don't affect IRR/MOIC
     )
     .map((cf) => {
-      const amount = parseCurrency(cf.amount) || 0;
+      const amount = safeParseCurrency(cf.amount, 'cash flow amount');
       return {
         date: cf.date,
         amount: cf.type === 'Contribution' ? -Math.abs(amount) : Math.abs(amount),
@@ -147,22 +170,22 @@ export function parseCashFlowsForIRR(fund: Fund, cutoffDate?: Date): IRRCashFlow
   // IMPORTANT: Include negative NAV (unrealized losses) - excluding them inflates returns
   const nav = getLatestNav(fund, cutoffDate);
   const navs = (fund.monthlyNav || [])
-    .filter((n) => isValidDate(n.date) && (!cutoffDate || new Date(n.date) <= cutoffDate))
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .filter((n) => isValidDate(n.date) && (!cutoffDate || parseDateLocal(n.date) <= cutoffDate))
+    .sort((a, b) => parseDateLocal(b.date).getTime() - parseDateLocal(a.date).getTime());
 
   if (navs.length > 0) {
     // NAV represents current portfolio value (can be negative for impaired funds)
     flows.push({ date: navs[0]!.date, amount: nav });
   }
 
-  return flows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  return flows.sort((a, b) => parseDateLocal(a.date).getTime() - parseDateLocal(b.date).getTime());
 }
 
 /**
  * Calculate all metrics for a fund
  */
 export function calculateMetrics(fund: Fund, cutoffDate?: Date): FundMetrics {
-  const commitment = parseCurrency(fund.commitment) || 0;
+  const commitment = safeParseCurrency(fund.commitment, 'commitment');
   const calledCapital = getTotalByType(fund, 'Contribution', cutoffDate);
   const distributions = getTotalByType(fund, 'Distribution', cutoffDate);
   const nav = getLatestNav(fund, cutoffDate);
