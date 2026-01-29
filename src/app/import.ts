@@ -147,38 +147,113 @@ export async function handleImportFileSelect(event: Event): Promise<void> {
     pendingImportData = data;
 
     // Generate preview
-    const fundsCount = Array.isArray(data.funds) ? data.funds.length : (Array.isArray(data) ? data.length : 0);
+    const fundsToImport = data.funds || data;
+    const fundsCount = Array.isArray(fundsToImport) ? fundsToImport.length : 0;
     const groupsCount = data.groups?.length || 0;
     const fundNamesCount = data.fundNames?.length || 0;
 
-    if (previewContent) {
-      previewContent.innerHTML = `
-        <div style="margin-bottom: 15px;">
-          <strong>File:</strong> ${file.name}<br>
-          <strong>Size:</strong> ${(file.size / 1024).toFixed(2)} KB
-        </div>
-        <div style="margin-bottom: 15px;">
-          <strong>Contents:</strong>
+    // Check for duplicates against existing data
+    const existingFunds = await getAllFunds();
+    const existingFundKeys = new Set<string>();
+    existingFunds.forEach((f) => {
+      const key = `${f.fundName}|${f.accountNumber}`.toLowerCase();
+      existingFundKeys.add(key);
+    });
+
+    const duplicates: Array<{ fundName: string; accountNumber: string }> = [];
+    const newFunds: Array<{ fundName: string; accountNumber: string }> = [];
+
+    if (Array.isArray(fundsToImport)) {
+      for (const fund of fundsToImport) {
+        const key = `${fund.fundName}|${fund.accountNumber}`.toLowerCase();
+        if (existingFundKeys.has(key)) {
+          duplicates.push({ fundName: fund.fundName, accountNumber: fund.accountNumber });
+        } else {
+          newFunds.push({ fundName: fund.fundName, accountNumber: fund.accountNumber });
+        }
+      }
+    }
+
+    // Check for existing groups
+    const existingGroups = await getAllGroups();
+    const existingGroupNames = new Set(existingGroups.map((g) => g.name.toLowerCase()));
+    let existingGroupsCount = 0;
+    let newGroupsCount = 0;
+
+    if (data.groups && Array.isArray(data.groups)) {
+      for (const group of data.groups) {
+        if (existingGroupNames.has(group.name.toLowerCase())) {
+          existingGroupsCount++;
+        } else {
+          newGroupsCount++;
+        }
+      }
+    }
+
+    // Build preview HTML
+    let previewHtml = `
+      <div style="margin-bottom: 15px;">
+        <strong>File:</strong> ${escapeHtml(file.name)}<br>
+        <strong>Size:</strong> ${(file.size / 1024).toFixed(2)} KB
+      </div>
+      <div style="margin-bottom: 15px;">
+        <strong>Contents:</strong>
+        <ul style="margin: 10px 0 0 20px;">
+          <li>${fundsCount} fund(s)</li>
+          ${groupsCount > 0 ? `<li>${groupsCount} group(s)</li>` : ''}
+          ${fundNamesCount > 0 ? `<li>${fundNamesCount} fund name(s)</li>` : ''}
+        </ul>
+      </div>
+    `;
+
+    // Show import analysis
+    if (fundsCount > 0) {
+      previewHtml += `
+        <div style="margin-bottom: 15px; padding: 12px; background: var(--color-alt-bg); border-radius: var(--radius-sm);">
+          <strong>Import Analysis:</strong>
           <ul style="margin: 10px 0 0 20px;">
-            <li>${fundsCount} fund(s)</li>
-            ${groupsCount > 0 ? `<li>${groupsCount} group(s)</li>` : ''}
-            ${fundNamesCount > 0 ? `<li>${fundNamesCount} fund name(s)</li>` : ''}
+            <li style="color: var(--color-success);">${newFunds.length} new fund(s) will be imported</li>
+            ${duplicates.length > 0 ? `<li style="color: var(--color-warning);">${duplicates.length} duplicate(s) will be skipped</li>` : ''}
+            ${newGroupsCount > 0 ? `<li style="color: var(--color-success);">${newGroupsCount} new group(s) will be created</li>` : ''}
+            ${existingGroupsCount > 0 ? `<li style="color: var(--color-text-light);">${existingGroupsCount} existing group(s) will be matched</li>` : ''}
           </ul>
         </div>
-        ${fundsCount > 0 ? `
-          <div>
-            <strong>Sample funds:</strong>
-            <ul style="margin: 10px 0 0 20px; font-size: 0.9em;">
-              ${(data.funds || data).slice(0, 5).map((f: any) => `<li>${escapeHtml(f.fundName || '')} (${escapeHtml(f.accountNumber || '')})</li>`).join('')}
-              ${fundsCount > 5 ? `<li>... and ${fundsCount - 5} more</li>` : ''}
-            </ul>
-          </div>
-        ` : ''}
       `;
     }
 
+    // Show duplicates if any
+    if (duplicates.length > 0) {
+      previewHtml += `
+        <div style="margin-bottom: 15px;">
+          <strong style="color: var(--color-warning);">Duplicates to skip:</strong>
+          <ul style="margin: 10px 0 0 20px; font-size: 0.9em; color: var(--color-warning);">
+            ${duplicates.slice(0, 5).map((d) => `<li>${escapeHtml(d.fundName)} (${escapeHtml(d.accountNumber)})</li>`).join('')}
+            ${duplicates.length > 5 ? `<li>... and ${duplicates.length - 5} more</li>` : ''}
+          </ul>
+        </div>
+      `;
+    }
+
+    // Show sample new funds
+    if (newFunds.length > 0) {
+      previewHtml += `
+        <div>
+          <strong>New funds to import:</strong>
+          <ul style="margin: 10px 0 0 20px; font-size: 0.9em;">
+            ${newFunds.slice(0, 5).map((f) => `<li>${escapeHtml(f.fundName)} (${escapeHtml(f.accountNumber)})</li>`).join('')}
+            ${newFunds.length > 5 ? `<li>... and ${newFunds.length - 5} more</li>` : ''}
+          </ul>
+        </div>
+      `;
+    }
+
+    if (previewContent) {
+      previewContent.innerHTML = previewHtml;
+    }
+
     if (applyBtn) {
-      applyBtn.disabled = false;
+      // Only enable if there's something to import
+      applyBtn.disabled = newFunds.length === 0 && newGroupsCount === 0 && fundNamesCount === 0;
     }
   } catch (err) {
     if (previewContent) {
