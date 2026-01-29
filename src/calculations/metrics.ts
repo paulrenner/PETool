@@ -12,7 +12,7 @@ export function getVintageYear(fund: Fund): number | null {
     .filter((cf) => cf.type === 'Contribution' && isValidDate(cf.date))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  return contributions.length > 0 ? new Date(contributions[0]!.date).getFullYear() : null;
+  return contributions.length > 0 ? new Date(contributions[0]!.date + 'T00:00:00').getFullYear() : null;
 }
 
 /**
