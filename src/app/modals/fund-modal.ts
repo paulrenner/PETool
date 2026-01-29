@@ -569,7 +569,7 @@ export async function saveFundFromModal(
   const duplicateMultiplierInput = document.getElementById('duplicateMultiplier') as HTMLInputElement;
 
   let fundName = fundNameSelect?.value || '';
-  const accountNumber = accountNumberInput?.value?.trim() || '';
+  const accountNumber = (accountNumberInput?.value || '').replace(/\s/g, '');
   const groupId = fundGroupSelect?.value ? parseInt(fundGroupSelect.value) : null;
   const commitment = parseCurrency(commitmentInput?.value || '0');
   const isDuplicate = isDuplicateInput?.value === 'true';
