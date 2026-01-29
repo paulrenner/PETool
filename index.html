@@ -211,7 +211,7 @@
             <li style="color: var(--color-success);">${g.length} new fund(s) will be imported</li>
             ${f.length>0?`<li style="color: var(--color-warning);">${f.length} duplicate(s) will be skipped</li>`:""}
             ${B>0?`<li style="color: var(--color-success);">${B} new group(s) will be created</li>`:""}
-            ${N>0?`<li style="color: var(--color-text-light);">${N} existing group(s) will be matched</li>`:""}
+            ${N>0?`<li style="color: var(--color-warning);">${N} existing group(s) will be skipped</li>`:""}
           </ul>
         </div>
       `),f.length>0&&(E+=`

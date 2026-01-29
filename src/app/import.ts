@@ -215,7 +215,7 @@ export async function handleImportFileSelect(event: Event): Promise<void> {
             <li style="color: var(--color-success);">${newFunds.length} new fund(s) will be imported</li>
             ${duplicates.length > 0 ? `<li style="color: var(--color-warning);">${duplicates.length} duplicate(s) will be skipped</li>` : ''}
             ${newGroupsCount > 0 ? `<li style="color: var(--color-success);">${newGroupsCount} new group(s) will be created</li>` : ''}
-            ${existingGroupsCount > 0 ? `<li style="color: var(--color-text-light);">${existingGroupsCount} existing group(s) will be matched</li>` : ''}
+            ${existingGroupsCount > 0 ? `<li style="color: var(--color-warning);">${existingGroupsCount} existing group(s) will be skipped</li>` : ''}
           </ul>
         </div>
       `;
