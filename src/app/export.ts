@@ -72,6 +72,7 @@ export async function exportDatabase(): Promise<void> {
         await writable.write(blob);
         await writable.close();
 
+        AppState.markDataExported();
         showStatus('Data exported successfully');
         return;
       } catch (err) {
@@ -90,6 +91,7 @@ export async function exportDatabase(): Promise<void> {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
+    AppState.markDataExported();
     showStatus('Data exported successfully');
   } catch (err) {
     showStatus('Error exporting data: ' + (err as Error).message, 'error');

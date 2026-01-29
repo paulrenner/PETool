@@ -209,8 +209,44 @@ function initBackupWarningListeners(): void {
 }
 
 // ===========================
+// Export Reminder Functions
+// ===========================
+
+const EXPORT_REMINDER_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Check if we should show an export reminder
+ */
+function checkExportReminder(): void {
+  if (AppState.shouldShowExportReminder(EXPORT_REMINDER_INTERVAL)) {
+    showExportReminder();
+  }
+}
+
+/**
+ * Show a non-intrusive export reminder
+ */
+function showExportReminder(): void {
+  // Dismiss this reminder occurrence (will show again in 5 minutes if still dirty)
+  AppState.dismissExportReminder();
+
+  // Show a status message instead of a modal (less intrusive)
+  showStatus('You have unsaved changes. Consider exporting to JSON.', 'warning');
+}
+
+/**
+ * Start the export reminder interval
+ */
+function startExportReminderInterval(): void {
+  setInterval(checkExportReminder, EXPORT_REMINDER_INTERVAL);
+}
+
+// ===========================
 // Health Check Functions
 // ===========================
+
+// Cache for health check results
+let cachedHealthCheckResults: HealthCheckResult | null = null;
 
 /**
  * Show health check modal with results
@@ -218,6 +254,14 @@ function initBackupWarningListeners(): void {
 function showHealthCheckModal(): void {
   const summaryDiv = document.getElementById('healthCheckSummary');
   const resultsDiv = document.getElementById('healthCheckResults');
+
+  // Check if we can use cached results
+  if (!AppState.needsHealthCheckRefresh() && cachedHealthCheckResults) {
+    // Use cached results - no loading spinner needed
+    openModal('healthCheckModal');
+    renderHealthCheckResults(cachedHealthCheckResults);
+    return;
+  }
 
   // Show loading state
   if (summaryDiv) summaryDiv.innerHTML = '';
@@ -238,6 +282,11 @@ function showHealthCheckModal(): void {
     const groups = AppState.getGroups();
     const dismissedPairs = await getDismissedHealthIssues();
     const results = runHealthCheck(funds, groups, dismissedPairs);
+
+    // Cache results and mark health check as run
+    cachedHealthCheckResults = results;
+    AppState.markHealthCheckRun();
+
     renderHealthCheckResults(results);
   }, 50);
 }
@@ -1091,16 +1140,37 @@ function initMultiSelectDropdowns(): void {
       const target = e.target as HTMLElement;
       if (target.matches('.multi-select-search input')) {
         filterMultiSelectOptions(container as HTMLElement, (target as HTMLInputElement).value);
+        // Reset highlight when search changes
+        clearMultiSelectHighlight(container as HTMLElement);
       }
     });
 
-    // Handle dropdown keyboard
+    // Handle dropdown keyboard (arrow navigation + enter to toggle)
     dropdown.addEventListener('keydown', (e) => {
-      if ((e as KeyboardEvent).key === 'Escape') {
+      const event = e as KeyboardEvent;
+
+      if (event.key === 'Escape') {
         container.classList.remove('open');
         trigger.setAttribute('aria-expanded', 'false');
         clearMultiSelectSearch(container as HTMLElement);
+        clearMultiSelectHighlight(container as HTMLElement);
         (trigger as HTMLElement).focus();
+        return;
+      }
+
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        navigateMultiSelectOptions(container as HTMLElement, event.key === 'ArrowDown' ? 1 : -1);
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const highlighted = container.querySelector('.multi-select-option.highlighted') as HTMLElement;
+        if (highlighted && !highlighted.classList.contains('search-hidden')) {
+          toggleMultiSelectOption(container as HTMLElement, highlighted, applyFiltersDebounced);
+        }
+        return;
       }
     });
 
@@ -1115,20 +1185,16 @@ function initMultiSelectDropdowns(): void {
       const option = target.closest('.multi-select-option') as HTMLElement;
       if (option) {
         e.stopPropagation();
-        option.classList.toggle('selected');
-        const checkbox = option.querySelector('input[type="checkbox"]') as HTMLInputElement;
-        if (checkbox) checkbox.checked = option.classList.contains('selected');
-        option.setAttribute('aria-selected', option.classList.contains('selected').toString());
+        toggleMultiSelectOption(container as HTMLElement, option, applyFiltersDebounced);
+      }
+    });
 
-        // Handle cascading for group filter
-        if (container.id === 'groupFilter') {
-          const groupId = parseInt(option.getAttribute('data-value') || '0');
-          const isNowSelected = option.classList.contains('selected');
-          handleGroupFilterCascade(container as HTMLElement, groupId, isNowSelected);
-        }
-
-        updateMultiSelectDisplay(container.id);
-        applyFiltersDebounced();
+    // Handle mouseover to update highlight
+    dropdown.addEventListener('mouseover', (e) => {
+      const option = (e.target as HTMLElement).closest('.multi-select-option') as HTMLElement;
+      if (option && !option.classList.contains('search-hidden')) {
+        clearMultiSelectHighlight(container as HTMLElement);
+        option.classList.add('highlighted');
       }
     });
   });
@@ -1140,6 +1206,7 @@ function initMultiSelectDropdowns(): void {
         ms.classList.remove('open');
         ms.querySelector('.multi-select-trigger')?.setAttribute('aria-expanded', 'false');
         clearMultiSelectSearch(ms as HTMLElement);
+        clearMultiSelectHighlight(ms as HTMLElement);
       });
     }
   });
@@ -1374,6 +1441,73 @@ function selectSearchableOption(
   if (searchInput) searchInput.value = '';
   filterSearchableOptions(container, '');
   clearSearchableHighlight(container);
+}
+
+// ===========================
+// Multi-Select Keyboard Navigation Helpers
+// ===========================
+
+/**
+ * Clear highlight from all options in a multi-select
+ */
+function clearMultiSelectHighlight(container: HTMLElement): void {
+  container.querySelectorAll('.multi-select-option.highlighted').forEach((opt) => {
+    opt.classList.remove('highlighted');
+  });
+}
+
+/**
+ * Navigate through multi-select options with arrow keys
+ */
+function navigateMultiSelectOptions(container: HTMLElement, direction: number): void {
+  const options = Array.from(
+    container.querySelectorAll('.multi-select-option:not(.search-hidden)')
+  ) as HTMLElement[];
+
+  if (options.length === 0) return;
+
+  const currentHighlight = container.querySelector('.multi-select-option.highlighted') as HTMLElement;
+  let currentIndex = currentHighlight ? options.indexOf(currentHighlight) : -1;
+
+  // Clear current highlight
+  clearMultiSelectHighlight(container);
+
+  // Calculate new index
+  let newIndex = currentIndex + direction;
+  if (newIndex < 0) newIndex = options.length - 1;
+  if (newIndex >= options.length) newIndex = 0;
+
+  // Apply new highlight
+  const newOption = options[newIndex];
+  if (newOption) {
+    newOption.classList.add('highlighted');
+    // Scroll into view if needed
+    newOption.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+/**
+ * Toggle selection of highlighted option in a multi-select
+ */
+function toggleMultiSelectOption(
+  container: HTMLElement,
+  option: HTMLElement,
+  applyFilters: () => void
+): void {
+  option.classList.toggle('selected');
+  const checkbox = option.querySelector('input[type="checkbox"]') as HTMLInputElement;
+  if (checkbox) checkbox.checked = option.classList.contains('selected');
+  option.setAttribute('aria-selected', option.classList.contains('selected').toString());
+
+  // Handle cascading for group filter
+  if (container.id === 'groupFilter') {
+    const groupId = parseInt(option.getAttribute('data-value') || '0');
+    const isNowSelected = option.classList.contains('selected');
+    handleGroupFilterCascade(container, groupId, isNowSelected);
+  }
+
+  updateMultiSelectDisplay(container.id);
+  applyFilters();
 }
 
 // ===========================
@@ -2086,6 +2220,9 @@ async function init(): Promise<void> {
     setTimeout(() => {
       checkBackupReminder();
     }, 1000);
+
+    // Start export reminder interval (shows reminder every 5 minutes if data has changed)
+    startExportReminderInterval();
   } catch (err) {
     console.error('Error initializing application:', err);
     hideLoading();

@@ -26,6 +26,12 @@ class AppStateClass {
   hasUnsavedChanges = false; // For details modal
   fundModalHasUnsavedChanges = false; // For fund (add/edit) modal
 
+  // Data change tracking
+  dataVersion = 0; // Increments whenever data changes
+  lastHealthCheckVersion = -1; // Data version when health check was last run
+  dataChangedSinceLastExport = false; // Whether data has changed since last export
+  lastExportReminderTime = 0; // Timestamp of last export reminder
+
   // Cache
   metricsCache: Map<string, MetricsCacheEntry> = new Map();
   groupDescendantsCache: Map<number, number[]> = new Map();
@@ -170,6 +176,34 @@ class AppStateClass {
 
   setAbortController(controller: AbortController | null): void {
     this.abortController = controller;
+  }
+
+  // Data change tracking methods
+  markDataChanged(): void {
+    this.dataVersion++;
+    this.dataChangedSinceLastExport = true;
+  }
+
+  markDataExported(): void {
+    this.dataChangedSinceLastExport = false;
+    this.lastExportReminderTime = Date.now();
+  }
+
+  needsHealthCheckRefresh(): boolean {
+    return this.lastHealthCheckVersion !== this.dataVersion;
+  }
+
+  markHealthCheckRun(): void {
+    this.lastHealthCheckVersion = this.dataVersion;
+  }
+
+  shouldShowExportReminder(intervalMs: number): boolean {
+    if (!this.dataChangedSinceLastExport) return false;
+    return Date.now() - this.lastExportReminderTime >= intervalMs;
+  }
+
+  dismissExportReminder(): void {
+    this.lastExportReminderTime = Date.now();
   }
 }
 

@@ -98,7 +98,7 @@ export function runHealthCheck(
   }
 
   // Check for group issues
-  const groupIssues = checkGroups(groups);
+  const groupIssues = checkGroups(groups, funds);
 
   // Sort by severity (errors first, then warnings, then info)
   const severityOrder: Record<IssueSeverity, number> = { error: 0, warning: 1, info: 2 };
@@ -118,10 +118,26 @@ export function runHealthCheck(
 }
 
 /**
- * Check groups for issues (e.g., ID 0 indicating a creation bug)
+ * Check groups for issues (e.g., ID 0 indicating a creation bug, orphaned groups)
  */
-function checkGroups(groups: Group[]): GroupIssue[] {
+function checkGroups(groups: Group[], funds: Fund[]): GroupIssue[] {
   const issues: GroupIssue[] = [];
+
+  // Build a set of group IDs that have funds assigned
+  const groupsWithFunds = new Set<number>();
+  for (const fund of funds) {
+    if (fund.groupId != null) {
+      groupsWithFunds.add(fund.groupId);
+    }
+  }
+
+  // Build a set of group IDs that have child groups
+  const groupsWithChildren = new Set<number>();
+  for (const group of groups) {
+    if (group.parentGroupId != null) {
+      groupsWithChildren.add(group.parentGroupId);
+    }
+  }
 
   for (const group of groups) {
     // Check for groups with ID 0 (indicates a bug from previous version)
@@ -132,6 +148,21 @@ function checkGroups(groups: Group[]): GroupIssue[] {
         severity: 'error',
         message: 'Group has ID 0 (data corruption). Delete and recreate this group.',
       });
+    }
+
+    // Check for orphaned groups (no funds or child groups linked)
+    if (group.id != null && group.id !== 0) {
+      const hasFunds = groupsWithFunds.has(group.id);
+      const hasChildren = groupsWithChildren.has(group.id);
+
+      if (!hasFunds && !hasChildren) {
+        issues.push({
+          groupId: group.id,
+          groupName: group.name,
+          severity: 'warning',
+          message: 'Orphaned group: no investments or sub-groups assigned.',
+        });
+      }
     }
   }
 
@@ -191,10 +222,12 @@ function checkFund(fund: Fund): HealthIssue[] {
       }
     }
 
-    // Check: Duplicate cash flows (same date, type, amount)
+    // Check: Duplicate cash flows (same date, type, amount, and affectsCommitment)
     const seen = new Map<string, number>();
     for (const cf of fund.cashFlows) {
-      const key = `${cf.date}|${cf.type}|${cf.amount}`;
+      // Include affectsCommitment in the key - different values mean different cash flows
+      const affectsCommitment = cf.affectsCommitment !== false; // Default to true if undefined
+      const key = `${cf.date}|${cf.type}|${cf.amount}|${affectsCommitment}`;
       seen.set(key, (seen.get(key) || 0) + 1);
     }
     const duplicates = Array.from(seen.entries()).filter(([, count]) => count > 1);
@@ -474,8 +507,6 @@ function checkDuplicatePair(
   fund1: Fund,
   fund2: Fund
 ): { reason: string; confidence: 'high' | 'medium' | 'low' } | null {
-  const metrics1 = calculateMetrics(fund1);
-  const metrics2 = calculateMetrics(fund2);
   const sameAccountNumber =
     fund1.accountNumber &&
     fund2.accountNumber &&
@@ -487,28 +518,14 @@ function checkDuplicatePair(
     return { reason: 'Identical fund name and account number', confidence: 'high' };
   }
 
-  // Check 2: Same investor + same commitment + same vintage (different funds)
-  if (sameAccountNumber && !sameFundName) {
-    if (
-      fund1.commitment === fund2.commitment &&
-      metrics1.vintageYear === metrics2.vintageYear &&
-      metrics1.vintageYear !== null
-    ) {
-      return {
-        reason: `Same account, commitment, and vintage year (${metrics1.vintageYear})`,
-        confidence: 'high',
-      };
-    }
-  }
-
-  // Check 3: Same fund, different accounts - check if cash flows are proportional to commitment
+  // Check 2: Same fund, different accounts - check if cash flows are proportional to commitment
   // (if not proportional, there may be a data issue)
   const proportionalityCheck = checkCashFlowProportionality(fund1, fund2);
   if (proportionalityCheck) {
     return proportionalityCheck;
   }
 
-  // Check 4: Very similar names + same account = possible typo/duplicate
+  // Check 3: Very similar names + same account = possible typo/duplicate
   const similarity = calculateNameSimilarity(fund1.fundName, fund2.fundName);
   if (similarity >= 0.85 && sameAccountNumber) {
     return {

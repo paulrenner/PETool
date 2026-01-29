@@ -2,6 +2,7 @@ import type { Fund, FundNameData, Group, AuditLogEntry, AuditLogFilter, AuditEnt
 import { generateChangeSummary, formatChangeSummary } from '../types/audit';
 import { CONFIG } from './config';
 import { validateFund } from '../utils/validation';
+import { AppState } from './state';
 
 // Database instance
 let db: IDBDatabase | null = null;
@@ -265,6 +266,9 @@ export function saveFundToDB(fundData: Fund): Promise<number> {
       request.onsuccess = () => {
         const savedId = request.result as number;
 
+        // Mark data as changed for export reminders and health check cache
+        AppState.markDataChanged();
+
         // Log audit entry (async, don't wait)
         const savedFund = { ...fundData, id: savedId };
         logFundModification(
@@ -412,6 +416,9 @@ export function deleteFundFromDB(id: number): Promise<void> {
       const deleteRequest = objectStore.delete(id);
 
       deleteRequest.onsuccess = () => {
+        // Mark data as changed
+        AppState.markDataChanged();
+
         // Log audit entry (async, don't wait)
         if (fundToDelete) {
           logFundModification('DELETE', fundToDelete).catch(console.error);
@@ -495,7 +502,10 @@ export function saveFundName(nameOrObject: string | Partial<FundNameData>): Prom
     const objectStore = tx.objectStore(CONFIG.FUNDNAMES_STORE);
     const request = objectStore.put(fundNameObj);
 
-    request.onsuccess = () => resolve();
+    request.onsuccess = () => {
+      AppState.markDataChanged();
+      resolve();
+    };
     request.onerror = () => reject(request.error);
   });
 }
@@ -511,7 +521,10 @@ export function deleteFundName(name: string): Promise<void> {
     const objectStore = tx.objectStore(CONFIG.FUNDNAMES_STORE);
     const request = objectStore.delete(name);
 
-    request.onsuccess = () => resolve();
+    request.onsuccess = () => {
+      AppState.markDataChanged();
+      resolve();
+    };
     request.onerror = () => reject(request.error);
   });
 }
@@ -535,7 +548,10 @@ export function saveGroup(groupData: Omit<Group, 'id'> | Group): Promise<number>
     const objectStore = tx.objectStore(CONFIG.GROUPS_STORE);
     const request = objectStore.put(groupData);
 
-    request.onsuccess = () => resolve(request.result as number);
+    request.onsuccess = () => {
+      AppState.markDataChanged();
+      resolve(request.result as number);
+    };
     request.onerror = () => reject(request.error);
   });
 }
@@ -551,7 +567,10 @@ export function deleteGroup(id: number): Promise<void> {
     const objectStore = tx.objectStore(CONFIG.GROUPS_STORE);
     const request = objectStore.delete(id);
 
-    request.onsuccess = () => resolve();
+    request.onsuccess = () => {
+      AppState.markDataChanged();
+      resolve();
+    };
     request.onerror = () => reject(request.error);
   });
 }
@@ -584,6 +603,8 @@ export function clearAllData(): Promise<void> {
         completed++;
         if (completed === storeNames.length) {
           settled = true;
+          // Mark data as changed
+          AppState.markDataChanged();
           // Log the clear operation
           logAuditEntry({
             operation: 'CLEAR_ALL',

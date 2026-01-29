@@ -209,7 +209,8 @@
             border-color: #4A5568;
         }
 
-        [data-theme="dark"] .multi-select-option:hover {
+        [data-theme="dark"] .multi-select-option:hover,
+        [data-theme="dark"] .multi-select-option.highlighted {
             background: #374151;
         }
 
@@ -1095,8 +1096,10 @@
             transition: background 0.15s ease;
         }
 
-        .multi-select-option:hover {
+        .multi-select-option:hover,
+        .multi-select-option.highlighted {
             background: var(--color-alt-bg);
+            outline: none;
         }
 
         .multi-select-option.selected {
