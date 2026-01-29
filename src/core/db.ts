@@ -856,6 +856,50 @@ export function dismissHealthIssue(fund1Id: number, fund2Id: number, reason: str
 }
 
 /**
+ * Dismiss an individual fund health issue (warning/info)
+ * Uses fund1Id for the fund, fund2Id = 0 to distinguish from duplicate pairs
+ */
+export function dismissFundIssue(fundId: number, category: string, message: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      reject(new Error('Database not initialized'));
+      return;
+    }
+
+    if (!db.objectStoreNames.contains(CONFIG.DISMISSED_ISSUES_STORE)) {
+      reject(new Error('Dismissed issues store not available'));
+      return;
+    }
+
+    const dismissedIssue: Omit<DismissedHealthIssue, 'id'> = {
+      fund1Id: fundId,
+      fund2Id: 0, // 0 indicates this is a fund issue, not a duplicate pair
+      category,
+      message,
+      reason: `${category}: ${message}`,
+      dismissedAt: new Date().toISOString(),
+    };
+
+    const tx = db.transaction([CONFIG.DISMISSED_ISSUES_STORE], 'readwrite');
+    const store = tx.objectStore(CONFIG.DISMISSED_ISSUES_STORE);
+    const request = store.add(dismissedIssue);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+/**
+ * Check if a fund issue is dismissed
+ */
+export async function isFundIssueDismissed(fundId: number, category: string, message: string): Promise<boolean> {
+  const dismissed = await getDismissedHealthIssues();
+  return dismissed.some(
+    (d) => d.fund1Id === fundId && d.fund2Id === 0 && d.category === category && d.message === message
+  );
+}
+
+/**
  * Undismiss a health check issue (remove from dismissed list)
  */
 export function undismissHealthIssue(fund1Id: number, fund2Id: number): Promise<void> {

@@ -68,9 +68,9 @@ export interface HealthCheckResult {
 export function runHealthCheck(
   funds: Fund[],
   groups: Group[] = [],
-  dismissedPairs: DismissedHealthIssue[] = []
+  dismissedIssues: DismissedHealthIssue[] = []
 ): HealthCheckResult {
-  const issues: HealthIssue[] = [];
+  let issues: HealthIssue[] = [];
   const fundsWithIssuesSet = new Set<number>();
 
   for (const fund of funds) {
@@ -86,13 +86,21 @@ export function runHealthCheck(
   // Check for duplicate funds
   let duplicates = findDuplicateFunds(funds);
 
-  // Filter out dismissed pairs
-  if (dismissedPairs.length > 0) {
+  // Filter out dismissed items
+  if (dismissedIssues.length > 0) {
+    // Filter dismissed duplicate pairs (fund2Id > 0)
     duplicates = duplicates.filter((dup) => {
       const normalizedId1 = Math.min(dup.fund1Id, dup.fund2Id);
       const normalizedId2 = Math.max(dup.fund1Id, dup.fund2Id);
-      return !dismissedPairs.some(
-        (d) => d.fund1Id === normalizedId1 && d.fund2Id === normalizedId2
+      return !dismissedIssues.some(
+        (d) => d.fund2Id > 0 && d.fund1Id === normalizedId1 && d.fund2Id === normalizedId2
+      );
+    });
+
+    // Filter dismissed fund issues (fund2Id === 0)
+    issues = issues.filter((issue) => {
+      return !dismissedIssues.some(
+        (d) => d.fund2Id === 0 && d.fund1Id === issue.fundId && d.category === issue.category && d.message === issue.message
       );
     });
   }
@@ -103,6 +111,12 @@ export function runHealthCheck(
   // Sort by severity (errors first, then warnings, then info)
   const severityOrder: Record<IssueSeverity, number> = { error: 0, warning: 1, info: 2 };
   issues.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+
+  // Recalculate fundsWithIssues after filtering
+  fundsWithIssuesSet.clear();
+  for (const issue of issues) {
+    fundsWithIssuesSet.add(issue.fundId);
+  }
 
   return {
     totalFunds: funds.length,

@@ -17,6 +17,7 @@ import {
   clearAllData,
   getDismissedHealthIssues,
   dismissHealthIssue,
+  dismissFundIssue,
 } from './core/db';
 import type { FundWithMetrics, FundNameData } from './types';
 
@@ -373,6 +374,12 @@ function renderHealthCheckResults(results: HealthCheckResult): void {
  * Render a single health issue
  */
 function renderHealthIssue(issue: HealthIssue): string {
+  // Allow dismissing warnings and info, but not errors (errors are critical)
+  const canDismiss = issue.severity === 'warning' || issue.severity === 'info';
+  const dismissButton = canDismiss
+    ? `<button class="btn-dismiss-issue btn-dismiss-fund-issue" data-fund-id="${issue.fundId}" data-category="${escapeHtml(issue.category)}" data-message="${escapeHtml(issue.message)}" title="Dismiss this issue">Dismiss</button>`
+    : '';
+
   return `
     <div class="health-issue" data-fund-id="${issue.fundId}">
       <span class="health-issue-severity ${getSeverityClass(issue.severity)}">${getSeverityLabel(issue.severity)}</span>
@@ -381,6 +388,7 @@ function renderHealthIssue(issue: HealthIssue): string {
         <div class="health-issue-message">${escapeHtml(issue.message)}</div>
         <div class="health-issue-category">${escapeHtml(issue.category)}</div>
       </div>
+      ${dismissButton}
     </div>
   `;
 }
@@ -440,8 +448,8 @@ function initHealthCheckModal(): void {
     resultsDiv.addEventListener('click', async (e) => {
       const target = e.target as HTMLElement;
 
-      // Check for dismiss button click
-      const dismissBtn = target.closest('.btn-dismiss-issue') as HTMLElement;
+      // Check for dismiss button click (duplicate pair)
+      const dismissBtn = target.closest('.btn-dismiss-issue:not(.btn-dismiss-fund-issue)') as HTMLElement;
       if (dismissBtn) {
         e.stopPropagation();
         const fund1Id = parseInt(dismissBtn.getAttribute('data-fund1-id') || '0', 10);
@@ -451,10 +459,35 @@ function initHealthCheckModal(): void {
         if (fund1Id > 0 && fund2Id > 0) {
           try {
             await dismissHealthIssue(fund1Id, fund2Id, reason);
-            // Refresh the health check modal
+            // Clear cache and refresh the health check modal
+            cachedHealthCheckResults = null;
+            AppState.markHealthCheckRun(); // Reset so it re-runs
+            (AppState as any).lastHealthCheckVersion = -1;
             showHealthCheckModal();
           } catch (err) {
             console.error('Error dismissing health issue:', err);
+          }
+        }
+        return;
+      }
+
+      // Check for dismiss button click (fund issue)
+      const dismissFundBtn = target.closest('.btn-dismiss-fund-issue') as HTMLElement;
+      if (dismissFundBtn) {
+        e.stopPropagation();
+        const fundId = parseInt(dismissFundBtn.getAttribute('data-fund-id') || '0', 10);
+        const category = dismissFundBtn.getAttribute('data-category') || '';
+        const message = dismissFundBtn.getAttribute('data-message') || '';
+
+        if (fundId > 0 && category && message) {
+          try {
+            await dismissFundIssue(fundId, category, message);
+            // Clear cache and refresh the health check modal
+            cachedHealthCheckResults = null;
+            (AppState as any).lastHealthCheckVersion = -1;
+            showHealthCheckModal();
+          } catch (err) {
+            console.error('Error dismissing fund issue:', err);
           }
         }
         return;
