@@ -90,11 +90,21 @@ export async function saveGroupFromModal(
     return;
   }
 
+  // Check for duplicate group names
+  const existingGroups = AppState.getGroups();
+  const duplicateName = existingGroups.find(
+    (g) => g.name.toLowerCase() === name.toLowerCase() && g.id !== editId
+  );
+  if (duplicateName) {
+    showStatus('A group with this name already exists', 'error');
+    return;
+  }
+
   try {
     showLoading('Saving...');
 
-    const groupData: Group = {
-      id: editId || 0,
+    // Build group data - omit id for new groups so IndexedDB auto-generates it
+    const groupData: Omit<Group, 'id'> & { id?: number } = {
       name,
       parentGroupId,
       type: type || undefined,

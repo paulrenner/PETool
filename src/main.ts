@@ -1377,7 +1377,7 @@ function initializeEventListeners(): void {
       const action = btn.dataset.action;
       const id = parseInt(btn.dataset.id || '0');
 
-      if (action === 'editGroup' && id) {
+      if (action === 'editGroup' && !isNaN(id)) {
         const group = AppState.getGroupByIdSync(id);
         if (group) {
           const editGroupId = document.getElementById('editGroupId') as HTMLInputElement;
