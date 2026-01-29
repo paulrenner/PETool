@@ -29,8 +29,17 @@ export function calculateIRR(cashFlows: IRRCashFlow[], guess: number = CONFIG.IR
     (a, b) => parseDateLocal(a.date) - parseDateLocal(b.date)
   );
   const firstFlow = flows[0];
-  if (!firstFlow) return null; // Safety check (should never happen given length check above)
+  const lastFlow = flows[flows.length - 1];
+  if (!firstFlow || !lastFlow) return null;
   const firstDateTime = parseDateLocal(firstFlow.date);
+  const lastDateTime = parseDateLocal(lastFlow.date);
+
+  // If all cash flows are on the same date (or within 1 day), IRR is undefined
+  // Without meaningful time elapsed, there's no annualized rate to calculate
+  const daysDiff = (lastDateTime - firstDateTime) / (24 * 60 * 60 * 1000);
+  if (daysDiff < 1) {
+    return null;
+  }
 
   const npv = (rate: number): number =>
     flows.reduce((acc, cf) => {
