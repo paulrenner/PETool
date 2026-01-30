@@ -75,8 +75,6 @@ export function initDB(): Promise<IDBDatabase> {
         dismissedStore.createIndex('fund2Id', 'fund2Id', { unique: false });
       }
 
-      console.log(`Database upgrade from v${oldVersion} to v${CONFIG.DB_VERSION}`);
-
       // Migration v5 to v6: Move tags from investments to fund names
       if (oldVersion < 6 && oldVersion >= 5) {
         if (database.objectStoreNames.contains('tags')) {

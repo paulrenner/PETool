@@ -16,6 +16,7 @@ import { parseCurrency } from '../utils/formatting';
 import { escapeHtml } from '../utils/escaping';
 import { validateFund } from '../utils/validation';
 import { showStatus, showLoading, hideLoading, openModal, closeModal } from './modals';
+import { getMultiSelectValues, setMultiSelectValues } from './filters';
 
 // Import preview data storage
 let pendingImportData: any = null;
@@ -570,7 +571,24 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
     }
 
     pendingImportData = null;
+
+    // Preserve current filter selections before refreshing
+    const savedFilters = {
+      fundFilter: getMultiSelectValues('fundFilter'),
+      accountFilter: getMultiSelectValues('accountFilter'),
+      groupFilter: getMultiSelectValues('groupFilter'),
+      tagFilter: getMultiSelectValues('tagFilter'),
+      vintageFilter: getMultiSelectValues('vintageFilter'),
+    };
+
     await onComplete();
+
+    // Restore filter selections after refresh
+    setMultiSelectValues('fundFilter', savedFilters.fundFilter);
+    setMultiSelectValues('accountFilter', savedFilters.accountFilter);
+    setMultiSelectValues('groupFilter', savedFilters.groupFilter);
+    setMultiSelectValues('tagFilter', savedFilters.tagFilter);
+    setMultiSelectValues('vintageFilter', savedFilters.vintageFilter);
   } catch (err) {
     showStatus('Error importing data: ' + (err as Error).message, 'error');
     console.error('Error importing data:', err);

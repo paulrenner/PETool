@@ -2325,7 +2325,6 @@ async function init(): Promise<void> {
     await renderTable();
 
     hideLoading();
-    console.log('PE Fund Manager initialized successfully');
 
     // Check backup reminder after a short delay (don't interfere with initial load)
     setTimeout(() => {
