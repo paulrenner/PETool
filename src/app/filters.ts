@@ -119,6 +119,10 @@ export function populateMultiSelect(
   const dropdown = container.querySelector('.multi-select-dropdown');
   if (!dropdown) return;
 
+  // Preserve search state before rebuilding
+  const existingSearchInput = dropdown.querySelector('.multi-select-search input') as HTMLInputElement;
+  const preservedSearch = existingSearchInput?.value || '';
+
   let seenTopLevelGroup = false;
   const optionsHtml = options
     .map((opt) => {
@@ -154,11 +158,17 @@ export function populateMultiSelect(
 
   dropdown.innerHTML = `
     <div class="multi-select-search">
-      <input type="text" placeholder="Search..." aria-label="Search options">
+      <input type="text" placeholder="Search..." aria-label="Search options" value="${escapeHtml(preservedSearch)}">
+      <button type="button" class="multi-select-all-btn" title="Select all visible options">Select All</button>
     </div>
     <div class="multi-select-options">${optionsHtml}</div>
     <div class="multi-select-no-results">No matches found</div>
   `;
+
+  // Restore search filter if there was one
+  if (preservedSearch) {
+    filterMultiSelectOptions(container, preservedSearch);
+  }
 
   updateMultiSelectDisplay(id);
 }
@@ -201,6 +211,24 @@ export function clearMultiSelectSearch(container: HTMLElement): void {
     searchInput.value = '';
   }
   filterMultiSelectOptions(container, '');
+}
+
+/**
+ * Select all visible (non-hidden) options in a multi-select dropdown
+ */
+export function selectAllVisibleOptions(container: HTMLElement): void {
+  const optionsContainer = container.querySelector('.multi-select-options');
+  if (!optionsContainer) return;
+
+  const visibleOptions = optionsContainer.querySelectorAll('.multi-select-option:not(.search-hidden)');
+  visibleOptions.forEach((option) => {
+    option.classList.add('selected');
+    const checkbox = option.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    if (checkbox) checkbox.checked = true;
+    option.setAttribute('aria-selected', 'true');
+  });
+
+  updateMultiSelectDisplay(container.id);
 }
 
 /**

@@ -250,6 +250,18 @@
             border-color: var(--color-action);
         }
 
+        [data-theme="dark"] .multi-select-all-btn {
+            background: #374151;
+            border-color: #4A5568;
+            color: var(--color-text);
+        }
+
+        [data-theme="dark"] .multi-select-all-btn:hover {
+            background: var(--color-action);
+            border-color: var(--color-action);
+            color: white;
+        }
+
         /* Portfolio Summary Stats */
         .portfolio-summary {
             display: flex;
@@ -1167,16 +1179,37 @@
             top: 0;
             background: var(--color-white);
             z-index: 1;
+            display: flex;
+            gap: 6px;
+            align-items: center;
         }
 
         .multi-select-search input {
-            width: 100%;
+            flex: 1;
             padding: 6px 10px;
             border: 1px solid var(--color-border-input);
             border-radius: var(--radius-sm);
             font-size: 13px;
             background: var(--color-white);
             color: var(--color-text);
+        }
+
+        .multi-select-all-btn {
+            padding: 5px 8px;
+            font-size: 11px;
+            background: var(--color-alt-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            color: var(--color-text);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: var(--transition-fast);
+        }
+
+        .multi-select-all-btn:hover {
+            background: var(--color-action);
+            border-color: var(--color-action);
+            color: white;
         }
 
         .multi-select-search input:focus {

@@ -41,6 +41,7 @@ import {
   updateMultiSelectDisplay,
   filterMultiSelectOptions,
   clearMultiSelectSearch,
+  selectAllVisibleOptions,
   applyCurrentFilters,
   resetFilters,
   updateActiveFiltersIndicator,
@@ -1277,6 +1278,25 @@ function initMultiSelectDropdowns(): void {
     // Handle option clicks
     dropdown.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
+
+      // Handle "Select All" button click
+      if (target.closest('.multi-select-all-btn')) {
+        e.stopPropagation();
+        selectAllVisibleOptions(container as HTMLElement);
+
+        // Handle cascading for group filter if needed
+        if (container.id === 'groupFilter') {
+          const selectedOptions = container.querySelectorAll('.multi-select-option.selected');
+          selectedOptions.forEach((opt) => {
+            const groupId = parseInt((opt as HTMLElement).getAttribute('data-value') || '0');
+            handleGroupFilterCascade(container as HTMLElement, groupId, true);
+          });
+        }
+
+        applyFiltersDebounced();
+        return;
+      }
+
       if (target.closest('.multi-select-search')) {
         e.stopPropagation();
         return;
