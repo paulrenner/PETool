@@ -138,9 +138,10 @@ export function getOutstandingCommitment(fund: Fund, cutoffDate?: Date): number 
         // distributions marked as non-recallable.
         outstanding += Math.abs(amount);
       } else if (cf.type === 'Adjustment') {
-        // Adjustments that affect commitment reduce outstanding (like contributions).
-        // Use case: Correcting for additional capital deployed outside normal calls.
-        outstanding -= Math.abs(amount);
+        // Adjustments that affect commitment: positive reduces, negative increases.
+        // Use case: Correcting commitment tracking (e.g., +10000 reduces outstanding,
+        // -10000 increases outstanding to reverse a prior adjustment).
+        outstanding -= amount;
       }
     });
 
