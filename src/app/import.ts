@@ -110,12 +110,17 @@ export function showImportPreviewModal(): void {
   pendingImportData = null;
   const previewContent = document.getElementById('importPreviewContent');
   const applyBtn = document.getElementById('applyImportBtn') as HTMLButtonElement;
+  const fileInput = document.getElementById('importPreviewFileInput') as HTMLInputElement;
 
   if (previewContent) {
     previewContent.innerHTML = '<p style="color: var(--color-text-light);">Select a JSON file to preview...</p>';
   }
   if (applyBtn) {
     applyBtn.disabled = true;
+  }
+  // Reset file input so selecting the same file again triggers the change event
+  if (fileInput) {
+    fileInput.value = '';
   }
 
   openModal('importPreviewModal');
