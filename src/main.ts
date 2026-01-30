@@ -2015,18 +2015,41 @@ function initializeEventListeners(): void {
 
   // Sidebar - Group by Fund checkbox
   const sidebarGroupByFundCheckbox = document.getElementById('sidebarGroupByFundCheckbox');
+  const groupByFundToggle = document.getElementById('groupByFundToggle');
+
   if (sidebarGroupByFundCheckbox) {
     sidebarGroupByFundCheckbox.addEventListener('change', async () => {
       const checked = (sidebarGroupByFundCheckbox as HTMLInputElement).checked;
       localStorage.setItem(CONFIG.STORAGE_GROUP_BY_FUND, checked.toString());
+      // Sync header toggle icon
+      if (groupByFundToggle) {
+        groupByFundToggle.classList.toggle('active', checked);
+      }
       await renderTable();
     });
 
     // Restore saved preference
     const savedGroupByFund = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND);
     if (savedGroupByFund !== null) {
-      (sidebarGroupByFundCheckbox as HTMLInputElement).checked = savedGroupByFund === 'true';
+      const isGrouped = savedGroupByFund === 'true';
+      (sidebarGroupByFundCheckbox as HTMLInputElement).checked = isGrouped;
+      // Initialize header toggle icon state
+      if (groupByFundToggle && isGrouped) {
+        groupByFundToggle.classList.add('active');
+      }
     }
+  }
+
+  // Header - Group by Fund toggle button
+  if (groupByFundToggle) {
+    groupByFundToggle.addEventListener('click', async () => {
+      const sidebarCheckbox = document.getElementById('sidebarGroupByFundCheckbox') as HTMLInputElement;
+      const newState = !sidebarCheckbox?.checked;
+      if (sidebarCheckbox) sidebarCheckbox.checked = newState;
+      groupByFundToggle.classList.toggle('active', newState);
+      localStorage.setItem(CONFIG.STORAGE_GROUP_BY_FUND, newState.toString());
+      await renderTable();
+    });
   }
 
   // Sidebar - Mask Accounts checkbox

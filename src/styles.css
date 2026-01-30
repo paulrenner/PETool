@@ -2931,3 +2931,36 @@
         .table-loading-text {
             font-size: 14px;
         }
+
+        /* ===========================
+           Header Toggle Button
+           =========================== */
+        .header-toggle {
+            font-size: 14px;
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition-fast);
+            background: transparent;
+            color: var(--color-white);
+            opacity: 0.7;
+        }
+
+        .header-toggle:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .header-toggle.active {
+            background-color: var(--color-action);
+            color: white;
+            opacity: 1;
+        }
+
+        [data-theme="dark"] .header-toggle {
+            color: var(--color-text);
+        }
+
+        [data-theme="dark"] .header-toggle.active {
+            background-color: var(--color-action);
+            color: white;
+        }
