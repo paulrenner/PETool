@@ -589,6 +589,9 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
     setMultiSelectValues('groupFilter', savedFilters.groupFilter);
     setMultiSelectValues('tagFilter', savedFilters.tagFilter);
     setMultiSelectValues('vintageFilter', savedFilters.vintageFilter);
+
+    // Re-render table with restored filters applied
+    await onComplete();
   } catch (err) {
     showStatus('Error importing data: ' + (err as Error).message, 'error');
     console.error('Error importing data:', err);
