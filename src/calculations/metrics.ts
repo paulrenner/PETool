@@ -119,11 +119,22 @@ export function getOutstandingCommitment(fund: Fund, cutoffDate?: Date): number 
     .filter(
       (cf) =>
         isValidDate(cf.date) &&
-        (!cutoffDate || parseDateLocal(cf.date) <= cutoffDate) &&
-        cf.affectsCommitment !== false
+        (!cutoffDate || parseDateLocal(cf.date) <= cutoffDate)
     )
     .forEach((cf) => {
       const amount = safeParseCurrency(cf.amount, 'cash flow amount');
+
+      // Adjustments ALWAYS affect commitment - that's their only purpose
+      // (they're excluded from IRR, MOIC, NAV, and timeline)
+      if (cf.type === 'Adjustment') {
+        // Positive reduces outstanding, negative increases outstanding
+        outstanding -= amount;
+        return;
+      }
+
+      // For Contributions/Distributions, respect the affectsCommitment flag
+      if (cf.affectsCommitment === false) return;
+
       if (cf.type === 'Contribution') {
         outstanding -= Math.abs(amount);
       } else if (cf.type === 'Distribution') {
@@ -133,15 +144,7 @@ export function getOutstandingCommitment(fund: Fund, cutoffDate?: Date): number 
         //
         // For standard (non-recallable) distributions, set `affectsCommitment: false`
         // on the cash flow to prevent it from adding back to outstanding commitment.
-        //
-        // The filter above (cf.affectsCommitment !== false) already excludes
-        // distributions marked as non-recallable.
         outstanding += Math.abs(amount);
-      } else if (cf.type === 'Adjustment') {
-        // Adjustments that affect commitment: positive reduces, negative increases.
-        // Use case: Correcting commitment tracking (e.g., +10000 reduces outstanding,
-        // -10000 increases outstanding to reverse a prior adjustment).
-        outstanding -= amount;
       }
     });
 
