@@ -32,6 +32,7 @@ export {
   addCashFlowRow,
   addNavRow,
   saveDetailsFromModal,
+  updateDetailsSummary,
   getCurrentDetailsFundId,
   setCurrentActionFundId,
   getCurrentActionFundId,

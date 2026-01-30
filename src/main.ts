@@ -68,6 +68,7 @@ import {
   addCashFlowRow,
   addNavRow,
   saveDetailsFromModal,
+  updateDetailsSummary,
   showManageFundsModal,
   showManageGroupsModal,
   saveGroupFromModal,
@@ -1774,6 +1775,7 @@ function initializeEventListeners(): void {
           if (row) {
             row.remove();
             AppState.setUnsavedChanges(true);
+            updateDetailsSummary();
           }
         }
       });
@@ -1781,6 +1783,13 @@ function initializeEventListeners(): void {
       // Mark unsaved changes when inputs change
       table.addEventListener('input', () => {
         AppState.setUnsavedChanges(true);
+        updateDetailsSummary();
+      });
+
+      // Handle checkbox and select changes (change event doesn't fire for text input)
+      table.addEventListener('change', () => {
+        AppState.setUnsavedChanges(true);
+        updateDetailsSummary();
       });
     }
   });

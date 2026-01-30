@@ -989,6 +989,77 @@ export function addNavRow(): void {
 }
 
 /**
+ * Update the details modal summary based on current form values
+ * Called when cash flows or NAV entries are modified
+ */
+export async function updateDetailsSummary(): Promise<void> {
+  const detailsFundId = AppState.currentDetailsFundId;
+  if (!detailsFundId) return;
+
+  const fund = await getFundById(detailsFundId);
+  if (!fund) return;
+
+  // Collect current cash flows from form
+  const cashFlowRows = document.querySelectorAll('#cashFlowsTable tbody tr');
+  const cashFlows: CashFlow[] = [];
+
+  cashFlowRows.forEach((row) => {
+    const dateInput = row.querySelector('input[data-field="date"]') as HTMLInputElement;
+    const amountInput = row.querySelector('input[data-field="amount"]') as HTMLInputElement;
+    const typeSelect = row.querySelector('select[data-field="type"]') as HTMLSelectElement;
+    const affectsCheckbox = row.querySelector(
+      'input[data-field="affectsCommitment"]'
+    ) as HTMLInputElement;
+
+    const date = dateInput?.value || '';
+    const amount = parseCurrency(amountInput?.value || '0');
+    const type = (typeSelect?.value || 'Contribution') as CashFlow['type'];
+    const affectsCommitment = affectsCheckbox?.checked ?? true;
+
+    if (date && !isNaN(amount)) {
+      cashFlows.push({ date, amount, type, affectsCommitment });
+    }
+  });
+
+  // Collect current NAV entries from form
+  const navRows = document.querySelectorAll('#navTable tbody tr');
+  const monthlyNav: Nav[] = [];
+
+  navRows.forEach((row) => {
+    const dateInput = row.querySelector('input[data-field="date"]') as HTMLInputElement;
+    const amountInput = row.querySelector('input[data-field="amount"]') as HTMLInputElement;
+
+    const date = dateInput?.value || '';
+    const amount = parseCurrency(amountInput?.value || '0');
+
+    if (date && !isNaN(amount)) {
+      monthlyNav.push({ date, amount });
+    }
+  });
+
+  // Build temporary fund with current form values
+  const tempFund: Fund = {
+    ...fund,
+    cashFlows,
+    monthlyNav,
+  };
+
+  // Calculate and update metrics
+  const metrics = calculateMetrics(tempFund);
+  const setElement = (id: string, value: string) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
+
+  setElement('detailsSummaryCommitment', formatCurrency(fund.commitment));
+  setElement('detailsSummaryContributions', formatCurrency(metrics.calledCapital));
+  setElement('detailsSummaryDistributions', formatCurrency(metrics.distributions));
+  setElement('detailsSummaryValue', formatCurrency(metrics.nav));
+  setElement('detailsSummaryReturn', formatCurrency(metrics.investmentReturn || 0));
+  setElement('detailsSummaryOutstanding', formatCurrency(metrics.outstandingCommitment));
+}
+
+/**
  * Save details from modal
  */
 export async function saveDetailsFromModal(
