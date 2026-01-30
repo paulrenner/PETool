@@ -41,7 +41,8 @@ import {
   updateMultiSelectDisplay,
   filterMultiSelectOptions,
   clearMultiSelectSearch,
-  selectAllVisibleOptions,
+  toggleAllVisibleOptions,
+  updateSelectAllCheckbox,
   applyCurrentFilters,
   resetFilters,
   updateActiveFiltersIndicator,
@@ -1243,6 +1244,8 @@ function initMultiSelectDropdowns(): void {
         filterMultiSelectOptions(container as HTMLElement, (target as HTMLInputElement).value);
         // Reset highlight when search changes
         clearMultiSelectHighlight(container as HTMLElement);
+        // Update Select All checkbox based on new visible options
+        updateSelectAllCheckbox(container as HTMLElement);
       }
     });
 
@@ -1279,24 +1282,6 @@ function initMultiSelectDropdowns(): void {
     dropdown.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
 
-      // Handle "Select All" button click
-      if (target.closest('.multi-select-all-btn')) {
-        e.stopPropagation();
-        selectAllVisibleOptions(container as HTMLElement);
-
-        // Handle cascading for group filter if needed
-        if (container.id === 'groupFilter') {
-          const selectedOptions = container.querySelectorAll('.multi-select-option.selected');
-          selectedOptions.forEach((opt) => {
-            const groupId = parseInt((opt as HTMLElement).getAttribute('data-value') || '0');
-            handleGroupFilterCascade(container as HTMLElement, groupId, true);
-          });
-        }
-
-        applyFiltersDebounced();
-        return;
-      }
-
       if (target.closest('.multi-select-search')) {
         e.stopPropagation();
         return;
@@ -1305,6 +1290,24 @@ function initMultiSelectDropdowns(): void {
       const option = target.closest('.multi-select-option') as HTMLElement;
       if (option) {
         e.stopPropagation();
+
+        // Handle "Select All" option
+        if (option.classList.contains('multi-select-all-option')) {
+          toggleAllVisibleOptions(container as HTMLElement);
+
+          // Handle cascading for group filter if needed
+          if (container.id === 'groupFilter') {
+            const selectedOptions = container.querySelectorAll('.multi-select-option.selected:not(.multi-select-all-option)');
+            selectedOptions.forEach((opt) => {
+              const groupId = parseInt((opt as HTMLElement).getAttribute('data-value') || '0');
+              handleGroupFilterCascade(container as HTMLElement, groupId, true);
+            });
+          }
+
+          applyFiltersDebounced();
+          return;
+        }
+
         toggleMultiSelectOption(container as HTMLElement, option, applyFiltersDebounced);
       }
     });
@@ -1628,6 +1631,9 @@ function toggleMultiSelectOption(
     const isNowSelected = option.classList.contains('selected');
     handleGroupFilterCascade(container, groupId, isNowSelected);
   }
+
+  // Update Select All checkbox state
+  updateSelectAllCheckbox(container);
 
   updateMultiSelectDisplay(container.id);
   applyFilters();

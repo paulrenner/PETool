@@ -159,9 +159,14 @@ export function populateMultiSelect(
   dropdown.innerHTML = `
     <div class="multi-select-search">
       <input type="text" placeholder="Search..." aria-label="Search options" value="${escapeHtml(preservedSearch)}">
-      <button type="button" class="multi-select-all-btn" title="Select all visible options">Select All</button>
     </div>
-    <div class="multi-select-options">${optionsHtml}</div>
+    <div class="multi-select-options">
+      <div class="multi-select-option multi-select-all-option" data-value="__select_all__" role="option" aria-selected="false">
+        <input type="checkbox" tabindex="-1">
+        <label>Select All</label>
+      </div>
+      ${optionsHtml}
+    </div>
     <div class="multi-select-no-results">No matches found</div>
   `;
 
@@ -214,21 +219,72 @@ export function clearMultiSelectSearch(container: HTMLElement): void {
 }
 
 /**
- * Select all visible (non-hidden) options in a multi-select dropdown
+ * Toggle all visible (non-hidden) options in a multi-select dropdown
+ * If all visible are selected, deselect all. Otherwise, select all.
  */
-export function selectAllVisibleOptions(container: HTMLElement): void {
+export function toggleAllVisibleOptions(container: HTMLElement): void {
   const optionsContainer = container.querySelector('.multi-select-options');
   if (!optionsContainer) return;
 
-  const visibleOptions = optionsContainer.querySelectorAll('.multi-select-option:not(.search-hidden)');
+  // Get visible options (excluding the Select All option itself)
+  const visibleOptions = optionsContainer.querySelectorAll(
+    '.multi-select-option:not(.search-hidden):not(.multi-select-all-option)'
+  );
+
+  // Check if all visible options are currently selected
+  const allSelected = Array.from(visibleOptions).every((opt) => opt.classList.contains('selected'));
+
+  // Toggle: if all selected, deselect all; otherwise select all
+  const shouldSelect = !allSelected;
+
   visibleOptions.forEach((option) => {
-    option.classList.add('selected');
+    if (shouldSelect) {
+      option.classList.add('selected');
+    } else {
+      option.classList.remove('selected');
+    }
     const checkbox = option.querySelector('input[type="checkbox"]') as HTMLInputElement;
-    if (checkbox) checkbox.checked = true;
-    option.setAttribute('aria-selected', 'true');
+    if (checkbox) checkbox.checked = shouldSelect;
+    option.setAttribute('aria-selected', shouldSelect.toString());
   });
 
+  updateSelectAllCheckbox(container);
   updateMultiSelectDisplay(container.id);
+}
+
+/**
+ * Update the "Select All" checkbox state based on visible options
+ */
+export function updateSelectAllCheckbox(container: HTMLElement): void {
+  const selectAllOption = container.querySelector('.multi-select-all-option');
+  if (!selectAllOption) return;
+
+  const optionsContainer = container.querySelector('.multi-select-options');
+  if (!optionsContainer) return;
+
+  // Get visible options (excluding Select All)
+  const visibleOptions = optionsContainer.querySelectorAll(
+    '.multi-select-option:not(.search-hidden):not(.multi-select-all-option)'
+  );
+
+  if (visibleOptions.length === 0) {
+    // No visible options, uncheck Select All
+    selectAllOption.classList.remove('selected');
+    const checkbox = selectAllOption.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    if (checkbox) checkbox.checked = false;
+    return;
+  }
+
+  const allSelected = Array.from(visibleOptions).every((opt) => opt.classList.contains('selected'));
+
+  if (allSelected) {
+    selectAllOption.classList.add('selected');
+  } else {
+    selectAllOption.classList.remove('selected');
+  }
+
+  const checkbox = selectAllOption.querySelector('input[type="checkbox"]') as HTMLInputElement;
+  if (checkbox) checkbox.checked = allSelected;
 }
 
 /**
