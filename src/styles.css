@@ -163,15 +163,21 @@
 
         [data-theme="dark"] .details-table th {
             background-color: #374151;
-            border-color: #4A5568;
-        }
-
-        [data-theme="dark"] .details-table td {
-            border-color: #4A5568;
+            border-bottom-color: #4A5568;
         }
 
         [data-theme="dark"] .details-table tbody tr:nth-child(even) {
             background-color: #1F2937;
+        }
+
+        [data-theme="dark"] .details-table input:hover,
+        [data-theme="dark"] .details-table select:hover {
+            border-bottom-color: #4A5568;
+        }
+
+        [data-theme="dark"] .details-table input:focus,
+        [data-theme="dark"] .details-table select:focus {
+            border-bottom-color: var(--color-action);
         }
 
         [data-theme="dark"] .group-item,
@@ -2242,14 +2248,15 @@
             color: var(--color-white);
             padding: 6px 8px;
             text-align: left;
-            border: 1px solid var(--color-primary);
+            border: none;
+            border-bottom: 2px solid var(--color-primary);
             font-weight: 500;
             font-size: 0.85em;
         }
 
         .details-table td {
-            padding: 4px;
-            border: 1px solid var(--color-border);
+            padding: 6px 8px;
+            border: none;
         }
 
         .details-table tbody tr:nth-child(even) {
@@ -2259,10 +2266,24 @@
         .details-table input,
         .details-table select {
             padding: 6px 8px;
-            border: 1px solid var(--color-border-input);
-            border-radius: var(--radius-sm);
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid transparent;
+            border-radius: 0;
             font-size: 1em;
             box-sizing: border-box;
+            transition: border-color 0.15s ease;
+        }
+
+        .details-table input:hover,
+        .details-table select:hover {
+            border-bottom-color: var(--color-border-input);
+        }
+
+        .details-table input:focus,
+        .details-table select:focus {
+            border-bottom-color: var(--color-action);
+            outline: none;
         }
 
         .details-table input[type="number"],
@@ -2330,6 +2351,7 @@
         #navTable th:nth-child(2),
         #navTable td:nth-child(2) {
             width: 140px;
+            text-align: right;
         }
 
         #navTable th:nth-child(3),
