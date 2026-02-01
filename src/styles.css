@@ -2275,6 +2275,7 @@
             border: none;
             border-bottom: 1px solid transparent;
             border-radius: 0;
+            font-family: inherit;
             font-size: 1em;
             box-sizing: border-box;
             transition: border-color 0.15s ease;
