@@ -16,7 +16,7 @@ import { calculateMetrics } from '../../calculations';
 import { escapeHtml, escapeAttribute } from '../../utils/escaping';
 import { formatCurrency, parseCurrency, formatNumberWithCommas } from '../../utils/formatting';
 import { buildGroupsTree } from '../filters';
-import { showStatus, showLoading, hideLoading, showConfirm, openModal, closeModal } from './common';
+import { showStatus, showLoading, hideLoading, showConfirm, openModal, closeModal, setFieldError, clearFieldError, clearFormErrors } from './common';
 import type { Group } from '../../types';
 
 // ===========================
@@ -47,9 +47,11 @@ export function initFundFormChangeTracking(): void {
     if (input) {
       input.addEventListener('input', () => {
         AppState.setFundModalUnsavedChanges(true);
+        clearFieldError(id); // Clear error when user types
       });
       input.addEventListener('change', () => {
         AppState.setFundModalUnsavedChanges(true);
+        clearFieldError(id); // Clear error when user changes selection
       });
     }
   });
@@ -541,7 +543,7 @@ export async function showAddFundModal(): Promise<void> {
   if (fundIdInput) fundIdInput.value = '';
   if (isDuplicateInput) isDuplicateInput.value = '';
   if (saveFundBtn) saveFundBtn.textContent = 'Save';
-  if (multiplierContainer) multiplierContainer.style.display = 'none';
+  if (multiplierContainer) multiplierContainer.classList.add('hidden');
 
   // Reset form
   const form = document.getElementById('fundForm') as HTMLFormElement;
@@ -580,7 +582,7 @@ export async function showEditFundModal(fundId: number): Promise<void> {
   if (fundIdInput) fundIdInput.value = fundId.toString();
   if (isDuplicateInput) isDuplicateInput.value = '';
   if (saveFundBtn) saveFundBtn.textContent = 'Save';
-  if (multiplierContainer) multiplierContainer.style.display = 'none';
+  if (multiplierContainer) multiplierContainer.classList.add('hidden');
 
   // Reset auto-fill indicator (don't auto-fill when editing existing fund)
   removeGroupAutoFillIndicator();
@@ -621,7 +623,7 @@ export async function showDuplicateFundModal(fundId: number): Promise<void> {
   if (fundIdInput) fundIdInput.value = fundId.toString();
   if (isDuplicateInput) isDuplicateInput.value = 'true';
   if (saveFundBtn) saveFundBtn.textContent = 'Duplicate';
-  if (multiplierContainer) multiplierContainer.style.display = 'block';
+  if (multiplierContainer) multiplierContainer.classList.remove('hidden');
   if (duplicateMultiplierInput) duplicateMultiplierInput.value = '1';
 
   // Reset auto-fill indicator (will trigger auto-fill when user enters account number)
@@ -692,7 +694,7 @@ export async function saveFundFromModal(
       await populateFundNameDropdown();
       if (fundNameSelect) fundNameSelect.value = newName;
       const container = document.getElementById('newFundNameContainer');
-      if (container) container.style.display = 'none';
+      if (container) container.classList.add('hidden');
       if (newFundNameInput) newFundNameInput.value = '';
     } catch (err) {
       showStatus('Error creating fund name: ' + (err as Error).message, 'error');
@@ -700,19 +702,29 @@ export async function saveFundFromModal(
     }
   }
 
-  // Validation
+  // Clear previous errors
+  clearFormErrors('fundForm');
+
+  // Validation with field-level errors
+  let hasErrors = false;
+
   if (!fundName) {
-    showStatus('Please select a fund name', 'error');
-    return;
+    setFieldError('fundName', 'Please select a fund name');
+    hasErrors = true;
   }
 
   if (!accountNumber) {
-    showStatus('Please enter an account number', 'error');
-    return;
+    setFieldError('accountNumber', 'Please enter an account number');
+    hasErrors = true;
   }
 
   if (isNaN(commitment) || commitment <= 0) {
-    showStatus('Please enter a valid commitment amount', 'error');
+    setFieldError('commitment', 'Please enter a valid commitment amount');
+    hasErrors = true;
+  }
+
+  if (hasErrors) {
+    showStatus('Please fix the errors above', 'error');
     return;
   }
 

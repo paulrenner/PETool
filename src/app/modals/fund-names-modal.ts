@@ -361,7 +361,7 @@ export async function addNewFundNameInline(): Promise<void> {
 
     // Hide the new name container
     const container = document.getElementById('newFundNameContainer');
-    if (container) container.style.display = 'none';
+    if (container) container.classList.add('hidden');
     if (newNameInput) newNameInput.value = '';
 
     showStatus('Fund name added successfully');
@@ -379,7 +379,7 @@ export function cancelNewFundNameInline(): void {
   const input = document.getElementById('newFundNameInline') as HTMLInputElement;
   const fundNameSelect = document.getElementById('fundName') as HTMLSelectElement;
 
-  if (container) container.style.display = 'none';
+  if (container) container.classList.add('hidden');
   if (input) input.value = '';
   if (fundNameSelect) fundNameSelect.value = '';
 }

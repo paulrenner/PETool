@@ -1081,65 +1081,67 @@ async function handleHeaderClick(event: Event): Promise<void> {
  */
 function handleActionButtonClick(event: Event): void {
   const target = event.target as HTMLElement;
+  const button = target.closest('.table-action-btn') as HTMLElement;
+  if (!button) return;
 
-  // Handle grouped fund edit button clicks
-  const groupedEditBtn = target.closest('.grouped-fund-edit-btn') as HTMLElement;
-  if (groupedEditBtn) {
-    event.stopPropagation();
-    const fundName = groupedEditBtn.dataset.fundName;
+  event.stopPropagation();
+  const action = button.dataset.action;
+
+  // Handle edit fund name action (grouped view)
+  if (action === 'edit-fund') {
+    const fundName = button.dataset.fundName;
     if (fundName) {
       showEditFundNameModal(fundName);
     }
     return;
   }
 
-  const button = target.closest('.fund-actions-btn') as HTMLElement;
-  if (!button) return;
+  // Handle menu action (normal view)
+  if (action === 'menu') {
+    const fundId = parseInt(button.dataset.fundId || '0');
+    if (!fundId) return;
 
-  event.stopPropagation();
-  const fundId = parseInt(button.dataset.fundId || '0');
-  if (!fundId) return;
+    setCurrentActionFundId(fundId);
 
-  setCurrentActionFundId(fundId);
+    const dropdown = document.getElementById('actionDropdown') as HTMLElement;
+    if (!dropdown) return;
 
-  const dropdown = document.getElementById('actionDropdown') as HTMLElement;
-  if (!dropdown) return;
+    const rect = button.getBoundingClientRect();
 
-  const rect = button.getBoundingClientRect();
+    // Get dropdown dimensions (temporarily show to measure)
+    dropdown.style.visibility = 'hidden';
+    dropdown.classList.add('show');
+    const dropdownWidth = dropdown.offsetWidth || 160;
+    const dropdownHeight = dropdown.offsetHeight || 200;
+    dropdown.classList.remove('show');
+    dropdown.style.visibility = '';
 
-  // Get dropdown dimensions (temporarily show to measure)
-  dropdown.style.visibility = 'hidden';
-  dropdown.classList.add('show');
-  const dropdownWidth = dropdown.offsetWidth || 160;
-  const dropdownHeight = dropdown.offsetHeight || 200;
-  dropdown.classList.remove('show');
-  dropdown.style.visibility = '';
+    // Calculate position with viewport boundary checks
+    let top = rect.bottom + 2;
+    let left = rect.left - (dropdownWidth - rect.width);
 
-  // Calculate position with viewport boundary checks
-  let top = rect.bottom + 2;
-  let left = rect.left - (dropdownWidth - rect.width);
+    // Check if dropdown would go below viewport
+    if (top + dropdownHeight > window.innerHeight) {
+      // Position above the button instead
+      top = rect.top - dropdownHeight - 2;
+    }
 
-  // Check if dropdown would go below viewport
-  if (top + dropdownHeight > window.innerHeight) {
-    // Position above the button instead
-    top = rect.top - dropdownHeight - 2;
+    // Check if dropdown would go past left edge
+    if (left < 8) {
+      left = 8;
+    }
+
+    // Check if dropdown would go past right edge
+    if (left + dropdownWidth > window.innerWidth - 8) {
+      left = window.innerWidth - dropdownWidth - 8;
+    }
+
+    // Apply position (use fixed positioning for viewport-relative)
+    dropdown.style.position = 'fixed';
+    dropdown.style.top = `${top}px`;
+    dropdown.style.left = `${left}px`;
+    dropdown.classList.add('show');
   }
-
-  // Check if dropdown would go past left edge
-  if (left < 8) {
-    left = 8;
-  }
-
-  // Check if dropdown would go past right edge
-  if (left + dropdownWidth > window.innerWidth - 8) {
-    left = window.innerWidth - dropdownWidth - 8;
-  }
-
-  // Apply position (use fixed positioning for viewport-relative)
-  dropdown.style.position = 'fixed';
-  dropdown.style.top = `${top}px`;
-  dropdown.style.left = `${left}px`;
-  dropdown.classList.add('show');
 }
 
 // ===========================
@@ -1818,10 +1820,10 @@ function initializeEventListeners(): void {
       const value = (e.target as HTMLSelectElement).value;
       const newNameContainer = document.getElementById('newFundNameContainer');
       if (value === '__new__' && newNameContainer) {
-        newNameContainer.style.display = 'block';
+        newNameContainer.classList.remove('hidden');
         (document.getElementById('newFundNameInline') as HTMLInputElement)?.focus();
       } else if (newNameContainer) {
-        newNameContainer.style.display = 'none';
+        newNameContainer.classList.add('hidden');
       }
     });
   }
@@ -2041,7 +2043,7 @@ function initializeEventListeners(): void {
           if (newGroupName) newGroupName.value = group.name;
           if (newGroupType) newGroupType.value = group.type || '';
           if (saveGroupBtn) saveGroupBtn.textContent = 'Update Group';
-          if (cancelEditBtn) cancelEditBtn.style.display = 'inline-block';
+          if (cancelEditBtn) cancelEditBtn.classList.remove('hidden');
           if (groupFormTitle) groupFormTitle.textContent = 'Edit Group';
 
           // Populate parent dropdown excluding this group and its descendants
@@ -2068,7 +2070,7 @@ function initializeEventListeners(): void {
       if (newGroupType) newGroupType.value = '';
       if (saveGroupBtn) saveGroupBtn.textContent = 'Add Group';
       if (groupFormTitle) groupFormTitle.textContent = 'Add New Group';
-      cancelEditBtn.style.display = 'none';
+      cancelEditBtn.classList.add('hidden');
 
       populateGroupDropdown('newGroupParent');
     });

@@ -491,10 +491,10 @@ export function updateActiveFiltersIndicator(): void {
 
   if (activeCount > 0) {
     indicator.innerHTML = `${activeCount} filter${activeCount > 1 ? 's' : ''} active <button class="clear-filters" title="Clear all filters" aria-label="Clear all filters">&times;</button>`;
-    indicator.style.display = 'inline-flex';
+    indicator.classList.add('show');
   } else {
     indicator.innerHTML = '';
-    indicator.style.display = 'none';
+    indicator.classList.remove('show');
   }
 }
 

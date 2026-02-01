@@ -78,7 +78,7 @@ export async function showBulkCashFlowModal(): Promise<void> {
   if (typeSelect) typeSelect.value = 'Contribution';
   if (percentInput) percentInput.value = '';
   if (affectsCheckbox) affectsCheckbox.checked = true;
-  if (preview) preview.style.display = 'none';
+  if (preview) preview.classList.remove('show');
   if (applyBtn) applyBtn.disabled = true;
 
   openModal('bulkCashFlowModal');
@@ -129,7 +129,7 @@ export async function previewBulkCashFlow(): Promise<void> {
   html += `</tbody><tfoot><tr style="font-weight: bold;"><td>Total (${matchingFunds.length} investors)</td><td></td><td style="text-align: right;">${formatCurrency(displayTotal)}</td></tr></tfoot></table>`;
 
   if (previewContent) previewContent.innerHTML = html;
-  if (preview) preview.style.display = 'block';
+  if (preview) preview.classList.add('show');
   if (applyBtn) applyBtn.disabled = false;
 }
 
@@ -196,7 +196,7 @@ export async function showBulkRemoveFundModal(): Promise<void> {
   const preview = document.getElementById('bulkRemoveFundPreview');
   const applyBtn = document.getElementById('applyBulkRemoveFundBtn') as HTMLButtonElement;
 
-  if (preview) preview.style.display = 'none';
+  if (preview) preview.classList.remove('show');
   if (applyBtn) applyBtn.disabled = true;
 
   openModal('bulkRemoveFundModal');
@@ -231,7 +231,7 @@ export async function previewBulkRemoveFund(): Promise<void> {
   html += `<p style="margin-top: 10px; font-weight: bold; color: var(--color-danger);">Total: ${matchingFunds.length} investment(s) will be permanently deleted.</p>`;
 
   if (previewContent) previewContent.innerHTML = html;
-  if (preview) preview.style.display = 'block';
+  if (preview) preview.classList.add('show');
   if (applyBtn) applyBtn.disabled = false;
 }
 
@@ -280,7 +280,7 @@ export async function showBulkAssignGroupModal(): Promise<void> {
   const preview = document.getElementById('bulkAssignGroupPreview');
   const applyBtn = document.getElementById('applyBulkAssignGroupBtn') as HTMLButtonElement;
 
-  if (preview) preview.style.display = 'none';
+  if (preview) preview.classList.remove('show');
   if (applyBtn) applyBtn.disabled = true;
 
   openModal('bulkAssignGroupModal');
@@ -319,7 +319,7 @@ export async function previewBulkAssignGroup(): Promise<void> {
   html += `<p style="margin-top: 10px;">These ${matchingFunds.length} investment(s) will be assigned to: <strong>${escapeHtml(groupName)}</strong></p>`;
 
   if (previewContent) previewContent.innerHTML = html;
-  if (preview) preview.style.display = 'block';
+  if (preview) preview.classList.add('show');
   if (applyBtn) applyBtn.disabled = false;
 }
 

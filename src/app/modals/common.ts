@@ -2,10 +2,90 @@
  * Common modal utilities - status messages, loading, confirm dialogs, modal open/close
  */
 
+// Track the element that triggered the modal for focus restoration
+let previouslyFocusedElement: HTMLElement | null = null;
+
+// Track active focus trap handler for cleanup
+let activeFocusTrapHandler: ((e: KeyboardEvent) => void) | null = null;
+
+/**
+ * Get all focusable elements within a container
+ */
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  const focusableSelectors = [
+    'button:not([disabled]):not([tabindex="-1"])',
+    'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"])',
+    'select:not([disabled]):not([tabindex="-1"])',
+    'textarea:not([disabled]):not([tabindex="-1"])',
+    'a[href]:not([tabindex="-1"])',
+    '[tabindex]:not([tabindex="-1"]):not([disabled])',
+  ].join(', ');
+
+  return Array.from(container.querySelectorAll<HTMLElement>(focusableSelectors)).filter(
+    (el) => el.offsetParent !== null // Only visible elements
+  );
+}
+
+/**
+ * Set up focus trap within a modal
+ */
+function setupFocusTrap(modal: HTMLElement): void {
+  // Remove any existing focus trap
+  if (activeFocusTrapHandler) {
+    document.removeEventListener('keydown', activeFocusTrapHandler);
+  }
+
+  activeFocusTrapHandler = (e: KeyboardEvent) => {
+    if (e.key !== 'Tab') return;
+
+    const focusableElements = getFocusableElements(modal);
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (!firstElement || !lastElement) return;
+
+    if (e.shiftKey) {
+      // Shift + Tab: if on first element, go to last
+      if (document.activeElement === firstElement) {
+        e.preventDefault();
+        lastElement.focus();
+      }
+    } else {
+      // Tab: if on last element, go to first
+      if (document.activeElement === lastElement) {
+        e.preventDefault();
+        firstElement.focus();
+      }
+    }
+  };
+
+  document.addEventListener('keydown', activeFocusTrapHandler);
+}
+
+/**
+ * Remove focus trap
+ */
+function removeFocusTrap(): void {
+  if (activeFocusTrapHandler) {
+    document.removeEventListener('keydown', activeFocusTrapHandler);
+    activeFocusTrapHandler = null;
+  }
+}
+
 /**
  * Show status message
  */
 export function showStatus(message: string, type: 'success' | 'error' | 'warning' = 'success'): void {
+  // Get or create toast container
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    container.setAttribute('aria-live', 'polite');
+    document.body.appendChild(container);
+  }
+
   const statusDiv = document.createElement('div');
   statusDiv.className = `status-message ${type}`;
 
@@ -18,7 +98,7 @@ export function showStatus(message: string, type: 'success' | 'error' | 'warning
 
   statusDiv.appendChild(messageText);
   statusDiv.appendChild(closeBtn);
-  document.body.appendChild(statusDiv);
+  container.appendChild(statusDiv);
 
   // Use named handler for proper cleanup
   const handleClose = () => {
@@ -67,11 +147,15 @@ export function showConfirm(
     const messageEl = document.getElementById('confirmModalMessage');
     const confirmBtn = document.getElementById('confirmModalConfirmBtn');
     const cancelBtn = document.getElementById('confirmModalCancelBtn');
+    const closeBtn = document.getElementById('closeConfirmModalBtn');
 
     if (!modal || !titleEl || !messageEl || !confirmBtn || !cancelBtn) {
       resolve(false);
       return;
     }
+
+    // Store the currently focused element for restoration
+    const previousFocus = document.activeElement as HTMLElement;
 
     titleEl.textContent = options.title || 'Confirm';
     messageEl.textContent = message;
@@ -79,6 +163,10 @@ export function showConfirm(
     cancelBtn.textContent = options.cancelText || 'Cancel';
 
     modal.classList.add('show');
+
+    // Set up focus trap and focus the cancel button (safer default)
+    setupFocusTrap(modal);
+    requestAnimationFrame(() => cancelBtn.focus());
 
     // Use named handlers for proper cleanup
     const handleConfirm = () => {
@@ -93,27 +181,117 @@ export function showConfirm(
 
     const cleanup = () => {
       modal.classList.remove('show');
+      removeFocusTrap();
       confirmBtn.removeEventListener('click', handleConfirm);
       cancelBtn.removeEventListener('click', handleCancel);
+      if (closeBtn) closeBtn.removeEventListener('click', handleCancel);
+      // Restore focus
+      if (previousFocus && previousFocus.focus) {
+        previousFocus.focus();
+      }
     };
 
     confirmBtn.addEventListener('click', handleConfirm);
     cancelBtn.addEventListener('click', handleCancel);
+    if (closeBtn) closeBtn.addEventListener('click', handleCancel);
   });
 }
 
 /**
- * Open modal helper
+ * Set form field error state
  */
-export function openModal(modalId: string): void {
-  const modal = document.getElementById(modalId);
-  if (modal) modal.classList.add('show');
+export function setFieldError(fieldId: string, errorMessage?: string): void {
+  const field = document.getElementById(fieldId);
+  if (!field) return;
+
+  const formGroup = field.closest('.form-group');
+  if (!formGroup) return;
+
+  formGroup.classList.add('has-error');
+
+  // Add or update error message if provided
+  if (errorMessage) {
+    let errorEl = formGroup.querySelector('.error-message') as HTMLElement;
+    if (!errorEl) {
+      errorEl = document.createElement('span');
+      errorEl.className = 'error-message';
+      formGroup.appendChild(errorEl);
+    }
+    errorEl.textContent = errorMessage;
+  }
 }
 
 /**
- * Close modal helper
+ * Clear form field error state
+ */
+export function clearFieldError(fieldId: string): void {
+  const field = document.getElementById(fieldId);
+  if (!field) return;
+
+  const formGroup = field.closest('.form-group');
+  if (!formGroup) return;
+
+  formGroup.classList.remove('has-error');
+
+  const errorEl = formGroup.querySelector('.error-message');
+  if (errorEl) errorEl.textContent = '';
+}
+
+/**
+ * Clear all form errors in a form
+ */
+export function clearFormErrors(formId: string): void {
+  const form = document.getElementById(formId);
+  if (!form) return;
+
+  form.querySelectorAll('.form-group.has-error').forEach((group) => {
+    group.classList.remove('has-error');
+    const errorEl = group.querySelector('.error-message');
+    if (errorEl) errorEl.textContent = '';
+  });
+}
+
+/**
+ * Open modal helper with focus management
+ */
+export function openModal(modalId: string): void {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+
+  // Store the currently focused element for restoration
+  previouslyFocusedElement = document.activeElement as HTMLElement;
+
+  modal.classList.add('show');
+
+  // Set up focus trap
+  setupFocusTrap(modal);
+
+  // Focus the first focusable element (or close button) after a brief delay
+  // to allow the modal to become visible
+  requestAnimationFrame(() => {
+    const focusableElements = getFocusableElements(modal);
+    const firstElement = focusableElements[0];
+    if (firstElement) {
+      firstElement.focus();
+    }
+  });
+}
+
+/**
+ * Close modal helper with focus restoration
  */
 export function closeModal(modalId: string): void {
   const modal = document.getElementById(modalId);
-  if (modal) modal.classList.remove('show');
+  if (!modal) return;
+
+  modal.classList.remove('show');
+
+  // Remove focus trap
+  removeFocusTrap();
+
+  // Restore focus to the previously focused element
+  if (previouslyFocusedElement && previouslyFocusedElement.focus) {
+    previouslyFocusedElement.focus();
+    previouslyFocusedElement = null;
+  }
 }
