@@ -2924,10 +2924,6 @@
         /* ===========================
            Group by Fund Feature
            =========================== */
-        .grouped-fund-row {
-            background: var(--color-alt-bg);
-        }
-
         .grouped-fund-row td:first-child {
             font-weight: 600;
         }
@@ -2936,10 +2932,6 @@
             font-size: 0.85em;
             color: var(--color-text-light);
             font-weight: normal;
-        }
-
-        [data-theme="dark"] .grouped-fund-row {
-            background: var(--color-hover-bg);
         }
 
         /* ===========================
