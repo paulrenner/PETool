@@ -52,10 +52,11 @@ export function getMultiSelectValues(id: string): string[] {
 export function setMultiSelectValues(id: string, values: string[]): void {
   const container = document.getElementById(id);
   if (!container) return;
+  const valuesSet = new Set(values);
   const options = container.querySelectorAll('.multi-select-option');
   options.forEach((opt) => {
     const el = opt as HTMLElement;
-    if (values.includes(el.dataset.value || '')) {
+    if (valuesSet.has(el.dataset.value || '')) {
       opt.classList.add('selected');
       const checkbox = opt.querySelector('input[type="checkbox"]') as HTMLInputElement;
       if (checkbox) checkbox.checked = true;
@@ -287,10 +288,37 @@ export function updateSelectAllCheckbox(container: HTMLElement): void {
   if (checkbox) checkbox.checked = allSelected;
 }
 
+// Cache for group tree to avoid rebuilding on every filter update
+let cachedGroupTree: Array<Group & { children: any[] }> | null = null;
+let cachedGroupsRef: Group[] | null = null;
+
 /**
  * Build a tree structure from flat groups array, sorted alphabetically
+ * Uses caching since group hierarchy rarely changes
  */
 export function buildGroupsTree(
+  groups: Group[],
+  parentId: number | null
+): Array<Group & { children: Array<Group & { children: any[] }> }> {
+  // For root-level call (parentId === null), use caching
+  if (parentId === null) {
+    // Return cached tree if groups array reference hasn't changed
+    if (cachedGroupTree && cachedGroupsRef === groups) {
+      return cachedGroupTree;
+    }
+    // Build new tree and cache it
+    cachedGroupsRef = groups;
+    cachedGroupTree = buildGroupsTreeInternal(groups, null);
+    return cachedGroupTree;
+  }
+  // Non-root calls go directly to internal function
+  return buildGroupsTreeInternal(groups, parentId);
+}
+
+/**
+ * Internal tree building function (no caching)
+ */
+function buildGroupsTreeInternal(
   groups: Group[],
   parentId: number | null
 ): Array<Group & { children: Array<Group & { children: any[] }> }> {
@@ -299,8 +327,16 @@ export function buildGroupsTree(
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((g) => ({
       ...g,
-      children: buildGroupsTree(groups, g.id),
+      children: buildGroupsTreeInternal(groups, g.id),
     }));
+}
+
+/**
+ * Clear the group tree cache (call when groups are modified)
+ */
+export function clearGroupTreeCache(): void {
+  cachedGroupTree = null;
+  cachedGroupsRef = null;
 }
 
 /**
@@ -560,9 +596,11 @@ export function updateFilterDropdowns(allFunds: Fund[]): void {
     return funds.filter((f) => accounts.has(f.accountNumber));
   };
 
+  // Pre-filter by groups once (common operation for fund, account, vintage dropdowns)
+  const fundsFilteredByGroups = filterByGroups(allFunds, groupFilterSet);
+
   // 1. Update FUND dropdown
-  let fundsForFundDropdown = allFunds;
-  fundsForFundDropdown = filterByGroups(fundsForFundDropdown, groupFilterSet);
+  let fundsForFundDropdown = fundsFilteredByGroups;
   fundsForFundDropdown = filterByAccounts(fundsForFundDropdown, accountSet);
   fundsForFundDropdown = filterByVintages(fundsForFundDropdown, vintageSet);
 
@@ -573,8 +611,7 @@ export function updateFilterDropdowns(allFunds: Fund[]): void {
   populateMultiSelect('fundFilter', fundOptions, validFundValues);
 
   // 2. Update ACCOUNT dropdown
-  let fundsForAccountDropdown = allFunds;
-  fundsForAccountDropdown = filterByGroups(fundsForAccountDropdown, groupFilterSet);
+  let fundsForAccountDropdown = fundsFilteredByGroups;
   fundsForAccountDropdown = filterByFunds(fundsForAccountDropdown, fundSet);
   fundsForAccountDropdown = filterByVintages(fundsForAccountDropdown, vintageSet);
 
@@ -643,8 +680,7 @@ export function updateFilterDropdowns(allFunds: Fund[]): void {
   populateMultiSelect('groupFilter', groupOptions, validGroupValues);
 
   // 4. Update VINTAGE dropdown
-  let fundsForVintageDropdown = allFunds;
-  fundsForVintageDropdown = filterByGroups(fundsForVintageDropdown, groupFilterSet);
+  let fundsForVintageDropdown = fundsFilteredByGroups;
   fundsForVintageDropdown = filterByFunds(fundsForVintageDropdown, fundSet);
   fundsForVintageDropdown = filterByAccounts(fundsForVintageDropdown, accountSet);
 

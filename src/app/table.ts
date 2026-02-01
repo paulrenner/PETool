@@ -5,7 +5,7 @@
 import type { Fund, FundMetrics, FundWithMetrics, SortColumn, CashFlow, Nav } from '../types';
 import { AppState } from '../core/state';
 import { calculateMetricsCached, calculateIRR, calculateMOIC, parseCashFlowsForIRR, calculateMetrics } from '../calculations';
-import { escapeHtml } from '../utils/escaping';
+import { escapeHtml, escapeAttribute } from '../utils/escaping';
 import { formatCurrency } from '../utils/formatting';
 
 /**
@@ -165,7 +165,7 @@ export function renderFundRow(
     <td class="number ${m.irr !== null && m.irr >= 0 ? 'positive' : 'negative'}">${formatIRR(m.irr)}</td>
     <td class="number">${formatCurrency(m.outstandingCommitment)}</td>
     <td class="center">
-      <button class="btn-icon fund-actions-btn" data-fund-id="${fund.id}" title="Actions" aria-label="Actions for ${escapeHtml(fund.fundName)}">⚙</button>
+      <button class="btn-icon fund-actions-btn" data-fund-id="${escapeAttribute(String(fund.id))}" title="Actions" aria-label="Actions for ${escapeHtml(fund.fundName)}">⚙</button>
     </td>
   `;
 }

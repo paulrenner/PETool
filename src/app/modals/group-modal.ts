@@ -12,7 +12,7 @@ import {
   saveGroup,
   deleteGroup,
 } from '../../core/db';
-import { escapeHtml } from '../../utils/escaping';
+import { escapeHtml, escapeAttribute } from '../../utils/escaping';
 import { buildGroupsTree } from '../filters';
 import { showStatus, showLoading, hideLoading, showConfirm, openModal, closeModal } from './common';
 import { populateGroupDropdown } from './fund-modal';
@@ -48,8 +48,8 @@ export async function showManageGroupsModal(): Promise<void> {
             ${node.type ? `<span style="font-size: 0.85em; color: var(--color-text-light);"> (${escapeHtml(node.type)})</span>` : ''}
           </div>
           <div>
-            <button class="btn-icon" data-action="editGroup" data-id="${node.id}" title="Edit">✎</button>
-            <button class="btn-icon danger" data-action="deleteGroup" data-id="${node.id}" title="Delete">×</button>
+            <button class="btn-icon" data-action="editGroup" data-id="${escapeAttribute(String(node.id))}" title="Edit">✎</button>
+            <button class="btn-icon danger" data-action="deleteGroup" data-id="${escapeAttribute(String(node.id))}" title="Delete">×</button>
           </div>
         </div>
       </div>

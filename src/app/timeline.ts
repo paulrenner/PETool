@@ -438,7 +438,8 @@ export function renderTimelineTable(funds: Fund[]): void {
   }
 
   if (!funds || funds.length === 0) {
-    container.innerHTML = '<p class="timeline-no-data">No investments to display. <a href="#" onclick="showAddFundModal(); return false;" style="color: var(--color-action);">Add your first investment</a> with cash flows to see the timeline.</p>';
+    container.innerHTML = '<p class="timeline-no-data">No investments to display. <a href="#" data-action="showAddFundModal" style="color: var(--color-action);">Add your first investment</a> with cash flows to see the timeline.</p>';
+    attachTimelineActionListeners(container);
     return;
   }
 
@@ -533,19 +534,37 @@ export function renderTimelineTable(funds: Fund[]): void {
         : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
       footnoteHtml += `<p style="margin: 0;">${footnoteText}</p>`;
     } else if (hasEstimatedData && !yearRange.firstProjectedYear) {
-      footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing term start date (spread over 4 years). <a href="#" onclick="showManageFundsModal(); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
+      footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing term start date (spread over 4 years). <a href="#" data-action="showManageFundsModal" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
     } else if (yearRange.firstProjectedYear && hasEstimatedData) {
       const footnoteText = cutoffDate
         ? `* Projected values (after ${escapeHtml(cutoffDateValue || '')}) based on remaining uncalled capital distributed linearly across investment period`
         : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
       footnoteHtml += `<p style="margin: 0 0 4px 0;">${footnoteText}</p>`;
-      footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing term start date (spread over 4 years). <a href="#" onclick="showManageFundsModal(); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
+      footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing term start date (spread over 4 years). <a href="#" data-action="showManageFundsModal" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
     }
     footnoteHtml += '</div>';
     html += footnoteHtml;
   }
 
   container.innerHTML = html;
+  attachTimelineActionListeners(container);
+}
+
+/**
+ * Attach event listeners for timeline action links (avoids inline onclick)
+ */
+function attachTimelineActionListeners(container: HTMLElement): void {
+  container.querySelectorAll('a[data-action]').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const action = (link as HTMLElement).dataset.action;
+      if (action === 'showAddFundModal' && typeof (window as any).showAddFundModal === 'function') {
+        (window as any).showAddFundModal();
+      } else if (action === 'showManageFundsModal' && typeof (window as any).showManageFundsModal === 'function') {
+        (window as any).showManageFundsModal();
+      }
+    });
+  });
 }
 
 /**

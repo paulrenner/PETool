@@ -25,14 +25,18 @@ function parseDateLocal(dateStr: string): number {
 export function calculateIRR(cashFlows: IRRCashFlow[], guess: number = CONFIG.IRR_GUESS): number | null {
   if (!Array.isArray(cashFlows) || cashFlows.length < 2) return null;
 
-  const flows = [...cashFlows].sort(
-    (a, b) => parseDateLocal(a.date) - parseDateLocal(b.date)
-  );
-  const firstFlow = flows[0];
-  const lastFlow = flows[flows.length - 1];
+  // Pre-parse all dates once to avoid repeated parsing in the Newton-Raphson loop
+  const flowsWithTime = cashFlows.map((cf) => ({
+    amount: cf.amount,
+    timestamp: parseDateLocal(cf.date),
+  }));
+  flowsWithTime.sort((a, b) => a.timestamp - b.timestamp);
+
+  const firstFlow = flowsWithTime[0];
+  const lastFlow = flowsWithTime[flowsWithTime.length - 1];
   if (!firstFlow || !lastFlow) return null;
-  const firstDateTime = parseDateLocal(firstFlow.date);
-  const lastDateTime = parseDateLocal(lastFlow.date);
+  const firstDateTime = firstFlow.timestamp;
+  const lastDateTime = lastFlow.timestamp;
 
   // IRR requires meaningful time elapsed to calculate an annualized rate
   // With very short periods, small gains/losses produce extreme annualized rates
@@ -42,19 +46,22 @@ export function calculateIRR(cashFlows: IRRCashFlow[], guess: number = CONFIG.IR
     return null;
   }
 
+  // Pre-compute yearsDiff for each flow (avoids repeated calculation in loop)
+  const msPerYear = 365.25 * 24 * 60 * 60 * 1000;
+  const flowsWithYears = flowsWithTime.map((f) => ({
+    amount: f.amount,
+    yearsDiff: (f.timestamp - firstDateTime) / msPerYear,
+  }));
+
   const npv = (rate: number): number =>
-    flows.reduce((acc, cf) => {
-      const yearsDiff =
-        (parseDateLocal(cf.date) - firstDateTime) / (365.25 * 24 * 60 * 60 * 1000);
-      return acc + cf.amount / Math.pow(1 + rate, yearsDiff);
+    flowsWithYears.reduce((acc, cf) => {
+      return acc + cf.amount / Math.pow(1 + rate, cf.yearsDiff);
     }, 0);
 
   const dNpv = (rate: number): number =>
-    flows.reduce((acc, cf) => {
-      const yearsDiff =
-        (parseDateLocal(cf.date) - firstDateTime) / (365.25 * 24 * 60 * 60 * 1000);
-      if (yearsDiff === 0) return acc;
-      return acc - (yearsDiff * cf.amount) / Math.pow(1 + rate, yearsDiff + 1);
+    flowsWithYears.reduce((acc, cf) => {
+      if (cf.yearsDiff === 0) return acc;
+      return acc - (cf.yearsDiff * cf.amount) / Math.pow(1 + rate, cf.yearsDiff + 1);
     }, 0);
 
   let rate = guess;

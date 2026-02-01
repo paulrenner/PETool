@@ -126,7 +126,7 @@ import {
 } from './app/health-check';
 
 import { escapeHtml, escapeAttribute } from './utils/escaping';
-import { announceToScreenReader } from './ui/utils';
+import { announceToScreenReader, safeJSONParse } from './ui/utils';
 
 // ===========================
 // Backup Reminder Functions
@@ -253,12 +253,36 @@ function startExportReminderInterval(): void {
   exportReminderIntervalId = setInterval(checkExportReminder, EXPORT_REMINDER_INTERVAL);
 }
 
+/**
+ * Stop the export reminder interval (called on page unload)
+ */
+function stopExportReminderInterval(): void {
+  if (exportReminderIntervalId !== null) {
+    clearInterval(exportReminderIntervalId);
+    exportReminderIntervalId = null;
+  }
+}
+
+// Clean up interval on page unload to prevent memory leaks
+window.addEventListener('beforeunload', stopExportReminderInterval);
+
 // ===========================
 // Health Check Functions
 // ===========================
 
-// Cache for health check results
+// Cache for health check results with TTL
+const HEALTH_CHECK_CACHE_TTL = 60 * 1000; // 1 minute TTL
 let cachedHealthCheckResults: HealthCheckResult | null = null;
+let healthCheckCacheTimestamp: number = 0;
+
+/**
+ * Check if health check cache is valid (not expired)
+ */
+function isHealthCheckCacheValid(): boolean {
+  if (!cachedHealthCheckResults) return false;
+  if (AppState.needsHealthCheckRefresh()) return false;
+  return Date.now() - healthCheckCacheTimestamp < HEALTH_CHECK_CACHE_TTL;
+}
 
 /**
  * Show health check modal with results
@@ -267,11 +291,11 @@ function showHealthCheckModal(): void {
   const summaryDiv = document.getElementById('healthCheckSummary');
   const resultsDiv = document.getElementById('healthCheckResults');
 
-  // Check if we can use cached results
-  if (!AppState.needsHealthCheckRefresh() && cachedHealthCheckResults) {
+  // Check if we can use cached results (with TTL check)
+  if (isHealthCheckCacheValid()) {
     // Use cached results - no loading spinner needed
     openModal('healthCheckModal');
-    renderHealthCheckResults(cachedHealthCheckResults);
+    renderHealthCheckResults(cachedHealthCheckResults!);
     return;
   }
 
@@ -295,8 +319,9 @@ function showHealthCheckModal(): void {
     const dismissedPairs = await getDismissedHealthIssues();
     const results = runHealthCheck(funds, groups, dismissedPairs);
 
-    // Cache results and mark health check as run
+    // Cache results with timestamp and mark health check as run
     cachedHealthCheckResults = results;
+    healthCheckCacheTimestamp = Date.now();
     AppState.markHealthCheckRun();
 
     renderHealthCheckResults(results);
@@ -388,11 +413,11 @@ function renderHealthIssue(issue: HealthIssue): string {
   // Allow dismissing warnings and info, but not errors (errors are critical)
   const canDismiss = issue.severity === 'warning' || issue.severity === 'info';
   const dismissButton = canDismiss
-    ? `<button class="btn-dismiss-issue btn-dismiss-fund-issue" data-fund-id="${issue.fundId}" data-category="${escapeAttribute(issue.category)}" data-message="${escapeAttribute(issue.message)}" title="Dismiss this issue">Dismiss</button>`
+    ? `<button class="btn-dismiss-issue btn-dismiss-fund-issue" data-fund-id="${escapeAttribute(String(issue.fundId))}" data-category="${escapeAttribute(issue.category)}" data-message="${escapeAttribute(issue.message)}" title="Dismiss this issue">Dismiss</button>`
     : '';
 
   return `
-    <div class="health-issue" data-fund-id="${issue.fundId}">
+    <div class="health-issue" data-fund-id="${escapeAttribute(String(issue.fundId))}">
       <span class="health-issue-severity ${getSeverityClass(issue.severity)}">${getSeverityLabel(issue.severity)}</span>
       <div class="health-issue-content">
         <div class="health-issue-fund">${escapeHtml(issue.fundName)}</div>
@@ -413,13 +438,13 @@ function renderDuplicatePair(dup: DuplicatePair): string {
       <span class="duplicate-confidence ${getConfidenceClass(dup.confidence)}">${dup.confidence}</span>
       <div class="duplicate-content">
         <div class="duplicate-funds">
-          <span class="duplicate-fund-link" data-fund-id="${dup.fund1Id}">${escapeHtml(dup.fund1Name)}</span>
+          <span class="duplicate-fund-link" data-fund-id="${escapeAttribute(String(dup.fund1Id))}">${escapeHtml(dup.fund1Name)}</span>
           <span class="duplicate-separator">&harr;</span>
-          <span class="duplicate-fund-link" data-fund-id="${dup.fund2Id}">${escapeHtml(dup.fund2Name)}</span>
+          <span class="duplicate-fund-link" data-fund-id="${escapeAttribute(String(dup.fund2Id))}">${escapeHtml(dup.fund2Name)}</span>
         </div>
         <div class="duplicate-reason">${escapeHtml(dup.reason)}</div>
       </div>
-      <button class="btn-dismiss-issue" data-fund1-id="${dup.fund1Id}" data-fund2-id="${dup.fund2Id}" data-reason="${escapeAttribute(dup.reason)}" title="Dismiss this issue">Dismiss</button>
+      <button class="btn-dismiss-issue" data-fund1-id="${escapeAttribute(String(dup.fund1Id))}" data-fund2-id="${escapeAttribute(String(dup.fund2Id))}" data-reason="${escapeAttribute(dup.reason)}" title="Dismiss this issue">Dismiss</button>
     </div>
   `;
 }
@@ -539,7 +564,7 @@ let lastMousedownOnResizer = false;
  * Save column width to localStorage
  */
 function saveColumnWidth(columnIndex: number, width: number): void {
-  const savedWidths = JSON.parse(localStorage.getItem(CONFIG.STORAGE_COLUMN_WIDTHS) || '{}');
+  const savedWidths = safeJSONParse<Record<number, number>>(localStorage.getItem(CONFIG.STORAGE_COLUMN_WIDTHS) || '{}');
   savedWidths[columnIndex] = width;
   localStorage.setItem(CONFIG.STORAGE_COLUMN_WIDTHS, JSON.stringify(savedWidths));
 }
@@ -551,7 +576,7 @@ function restoreColumnWidths(): void {
   const table = document.getElementById('fundsTable') as HTMLTableElement;
   if (!table) return;
 
-  const savedWidths = JSON.parse(localStorage.getItem(CONFIG.STORAGE_COLUMN_WIDTHS) || '{}');
+  const savedWidths = safeJSONParse<Record<number, number>>(localStorage.getItem(CONFIG.STORAGE_COLUMN_WIDTHS) || '{}');
   const ths = table.querySelectorAll('thead th');
 
   ths.forEach((th, index) => {
@@ -1194,6 +1219,10 @@ function initMultiSelectDropdowns(): void {
   const multiSelects = document.querySelectorAll('.multi-select');
 
   multiSelects.forEach((container) => {
+    // Skip if already initialized to prevent duplicate listeners
+    if ((container as HTMLElement).dataset.initialized === 'true') return;
+    (container as HTMLElement).dataset.initialized = 'true';
+
     const trigger = container.querySelector('.multi-select-trigger');
     const dropdown = container.querySelector('.multi-select-dropdown');
 
@@ -1319,17 +1348,6 @@ function initMultiSelectDropdowns(): void {
     });
   });
 
-  // Close all dropdowns on outside click
-  document.addEventListener('click', (e) => {
-    if (!(e.target as HTMLElement).closest('.multi-select')) {
-      document.querySelectorAll('.multi-select.open').forEach((ms) => {
-        ms.classList.remove('open');
-        ms.querySelector('.multi-select-trigger')?.setAttribute('aria-expanded', 'false');
-        clearMultiSelectSearch(ms as HTMLElement);
-        clearMultiSelectHighlight(ms as HTMLElement);
-      });
-    }
-  });
 }
 
 // ===========================
@@ -1340,6 +1358,10 @@ function initSearchableSelects(): void {
   const searchableSelects = document.querySelectorAll('.searchable-select');
 
   searchableSelects.forEach((container) => {
+    // Skip if already initialized to prevent duplicate listeners
+    if ((container as HTMLElement).dataset.initialized === 'true') return;
+    (container as HTMLElement).dataset.initialized = 'true';
+
     const trigger = container.querySelector('.searchable-select-trigger');
     const dropdown = container.querySelector('.searchable-select-dropdown');
     const hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement;
@@ -1445,9 +1467,32 @@ function initSearchableSelects(): void {
     });
   });
 
-  // Close all searchable selects on outside click
+}
+
+// ===========================
+// Global Click Handler (Consolidated)
+// ===========================
+
+/**
+ * Single consolidated handler for closing dropdowns on outside click.
+ * This avoids multiple global document listeners.
+ */
+function initGlobalClickHandler(): void {
   document.addEventListener('click', (e) => {
-    if (!(e.target as HTMLElement).closest('.searchable-select')) {
+    const target = e.target as HTMLElement;
+
+    // Close multi-select dropdowns
+    if (!target.closest('.multi-select')) {
+      document.querySelectorAll('.multi-select.open').forEach((ms) => {
+        ms.classList.remove('open');
+        ms.querySelector('.multi-select-trigger')?.setAttribute('aria-expanded', 'false');
+        clearMultiSelectSearch(ms as HTMLElement);
+        clearMultiSelectHighlight(ms as HTMLElement);
+      });
+    }
+
+    // Close searchable-select dropdowns
+    if (!target.closest('.searchable-select')) {
       document.querySelectorAll('.searchable-select.open').forEach((ss) => {
         ss.classList.remove('open');
         ss.querySelector('.searchable-select-trigger')?.setAttribute('aria-expanded', 'false');
@@ -1455,6 +1500,12 @@ function initSearchableSelects(): void {
         if (searchInput) searchInput.value = '';
         filterSearchableOptions(ss as HTMLElement, '');
       });
+    }
+
+    // Close action dropdown
+    const actionDropdown = document.getElementById('actionDropdown');
+    if (actionDropdown && !target.closest('#actionDropdown') && !target.closest('.fund-actions-btn')) {
+      actionDropdown.classList.remove('show');
     }
   });
 }
@@ -1656,15 +1707,6 @@ function initializeEventListeners(): void {
       // Users can access fund details via the action menu
     });
   }
-
-  // Close action dropdown on outside click
-  document.addEventListener('click', (e) => {
-    const dropdown = document.getElementById('actionDropdown');
-    const target = e.target as HTMLElement;
-    if (dropdown && !target.closest('#actionDropdown') && !target.closest('.fund-actions-btn')) {
-      dropdown.classList.remove('show');
-    }
-  });
 
   // Action dropdown actions
   const actionEdit = document.getElementById('actionEdit');
@@ -2367,6 +2409,7 @@ async function init(): Promise<void> {
     initializeCutoffDate();
     initMultiSelectDropdowns();
     initSearchableSelects();
+    initGlobalClickHandler();
     initializeEventListeners();
     initBackupWarningListeners();
     initHealthCheckModal();

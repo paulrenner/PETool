@@ -26,10 +26,11 @@ export function getMultiSelectValues(id: string): string[] {
 export function setMultiSelectValues(id: string, values: string[]): void {
   const container = document.getElementById(id);
   if (!container) return;
+  const valuesSet = new Set(values);
   const options = container.querySelectorAll('.multi-select-option');
   options.forEach((opt) => {
     const element = opt as HTMLElement;
-    if (values.includes(element.dataset.value || '')) {
+    if (valuesSet.has(element.dataset.value || '')) {
       element.classList.add('selected');
       const checkbox = element.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
       if (checkbox) checkbox.checked = true;

@@ -6,7 +6,6 @@ import { AppState } from './state';
 
 // Database instance
 let db: IDBDatabase | null = null;
-let dbReady = false;
 
 /**
  * Initialize IndexedDB database
@@ -18,7 +17,6 @@ export function initDB(): Promise<IDBDatabase> {
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       db = request.result;
-      dbReady = true;
       resolve(db);
     };
 
@@ -162,21 +160,6 @@ export function initDB(): Promise<IDBDatabase> {
     };
   });
 }
-
-/**
- * Check if database is ready
- */
-export function isDBReady(): boolean {
-  return dbReady;
-}
-
-/**
- * Get database instance
- */
-export function getDB(): IDBDatabase | null {
-  return db;
-}
-
 // ===========================
 // Generic DB Helper
 // ===========================
@@ -887,67 +870,3 @@ export function dismissFundIssue(fundId: number, category: string, message: stri
   });
 }
 
-/**
- * Check if a fund issue is dismissed
- */
-export async function isFundIssueDismissed(fundId: number, category: string, message: string): Promise<boolean> {
-  const dismissed = await getDismissedHealthIssues();
-  return dismissed.some(
-    (d) => d.fund1Id === fundId && d.fund2Id === 0 && d.category === category && d.message === message
-  );
-}
-
-/**
- * Undismiss a health check issue (remove from dismissed list)
- */
-export function undismissHealthIssue(fund1Id: number, fund2Id: number): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (!db) {
-      reject(new Error('Database not initialized'));
-      return;
-    }
-
-    if (!db.objectStoreNames.contains(CONFIG.DISMISSED_ISSUES_STORE)) {
-      resolve();
-      return;
-    }
-
-    // Normalize fund IDs so order doesn't matter
-    const normalizedFund1Id = Math.min(fund1Id, fund2Id);
-    const normalizedFund2Id = Math.max(fund1Id, fund2Id);
-
-    const tx = db.transaction([CONFIG.DISMISSED_ISSUES_STORE], 'readwrite');
-    const store = tx.objectStore(CONFIG.DISMISSED_ISSUES_STORE);
-    const request = store.openCursor();
-
-    request.onsuccess = (event) => {
-      const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-      if (cursor) {
-        const issue = cursor.value as DismissedHealthIssue;
-        if (issue.fund1Id === normalizedFund1Id && issue.fund2Id === normalizedFund2Id) {
-          cursor.delete();
-          resolve();
-          return;
-        }
-        cursor.continue();
-      } else {
-        // Not found, still resolve
-        resolve();
-      }
-    };
-    request.onerror = () => reject(request.error);
-  });
-}
-
-/**
- * Check if a health issue is dismissed
- */
-export async function isHealthIssueDismissed(fund1Id: number, fund2Id: number): Promise<boolean> {
-  const dismissed = await getDismissedHealthIssues();
-  const normalizedFund1Id = Math.min(fund1Id, fund2Id);
-  const normalizedFund2Id = Math.max(fund1Id, fund2Id);
-
-  return dismissed.some(
-    (d) => d.fund1Id === normalizedFund1Id && d.fund2Id === normalizedFund2Id
-  );
-}
