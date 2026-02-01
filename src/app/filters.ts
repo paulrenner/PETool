@@ -585,6 +585,60 @@ export function handleGroupFilterCascade(
 }
 
 /**
+ * Handle cascading selection for multiple groups at once (batched for performance)
+ * Used when "Select All" is clicked to avoid calling handleGroupFilterCascade in a loop
+ */
+export function handleGroupFilterCascadeBatch(
+  container: HTMLElement,
+  groupIds: number[],
+  isNowSelected: boolean
+): void {
+  const optionsContainer = container.querySelector('.multi-select-options');
+  if (!optionsContainer) return;
+
+  // Collect all group IDs that need to be updated
+  const groupsToUpdate = new Set<number>();
+
+  for (const clickedGroupId of groupIds) {
+    if (isNowSelected) {
+      // Add all descendants
+      const descendants = AppState.getDescendantIds(clickedGroupId);
+      descendants.forEach((id) => groupsToUpdate.add(id));
+    } else {
+      // Add all descendants
+      const descendants = AppState.getDescendantIds(clickedGroupId);
+      descendants.forEach((id) => groupsToUpdate.add(id));
+
+      // Add all ancestors
+      const group = AppState.getGroupByIdSync(clickedGroupId);
+      if (group && group.parentGroupId != null) {
+        let parentId: number | null = group.parentGroupId;
+        while (parentId != null) {
+          groupsToUpdate.add(parentId);
+          const parentGroup = AppState.getGroupByIdSync(parentId);
+          parentId = parentGroup ? parentGroup.parentGroupId : null;
+        }
+      }
+    }
+  }
+
+  // Batch DOM updates - single pass through all affected options
+  groupsToUpdate.forEach((groupId) => {
+    const option = optionsContainer.querySelector(`[data-value="${groupId}"]`);
+    if (option) {
+      if (isNowSelected) {
+        option.classList.add('selected');
+      } else {
+        option.classList.remove('selected');
+      }
+      const checkbox = option.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      if (checkbox) checkbox.checked = isNowSelected;
+      option.setAttribute('aria-selected', isNowSelected.toString());
+    }
+  });
+}
+
+/**
  * Update filter dropdowns based on current selections
  */
 export function updateFilterDropdowns(allFunds: Fund[]): void {

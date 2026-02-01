@@ -48,6 +48,7 @@ import {
   resetFilters,
   updateActiveFiltersIndicator,
   handleGroupFilterCascade,
+  handleGroupFilterCascadeBatch,
   updateFilterDropdowns,
 } from './app/filters';
 
@@ -128,6 +129,9 @@ import {
 
 import { escapeHtml, escapeAttribute } from './utils/escaping';
 import { announceToScreenReader, safeJSONParse } from './ui/utils';
+
+// Search debounce timers (per-container)
+const searchDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 // ===========================
 // Backup Reminder Functions
@@ -962,6 +966,7 @@ async function applyFilters(): Promise<void> {
 }
 
 const applyFiltersDebounced = debounce(applyFilters, CONFIG.DEBOUNCE_FILTER);
+const updateDetailsSummaryDebounced = debounce(updateDetailsSummary, CONFIG.DEBOUNCE_INPUT);
 
 /**
  * Update header based on selected groups
@@ -1274,15 +1279,22 @@ function initMultiSelectDropdowns(): void {
       }
     });
 
-    // Handle search input
+    // Handle search input (debounced to batch DOM updates)
     dropdown.addEventListener('input', (e) => {
       const target = e.target as HTMLElement;
       if (target.matches('.multi-select-search input')) {
-        filterMultiSelectOptions(container as HTMLElement, (target as HTMLInputElement).value);
-        // Reset highlight when search changes
-        clearMultiSelectHighlight(container as HTMLElement);
-        // Update Select All checkbox based on new visible options
-        updateSelectAllCheckbox(container as HTMLElement);
+        const containerId = container.id || 'unknown';
+        const existingTimer = searchDebounceTimers.get(containerId);
+        if (existingTimer) clearTimeout(existingTimer);
+
+        const searchValue = (target as HTMLInputElement).value;
+        const timer = setTimeout(() => {
+          filterMultiSelectOptions(container as HTMLElement, searchValue);
+          clearMultiSelectHighlight(container as HTMLElement);
+          updateSelectAllCheckbox(container as HTMLElement);
+          searchDebounceTimers.delete(containerId);
+        }, 150);
+        searchDebounceTimers.set(containerId, timer);
       }
     });
 
@@ -1332,13 +1344,15 @@ function initMultiSelectDropdowns(): void {
         if (option.classList.contains('multi-select-all-option')) {
           toggleAllVisibleOptions(container as HTMLElement);
 
-          // Handle cascading for group filter if needed
+          // Handle cascading for group filter (batched for performance)
           if (container.id === 'groupFilter') {
             const selectedOptions = container.querySelectorAll('.multi-select-option.selected:not(.multi-select-all-option)');
-            selectedOptions.forEach((opt) => {
-              const groupId = parseInt((opt as HTMLElement).getAttribute('data-value') || '0');
-              handleGroupFilterCascade(container as HTMLElement, groupId, true);
-            });
+            const groupIds = Array.from(selectedOptions).map(
+              (opt) => parseInt((opt as HTMLElement).getAttribute('data-value') || '0')
+            ).filter((id) => id > 0);
+            if (groupIds.length > 0) {
+              handleGroupFilterCascadeBatch(container as HTMLElement, groupIds, true);
+            }
           }
 
           applyFiltersDebounced();
@@ -1415,13 +1429,21 @@ function initSearchableSelects(): void {
       }
     });
 
-    // Handle search input
+    // Handle search input (debounced to batch DOM updates)
     dropdown.addEventListener('input', (e) => {
       const target = e.target as HTMLElement;
       if (target.matches('.searchable-select-search input')) {
-        filterSearchableOptions(container as HTMLElement, (target as HTMLInputElement).value);
-        // Reset highlight when search changes
-        clearSearchableHighlight(container as HTMLElement);
+        const containerId = container.id || 'searchable-unknown';
+        const existingTimer = searchDebounceTimers.get(containerId);
+        if (existingTimer) clearTimeout(existingTimer);
+
+        const searchValue = (target as HTMLInputElement).value;
+        const timer = setTimeout(() => {
+          filterSearchableOptions(container as HTMLElement, searchValue);
+          clearSearchableHighlight(container as HTMLElement);
+          searchDebounceTimers.delete(containerId);
+        }, 150);
+        searchDebounceTimers.set(containerId, timer);
       }
     });
 
@@ -1847,16 +1869,16 @@ function initializeEventListeners(): void {
         }
       });
 
-      // Mark unsaved changes when inputs change
+      // Mark unsaved changes when inputs change (debounced to avoid recalculating on every keystroke)
       table.addEventListener('input', () => {
         AppState.setUnsavedChanges(true);
-        updateDetailsSummary();
+        updateDetailsSummaryDebounced();
       });
 
-      // Handle checkbox and select changes (change event doesn't fire for text input)
+      // Handle checkbox and select changes (debounced)
       table.addEventListener('change', () => {
         AppState.setUnsavedChanges(true);
-        updateDetailsSummary();
+        updateDetailsSummaryDebounced();
       });
     }
   });
