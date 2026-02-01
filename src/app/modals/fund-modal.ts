@@ -13,7 +13,7 @@ import {
   saveFundName,
 } from '../../core/db';
 import { calculateMetrics } from '../../calculations';
-import { escapeHtml } from '../../utils/escaping';
+import { escapeHtml, escapeAttribute } from '../../utils/escaping';
 import { formatCurrency, parseCurrency, formatNumberWithCommas } from '../../utils/formatting';
 import { buildGroupsTree } from '../filters';
 import { showStatus, showLoading, hideLoading, showConfirm, openModal, closeModal } from './common';
@@ -28,13 +28,6 @@ import type { Group } from '../../types';
  */
 export function setFundModalUnsavedChanges(value: boolean): void {
   AppState.setFundModalUnsavedChanges(value);
-}
-
-/**
- * Check if fund modal has unsaved changes
- */
-export function hasFundModalUnsavedChanges(): boolean {
-  return AppState.fundModalHasUnsavedChanges;
 }
 
 /**
@@ -484,7 +477,7 @@ export function populateSearchableGroupDropdown(
       if (excludeGroupId !== undefined && node.id === excludeGroupId) return;
 
       const prefix = level > 0 ? '–'.repeat(level) + ' ' : '';
-      optionsHtml += `<div class="searchable-select-option" data-value="${node.id}" data-indent="${level}">
+      optionsHtml += `<div class="searchable-select-option" data-value="${escapeAttribute(String(node.id))}" data-indent="${level}">
         ${escapeHtml(prefix + node.name)}
       </div>`;
 

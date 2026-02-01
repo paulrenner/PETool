@@ -15,7 +15,6 @@ export {
 // Fund modal operations
 export {
   setFundModalUnsavedChanges,
-  hasFundModalUnsavedChanges,
   initFundFormChangeTracking,
   closeFundModalWithConfirm,
   initAccountNumberAutoFill,

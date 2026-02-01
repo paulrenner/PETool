@@ -38,6 +38,7 @@ import {
 
 import {
   getMultiSelectValues,
+  hasActiveFilters,
   updateMultiSelectDisplay,
   filterMultiSelectOptions,
   clearMultiSelectSearch,
@@ -624,22 +625,22 @@ function initColumnResizing(): void {
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
 
+      // Track current width for saving on mouseup (avoid localStorage writes during drag)
+      let currentWidth = startWidth;
+
       const onMouseMove = (e: MouseEvent) => {
         const diff = e.pageX - startX;
-        const newWidth = Math.max(CONFIG.MIN_COLUMN_WIDTH, startWidth + diff);
-        (th as HTMLElement).style.width = newWidth + 'px';
-        (th as HTMLElement).style.minWidth = newWidth + 'px';
-        (th as HTMLElement).style.maxWidth = newWidth + 'px';
+        currentWidth = Math.max(CONFIG.MIN_COLUMN_WIDTH, startWidth + diff);
+        (th as HTMLElement).style.width = currentWidth + 'px';
+        (th as HTMLElement).style.minWidth = currentWidth + 'px';
+        (th as HTMLElement).style.maxWidth = currentWidth + 'px';
 
         // Apply width to cached TD elements
         columnTds.forEach((td) => {
-          (td as HTMLElement).style.width = newWidth + 'px';
-          (td as HTMLElement).style.minWidth = newWidth + 'px';
-          (td as HTMLElement).style.maxWidth = newWidth + 'px';
+          (td as HTMLElement).style.width = currentWidth + 'px';
+          (td as HTMLElement).style.minWidth = currentWidth + 'px';
+          (td as HTMLElement).style.maxWidth = currentWidth + 'px';
         });
-
-        // Save to localStorage
-        saveColumnWidth(columnIndex, newWidth);
       };
 
       const cleanup = () => {
@@ -649,6 +650,10 @@ function initColumnResizing(): void {
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', cleanup);
         window.removeEventListener('blur', cleanup);
+        // Save final width to localStorage only once on mouseup
+        if (currentWidth !== startWidth) {
+          saveColumnWidth(columnIndex, currentWidth);
+        }
         // Reset flag after a short delay so click handler can check it
         setTimeout(() => {
           isResizingColumn = false;
@@ -812,12 +817,7 @@ async function renderTable(): Promise<void> {
     tbody.innerHTML = '';
 
     if (fundsWithMetrics.length === 0) {
-      const hasFilters =
-        getMultiSelectValues('fundFilter').length > 0 ||
-        getMultiSelectValues('accountFilter').length > 0 ||
-        getMultiSelectValues('groupFilter').length > 0 ||
-        getMultiSelectValues('tagFilter').length > 0 ||
-        getMultiSelectValues('vintageFilter').length > 0;
+      const hasFilters = hasActiveFilters();
 
       const hasAnyFunds = funds.length > 0;
 

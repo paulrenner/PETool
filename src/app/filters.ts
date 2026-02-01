@@ -5,7 +5,7 @@
 import type { Fund, Group } from '../types';
 import { AppState } from '../core/state';
 import { getVintageYear } from '../calculations/metrics';
-import { escapeHtml } from '../utils/escaping';
+import { escapeHtml, escapeAttribute } from '../utils/escaping';
 
 /**
  * Get the most recent quarter-end date as a YYYY-MM-DD string
@@ -44,6 +44,46 @@ export function getMultiSelectValues(id: string): string[] {
   if (!container) return [];
   const selected = container.querySelectorAll('.multi-select-option.selected');
   return Array.from(selected).map((opt) => (opt as HTMLElement).dataset.value || '');
+}
+
+/**
+ * Filter value cache for batch operations
+ */
+interface FilterValues {
+  fund: string[];
+  account: string[];
+  group: string[];
+  vintage: string[];
+  tag: string[];
+}
+
+/**
+ * Get all filter values in a single batch operation
+ * More efficient than calling getMultiSelectValues 5 times
+ */
+export function getAllFilterValues(): FilterValues {
+  const ids = ['fundFilter', 'accountFilter', 'groupFilter', 'vintageFilter', 'tagFilter'];
+  const keys: (keyof FilterValues)[] = ['fund', 'account', 'group', 'vintage', 'tag'];
+  const result: FilterValues = { fund: [], account: [], group: [], vintage: [], tag: [] };
+
+  ids.forEach((id, index) => {
+    const container = document.getElementById(id);
+    if (container) {
+      const selected = container.querySelectorAll('.multi-select-option.selected');
+      result[keys[index]!] = Array.from(selected).map((opt) => (opt as HTMLElement).dataset.value || '');
+    }
+  });
+
+  return result;
+}
+
+/**
+ * Check if any filters are active (batch version)
+ */
+export function hasActiveFilters(): boolean {
+  const values = getAllFilterValues();
+  return values.fund.length > 0 || values.account.length > 0 ||
+         values.group.length > 0 || values.vintage.length > 0 || values.tag.length > 0;
 }
 
 /**
@@ -146,7 +186,7 @@ export function populateMultiSelect(
 
       return `
       <div class="${classes.join(' ')}"
-           data-value="${escapeHtml(opt.value)}"
+           data-value="${escapeAttribute(opt.value)}"
            role="option"
            aria-selected="${isSelected}"
            ${indentStyle}>
