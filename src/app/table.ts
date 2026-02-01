@@ -286,28 +286,25 @@ export function updatePortfolioSummary(
 }
 
 /**
- * Update sort indicator in table headers
+ * Update sort indicator in table headers using CSS classes
+ * Uses CSS ::after pseudo-elements for indicators (no DOM manipulation)
  */
 export function updateSortIndicators(sortColumns: SortColumn[]): void {
-  // Clear existing indicators
+  // Clear existing indicators using CSS classes only
   document.querySelectorAll('#fundsTable th').forEach((th) => {
-    th.classList.remove('sort-asc', 'sort-desc');
-    const indicator = th.querySelector('.sort-indicator');
-    if (indicator) indicator.remove();
+    th.classList.remove('sorted-asc', 'sorted-desc');
+    (th as HTMLElement).removeAttribute('data-sort-priority');
   });
 
-  // Add indicators for current sort columns
+  // Add CSS-based indicators for current sort columns
   sortColumns.forEach(({ column, direction }, index) => {
     const th = document.querySelector(`#fundsTable th[data-sort="${column}"]`);
     if (th) {
-      th.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
-      const indicator = document.createElement('span');
-      indicator.className = 'sort-indicator';
-      indicator.textContent = direction === 'asc' ? ' ▲' : ' ▼';
+      th.classList.add(direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
+      // Set priority for multi-column sort (CSS handles the display)
       if (sortColumns.length > 1) {
-        indicator.textContent += ` (${index + 1})`;
+        (th as HTMLElement).setAttribute('data-sort-priority', (index + 1).toString());
       }
-      th.appendChild(indicator);
     }
   });
 }

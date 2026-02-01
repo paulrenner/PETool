@@ -14,8 +14,6 @@ export const CONFIG = {
   // Currency formatting
   CURRENCY_FORMAT: 'en-US',
   CURRENCY_CODE: 'USD',
-  CURRENCY_MIN: -1e12,
-  CURRENCY_MAX: 1e12,
 
   // IRR calculation
   IRR_MAX_ITERATIONS: 1000,

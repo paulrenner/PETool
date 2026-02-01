@@ -234,7 +234,7 @@ export async function handleImportFileSelect(event: Event): Promise<void> {
     }
   } catch (err) {
     if (previewContent) {
-      previewContent.innerHTML = `<p style="color: var(--color-danger);">Error reading file: ${(err as Error).message}</p>`;
+      previewContent.innerHTML = `<p style="color: var(--color-danger);">Error reading file: ${escapeHtml((err as Error).message)}</p>`;
     }
     pendingImportData = null;
     input.value = '';

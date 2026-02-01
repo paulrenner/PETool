@@ -17,12 +17,6 @@ describe('CONFIG', () => {
         expect(CONFIG.IRR_MIN_RATE).toBeLessThan(CONFIG.IRR_MAX_RATE);
     });
 
-    test('has valid currency constraints', () => {
-        expect(CONFIG.CURRENCY_MIN).toBeLessThan(0);
-        expect(CONFIG.CURRENCY_MAX).toBeGreaterThan(0);
-        expect(CONFIG.CURRENCY_MIN).toBeLessThan(CONFIG.CURRENCY_MAX);
-    });
-
     test('has valid file size limit', () => {
         expect(CONFIG.MAX_FILE_SIZE).toBe(50 * 1024 * 1024);
     });

@@ -45,6 +45,7 @@ export {
   deleteGroupById,
   showSyncAccountGroupsModal,
   applySyncAccountGroups,
+  resetGroupModalState,
 } from './group-modal';
 
 // Fund names modal operations
@@ -58,4 +59,5 @@ export {
   addNewFundNameFromModal,
   addNewFundNameInline,
   cancelNewFundNameInline,
+  resetFundNamesModalState,
 } from './fund-names-modal';

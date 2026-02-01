@@ -199,6 +199,13 @@ interface AccountGroupInconsistency {
 let pendingSyncData: AccountGroupInconsistency[] = [];
 
 /**
+ * Reset module-level state when modal closes
+ */
+export function resetGroupModalState(): void {
+  pendingSyncData = [];
+}
+
+/**
  * Analyze account numbers for group inconsistencies
  */
 async function analyzeAccountGroupInconsistencies(): Promise<AccountGroupInconsistency[]> {
@@ -319,6 +326,7 @@ export async function showSyncAccountGroupsModal(): Promise<void> {
 export async function applySyncAccountGroups(onComplete: () => Promise<void>): Promise<void> {
   if (pendingSyncData.length === 0) {
     showStatus('No sync needed');
+    resetGroupModalState();
     closeModal('syncAccountGroupsModal');
     return;
   }
@@ -339,7 +347,7 @@ export async function applySyncAccountGroups(onComplete: () => Promise<void>): P
       }
     }
 
-    pendingSyncData = [];
+    resetGroupModalState();
     AppState.clearMetricsCache();
     closeModal('syncAccountGroupsModal');
     showStatus(`Synced groups for ${updatedCount} investment${updatedCount !== 1 ? 's' : ''}`);

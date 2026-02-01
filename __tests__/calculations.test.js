@@ -3,11 +3,10 @@ import {
     calculateMOIC,
     getVintageYear,
     getTotalByType,
-    getLatestNav,
-    getOutstandingCommitment,
     parseCashFlowsForIRR,
     calculateMetrics
 } from '../src/calculations';
+import { getLatestNav, getOutstandingCommitment } from '../src/calculations/metrics';
 
 describe('calculateIRR', () => {
     test('returns null for empty array', () => {

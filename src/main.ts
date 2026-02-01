@@ -88,6 +88,8 @@ import {
   initAccountNumberAutoFill,
   showSyncAccountGroupsModal,
   applySyncAccountGroups,
+  resetFundNamesModalState,
+  resetGroupModalState,
 } from './app/modals';
 
 import {
@@ -586,6 +588,10 @@ function initColumnResizing(): void {
 
       const startX = e.pageX;
       const startWidth = (th as HTMLElement).offsetWidth;
+      const columnIndex = Array.from(ths).indexOf(th);
+
+      // Cache TD elements on mousedown to avoid repeated DOM queries during drag
+      const columnTds = table.querySelectorAll(`tbody tr td:nth-child(${columnIndex + 1})`);
 
       isResizingColumn = true;
       lastMousedownOnResizer = true;
@@ -600,10 +606,8 @@ function initColumnResizing(): void {
         (th as HTMLElement).style.minWidth = newWidth + 'px';
         (th as HTMLElement).style.maxWidth = newWidth + 'px';
 
-        // Also set width on corresponding td elements
-        const columnIndex = Array.from(ths).indexOf(th);
-        const tds = table.querySelectorAll(`tbody tr td:nth-child(${columnIndex + 1})`);
-        tds.forEach((td) => {
+        // Apply width to cached TD elements
+        columnTds.forEach((td) => {
           (td as HTMLElement).style.width = newWidth + 'px';
           (td as HTMLElement).style.minWidth = newWidth + 'px';
           (td as HTMLElement).style.maxWidth = newWidth + 'px';
@@ -1861,7 +1865,10 @@ function initializeEventListeners(): void {
   const cancelEditFundNameBtn = document.getElementById('cancelEditFundNameBtn');
   [closeEditFundNameModalBtn, cancelEditFundNameBtn].forEach((btn) => {
     if (btn) {
-      btn.addEventListener('click', () => closeModal('editFundNameModal'));
+      btn.addEventListener('click', () => {
+        resetFundNamesModalState();
+        closeModal('editFundNameModal');
+      });
     }
   });
 
@@ -2235,7 +2242,10 @@ function initializeEventListeners(): void {
   const cancelSyncAccountGroupsBtn = document.getElementById('cancelSyncAccountGroupsBtn');
   [closeSyncAccountGroupsModalBtn, cancelSyncAccountGroupsBtn].forEach((btn) => {
     if (btn) {
-      btn.addEventListener('click', () => closeModal('syncAccountGroupsModal'));
+      btn.addEventListener('click', () => {
+        resetGroupModalState();
+        closeModal('syncAccountGroupsModal');
+      });
     }
   });
 
@@ -2271,6 +2281,28 @@ function initializeEventListeners(): void {
       if (isExpanded) {
         renderTimeline();
       }
+    });
+  }
+
+  // Timeline table event delegation for expandable rows
+  const timelineContainer = document.getElementById('timelineTableContainer');
+  if (timelineContainer) {
+    timelineContainer.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const expandRow = target.closest('.timeline-expand-row') as HTMLElement | null;
+      if (!expandRow) return;
+
+      const type = expandRow.dataset.type;
+      const isExpanded = expandRow.classList.toggle('expanded');
+      const icon = expandRow.querySelector('.timeline-expand-icon');
+      if (icon) {
+        icon.textContent = isExpanded ? '▼' : '▶';
+      }
+
+      // Toggle fund detail rows
+      timelineContainer.querySelectorAll(`.timeline-fund-row[data-type="${type}"]`).forEach((fundRow) => {
+        fundRow.classList.toggle('visible', isExpanded);
+      });
     });
   }
 

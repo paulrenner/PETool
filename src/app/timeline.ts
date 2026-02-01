@@ -529,14 +529,14 @@ export function renderTimelineTable(funds: Fund[]): void {
     let footnoteHtml = '<div style="margin-top: 10px; font-size: 11px; color: var(--color-text-light); font-style: italic;">';
     if (yearRange.firstProjectedYear && !hasEstimatedData) {
       const footnoteText = cutoffDate
-        ? `* Projected values (after ${cutoffDateValue}) based on remaining uncalled capital distributed linearly across investment period`
+        ? `* Projected values (after ${escapeHtml(cutoffDateValue || '')}) based on remaining uncalled capital distributed linearly across investment period`
         : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
       footnoteHtml += `<p style="margin: 0;">${footnoteText}</p>`;
     } else if (hasEstimatedData && !yearRange.firstProjectedYear) {
       footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing term start date (spread over 4 years). <a href="#" onclick="showManageFundsModal(); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
     } else if (yearRange.firstProjectedYear && hasEstimatedData) {
       const footnoteText = cutoffDate
-        ? `* Projected values (after ${cutoffDateValue}) based on remaining uncalled capital distributed linearly across investment period`
+        ? `* Projected values (after ${escapeHtml(cutoffDateValue || '')}) based on remaining uncalled capital distributed linearly across investment period`
         : '* Projected values based on remaining uncalled capital distributed linearly across investment period';
       footnoteHtml += `<p style="margin: 0 0 4px 0;">${footnoteText}</p>`;
       footnoteHtml += `<p style="margin: 0; color: var(--color-warning);">&#8224; Estimated projections for funds missing term start date (spread over 4 years). <a href="#" onclick="showManageFundsModal(); return false;" style="color: var(--color-action);">Add fund terms</a> for more accurate projections.</p>`;
@@ -546,23 +546,6 @@ export function renderTimelineTable(funds: Fund[]): void {
   }
 
   container.innerHTML = html;
-
-  // Add click handlers for expandable rows
-  container.querySelectorAll('.timeline-expand-row').forEach((row) => {
-    row.addEventListener('click', function (this: HTMLElement) {
-      const type = this.dataset.type;
-      const isExpanded = this.classList.toggle('expanded');
-      const icon = this.querySelector('.timeline-expand-icon');
-      if (icon) {
-        icon.textContent = isExpanded ? '▼' : '▶';
-      }
-
-      // Toggle fund detail rows
-      container.querySelectorAll(`.timeline-fund-row[data-type="${type}"]`).forEach((fundRow) => {
-        fundRow.classList.toggle('visible', isExpanded);
-      });
-    });
-  });
 }
 
 /**

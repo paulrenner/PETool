@@ -18,11 +18,11 @@ import { validateFund } from '../src/utils/validation';
 import {
     calculateIRR,
     calculateMOIC,
-    getLatestNav,
     getTotalByType,
     parseCashFlowsForIRR,
     calculateMetrics
 } from '../src/calculations';
+import { getLatestNav } from '../src/calculations/metrics';
 
 // ============================================================================
 // 1. DATA VALIDATION TESTS (validateFund)

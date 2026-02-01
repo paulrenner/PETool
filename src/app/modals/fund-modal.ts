@@ -75,6 +75,7 @@ export async function closeFundModalWithConfirm(): Promise<void> {
     if (!confirmed) return;
   }
   AppState.setFundModalUnsavedChanges(false);
+  resetFundModalState();
   closeModal('fundModal');
 }
 
@@ -87,6 +88,15 @@ let suggestedGroupId: number | null = null;
 let accountHasExistingGroups = false;
 // Request tracking to prevent race conditions in async lookups
 let accountLookupRequestId = 0;
+
+/**
+ * Reset module-level state when modal closes
+ */
+function resetFundModalState(): void {
+  suggestedGroupId = null;
+  accountHasExistingGroups = false;
+  accountLookupRequestId = 0;
+}
 
 /**
  * Look up group for an account number based on existing funds
@@ -791,6 +801,7 @@ export async function saveFundFromModal(
     }
 
     AppState.setFundModalUnsavedChanges(false);
+    resetFundModalState();
     closeModal('fundModal');
     AppState.clearMetricsCache();
     await onSave();

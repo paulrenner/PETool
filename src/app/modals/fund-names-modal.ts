@@ -22,6 +22,13 @@ import { populateFundNameDropdown } from './fund-modal';
 let currentEditTags: string[] = [];
 
 /**
+ * Reset module-level state when modal closes
+ */
+export function resetFundNamesModalState(): void {
+  currentEditTags = [];
+}
+
+/**
  * Get all unique tags from existing fund names
  */
 function getAllUniqueTags(): string[] {
@@ -201,6 +208,7 @@ export async function saveEditedFundName(onSave: () => Promise<void>): Promise<v
     AppState.fundNames.add(newName);
     AppState.fundNameData.set(newName, fundNameData);
 
+    resetFundNamesModalState();
     closeModal('editFundNameModal');
     showStatus('Fund updated successfully');
 

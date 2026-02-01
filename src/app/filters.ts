@@ -518,59 +518,70 @@ export function updateFilterDropdowns(allFunds: Fund[]): void {
   const currentVintageValues = getMultiSelectValues('vintageFilter');
   const currentTagValues = getMultiSelectValues('tagFilter');
 
-  // Helper functions
-  const filterByGroups = (funds: Fund[], groupIds: string[]): Fund[] => {
-    if (groupIds.length === 0) return funds;
-    return funds.filter((fund) => {
-      if (!fund.groupId) return false;
-      for (const groupIdStr of groupIds) {
-        const gId = parseInt(groupIdStr);
-        if (fund.groupId === gId) return true;
-        const descendants = AppState.getDescendantIds(gId);
-        if (descendants.includes(fund.groupId)) return true;
+  // Pre-compute group filter set for O(1) lookups
+  let groupFilterSet: Set<number> | null = null;
+  if (currentGroupValues.length > 0) {
+    groupFilterSet = new Set<number>();
+    for (const groupIdStr of currentGroupValues) {
+      const gId = parseInt(groupIdStr);
+      const descendants = AppState.getDescendantIds(gId);
+      for (const id of descendants) {
+        groupFilterSet.add(id);
       }
-      return false;
-    });
+    }
+  }
+
+  // Convert arrays to Sets for O(1) lookups
+  const fundSet = currentFundValues.length > 0 ? new Set(currentFundValues) : null;
+  const accountSet = currentAccountValues.length > 0 ? new Set(currentAccountValues) : null;
+  const vintageSet = currentVintageValues.length > 0 ? new Set(currentVintageValues) : null;
+
+  // Helper functions using Sets for O(1) lookups
+  const filterByGroups = (funds: Fund[], groupSet: Set<number> | null): Fund[] => {
+    if (!groupSet) return funds;
+    return funds.filter((fund) => fund.groupId != null && groupSet.has(fund.groupId));
   };
 
-  const filterByVintages = (funds: Fund[], vintages: string[]): Fund[] => {
-    if (vintages.length === 0) return funds;
+  const filterByVintages = (funds: Fund[], vintages: Set<string> | null): Fund[] => {
+    if (!vintages) return funds;
     return funds.filter((fund) => {
       const vintage = getVintageYear(fund);
-      return vintage !== null && vintages.includes(vintage.toString());
+      return vintage !== null && vintages.has(vintage.toString());
     });
   };
 
-  const filterByFunds = (funds: Fund[], fundNames: string[]): Fund[] => {
-    if (fundNames.length === 0) return funds;
-    return funds.filter((f) => fundNames.includes(f.fundName));
+  const filterByFunds = (funds: Fund[], fundNames: Set<string> | null): Fund[] => {
+    if (!fundNames) return funds;
+    return funds.filter((f) => fundNames.has(f.fundName));
   };
 
-  const filterByAccounts = (funds: Fund[], accounts: string[]): Fund[] => {
-    if (accounts.length === 0) return funds;
-    return funds.filter((f) => accounts.includes(f.accountNumber));
+  const filterByAccounts = (funds: Fund[], accounts: Set<string> | null): Fund[] => {
+    if (!accounts) return funds;
+    return funds.filter((f) => accounts.has(f.accountNumber));
   };
 
   // 1. Update FUND dropdown
   let fundsForFundDropdown = allFunds;
-  fundsForFundDropdown = filterByGroups(fundsForFundDropdown, currentGroupValues);
-  fundsForFundDropdown = filterByAccounts(fundsForFundDropdown, currentAccountValues);
-  fundsForFundDropdown = filterByVintages(fundsForFundDropdown, currentVintageValues);
+  fundsForFundDropdown = filterByGroups(fundsForFundDropdown, groupFilterSet);
+  fundsForFundDropdown = filterByAccounts(fundsForFundDropdown, accountSet);
+  fundsForFundDropdown = filterByVintages(fundsForFundDropdown, vintageSet);
 
-  const uniqueFunds = [...new Set(fundsForFundDropdown.map((f) => f.fundName))].sort();
+  const uniqueFundsSet = new Set(fundsForFundDropdown.map((f) => f.fundName));
+  const uniqueFunds = [...uniqueFundsSet].sort();
   const fundOptions = uniqueFunds.map((name) => ({ value: name, label: name }));
-  const validFundValues = currentFundValues.filter((v) => uniqueFunds.includes(v));
+  const validFundValues = currentFundValues.filter((v) => uniqueFundsSet.has(v));
   populateMultiSelect('fundFilter', fundOptions, validFundValues);
 
   // 2. Update ACCOUNT dropdown
   let fundsForAccountDropdown = allFunds;
-  fundsForAccountDropdown = filterByGroups(fundsForAccountDropdown, currentGroupValues);
-  fundsForAccountDropdown = filterByFunds(fundsForAccountDropdown, currentFundValues);
-  fundsForAccountDropdown = filterByVintages(fundsForAccountDropdown, currentVintageValues);
+  fundsForAccountDropdown = filterByGroups(fundsForAccountDropdown, groupFilterSet);
+  fundsForAccountDropdown = filterByFunds(fundsForAccountDropdown, fundSet);
+  fundsForAccountDropdown = filterByVintages(fundsForAccountDropdown, vintageSet);
 
-  const uniqueAccounts = [...new Set(fundsForAccountDropdown.map((f) => f.accountNumber))].sort();
+  const uniqueAccountsSet = new Set(fundsForAccountDropdown.map((f) => f.accountNumber));
+  const uniqueAccounts = [...uniqueAccountsSet].sort();
   const accountOptions = uniqueAccounts.map((account) => ({ value: account, label: account }));
-  const validAccountValues = currentAccountValues.filter((v) => uniqueAccounts.includes(v));
+  const validAccountValues = currentAccountValues.filter((v) => uniqueAccountsSet.has(v));
   populateMultiSelect('accountFilter', accountOptions, validAccountValues);
 
   // 3. Update GROUP dropdown
@@ -610,9 +621,9 @@ export function updateFilterDropdowns(allFunds: Fund[]): void {
     ) {
       // Filter groups to only those containing matching funds
       let fundsForGroupDropdown = allFunds;
-      fundsForGroupDropdown = filterByFunds(fundsForGroupDropdown, currentFundValues);
-      fundsForGroupDropdown = filterByAccounts(fundsForGroupDropdown, currentAccountValues);
-      fundsForGroupDropdown = filterByVintages(fundsForGroupDropdown, currentVintageValues);
+      fundsForGroupDropdown = filterByFunds(fundsForGroupDropdown, fundSet);
+      fundsForGroupDropdown = filterByAccounts(fundsForGroupDropdown, accountSet);
+      fundsForGroupDropdown = filterByVintages(fundsForGroupDropdown, vintageSet);
 
       const validGroupIds = new Set<number>();
       fundsForGroupDropdown.forEach((fund) => {
@@ -627,16 +638,15 @@ export function updateFilterDropdowns(allFunds: Fund[]): void {
     }
   }
 
-  const validGroupValues = currentGroupValues.filter((v) =>
-    groupOptions.some((opt) => opt.value === v)
-  );
+  const validGroupSet = new Set(groupOptions.map((opt) => opt.value));
+  const validGroupValues = currentGroupValues.filter((v) => validGroupSet.has(v));
   populateMultiSelect('groupFilter', groupOptions, validGroupValues);
 
   // 4. Update VINTAGE dropdown
   let fundsForVintageDropdown = allFunds;
-  fundsForVintageDropdown = filterByGroups(fundsForVintageDropdown, currentGroupValues);
-  fundsForVintageDropdown = filterByFunds(fundsForVintageDropdown, currentFundValues);
-  fundsForVintageDropdown = filterByAccounts(fundsForVintageDropdown, currentAccountValues);
+  fundsForVintageDropdown = filterByGroups(fundsForVintageDropdown, groupFilterSet);
+  fundsForVintageDropdown = filterByFunds(fundsForVintageDropdown, fundSet);
+  fundsForVintageDropdown = filterByAccounts(fundsForVintageDropdown, accountSet);
 
   const vintages = new Set<number>();
   fundsForVintageDropdown.forEach((fund) => {
@@ -651,9 +661,7 @@ export function updateFilterDropdowns(allFunds: Fund[]): void {
     value: year.toString(),
     label: year.toString(),
   }));
-  const validVintageValues = currentVintageValues.filter((v) =>
-    sortedVintages.includes(parseInt(v))
-  );
+  const validVintageValues = currentVintageValues.filter((v) => vintages.has(parseInt(v)));
   populateMultiSelect('vintageFilter', vintageOptions, validVintageValues);
 
   // 5. Update TAG dropdown
@@ -666,6 +674,6 @@ export function updateFilterDropdowns(allFunds: Fund[]): void {
 
   const sortedTags = Array.from(allTags).sort((a, b) => a.localeCompare(b));
   const tagOptions = sortedTags.map((tag) => ({ value: tag, label: tag }));
-  const validTagValues = currentTagValues.filter((v) => sortedTags.includes(v));
+  const validTagValues = currentTagValues.filter((v) => allTags.has(v));
   populateMultiSelect('tagFilter', tagOptions, validTagValues);
 }
