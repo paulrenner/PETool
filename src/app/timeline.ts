@@ -45,7 +45,7 @@ interface TimelineYearRange {
  * @param cutoffDate - Cutoff date for separating historical from projected
  * @returns Historical cash flow data grouped by year and fund
  */
-export function aggregateHistoricalCashFlows(funds: Fund[], cutoffDate: Date | null): HistoricalCashFlows {
+function aggregateHistoricalCashFlows(funds: Fund[], cutoffDate: Date | null): HistoricalCashFlows {
   const result: HistoricalCashFlows = {
     calls: {},
     distributions: {},
@@ -99,7 +99,7 @@ export function aggregateHistoricalCashFlows(funds: Fund[], cutoffDate: Date | n
  * @param cutoffDate - Cutoff date for separating historical from projected
  * @returns Projected call data grouped by year and fund
  */
-export function calculateProjectedCalls(
+function calculateProjectedCalls(
   funds: Fund[],
   fundNameData: Map<string, FundNameData>,
   cutoffDate: Date | null
@@ -214,7 +214,7 @@ export function calculateProjectedCalls(
  * @param cutoffYear - The cutoff year (last historical year)
  * @returns Year range with metadata
  */
-export function getTimelineYearRange(
+function getTimelineYearRange(
   historical: HistoricalCashFlows,
   projected: ProjectedCalls,
   cutoffYear: number | null
@@ -424,7 +424,7 @@ function buildNetCashFlowRow(yearRange: TimelineYearRange, historical: Historica
  * Render the cash flow timeline table
  * @param funds - Filtered funds to display
  */
-export function renderTimelineTable(funds: Fund[]): void {
+function renderTimelineTable(funds: Fund[]): void {
   const container = document.getElementById('timelineTableContainer');
   const panel = document.getElementById('timelinePanel');
 

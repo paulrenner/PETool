@@ -707,16 +707,6 @@ export function getAuditLog(filter?: AuditLogFilter): Promise<AuditLogEntry[]> {
 }
 
 /**
- * Get audit history for a specific entity
- */
-export async function getEntityAuditHistory(
-  entityType: AuditEntityType,
-  entityId: number | string
-): Promise<AuditLogEntry[]> {
-  return getAuditLog({ entityType, entityId });
-}
-
-/**
  * Log a fund modification with change tracking
  */
 export async function logFundModification(
@@ -754,20 +744,6 @@ export async function logBulkImport(
     entityId: null,
     entityName: null,
     summary,
-    recordCount,
-  });
-}
-
-/**
- * Log an export operation
- */
-export async function logExport(format: string, recordCount: number): Promise<void> {
-  await logAuditEntry({
-    operation: 'EXPORT',
-    entityType: 'System',
-    entityId: null,
-    entityName: null,
-    summary: `Exported ${recordCount} records as ${format}`,
     recordCount,
   });
 }

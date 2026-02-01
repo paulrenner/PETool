@@ -19,7 +19,7 @@ export interface ConsolidatedFund extends Fund {
 /**
  * Format MOIC for display
  */
-export function formatMOIC(moic: number | null): string {
+function formatMOIC(moic: number | null): string {
   if (moic === null || moic === undefined || !isFinite(moic)) return 'N/A';
   return moic.toFixed(2) + 'x';
 }
@@ -27,7 +27,7 @@ export function formatMOIC(moic: number | null): string {
 /**
  * Format IRR for display
  */
-export function formatIRR(irr: number | null): string {
+function formatIRR(irr: number | null): string {
   if (irr === null || irr === undefined || !isFinite(irr)) return 'N/A';
   return (irr * 100).toFixed(2) + '%';
 }
@@ -35,7 +35,7 @@ export function formatIRR(irr: number | null): string {
 /**
  * Get immediate parent group name for a fund
  */
-export function getImmediateParentName(fund: Fund): string {
+function getImmediateParentName(fund: Fund): string {
   if (!fund.groupId) return '';
   const group = AppState.getGroupByIdSync(fund.groupId);
   return group ? group.name : '';
@@ -44,7 +44,7 @@ export function getImmediateParentName(fund: Fund): string {
 /**
  * Get parent name + account display text
  */
-export function getParentAccountDisplay(fund: Fund): string {
+function getParentAccountDisplay(fund: Fund): string {
   const parentName = getImmediateParentName(fund);
   return parentName ? `${parentName} (${fund.accountNumber})` : fund.accountNumber;
 }
@@ -52,7 +52,7 @@ export function getParentAccountDisplay(fund: Fund): string {
 /**
  * Get HTML for investor cell display
  */
-export function getInvestorCellHtml(fund: Fund): string {
+function getInvestorCellHtml(fund: Fund): string {
   const groupName = getImmediateParentName(fund);
   if (groupName) {
     return `<div>${escapeHtml(groupName)}</div><div style="font-size: 0.85em; color: var(--color-text-light);">${escapeHtml(fund.accountNumber)}</div>`;

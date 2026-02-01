@@ -372,14 +372,6 @@ function buildGroupsTreeInternal(
 }
 
 /**
- * Clear the group tree cache (call when groups are modified)
- */
-export function clearGroupTreeCache(): void {
-  cachedGroupTree = null;
-  cachedGroupsRef = null;
-}
-
-/**
  * Filter configurations
  */
 interface FilterConfig {
