@@ -15,45 +15,12 @@ import {
 import { parseCurrency } from '../utils/formatting';
 import { escapeHtml } from '../utils/escaping';
 import { validateFund } from '../utils/validation';
+import { safeJSONParse } from '../ui/utils';
 import { showStatus, showLoading, hideLoading, openModal, closeModal } from './modals';
 import { getMultiSelectValues, setMultiSelectValues } from './filters';
 
 // Import preview data storage
 let pendingImportData: any = null;
-
-/**
- * Safe JSON parse to prevent prototype pollution
- */
-function safeJSONParse(text: string): any {
-  const data = JSON.parse(text);
-  return sanitizeObject(data);
-}
-
-/**
- * Recursively sanitize an object to prevent prototype pollution
- */
-function sanitizeObject(obj: any): any {
-  if (obj === null || typeof obj !== 'object') {
-    return obj;
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map(sanitizeObject);
-  }
-
-  const clean: Record<string, any> = {};
-  const dangerousKeys = ['__proto__', 'constructor', 'prototype'];
-
-  for (const key of Object.keys(obj)) {
-    if (dangerousKeys.includes(key)) {
-      console.warn(`Blocked potentially dangerous key: ${key}`);
-      continue;
-    }
-    clean[key] = sanitizeObject(obj[key]);
-  }
-
-  return clean;
-}
 
 /**
  * Enrich import data by auto-filling groups based on account numbers
@@ -149,7 +116,7 @@ export async function handleImportFileSelect(event: Event): Promise<void> {
 
   try {
     const text = await file.text();
-    const data = safeJSONParse(text);
+    const data = safeJSONParse<any>(text);
     pendingImportData = data;
 
     // Generate preview

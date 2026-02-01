@@ -346,6 +346,26 @@ export function applyCurrentFilters(funds: Fund[]): Fund[] {
     vintageFilter: getMultiSelectValues('vintageFilter'),
   };
 
+  // Pre-compute group filter data for O(1) lookups (optimization)
+  const groupFilterVals = filterValues.groupFilter;
+  let groupMatchSet: Set<number> | null = null;
+  if (groupFilterVals.length > 0) {
+    groupMatchSet = new Set<number>();
+    for (const groupIdStr of groupFilterVals) {
+      const groupId = parseInt(groupIdStr);
+      // Add the group itself and all its descendants
+      const descendants = AppState.getDescendantIds(groupId);
+      for (const id of descendants) {
+        groupMatchSet.add(id);
+      }
+    }
+  }
+
+  // Convert tag filter to Set for O(1) lookup
+  const tagFilterSet = filterValues.tagFilter.length > 0
+    ? new Set(filterValues.tagFilter)
+    : null;
+
   return funds.filter((fund) => {
     // Apply declarative filters
     for (const config of FilterConfigs) {
@@ -353,34 +373,18 @@ export function applyCurrentFilters(funds: Fund[]): Fund[] {
       if (!config.apply(fund, value)) return false;
     }
 
-    // Group filter (special handling for hierarchical groups)
-    const groupFilterVals = filterValues.groupFilter;
-    if (groupFilterVals.length > 0) {
-      if (!fund.groupId) return false;
-      let matchesGroup = false;
-      for (const groupIdStr of groupFilterVals) {
-        const groupId = parseInt(groupIdStr);
-        if (fund.groupId === groupId) {
-          matchesGroup = true;
-          break;
-        }
-        const descendants = AppState.getDescendantIds(groupId);
-        if (descendants.includes(fund.groupId)) {
-          matchesGroup = true;
-          break;
-        }
+    // Group filter (using pre-computed Set for O(1) lookup)
+    if (groupMatchSet !== null) {
+      if (!fund.groupId || !groupMatchSet.has(fund.groupId)) {
+        return false;
       }
-      if (!matchesGroup) return false;
     }
 
-    // Tag filter
-    const tagFilterVals = filterValues.tagFilter;
-    if (tagFilterVals.length > 0) {
+    // Tag filter (using Set for O(1) lookup)
+    if (tagFilterSet !== null) {
       const fundNameObj = AppState.fundNameData.get(fund.fundName);
       const tags = fundNameObj?.tags || [];
-      const hasMatchingTag = tagFilterVals.some((selectedTag) =>
-        tags.includes(selectedTag)
-      );
+      const hasMatchingTag = tags.some((tag) => tagFilterSet.has(tag));
       if (!hasMatchingTag) return false;
     }
 

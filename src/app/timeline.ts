@@ -6,7 +6,7 @@
 import type { Fund, FundNameData } from '../types';
 import { AppState } from '../core/state';
 import { formatCurrency } from '../utils/formatting';
-import { escapeHtml } from '../utils/escaping';
+import { escapeHtml, escapeAttribute } from '../utils/escaping';
 import { applyCurrentFilters } from './filters';
 import { CONFIG } from '../core/config';
 
@@ -292,7 +292,7 @@ function buildTimelineRow(
 
   // Main row
   const safeLabel = escapeHtml(label);
-  const safeType = escapeHtml(type);
+  const safeType = escapeAttribute(type);
   const rowClass = type === 'calls' ? 'row-calls' : 'row-distributions';
   html += `<tr class="${rowClass} ${expandable ? 'timeline-expand-row' : ''}" ${expandable ? `data-type="${safeType}"` : ''}>`;
   html += `<td class="row-label">${expandable ? '<span class="timeline-expand-icon">▶</span>' : ''}${safeLabel}</td>`;

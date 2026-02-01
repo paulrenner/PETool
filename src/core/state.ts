@@ -69,6 +69,23 @@ class AppStateClass {
 
   setMetricsCache(fundId: number, cutoffDate: string, metrics: FundMetrics): void {
     const key = `${fundId}-${cutoffDate}`;
+
+    // Evict oldest entries if cache is at capacity (LRU-style eviction)
+    if (this.metricsCache.size >= CONFIG.MAX_METRICS_CACHE_SIZE) {
+      // Find and delete the oldest entry (by timestamp)
+      let oldestKey: string | null = null;
+      let oldestTime = Infinity;
+      for (const [k, v] of this.metricsCache) {
+        if (v.timestamp < oldestTime) {
+          oldestTime = v.timestamp;
+          oldestKey = k;
+        }
+      }
+      if (oldestKey) {
+        this.metricsCache.delete(oldestKey);
+      }
+    }
+
     this.metricsCache.set(key, { metrics, timestamp: Date.now() });
   }
 

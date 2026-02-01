@@ -123,7 +123,8 @@ import {
   type GroupIssue,
 } from './app/health-check';
 
-import { escapeHtml } from './utils/escaping';
+import { escapeHtml, escapeAttribute } from './utils/escaping';
+import { announceToScreenReader } from './ui/utils';
 
 // ===========================
 // Backup Reminder Functions
@@ -217,6 +218,7 @@ function initBackupWarningListeners(): void {
 // ===========================
 
 const EXPORT_REMINDER_INTERVAL = 5 * 60 * 1000; // 5 minutes
+let exportReminderIntervalId: ReturnType<typeof setInterval> | null = null;
 
 /**
  * Check if we should show an export reminder
@@ -242,7 +244,11 @@ function showExportReminder(): void {
  * Start the export reminder interval
  */
 function startExportReminderInterval(): void {
-  setInterval(checkExportReminder, EXPORT_REMINDER_INTERVAL);
+  // Clear any existing interval first
+  if (exportReminderIntervalId !== null) {
+    clearInterval(exportReminderIntervalId);
+  }
+  exportReminderIntervalId = setInterval(checkExportReminder, EXPORT_REMINDER_INTERVAL);
 }
 
 // ===========================
@@ -380,7 +386,7 @@ function renderHealthIssue(issue: HealthIssue): string {
   // Allow dismissing warnings and info, but not errors (errors are critical)
   const canDismiss = issue.severity === 'warning' || issue.severity === 'info';
   const dismissButton = canDismiss
-    ? `<button class="btn-dismiss-issue btn-dismiss-fund-issue" data-fund-id="${issue.fundId}" data-category="${escapeHtml(issue.category)}" data-message="${escapeHtml(issue.message)}" title="Dismiss this issue">Dismiss</button>`
+    ? `<button class="btn-dismiss-issue btn-dismiss-fund-issue" data-fund-id="${issue.fundId}" data-category="${escapeAttribute(issue.category)}" data-message="${escapeAttribute(issue.message)}" title="Dismiss this issue">Dismiss</button>`
     : '';
 
   return `
@@ -411,7 +417,7 @@ function renderDuplicatePair(dup: DuplicatePair): string {
         </div>
         <div class="duplicate-reason">${escapeHtml(dup.reason)}</div>
       </div>
-      <button class="btn-dismiss-issue" data-fund1-id="${dup.fund1Id}" data-fund2-id="${dup.fund2Id}" data-reason="${escapeHtml(dup.reason)}" title="Dismiss this issue">Dismiss</button>
+      <button class="btn-dismiss-issue" data-fund1-id="${dup.fund1Id}" data-fund2-id="${dup.fund2Id}" data-reason="${escapeAttribute(dup.reason)}" title="Dismiss this issue">Dismiss</button>
     </div>
   `;
 }
@@ -660,19 +666,6 @@ function setFilterLoading(show: boolean): void {
   const indicator = document.getElementById('filterLoading');
   if (indicator) {
     indicator.classList.toggle('show', show);
-  }
-}
-
-/**
- * Announce to screen readers
- */
-function announceToScreenReader(message: string): void {
-  const announcer = document.getElementById('srAnnounce');
-  if (announcer) {
-    announcer.textContent = message;
-    setTimeout(() => {
-      announcer.textContent = '';
-    }, 1000);
   }
 }
 

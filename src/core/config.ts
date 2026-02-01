@@ -41,6 +41,7 @@ export const CONFIG = {
 
   // Performance
   METRICS_CACHE_TTL: 5000, // 5 seconds
+  MAX_METRICS_CACHE_SIZE: 1000, // Maximum entries in metrics cache (prevents memory bloat)
   LAZY_RENDER_TIMELINE: true, // Only render timeline when expanded
   TABLE_LOADING_DELAY: 150, // Show loading indicator after this delay (ms)
 

@@ -11,7 +11,7 @@ import {
   saveFundName,
   deleteFundName,
 } from '../../core/db';
-import { escapeHtml } from '../../utils/escaping';
+import { escapeHtml, escapeAttribute } from '../../utils/escaping';
 import { showStatus, showLoading, hideLoading, showConfirm, openModal, closeModal } from './common';
 import { populateFundNameDropdown } from './fund-modal';
 
@@ -59,8 +59,8 @@ export async function showManageFundsModal(): Promise<void> {
           ${obj.tags && obj.tags.length > 0 ? `<div class="fund-name-tags">${obj.tags.map((t) => `<span class="table-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
         </div>
         <div>
-          <button class="btn-icon" data-action="editFundName" data-name="${escapeHtml(obj.name)}" title="Edit">✎</button>
-          <button class="btn-icon danger" data-action="deleteFundName" data-name="${escapeHtml(obj.name)}" title="Delete">×</button>
+          <button class="btn-icon" data-action="editFundName" data-name="${escapeAttribute(obj.name)}" title="Edit">✎</button>
+          <button class="btn-icon danger" data-action="deleteFundName" data-name="${escapeAttribute(obj.name)}" title="Delete">×</button>
         </div>
       `;
       fundNamesList.appendChild(item);

@@ -2838,8 +2838,7 @@
             padding: 0;
         }
 
-        .sidebar-item a,
-        .sidebar-import-label {
+        .sidebar-item a {
             display: flex;
             align-items: center;
             gap: 12px;
@@ -2851,8 +2850,7 @@
             font-size: 14px;
         }
 
-        .sidebar-item a:hover,
-        .sidebar-import-label:hover {
+        .sidebar-item a:hover {
             background: var(--color-hover-bg);
         }
 
