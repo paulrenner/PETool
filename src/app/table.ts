@@ -502,6 +502,8 @@ export function renderGroupedFundRow(
     <td class="number">${formatMOIC(m.moic)}</td>
     <td class="number ${m.irr !== null && m.irr >= 0 ? 'positive' : 'negative'}">${formatIRR(m.irr)}</td>
     <td class="number">${formatCurrency(m.outstandingCommitment)}</td>
-    <td></td>
+    <td class="center">
+      <button class="btn-icon grouped-fund-edit-btn" data-fund-name="${escapeAttribute(fund.fundName)}" title="Edit Fund Name" aria-label="Edit ${escapeHtml(fund.fundName)}">⚙</button>
+    </td>
   `;
 }

@@ -1081,6 +1081,18 @@ async function handleHeaderClick(event: Event): Promise<void> {
  */
 function handleActionButtonClick(event: Event): void {
   const target = event.target as HTMLElement;
+
+  // Handle grouped fund edit button clicks
+  const groupedEditBtn = target.closest('.grouped-fund-edit-btn') as HTMLElement;
+  if (groupedEditBtn) {
+    event.stopPropagation();
+    const fundName = groupedEditBtn.dataset.fundName;
+    if (fundName) {
+      showEditFundNameModal(fundName);
+    }
+    return;
+  }
+
   const button = target.closest('.fund-actions-btn') as HTMLElement;
   if (!button) return;
 
