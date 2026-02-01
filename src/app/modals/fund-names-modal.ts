@@ -212,8 +212,11 @@ export async function saveEditedFundName(onSave: () => Promise<void>): Promise<v
     closeModal('editFundNameModal');
     showStatus('Fund updated successfully');
 
-    // Refresh the manage funds modal if open
-    await showManageFundsModal();
+    // Refresh the manage funds modal only if it's currently open
+    const manageFundsModal = document.getElementById('manageFundNamesModal');
+    if (manageFundsModal?.classList.contains('show')) {
+      await showManageFundsModal();
+    }
     await onSave();
   } catch (err) {
     console.error('Error saving fund name:', err);
