@@ -3,6 +3,7 @@
  */
 
 import type { FundWithMetrics } from '../types';
+import { CONFIG } from '../core/config';
 import { AppState } from '../core/state';
 import { getAllFunds, getAllGroups, getAllFundNameObjects } from '../core/db';
 import { calculateMetrics } from '../calculations';
@@ -132,8 +133,7 @@ export async function exportToCSV(): Promise<void> {
     }));
 
     // Check if "group by fund" toggle is enabled
-    const groupByFundCheckbox = document.getElementById('sidebarGroupByFundCheckbox') as HTMLInputElement;
-    const groupByFund = groupByFundCheckbox?.checked ?? false;
+    const groupByFund = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND) === 'true';
 
     let headers: string[];
     let rows: string[];

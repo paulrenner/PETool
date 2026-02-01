@@ -838,7 +838,7 @@ async function renderTable(): Promise<void> {
     }
 
     const showTags = (document.getElementById('sidebarShowTagsCheckbox') as HTMLInputElement)?.checked ?? true;
-    const groupByFund = (document.getElementById('sidebarGroupByFundCheckbox') as HTMLInputElement)?.checked ?? false;
+    const groupByFund = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND) === 'true';
 
     // Calculate totals from ALL filtered funds (before pagination)
     const totals = calculateTotals(fundsWithMetrics, cutoffDate);
@@ -2032,39 +2032,18 @@ function initializeEventListeners(): void {
     }
   }
 
-  // Sidebar - Group by Fund checkbox
-  const sidebarGroupByFundCheckbox = document.getElementById('sidebarGroupByFundCheckbox');
-  const groupByFundToggle = document.getElementById('groupByFundToggle');
-
-  if (sidebarGroupByFundCheckbox) {
-    sidebarGroupByFundCheckbox.addEventListener('change', async () => {
-      const checked = (sidebarGroupByFundCheckbox as HTMLInputElement).checked;
-      localStorage.setItem(CONFIG.STORAGE_GROUP_BY_FUND, checked.toString());
-      // Sync header toggle icon
-      if (groupByFundToggle) {
-        groupByFundToggle.classList.toggle('active', checked);
-      }
-      await renderTable();
-    });
-
-    // Restore saved preference
-    const savedGroupByFund = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND);
-    if (savedGroupByFund !== null) {
-      const isGrouped = savedGroupByFund === 'true';
-      (sidebarGroupByFundCheckbox as HTMLInputElement).checked = isGrouped;
-      // Initialize header toggle icon state
-      if (groupByFundToggle && isGrouped) {
-        groupByFundToggle.classList.add('active');
-      }
-    }
-  }
-
   // Header - Group by Fund toggle button
+  const groupByFundToggle = document.getElementById('groupByFundToggle');
   if (groupByFundToggle) {
+    // Initialize toggle state from localStorage
+    const savedGroupByFund = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND);
+    if (savedGroupByFund === 'true') {
+      groupByFundToggle.classList.add('active');
+    }
+
     groupByFundToggle.addEventListener('click', async () => {
-      const sidebarCheckbox = document.getElementById('sidebarGroupByFundCheckbox') as HTMLInputElement;
-      const newState = !sidebarCheckbox?.checked;
-      if (sidebarCheckbox) sidebarCheckbox.checked = newState;
+      const currentState = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND) === 'true';
+      const newState = !currentState;
       groupByFundToggle.classList.toggle('active', newState);
       localStorage.setItem(CONFIG.STORAGE_GROUP_BY_FUND, newState.toString());
       await renderTable();
