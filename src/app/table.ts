@@ -328,53 +328,77 @@ export function consolidateFundsByName(
 
   // Create consolidated funds
   const consolidated: ConsolidatedFund[] = [];
+  const cutoffStr: string = cutoffDate ? cutoffDate.toISOString().split('T')[0] ?? '' : '';
 
   for (const [fundName, funds] of fundGroups) {
-    // Merge all cash flows and sum NAVs from pre-calculated metrics
-    const allCashFlows: CashFlow[] = [];
-    let totalCommitment = 0;
-    let totalNav = 0;
-    let latestNavDate: string | null = null;
+    // Collect fund IDs for cache lookup
+    const fundIds = funds.map((f) => f.id).filter((id): id is number => id != null);
 
-    for (const fund of funds) {
-      allCashFlows.push(...fund.cashFlows);
-      totalCommitment += fund.commitment;
+    // Check cache first
+    const cachedMetrics = AppState.getConsolidatedMetricsFromCache(fundName, cutoffStr, fundIds);
 
-      // Sum each fund's NAV (already correctly calculated in metrics)
-      totalNav += fund.metrics.nav;
+    let consolidatedMetrics: FundMetrics;
 
-      // Track the latest NAV date across all funds
-      if (fund.metrics.navDate) {
-        if (!latestNavDate || fund.metrics.navDate > latestNavDate) {
-          latestNavDate = fund.metrics.navDate;
+    if (cachedMetrics) {
+      // Use cached metrics
+      consolidatedMetrics = cachedMetrics;
+    } else {
+      // Calculate metrics - merge all cash flows and sum NAVs
+      const allCashFlows: CashFlow[] = [];
+      let sumCommitment = 0;
+      let totalNav = 0;
+      let latestNavDate: string | null = null;
+
+      for (const fund of funds) {
+        allCashFlows.push(...fund.cashFlows);
+        sumCommitment += fund.commitment;
+
+        // Sum each fund's NAV (already correctly calculated in metrics)
+        totalNav += fund.metrics.nav;
+
+        // Track the latest NAV date across all funds
+        if (fund.metrics.navDate) {
+          if (!latestNavDate || fund.metrics.navDate > latestNavDate) {
+            latestNavDate = fund.metrics.navDate;
+          }
         }
       }
+
+      // Create a synthetic NAV entry with the summed total
+      const syntheticNavDate: string = latestNavDate ?? new Date().toISOString().split('T')[0] ?? '';
+      const syntheticNav: Nav[] = [{ date: syntheticNavDate, amount: totalNav }];
+
+      // Create a synthetic fund for metrics calculation
+      const syntheticFund: Fund = {
+        fundName,
+        accountNumber: `${funds.length} investor${funds.length !== 1 ? 's' : ''}`,
+        commitment: sumCommitment,
+        cashFlows: allCashFlows,
+        monthlyNav: syntheticNav,
+        groupId: null,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Calculate consolidated metrics
+      consolidatedMetrics = calculateMetrics(syntheticFund, cutoffDate);
+
+      // Cache the result
+      AppState.setConsolidatedMetricsCache(fundName, cutoffStr, fundIds, consolidatedMetrics);
     }
 
-    // Create a synthetic NAV entry with the summed total
-    // This ensures getLatestNav returns the correct consolidated value
-    const syntheticNavDate = latestNavDate || new Date().toISOString().split('T')[0];
-    const syntheticNav: Nav[] = [{ date: syntheticNavDate!, amount: totalNav }];
+    // Build the consolidated fund object
+    const firstFund = funds[0];
+    const totalCommitment = funds.reduce((sum, f) => sum + f.commitment, 0);
 
-    // Create a synthetic fund for metrics calculation
-    const syntheticFund: Fund = {
+    const consolidatedFund: ConsolidatedFund = {
       fundName,
       accountNumber: `${funds.length} investor${funds.length !== 1 ? 's' : ''}`,
       commitment: totalCommitment,
-      cashFlows: allCashFlows,
-      monthlyNav: syntheticNav,
+      cashFlows: [], // Not needed for display
+      monthlyNav: [], // Not needed for display
       groupId: null,
       timestamp: new Date().toISOString(),
-    };
-
-    // Calculate consolidated metrics
-    const consolidatedMetrics = calculateMetrics(syntheticFund, cutoffDate);
-
-    // Use the fund name object for tags from the first fund
-    const firstFundId = funds[0]?.id;
-    const consolidatedFund: ConsolidatedFund = {
-      ...syntheticFund,
-      id: firstFundId, // Use first fund's ID for fund name lookup
+      id: firstFund?.id, // Use first fund's ID for fund name lookup
       investorCount: funds.length,
       consolidatedMetrics,
     };

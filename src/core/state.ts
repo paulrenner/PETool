@@ -5,6 +5,7 @@ import type {
   Group,
   SortColumn,
   MetricsCacheEntry,
+  ConsolidatedMetricsCacheEntry,
 } from '../types';
 import { CONFIG } from './config';
 
@@ -38,6 +39,7 @@ class AppStateClass {
 
   // Cache
   metricsCache: Map<string, MetricsCacheEntry> = new Map();
+  consolidatedMetricsCache: Map<string, ConsolidatedMetricsCacheEntry> = new Map();
   groupDescendantsCache: Map<number, number[]> = new Map();
   ancestorCache: Map<number, number[]> = new Map();
 
@@ -56,6 +58,7 @@ class AppStateClass {
   // Cache management
   clearMetricsCache(): void {
     this.metricsCache.clear();
+    this.consolidatedMetricsCache.clear();
   }
 
   getMetricsFromCache(fundId: number, cutoffDate: string): FundMetrics | null {
@@ -87,6 +90,50 @@ class AppStateClass {
     }
 
     this.metricsCache.set(key, { metrics, timestamp: Date.now() });
+  }
+
+  // Consolidated metrics cache (for grouped view)
+  getConsolidatedMetricsFromCache(
+    fundName: string,
+    cutoffDate: string,
+    fundIds: number[]
+  ): FundMetrics | null {
+    const key = `${fundName}-${cutoffDate}`;
+    const cached = this.consolidatedMetricsCache.get(key);
+    if (!cached) return null;
+
+    // Invalidate if data has changed
+    if (cached.dataVersion !== this.dataVersion) return null;
+
+    // Invalidate if fund set has changed (different filters applied)
+    const sortedIds = [...fundIds].sort((a, b) => a - b);
+    if (
+      cached.fundIds.length !== sortedIds.length ||
+      !cached.fundIds.every((id, i) => id === sortedIds[i])
+    ) {
+      return null;
+    }
+
+    return cached.metrics;
+  }
+
+  setConsolidatedMetricsCache(
+    fundName: string,
+    cutoffDate: string,
+    fundIds: number[],
+    metrics: FundMetrics
+  ): void {
+    const key = `${fundName}-${cutoffDate}`;
+    const sortedIds = [...fundIds].sort((a, b) => a - b);
+    this.consolidatedMetricsCache.set(key, {
+      metrics,
+      fundIds: sortedIds,
+      dataVersion: this.dataVersion,
+    });
+  }
+
+  clearConsolidatedMetricsCache(): void {
+    this.consolidatedMetricsCache.clear();
   }
 
   // State setters
