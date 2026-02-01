@@ -612,14 +612,13 @@ export function updateFilterDropdowns(allFunds: Fund[]): void {
       return options;
     };
 
-    if (currentGroupValues.length > 0) {
-      groupOptions.push(...flattenGroupTree(tree, 0));
-    } else if (
+    if (
       currentFundValues.length > 0 ||
       currentAccountValues.length > 0 ||
       currentVintageValues.length > 0
     ) {
       // Filter groups to only those containing matching funds
+      // This applies whether or not groups are already selected
       let fundsForGroupDropdown = allFunds;
       fundsForGroupDropdown = filterByFunds(fundsForGroupDropdown, fundSet);
       fundsForGroupDropdown = filterByAccounts(fundsForGroupDropdown, accountSet);
@@ -634,6 +633,7 @@ export function updateFilterDropdowns(allFunds: Fund[]): void {
       });
       groupOptions.push(...flattenGroupTree(tree, 0, validGroupIds));
     } else {
+      // No other filters active, show all groups
       groupOptions.push(...flattenGroupTree(tree, 0));
     }
   }
