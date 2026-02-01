@@ -12,7 +12,6 @@ export function showStatus(message: string, type: 'success' | 'error' | 'warning
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-status';
   closeBtn.innerHTML = '&times;';
-  closeBtn.onclick = () => statusDiv.remove();
 
   const messageText = document.createElement('span');
   messageText.textContent = message;
@@ -21,9 +20,17 @@ export function showStatus(message: string, type: 'success' | 'error' | 'warning
   statusDiv.appendChild(closeBtn);
   document.body.appendChild(statusDiv);
 
+  // Use named handler for proper cleanup
+  const handleClose = () => {
+    closeBtn.removeEventListener('click', handleClose);
+    statusDiv.remove();
+  };
+  closeBtn.addEventListener('click', handleClose);
+
   const dismissTime = type === 'success' ? 3000 : 8000;
   setTimeout(() => {
     if (statusDiv.parentNode) {
+      closeBtn.removeEventListener('click', handleClose);
       statusDiv.remove();
     }
   }, dismissTime);
@@ -73,21 +80,25 @@ export function showConfirm(
 
     modal.classList.add('show');
 
-    const cleanup = () => {
-      modal.classList.remove('show');
-      confirmBtn.onclick = null;
-      cancelBtn.onclick = null;
-    };
-
-    confirmBtn.onclick = () => {
+    // Use named handlers for proper cleanup
+    const handleConfirm = () => {
       cleanup();
       resolve(true);
     };
 
-    cancelBtn.onclick = () => {
+    const handleCancel = () => {
       cleanup();
       resolve(false);
     };
+
+    const cleanup = () => {
+      modal.classList.remove('show');
+      confirmBtn.removeEventListener('click', handleConfirm);
+      cancelBtn.removeEventListener('click', handleCancel);
+    };
+
+    confirmBtn.addEventListener('click', handleConfirm);
+    cancelBtn.addEventListener('click', handleCancel);
   });
 }
 

@@ -499,7 +499,7 @@ function initHealthCheckModal(): void {
             // Clear cache and refresh the health check modal
             cachedHealthCheckResults = null;
             AppState.markHealthCheckRun(); // Reset so it re-runs
-            (AppState as any).lastHealthCheckVersion = -1;
+            AppState.invalidateHealthCheck();
             showHealthCheckModal();
           } catch (err) {
             console.error('Error dismissing health issue:', err);
@@ -521,7 +521,7 @@ function initHealthCheckModal(): void {
             await dismissFundIssue(fundId, category, message);
             // Clear cache and refresh the health check modal
             cachedHealthCheckResults = null;
-            (AppState as any).lastHealthCheckVersion = -1;
+            AppState.invalidateHealthCheck();
             showHealthCheckModal();
           } catch (err) {
             console.error('Error dismissing fund issue:', err);
@@ -1215,6 +1215,21 @@ function initializeCutoffDate(): void {
 // Multi-Select Initialization
 // ===========================
 
+/**
+ * Close all open multi-select dropdowns
+ * Extracted to avoid redundant DOM queries
+ */
+function closeAllOpenMultiSelects(clearHighlight: boolean = false): void {
+  document.querySelectorAll('.multi-select.open').forEach((ms) => {
+    ms.classList.remove('open');
+    ms.querySelector('.multi-select-trigger')?.setAttribute('aria-expanded', 'false');
+    clearMultiSelectSearch(ms as HTMLElement);
+    if (clearHighlight) {
+      clearMultiSelectHighlight(ms as HTMLElement);
+    }
+  });
+}
+
 function initMultiSelectDropdowns(): void {
   const multiSelects = document.querySelectorAll('.multi-select');
 
@@ -1234,11 +1249,7 @@ function initMultiSelectDropdowns(): void {
       const wasOpen = container.classList.contains('open');
 
       // Close all others
-      document.querySelectorAll('.multi-select.open').forEach((ms) => {
-        ms.classList.remove('open');
-        ms.querySelector('.multi-select-trigger')?.setAttribute('aria-expanded', 'false');
-        clearMultiSelectSearch(ms as HTMLElement);
-      });
+      closeAllOpenMultiSelects();
 
       if (!wasOpen) {
         container.classList.add('open');
@@ -1483,12 +1494,7 @@ function initGlobalClickHandler(): void {
 
     // Close multi-select dropdowns
     if (!target.closest('.multi-select')) {
-      document.querySelectorAll('.multi-select.open').forEach((ms) => {
-        ms.classList.remove('open');
-        ms.querySelector('.multi-select-trigger')?.setAttribute('aria-expanded', 'false');
-        clearMultiSelectSearch(ms as HTMLElement);
-        clearMultiSelectHighlight(ms as HTMLElement);
-      });
+      closeAllOpenMultiSelects(true);
     }
 
     // Close searchable-select dropdowns
@@ -1701,11 +1707,7 @@ function initializeEventListeners(): void {
   // Table body clicks
   const tableBody = document.getElementById('fundsTableBody');
   if (tableBody) {
-    tableBody.addEventListener('click', (e) => {
-      handleActionButtonClick(e);
-      // Note: Row click to open details modal was removed per user request
-      // Users can access fund details via the action menu
-    });
+    tableBody.addEventListener('click', handleActionButtonClick);
   }
 
   // Action dropdown actions

@@ -218,6 +218,10 @@ class AppStateClass {
     this.lastHealthCheckVersion = this.dataVersion;
   }
 
+  invalidateHealthCheck(): void {
+    this.lastHealthCheckVersion = -1;
+  }
+
   shouldShowExportReminder(intervalMs: number): boolean {
     if (!this.dataChangedSinceLastExport) return false;
     return Date.now() - this.lastExportReminderTime >= intervalMs;
