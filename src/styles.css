@@ -170,6 +170,11 @@
             background-color: #1F2937;
         }
 
+        [data-theme="dark"] .details-table input,
+        [data-theme="dark"] .details-table select {
+            background: transparent !important;
+        }
+
         [data-theme="dark"] .details-table input:hover,
         [data-theme="dark"] .details-table select:hover {
             border-bottom-color: #4A5568;
@@ -2266,7 +2271,7 @@
         .details-table input,
         .details-table select {
             padding: 6px 8px;
-            background: transparent;
+            background: transparent !important;
             border: none;
             border-bottom: 1px solid transparent;
             border-radius: 0;
