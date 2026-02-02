@@ -87,6 +87,12 @@ function calculateCommitmentHistory(funds: Fund[], cutoffDate: Date | null): Com
     fundFirstContribution.set(fund.fundName, getFirstContributionDate(fund));
   });
 
+  // Debug: log first contribution dates for each fund
+  console.log('Commitment Chart - Fund first contribution dates:');
+  fundFirstContribution.forEach((date, fundName) => {
+    console.log(`  ${fundName}: ${date}`);
+  });
+
   const dataPoints: CommitmentDataPoint[] = [];
 
   // Add initial point (before first cash flow) showing zero commitment
