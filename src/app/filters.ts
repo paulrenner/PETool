@@ -5,7 +5,7 @@
 import type { Fund, Group } from '../types';
 import { AppState } from '../core/state';
 import { getVintageYear } from '../calculations/metrics';
-import { escapeHtml, escapeAttribute } from '../utils/escaping';
+import { escapeHtml } from '../utils/escaping';
 
 /**
  * Get the most recent quarter-end date as a YYYY-MM-DD string
@@ -149,6 +149,7 @@ interface MultiSelectOption {
 
 /**
  * Populate options in a multi-select dropdown
+ * Uses DocumentFragment for efficient batch DOM insertion
  */
 export function populateMultiSelect(
   id: string,
@@ -164,52 +165,73 @@ export function populateMultiSelect(
   const existingSearchInput = dropdown.querySelector('.multi-select-search input') as HTMLInputElement;
   const preservedSearch = existingSearchInput?.value || '';
 
-  let seenTopLevelGroup = false;
-  const optionsHtml = options
-    .map((opt) => {
-      const isSelected = preserveValues.includes(opt.value);
-      const indentStyle = opt.indent !== undefined ? `style="--indent-level: ${opt.indent}"` : '';
-
-      const classes = ['multi-select-option'];
-      if (opt.indent !== undefined) {
-        if (opt.indent === 0) {
-          classes.push('group-top-level');
-          if (seenTopLevelGroup) {
-            classes.push('group-separator');
-          }
-          seenTopLevelGroup = true;
-        } else {
-          classes.push('group-option', 'group-child');
-        }
-      }
-      if (isSelected) classes.push('selected');
-
-      return `
-      <div class="${classes.join(' ')}"
-           data-value="${escapeAttribute(opt.value)}"
-           role="option"
-           aria-selected="${isSelected}"
-           ${indentStyle}>
-        <input type="checkbox" ${isSelected ? 'checked' : ''} tabindex="-1">
-        <label>${escapeHtml(opt.label)}</label>
-      </div>
-    `;
-    })
-    .join('');
-
+  // Create static structure first
   dropdown.innerHTML = `
     <div class="multi-select-search">
       <input type="text" placeholder="Search..." aria-label="Search options" value="${escapeHtml(preservedSearch)}">
     </div>
-    <div class="multi-select-options">
-      <div class="multi-select-option multi-select-all-option" data-value="__select_all__" role="option" aria-selected="false">
-        <input type="checkbox" tabindex="-1">
-        <label>Select All</label>
-      </div>
-      ${optionsHtml}
-    </div>
+    <div class="multi-select-options"></div>
     <div class="multi-select-no-results">No matches found</div>
   `;
+
+  const optionsContainer = dropdown.querySelector('.multi-select-options')!;
+
+  // Use DocumentFragment for batch insertion of options
+  const fragment = document.createDocumentFragment();
+  const preserveSet = new Set(preserveValues);
+
+  // Create "Select All" option
+  const selectAllDiv = document.createElement('div');
+  selectAllDiv.className = 'multi-select-option multi-select-all-option';
+  selectAllDiv.setAttribute('data-value', '__select_all__');
+  selectAllDiv.setAttribute('role', 'option');
+  selectAllDiv.setAttribute('aria-selected', 'false');
+  selectAllDiv.innerHTML = '<input type="checkbox" tabindex="-1"><label>Select All</label>';
+  fragment.appendChild(selectAllDiv);
+
+  // Build options using DocumentFragment
+  let seenTopLevelGroup = false;
+  for (const opt of options) {
+    const isSelected = preserveSet.has(opt.value);
+    const div = document.createElement('div');
+
+    const classes = ['multi-select-option'];
+    if (opt.indent !== undefined) {
+      if (opt.indent === 0) {
+        classes.push('group-top-level');
+        if (seenTopLevelGroup) {
+          classes.push('group-separator');
+        }
+        seenTopLevelGroup = true;
+      } else {
+        classes.push('group-option', 'group-child');
+      }
+    }
+    if (isSelected) classes.push('selected');
+
+    div.className = classes.join(' ');
+    div.setAttribute('data-value', opt.value);
+    div.setAttribute('role', 'option');
+    div.setAttribute('aria-selected', String(isSelected));
+    if (opt.indent !== undefined) {
+      div.style.setProperty('--indent-level', String(opt.indent));
+    }
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = isSelected;
+    checkbox.tabIndex = -1;
+
+    const label = document.createElement('label');
+    label.textContent = opt.label;
+
+    div.appendChild(checkbox);
+    div.appendChild(label);
+    fragment.appendChild(div);
+  }
+
+  // Single DOM insertion
+  optionsContainer.appendChild(fragment);
 
   // Restore search filter if there was one
   if (preservedSearch) {
@@ -221,6 +243,7 @@ export function populateMultiSelect(
 
 /**
  * Filter options in a multi-select dropdown based on search text
+ * Batches CSS class changes for better performance
  */
 export function filterMultiSelectOptions(container: HTMLElement, searchText: string): void {
   const optionsContainer = container.querySelector('.multi-select-options');
@@ -229,22 +252,32 @@ export function filterMultiSelectOptions(container: HTMLElement, searchText: str
 
   const options = optionsContainer.querySelectorAll('.multi-select-option');
   const searchLower = searchText.toLowerCase().trim();
-  let visibleCount = 0;
+
+  // Batch operations: collect all changes first, then apply
+  const toShow: Element[] = [];
+  const toHide: Element[] = [];
 
   options.forEach((option) => {
     const label = option.querySelector('label');
     const text = label ? label.textContent?.toLowerCase() || '' : '';
 
     if (searchLower === '' || text.includes(searchLower)) {
-      option.classList.remove('search-hidden');
-      visibleCount++;
+      toShow.push(option);
     } else {
-      option.classList.add('search-hidden');
+      toHide.push(option);
     }
   });
 
+  // Apply all changes in batch (single reflow)
+  for (const option of toShow) {
+    option.classList.remove('search-hidden');
+  }
+  for (const option of toHide) {
+    option.classList.add('search-hidden');
+  }
+
   if (noResults) {
-    noResults.classList.toggle('visible', visibleCount === 0 && searchLower !== '');
+    noResults.classList.toggle('visible', toShow.length === 0 && searchLower !== '');
   }
 }
 

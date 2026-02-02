@@ -62,26 +62,37 @@ function getInvestorCellHtml(fund: Fund): string {
 
 /**
  * Sort data by multiple columns
+ * Uses lazy evaluation - only calculates metrics when needed for comparison
  */
 export function sortData(funds: Fund[], sortColumns: SortColumn[], cutoffDate?: Date): Fund[] {
   if (sortColumns.length === 0) return funds;
 
-  // Pre-calculate metrics for all funds using cache to avoid redundant calculations
+  // Check if any sort column requires metrics calculation
+  const metricsColumns = new Set(['vintage', 'commitment', 'totalContributions', 'totalDistributions', 'nav', 'investmentReturn', 'moic', 'irr', 'outstandingCommitment']);
+  const needsMetrics = sortColumns.some(({ column }) => metricsColumns.has(column));
+
+  // Lazy metrics map - only populated when needed
   const metricsMap = new Map<number, FundMetrics>();
-  for (const fund of funds) {
+  const getMetrics = (fund: Fund): FundMetrics => {
     if (fund.id != null) {
-      metricsMap.set(fund.id, calculateMetricsCached(fund, cutoffDate));
+      let metrics = metricsMap.get(fund.id);
+      if (!metrics) {
+        metrics = calculateMetricsCached(fund, cutoffDate);
+        metricsMap.set(fund.id, metrics);
+      }
+      return metrics;
     }
-  }
+    return calculateMetricsCached(fund, cutoffDate);
+  };
 
   return [...funds].sort((a, b) => {
     for (const { column, direction } of sortColumns) {
       const multiplier = direction === 'asc' ? 1 : -1;
       let comparison = 0;
 
-      // Use pre-calculated metrics (already cached)
-      const metricsA = a.id != null ? metricsMap.get(a.id) : calculateMetricsCached(a, cutoffDate);
-      const metricsB = b.id != null ? metricsMap.get(b.id) : calculateMetricsCached(b, cutoffDate);
+      // Only calculate metrics when sorting by metrics-based columns
+      const metricsA = needsMetrics ? getMetrics(a) : undefined;
+      const metricsB = needsMetrics ? getMetrics(b) : undefined;
 
       switch (column) {
         case 'fundName':
@@ -91,33 +102,31 @@ export function sortData(funds: Fund[], sortColumns: SortColumn[], cutoffDate?: 
           comparison = getParentAccountDisplay(a).localeCompare(getParentAccountDisplay(b));
           break;
         case 'vintage':
-          const vintageA = metricsA?.vintageYear || 0;
-          const vintageB = metricsB?.vintageYear || 0;
-          comparison = vintageA - vintageB;
+          comparison = (metricsA!.vintageYear || 0) - (metricsB!.vintageYear || 0);
           break;
         case 'commitment':
-          comparison = (metricsA?.commitment || 0) - (metricsB?.commitment || 0);
+          comparison = (metricsA!.commitment || 0) - (metricsB!.commitment || 0);
           break;
         case 'totalContributions':
-          comparison = (metricsA?.calledCapital || 0) - (metricsB?.calledCapital || 0);
+          comparison = (metricsA!.calledCapital || 0) - (metricsB!.calledCapital || 0);
           break;
         case 'totalDistributions':
-          comparison = (metricsA?.distributions || 0) - (metricsB?.distributions || 0);
+          comparison = (metricsA!.distributions || 0) - (metricsB!.distributions || 0);
           break;
         case 'nav':
-          comparison = (metricsA?.nav || 0) - (metricsB?.nav || 0);
+          comparison = (metricsA!.nav || 0) - (metricsB!.nav || 0);
           break;
         case 'investmentReturn':
-          comparison = (metricsA?.investmentReturn || 0) - (metricsB?.investmentReturn || 0);
+          comparison = (metricsA!.investmentReturn || 0) - (metricsB!.investmentReturn || 0);
           break;
         case 'moic':
-          comparison = (metricsA?.moic || 0) - (metricsB?.moic || 0);
+          comparison = (metricsA!.moic || 0) - (metricsB!.moic || 0);
           break;
         case 'irr':
-          comparison = (metricsA?.irr || 0) - (metricsB?.irr || 0);
+          comparison = (metricsA!.irr || 0) - (metricsB!.irr || 0);
           break;
         case 'outstandingCommitment':
-          comparison = (metricsA?.outstandingCommitment || 0) - (metricsB?.outstandingCommitment || 0);
+          comparison = (metricsA!.outstandingCommitment || 0) - (metricsB!.outstandingCommitment || 0);
           break;
         default:
           comparison = 0;
@@ -260,6 +269,7 @@ export function renderTotalsRow(
 
 /**
  * Update portfolio summary statistics
+ * Batches DOM lookups and updates for better performance
  */
 export function updatePortfolioSummary(
   fundsWithMetrics: FundWithMetrics[],
@@ -268,21 +278,29 @@ export function updatePortfolioSummary(
   const totals = calculateTotals(fundsWithMetrics, cutoffDate);
   const uniqueFunds = new Set(fundsWithMetrics.map((f) => f.fundName));
 
-  // Update DOM elements
-  const setElement = (id: string, value: string) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = value;
+  // Batch DOM lookups - get all elements at once
+  const elements = {
+    investmentCount: document.getElementById('summaryInvestmentCount'),
+    fundCount: document.getElementById('summaryFundCount'),
+    commitment: document.getElementById('summaryCommitment'),
+    nav: document.getElementById('summaryNav'),
+    irr: document.getElementById('summaryIRR'),
+    moic: document.getElementById('summaryMOIC'),
+    dpi: document.getElementById('summaryDPI'),
+    rvpi: document.getElementById('summaryRVPI'),
+    tvpi: document.getElementById('summaryTVPI'),
   };
 
-  setElement('summaryInvestmentCount', fundsWithMetrics.length.toString());
-  setElement('summaryFundCount', uniqueFunds.size.toString());
-  setElement('summaryCommitment', formatCurrency(totals.commitment));
-  setElement('summaryNav', formatCurrency(totals.nav));
-  setElement('summaryIRR', formatIRR(totals.aggregateIRR));
-  setElement('summaryMOIC', formatMOIC(totals.aggregateMOIC));
-  setElement('summaryDPI', totals.aggregateDPI !== null ? totals.aggregateDPI.toFixed(2) + 'x' : 'N/A');
-  setElement('summaryRVPI', totals.aggregateRVPI !== null ? totals.aggregateRVPI.toFixed(2) + 'x' : 'N/A');
-  setElement('summaryTVPI', totals.aggregateTVPI !== null ? totals.aggregateTVPI.toFixed(2) + 'x' : 'N/A');
+  // Batch DOM updates - apply all changes
+  if (elements.investmentCount) elements.investmentCount.textContent = fundsWithMetrics.length.toString();
+  if (elements.fundCount) elements.fundCount.textContent = uniqueFunds.size.toString();
+  if (elements.commitment) elements.commitment.textContent = formatCurrency(totals.commitment);
+  if (elements.nav) elements.nav.textContent = formatCurrency(totals.nav);
+  if (elements.irr) elements.irr.textContent = formatIRR(totals.aggregateIRR);
+  if (elements.moic) elements.moic.textContent = formatMOIC(totals.aggregateMOIC);
+  if (elements.dpi) elements.dpi.textContent = totals.aggregateDPI !== null ? totals.aggregateDPI.toFixed(2) + 'x' : 'N/A';
+  if (elements.rvpi) elements.rvpi.textContent = totals.aggregateRVPI !== null ? totals.aggregateRVPI.toFixed(2) + 'x' : 'N/A';
+  if (elements.tvpi) elements.tvpi.textContent = totals.aggregateTVPI !== null ? totals.aggregateTVPI.toFixed(2) + 'x' : 'N/A';
 }
 
 /**

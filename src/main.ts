@@ -658,11 +658,13 @@ function initColumnResizing(): void {
         if (currentWidth !== startWidth) {
           saveColumnWidth(columnIndex, currentWidth);
         }
-        // Reset flag after a short delay so click handler can check it
-        setTimeout(() => {
-          isResizingColumn = false;
-          lastMousedownOnResizer = false;
-        }, 50);
+        // Reset flag after next frame so click handler can check it
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            isResizingColumn = false;
+            lastMousedownOnResizer = false;
+          });
+        });
       };
 
       document.addEventListener('mousemove', onMouseMove);
@@ -694,6 +696,29 @@ function debounce<T extends (...args: any[]) => any>(
     };
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
+  };
+}
+
+/**
+ * Throttle function using requestAnimationFrame
+ * Batches high-frequency events (like mouseover) to next animation frame
+ */
+function rafThrottle<T extends (...args: any[]) => any>(
+  func: T
+): (...args: Parameters<T>) => void {
+  let rafId: number | null = null;
+  let lastArgs: Parameters<T> | null = null;
+
+  return function throttled(...args: Parameters<T>) {
+    lastArgs = args;
+    if (rafId === null) {
+      rafId = requestAnimationFrame(() => {
+        if (lastArgs) {
+          func(...lastArgs);
+        }
+        rafId = null;
+      });
+    }
   };
 }
 
@@ -883,6 +908,9 @@ async function renderTable(): Promise<void> {
       const consolidatedFunds = consolidateFundsByName(fundsWithMetrics, cutoffDate, AppState.sortColumns);
       const displayedConsolidated = consolidatedFunds.slice(0, displayLimit);
 
+      // Use DocumentFragment for batch DOM insertion (performance optimization)
+      const fragment = document.createDocumentFragment();
+
       displayedConsolidated.forEach((fund, index) => {
         const row = document.createElement('tr');
         row.classList.add('grouped-fund-row');
@@ -890,19 +918,25 @@ async function renderTable(): Promise<void> {
         row.setAttribute('role', 'row');
         row.setAttribute('aria-rowindex', (index + 2).toString());
         row.innerHTML = renderGroupedFundRow(fund, index, showTags);
-        tbody.appendChild(row);
+        fragment.appendChild(row);
       });
 
       // Add totals row (calculated from ALL funds, not just displayed)
       const totalRow = document.createElement('tr');
       totalRow.innerHTML = renderTotalsRow(totals);
-      tbody.appendChild(totalRow);
+      fragment.appendChild(totalRow);
+
+      // Single DOM insertion
+      tbody.appendChild(fragment);
 
       // Update pagination UI for grouped view
       updatePaginationUI(displayedConsolidated.length, consolidatedFunds.length);
     } else {
       // Render normal view (individual fund rows) with pagination
       const displayedFunds = fundsWithMetrics.slice(0, displayLimit);
+
+      // Use DocumentFragment for batch DOM insertion (performance optimization)
+      const fragment = document.createDocumentFragment();
 
       displayedFunds.forEach((fund, index) => {
         const row = document.createElement('tr');
@@ -911,13 +945,16 @@ async function renderTable(): Promise<void> {
         row.setAttribute('role', 'row');
         row.setAttribute('aria-rowindex', (index + 2).toString());
         row.innerHTML = renderFundRow(fund, index, showTags);
-        tbody.appendChild(row);
+        fragment.appendChild(row);
       });
 
       // Add totals row (calculated from ALL funds, not just displayed)
       const totalRow = document.createElement('tr');
       totalRow.innerHTML = renderTotalsRow(totals);
-      tbody.appendChild(totalRow);
+      fragment.appendChild(totalRow);
+
+      // Single DOM insertion
+      tbody.appendChild(fragment);
 
       // Update pagination UI
       updatePaginationUI(displayedFunds.length, totalCount);
@@ -1246,6 +1283,15 @@ function closeAllOpenMultiSelects(clearHighlight: boolean = false): void {
     if (clearHighlight) {
       clearMultiSelectHighlight(ms as HTMLElement);
     }
+    // Clean up any pending debounce timers for this dropdown
+    const containerId = ms.id;
+    if (containerId) {
+      const timer = searchDebounceTimers.get(containerId);
+      if (timer) {
+        clearTimeout(timer);
+        searchDebounceTimers.delete(containerId);
+      }
+    }
   });
 }
 
@@ -1377,13 +1423,17 @@ function initMultiSelectDropdowns(): void {
       }
     });
 
-    // Handle mouseover to update highlight
-    dropdown.addEventListener('mouseover', (e) => {
-      const option = (e.target as HTMLElement).closest('.multi-select-option') as HTMLElement;
+    // Handle mouseover to update highlight (throttled with rAF for performance)
+    const throttledMouseover = rafThrottle((target: HTMLElement) => {
+      const option = target.closest('.multi-select-option') as HTMLElement;
       if (option && !option.classList.contains('search-hidden')) {
         clearMultiSelectHighlight(container as HTMLElement);
         option.classList.add('highlighted');
       }
+    });
+
+    dropdown.addEventListener('mouseover', (e) => {
+      throttledMouseover(e.target as HTMLElement);
     });
   });
 
@@ -1504,13 +1554,17 @@ function initSearchableSelects(): void {
       }
     });
 
-    // Handle mouseover to update highlight
-    dropdown.addEventListener('mouseover', (e) => {
-      const option = (e.target as HTMLElement).closest('.searchable-select-option') as HTMLElement;
+    // Handle mouseover to update highlight (throttled with rAF for performance)
+    const throttledMouseover = rafThrottle((target: HTMLElement) => {
+      const option = target.closest('.searchable-select-option') as HTMLElement;
       if (option && !option.classList.contains('search-hidden')) {
         clearSearchableHighlight(container as HTMLElement);
         option.classList.add('highlighted');
       }
+    });
+
+    dropdown.addEventListener('mouseover', (e) => {
+      throttledMouseover(e.target as HTMLElement);
     });
   });
 

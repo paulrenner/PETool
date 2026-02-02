@@ -191,6 +191,8 @@ async function transaction<T>(
  * IMPORTANT: This function validates data before saving to prevent corruption.
  * Invalid data (NaN amounts, malformed dates, etc.) will be rejected.
  *
+ * Uses a single transaction for both get (audit) and save operations for better performance.
+ *
  * @param fundData - The fund to save
  * @returns Promise resolving to the fund ID
  * @throws Error if validation fails or database error occurs
@@ -212,30 +214,14 @@ export function saveFundToDB(fundData: Fund): Promise<number> {
     }
 
     const isUpdate = !!fundData.id;
+
+    // Use a single readwrite transaction for both get and save (performance optimization)
+    const tx = db.transaction([CONFIG.FUNDS_STORE], 'readwrite');
+    const objectStore = tx.objectStore(CONFIG.FUNDS_STORE);
+
     let previousFund: Fund | undefined;
 
-    // For updates, get the previous state for audit logging
-    if (isUpdate) {
-      const getRequest = db.transaction([CONFIG.FUNDS_STORE], 'readonly')
-        .objectStore(CONFIG.FUNDS_STORE)
-        .get(fundData.id!);
-
-      getRequest.onsuccess = () => {
-        previousFund = getRequest.result ? normalizeFund(getRequest.result) : undefined;
-        performSave();
-      };
-      getRequest.onerror = () => {
-        // Continue without previous state if lookup fails
-        performSave();
-      };
-    } else {
-      performSave();
-    }
-
-    function performSave() {
-      const tx = db!.transaction([CONFIG.FUNDS_STORE], 'readwrite');
-      const objectStore = tx.objectStore(CONFIG.FUNDS_STORE);
-
+    const performSave = () => {
       let request: IDBRequest<IDBValidKey>;
       if (fundData.id) {
         request = objectStore.put(fundData);
@@ -261,6 +247,22 @@ export function saveFundToDB(fundData: Fund): Promise<number> {
         resolve(savedId);
       };
       request.onerror = () => reject(request.error);
+    };
+
+    // For updates, get the previous state for audit logging within the same transaction
+    if (isUpdate) {
+      const getRequest = objectStore.get(fundData.id!);
+
+      getRequest.onsuccess = () => {
+        previousFund = getRequest.result ? normalizeFund(getRequest.result) : undefined;
+        performSave();
+      };
+      getRequest.onerror = () => {
+        // Continue without previous state if lookup fails
+        performSave();
+      };
+    } else {
+      performSave();
     }
   });
 }
