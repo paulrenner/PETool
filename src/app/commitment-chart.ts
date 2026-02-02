@@ -60,7 +60,20 @@ function getUniqueCashFlowDates(funds: Fund[], cutoffDate: Date | null): string[
 }
 
 /**
+ * Get the first contribution date for a fund
+ */
+function getFirstContributionDate(fund: Fund): string | null {
+  const contributions = (fund.cashFlows || [])
+    .filter((cf) => cf.type === 'Contribution' && cf.date)
+    .sort((a, b) => parseDateLocal(a.date).getTime() - parseDateLocal(b.date).getTime());
+
+  return contributions.length > 0 ? contributions[0]!.date : null;
+}
+
+/**
  * Calculate commitment history data points
+ * Note: A fund's commitment only appears in the chart starting from its first capital call.
+ * Before a fund's first contribution, it contributes zero to the total.
  */
 function calculateCommitmentHistory(funds: Fund[], cutoffDate: Date | null): CommitmentDataPoint[] {
   if (funds.length === 0) return [];
@@ -68,39 +81,41 @@ function calculateCommitmentHistory(funds: Fund[], cutoffDate: Date | null): Com
   const dates = getUniqueCashFlowDates(funds, cutoffDate);
   if (dates.length === 0) return [];
 
+  // Build a map of each fund's first contribution date
+  const fundFirstContribution = new Map<string, string | null>();
+  funds.forEach((fund) => {
+    fundFirstContribution.set(fund.fundName, getFirstContributionDate(fund));
+  });
+
   const dataPoints: CommitmentDataPoint[] = [];
 
-  // Add initial point (before first cash flow) showing total commitment
+  // Add initial point (before first cash flow) showing zero commitment
   const firstDate = dates[0]!;
   const dayBeforeFirst = new Date(parseDateLocal(firstDate));
   dayBeforeFirst.setDate(dayBeforeFirst.getDate() - 1);
   const initialDateStr = dayBeforeFirst.toISOString().split('T')[0]!;
 
-  // Calculate initial commitment (before any cash flows)
-  const initialByFund: Record<string, number> = {};
-  let initialTotal = 0;
-  funds.forEach((fund) => {
-    const commitment = fund.commitment || 0;
-    initialByFund[fund.fundName] = commitment;
-    initialTotal += commitment;
-  });
-
   dataPoints.push({
     date: initialDateStr,
-    totalCommitment: initialTotal,
-    byFund: initialByFund,
+    totalCommitment: 0,
+    byFund: {},
   });
 
   // Calculate commitment at each cash flow date
+  // A fund's commitment only counts after its first contribution
   dates.forEach((dateStr) => {
     const asOfDate = parseDateLocal(dateStr);
     const byFund: Record<string, number> = {};
     let total = 0;
 
     funds.forEach((fund) => {
-      const outstanding = getOutstandingCommitment(fund, asOfDate);
-      byFund[fund.fundName] = outstanding;
-      total += outstanding;
+      const firstContrib = fundFirstContribution.get(fund.fundName);
+      // Only include fund if it has a first contribution on or before this date
+      if (firstContrib && parseDateLocal(firstContrib) <= asOfDate) {
+        const outstanding = getOutstandingCommitment(fund, asOfDate);
+        byFund[fund.fundName] = outstanding;
+        total += outstanding;
+      }
     });
 
     dataPoints.push({
@@ -120,9 +135,13 @@ function calculateCommitmentHistory(funds: Fund[], cutoffDate: Date | null): Com
     let total = 0;
 
     funds.forEach((fund) => {
-      const outstanding = getOutstandingCommitment(fund, cutoffDate || undefined);
-      byFund[fund.fundName] = outstanding;
-      total += outstanding;
+      const firstContrib = fundFirstContribution.get(fund.fundName);
+      // Only include fund if it has made at least one contribution
+      if (firstContrib) {
+        const outstanding = getOutstandingCommitment(fund, cutoffDate || undefined);
+        byFund[fund.fundName] = outstanding;
+        total += outstanding;
+      }
     });
 
     dataPoints.push({
