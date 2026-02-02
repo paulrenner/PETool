@@ -115,6 +115,7 @@ import {
 } from './app/bulk';
 
 import { renderTimeline } from './app/timeline';
+import { renderCommitmentChart } from './app/commitment-chart';
 
 import {
   runHealthCheck,
@@ -2414,6 +2415,18 @@ function initializeEventListeners(): void {
       const isExpanded = timelinePanel.classList.toggle('expanded');
       if (isExpanded) {
         renderTimeline();
+      }
+    });
+  }
+
+  // Commitment chart panel toggle
+  const commitmentChartHeader = document.getElementById('commitmentChartHeader');
+  const commitmentChartPanel = document.getElementById('commitmentChartPanel');
+  if (commitmentChartHeader && commitmentChartPanel) {
+    commitmentChartHeader.addEventListener('click', () => {
+      const isExpanded = commitmentChartPanel.classList.toggle('expanded');
+      if (isExpanded) {
+        renderCommitmentChart();
       }
     });
   }

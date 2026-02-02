@@ -9,4 +9,5 @@ export * from './export';
 export * from './import';
 export * from './bulk';
 export * from './timeline';
+export * from './commitment-chart';
 export * from './health-check';

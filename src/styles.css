@@ -611,6 +611,117 @@
             }
         }
 
+        /* Commitment Chart Styles */
+        .commitment-chart {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            min-height: 250px;
+        }
+
+        .chart-grid line {
+            stroke: var(--color-border);
+            stroke-width: 1;
+            stroke-dasharray: 4, 4;
+        }
+
+        .chart-area {
+            fill: rgba(52, 152, 219, 0.15);
+        }
+
+        .chart-line {
+            fill: none;
+            stroke: var(--color-action);
+            stroke-width: 2;
+        }
+
+        .chart-axis line {
+            stroke: var(--color-text-light);
+            stroke-width: 1;
+        }
+
+        .chart-tick line {
+            stroke: var(--color-text-light);
+            stroke-width: 1;
+        }
+
+        .chart-tick text {
+            fill: var(--color-text-light);
+            font-size: 11px;
+        }
+
+        .chart-point {
+            fill: var(--color-action);
+            stroke: var(--color-white);
+            stroke-width: 2;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .chart-hover-target {
+            fill: transparent;
+            cursor: pointer;
+        }
+
+        .chart-hover-point:hover .chart-point {
+            opacity: 1;
+        }
+
+        .chart-tooltip-container {
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            overflow: visible;
+        }
+
+        .chart-hover-point:hover .chart-tooltip-container {
+            opacity: 1;
+        }
+
+        .chart-tooltip {
+            background: var(--color-primary);
+            color: var(--color-white);
+            padding: 8px 12px;
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            box-shadow: var(--shadow-md);
+            white-space: nowrap;
+            width: max-content;
+            max-width: 200px;
+        }
+
+        .chart-tooltip-date {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .chart-tooltip-total {
+            margin-bottom: 4px;
+        }
+
+        .chart-tooltip-breakdown {
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding-top: 4px;
+            margin-top: 4px;
+            font-size: 11px;
+        }
+
+        .chart-tooltip-fund {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        [data-theme="dark"] .chart-area {
+            fill: rgba(52, 152, 219, 0.25);
+        }
+
+        [data-theme="dark"] .chart-point {
+            stroke: var(--color-primary);
+        }
+
+        [data-theme="dark"] .chart-tooltip {
+            background: #4A5568;
+        }
+
         /* Keyboard Shortcuts Modal */
         .shortcuts-modal .modal-content {
             max-width: 500px;
@@ -3050,6 +3161,24 @@
             /* Hide minimized timeline in print view */
             #timelinePanel:not(.expanded) {
                 display: none !important;
+            }
+
+            /* Hide minimized commitment chart in print view */
+            #commitmentChartPanel:not(.expanded) {
+                display: none !important;
+            }
+
+            /* Hide chart tooltips in print */
+            .chart-tooltip-container {
+                display: none !important;
+            }
+
+            .chart-hover-target {
+                display: none !important;
+            }
+
+            .chart-point {
+                opacity: 1 !important;
             }
         }
 
