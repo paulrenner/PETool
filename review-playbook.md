@@ -13,7 +13,7 @@
 | 1 | System mapping | Low | ~5 |
 | 2 | Financial formulas | High | ~3 |
 | 3 | Data integrity | Medium | ~4 |
-| 4 | Security/perf | Medium | ~8 |
+| 4 | Security/perf | Medium | ~10 |
 | 5 | Architecture | Low | ~6 |
 | 6 | Tests | Medium | ~7 |
 | 7 | Synthesis | Low | Reports only |
@@ -191,6 +191,8 @@ Each issue must include:
 - `src/app/modals/*.ts` — Modal dialogs (user input)
 - `src/app/import.ts` — File parsing (injection surface)
 - `src/app/filters.ts` — Filter functionality
+- `src/app/timeline.ts` — Timeline visualization
+- `src/app/commitment-chart.ts` — Commitment chart (SVG rendering)
 - `src/calculations/irr.ts` — Hot-path calculations
 - `src/calculations/metrics.ts` — Aggregation loops
 
