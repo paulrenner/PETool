@@ -29,11 +29,14 @@ import {
   sortData,
   renderFundRow,
   renderGroupedFundRow,
+  renderGroupRow,
   calculateTotals,
   renderTotalsRow,
   updatePortfolioSummary,
   updateSortIndicators,
   consolidateFundsByName,
+  consolidateFundsByGroup,
+  flattenGroupTree,
 } from './app/table';
 
 import {
@@ -897,13 +900,57 @@ async function renderTable(): Promise<void> {
 
     const showTags = (document.getElementById('sidebarShowTagsCheckbox') as HTMLInputElement)?.checked ?? true;
     const groupByFund = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND) === 'true';
+    const groupByGroup = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_GROUP) === 'true';
 
     // Calculate totals from ALL filtered funds (before pagination)
     const totals = calculateTotals(fundsWithMetrics, cutoffDate);
     const totalCount = fundsWithMetrics.length;
     const displayLimit = AppState.displayLimit;
 
-    if (groupByFund) {
+    if (groupByGroup) {
+      // Render hierarchical group view
+      const expandedGroupsStr = localStorage.getItem(CONFIG.STORAGE_EXPANDED_GROUPS) || '[]';
+      let expandedGroupIds: Set<number | string>;
+      try {
+        const parsed = JSON.parse(expandedGroupsStr);
+        expandedGroupIds = new Set(parsed);
+      } catch {
+        expandedGroupIds = new Set();
+      }
+
+      const groupTree = consolidateFundsByGroup(fundsWithMetrics, cutoffDate, expandedGroupIds);
+      const flattenedGroups = flattenGroupTree(groupTree);
+
+      // Use DocumentFragment for batch DOM insertion
+      const fragment = document.createDocumentFragment();
+
+      flattenedGroups.forEach((group, index) => {
+        const row = document.createElement('tr');
+        row.classList.add('grouped-group-row');
+        row.classList.add(`depth-${Math.min(group.depth, 2)}`);
+        if (group.groupId === null) {
+          row.classList.add('no-group');
+        }
+        row.setAttribute('tabindex', '0');
+        row.setAttribute('role', 'row');
+        row.setAttribute('aria-rowindex', (index + 2).toString());
+        if (group.groupId !== null) {
+          row.setAttribute('data-group-id', group.groupId.toString());
+        }
+        row.innerHTML = renderGroupRow(group, index);
+        fragment.appendChild(row);
+      });
+
+      // Add totals row
+      const totalRow = document.createElement('tr');
+      totalRow.innerHTML = renderTotalsRow(totals);
+      fragment.appendChild(totalRow);
+
+      tbody.appendChild(fragment);
+
+      // Update pagination UI (no pagination for group view - show all)
+      updatePaginationUI(flattenedGroups.length, flattenedGroups.length);
+    } else if (groupByFund) {
       // Render consolidated view (grouped by fund name)
       const consolidatedFunds = consolidateFundsByName(fundsWithMetrics, cutoffDate, AppState.sortColumns);
       const displayedConsolidated = consolidatedFunds.slice(0, displayLimit);
@@ -1114,10 +1161,54 @@ async function handleHeaderClick(event: Event): Promise<void> {
 }
 
 /**
+ * Handle expand/collapse button click for group-by-group view
+ */
+function handleExpandButtonClick(event: Event): void {
+  const target = event.target as HTMLElement;
+  const button = target.closest('.btn-expand') as HTMLElement;
+  if (!button) return;
+
+  event.stopPropagation();
+  const groupId = button.dataset.groupId;
+  if (!groupId) return;
+
+  // Toggle expanded state in localStorage
+  const expandedGroupsStr = localStorage.getItem(CONFIG.STORAGE_EXPANDED_GROUPS) || '[]';
+  let expandedGroups: (number | string)[];
+  try {
+    expandedGroups = JSON.parse(expandedGroupsStr);
+  } catch {
+    expandedGroups = [];
+  }
+
+  const groupIdNum = parseInt(groupId);
+  const index = expandedGroups.findIndex(id => id === groupIdNum || id === groupId);
+
+  if (index >= 0) {
+    // Remove from expanded (collapse)
+    expandedGroups.splice(index, 1);
+  } else {
+    // Add to expanded (expand)
+    expandedGroups.push(groupIdNum);
+  }
+
+  localStorage.setItem(CONFIG.STORAGE_EXPANDED_GROUPS, JSON.stringify(expandedGroups));
+  renderTable();
+}
+
+/**
  * Handle action button click
  */
 function handleActionButtonClick(event: Event): void {
   const target = event.target as HTMLElement;
+
+  // Check for expand button first (group-by-group view)
+  const expandButton = target.closest('.btn-expand') as HTMLElement;
+  if (expandButton) {
+    handleExpandButtonClick(event);
+    return;
+  }
+
   const button = target.closest('.table-action-btn') as HTMLElement;
   if (!button) return;
 
@@ -1129,6 +1220,47 @@ function handleActionButtonClick(event: Event): void {
     const fundName = button.dataset.fundName;
     if (fundName) {
       showEditFundNameModal(fundName);
+    }
+    return;
+  }
+
+  // Handle edit group action (group-by-group view)
+  if (action === 'edit-group') {
+    const groupId = button.dataset.groupId;
+    if (groupId) {
+      showManageGroupsModal();
+      // Pre-select the group for editing after modal opens
+      setTimeout(() => {
+        const group = AppState.getGroupByIdSync(parseInt(groupId));
+        if (group) {
+          // Trigger edit mode for this group
+          const editGroupId = document.getElementById('editGroupId') as HTMLInputElement;
+          const newGroupName = document.getElementById('newGroupName') as HTMLInputElement;
+          const saveGroupBtn = document.getElementById('saveGroupBtn');
+          const cancelEditBtn = document.getElementById('cancelEditBtn');
+          const groupFormTitle = document.getElementById('groupFormTitle');
+
+          if (editGroupId && newGroupName && saveGroupBtn && cancelEditBtn && groupFormTitle) {
+            editGroupId.value = groupId;
+            newGroupName.value = group.name;
+            saveGroupBtn.textContent = 'Save Changes';
+            cancelEditBtn.classList.remove('hidden');
+            groupFormTitle.textContent = 'Edit Group';
+
+            // Set parent group if exists
+            const newGroupParent = document.getElementById('newGroupParent') as HTMLInputElement;
+            if (newGroupParent && group.parentGroupId) {
+              newGroupParent.value = group.parentGroupId.toString();
+            }
+
+            // Set type if exists
+            const newGroupType = document.getElementById('newGroupType') as HTMLSelectElement;
+            if (newGroupType && group.type) {
+              newGroupType.value = group.type;
+            }
+          }
+        }
+      }, 100);
     }
     return;
   }
@@ -2187,6 +2319,16 @@ function initializeEventListeners(): void {
       const newState = !currentState;
       groupByFundToggle.classList.toggle('active', newState);
       localStorage.setItem(CONFIG.STORAGE_GROUP_BY_FUND, newState.toString());
+
+      // If enabling group-by-fund, disable group-by-group to avoid confusion
+      if (newState) {
+        localStorage.setItem(CONFIG.STORAGE_GROUP_BY_GROUP, 'false');
+        const sidebarGroupByGroupCheckbox = document.getElementById('sidebarGroupByGroupCheckbox') as HTMLInputElement;
+        if (sidebarGroupByGroupCheckbox) {
+          sidebarGroupByGroupCheckbox.checked = false;
+        }
+      }
+
       await renderTable();
     });
   }
@@ -2206,6 +2348,32 @@ function initializeEventListeners(): void {
       const isMasked = savedMaskAccounts === 'true';
       (sidebarMaskAccountsCheckbox as HTMLInputElement).checked = isMasked;
       document.documentElement.setAttribute('data-mask-accounts', isMasked.toString());
+    }
+  }
+
+  // Sidebar - Group by Group checkbox
+  const sidebarGroupByGroupCheckbox = document.getElementById('sidebarGroupByGroupCheckbox');
+  if (sidebarGroupByGroupCheckbox) {
+    sidebarGroupByGroupCheckbox.addEventListener('change', async () => {
+      const checked = (sidebarGroupByGroupCheckbox as HTMLInputElement).checked;
+      localStorage.setItem(CONFIG.STORAGE_GROUP_BY_GROUP, checked.toString());
+
+      // If enabling group-by-group, disable group-by-fund to avoid confusion
+      if (checked) {
+        localStorage.setItem(CONFIG.STORAGE_GROUP_BY_FUND, 'false');
+        const groupByFundToggle = document.getElementById('groupByFundToggle');
+        if (groupByFundToggle) {
+          groupByFundToggle.classList.remove('active');
+        }
+      }
+
+      await renderTable();
+    });
+
+    // Restore saved preference
+    const savedGroupByGroup = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_GROUP);
+    if (savedGroupByGroup !== null) {
+      (sidebarGroupByGroupCheckbox as HTMLInputElement).checked = savedGroupByGroup === 'true';
     }
   }
 

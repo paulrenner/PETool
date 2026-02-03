@@ -2,7 +2,7 @@
  * Table rendering and sorting functionality
  */
 
-import type { Fund, FundMetrics, FundWithMetrics, SortColumn, CashFlow, Nav } from '../types';
+import type { Fund, FundMetrics, FundWithMetrics, SortColumn, CashFlow, Nav, Group } from '../types';
 import { AppState } from '../core/state';
 import { calculateMetricsCached, calculateIRR, calculateMOIC, parseCashFlowsForIRR, calculateMetrics } from '../calculations';
 import { escapeHtml, escapeAttribute } from '../utils/escaping';
@@ -14,6 +14,21 @@ import { formatCurrency } from '../utils/formatting';
 export interface ConsolidatedFund extends Fund {
   investorCount: number;
   consolidatedMetrics: FundMetrics;
+}
+
+/**
+ * Represents a group with aggregated metrics from all funds in the group
+ */
+export interface ConsolidatedGroup {
+  groupId: number | null; // null for "No Group"
+  groupName: string;
+  group: Group | null;
+  fundCount: number;
+  investorCount: number;
+  metrics: FundMetrics;
+  children: ConsolidatedGroup[];
+  depth: number;
+  isExpanded: boolean;
 }
 
 /**
@@ -522,6 +537,257 @@ export function renderGroupedFundRow(
     <td class="number">${formatCurrency(m.outstandingCommitment)}</td>
     <td class="center">
       <button class="btn-icon table-action-btn" data-action="edit-fund" data-fund-name="${escapeAttribute(fund.fundName)}" title="Edit Fund Name" aria-label="Edit ${escapeHtml(fund.fundName)}">⚙</button>
+    </td>
+  `;
+}
+
+/**
+ * Consolidate funds by group, creating a hierarchical tree structure
+ */
+export function consolidateFundsByGroup(
+  fundsWithMetrics: FundWithMetrics[],
+  cutoffDate?: Date,
+  expandedGroupIds: Set<number | string> = new Set()
+): ConsolidatedGroup[] {
+  // Group funds by their groupId
+  const fundsByGroupId = new Map<number | null, FundWithMetrics[]>();
+
+  for (const fund of fundsWithMetrics) {
+    const groupId = fund.groupId ?? null;
+    const existing = fundsByGroupId.get(groupId) || [];
+    existing.push(fund);
+    fundsByGroupId.set(groupId, existing);
+  }
+
+  // Build a map of all groups that have funds (directly or via descendants)
+  const groupsWithFunds = new Set<number>();
+
+  // First, mark all groups that directly have funds
+  for (const groupId of fundsByGroupId.keys()) {
+    if (groupId !== null) {
+      groupsWithFunds.add(groupId);
+      // Also mark all ancestors as having funds (so they show in the tree)
+      const ancestors = AppState.getAncestorIds(groupId);
+      for (const ancestorId of ancestors) {
+        groupsWithFunds.add(ancestorId);
+      }
+    }
+  }
+
+  // Calculate metrics for a group (aggregating all funds in the group and descendants)
+  function calculateGroupMetrics(groupId: number | null): {
+    metrics: FundMetrics;
+    fundCount: number;
+    investorCount: number;
+    allFunds: FundWithMetrics[];
+  } {
+    let allFunds: FundWithMetrics[] = [];
+
+    if (groupId === null) {
+      // "No Group" - just the ungrouped funds
+      allFunds = fundsByGroupId.get(null) || [];
+    } else {
+      // Get all funds in this group and all descendant groups
+      const descendantIds = AppState.getDescendantIds(groupId);
+      for (const descId of descendantIds) {
+        const funds = fundsByGroupId.get(descId);
+        if (funds) {
+          allFunds.push(...funds);
+        }
+      }
+    }
+
+    if (allFunds.length === 0) {
+      return {
+        metrics: {
+          vintageYear: null,
+          commitment: 0,
+          calledCapital: 0,
+          distributions: 0,
+          nav: 0,
+          navDate: null,
+          outstandingCommitment: 0,
+          investmentReturn: 0,
+          irr: null,
+          moic: null,
+          dpi: null,
+          rvpi: null,
+          tvpi: null,
+        },
+        fundCount: 0,
+        investorCount: 0,
+        allFunds: [],
+      };
+    }
+
+    // Merge all cash flows and sum values
+    const allCashFlows: CashFlow[] = [];
+    let sumCommitment = 0;
+    let totalNav = 0;
+    let latestNavDate: string | null = null;
+    const uniqueFunds = new Set<string>();
+
+    for (const fund of allFunds) {
+      allCashFlows.push(...fund.cashFlows);
+      sumCommitment += fund.commitment;
+      totalNav += fund.metrics.nav;
+      uniqueFunds.add(fund.fundName);
+
+      if (fund.metrics.navDate) {
+        if (!latestNavDate || fund.metrics.navDate > latestNavDate) {
+          latestNavDate = fund.metrics.navDate;
+        }
+      }
+    }
+
+    // Create synthetic fund for metrics calculation
+    const syntheticNavDate: string = latestNavDate ?? new Date().toISOString().split('T')[0] ?? '';
+    const syntheticNav: Nav[] = [{ date: syntheticNavDate, amount: totalNav }];
+
+    const syntheticFund: Fund = {
+      fundName: 'Synthetic',
+      accountNumber: 'Synthetic',
+      commitment: sumCommitment,
+      cashFlows: allCashFlows,
+      monthlyNav: syntheticNav,
+      groupId: null,
+      timestamp: new Date().toISOString(),
+    };
+
+    const metrics = calculateMetrics(syntheticFund, cutoffDate);
+
+    return {
+      metrics,
+      fundCount: uniqueFunds.size,
+      investorCount: allFunds.length,
+      allFunds,
+    };
+  }
+
+  // Build tree recursively
+  function buildGroupNode(groupId: number | null, depth: number): ConsolidatedGroup | null {
+    const group = groupId !== null ? (AppState.getGroupByIdSync(groupId) ?? null) : null;
+    const groupName = group?.name ?? 'No Group';
+
+    // For non-null groups, check if this group or any descendant has funds
+    if (groupId !== null && !groupsWithFunds.has(groupId)) {
+      return null;
+    }
+
+    const { metrics, fundCount, investorCount } = calculateGroupMetrics(groupId);
+
+    // Build children (only for actual groups, not "No Group")
+    const children: ConsolidatedGroup[] = [];
+    if (groupId !== null) {
+      const childIds = AppState.getDirectChildIds(groupId);
+      for (const childId of childIds) {
+        const childNode = buildGroupNode(childId, depth + 1);
+        if (childNode) {
+          children.push(childNode);
+        }
+      }
+      // Sort children by name
+      children.sort((a, b) => a.groupName.localeCompare(b.groupName));
+    }
+
+    const isExpanded = groupId === null || expandedGroupIds.has(groupId) || expandedGroupIds.has(String(groupId));
+
+    return {
+      groupId,
+      groupName,
+      group,
+      fundCount,
+      investorCount,
+      metrics,
+      children,
+      depth,
+      isExpanded,
+    };
+  }
+
+  // Build the tree starting from top-level groups
+  const result: ConsolidatedGroup[] = [];
+
+  // Get all top-level groups (parentGroupId is null)
+  const topLevelGroups = AppState.getGroups().filter(g => g.parentGroupId === null);
+
+  for (const group of topLevelGroups) {
+    const node = buildGroupNode(group.id, 0);
+    if (node) {
+      result.push(node);
+    }
+  }
+
+  // Sort top-level groups by name
+  result.sort((a, b) => a.groupName.localeCompare(b.groupName));
+
+  // Add "No Group" if there are ungrouped funds
+  const ungroupedFunds = fundsByGroupId.get(null);
+  if (ungroupedFunds && ungroupedFunds.length > 0) {
+    const noGroupNode = buildGroupNode(null, 0);
+    if (noGroupNode) {
+      result.push(noGroupNode);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Flatten the group tree for rendering, respecting expanded state
+ */
+export function flattenGroupTree(groups: ConsolidatedGroup[]): ConsolidatedGroup[] {
+  const result: ConsolidatedGroup[] = [];
+
+  function traverse(nodes: ConsolidatedGroup[]): void {
+    for (const node of nodes) {
+      result.push(node);
+      if (node.isExpanded && node.children.length > 0) {
+        traverse(node.children);
+      }
+    }
+  }
+
+  traverse(groups);
+  return result;
+}
+
+/**
+ * Render a group row for the group-by-group view
+ */
+export function renderGroupRow(
+  group: ConsolidatedGroup,
+  _index: number
+): string {
+  const m = group.metrics;
+  const investmentReturn = m.investmentReturn ?? (m.distributions + m.nav - m.calledCapital);
+  const hasChildren = group.children.length > 0;
+  const expandIcon = hasChildren
+    ? (group.isExpanded ? '&#9660;' : '&#9654;')
+    : '<span style="display:inline-block;width:12px;"></span>';
+
+  const indentPx = group.depth * 20;
+  const groupType = group.group?.type ? ` <span class="group-type-badge">${escapeHtml(group.group.type)}</span>` : '';
+
+  return `
+    <td style="padding-left: ${indentPx + 8}px;">
+      <div class="group-name-cell">
+        ${hasChildren ? `<button class="btn-expand" data-group-id="${group.groupId}" title="${group.isExpanded ? 'Collapse' : 'Expand'}">${expandIcon}</button>` : `<span class="expand-placeholder">${expandIcon}</span>`}
+        <span class="group-name">${escapeHtml(group.groupName)}</span>${groupType}
+      </div>
+    </td>
+    <td class="center"><span class="investor-count">${group.fundCount} fund${group.fundCount !== 1 ? 's' : ''}, ${group.investorCount} position${group.investorCount !== 1 ? 's' : ''}</span></td>
+    <td class="center">${m.vintageYear || 'N/A'}</td>
+    <td class="number">${formatCurrency(m.commitment || 0)}</td>
+    <td class="number">${formatCurrency(m.calledCapital)}</td>
+    <td class="number">${formatCurrency(m.distributions)}</td>
+    <td class="number">${formatCurrency(m.nav)}</td>
+    <td class="number ${investmentReturn >= 0 ? 'positive' : 'negative'}">${formatCurrency(investmentReturn)}</td>
+    <td class="number">${formatMOIC(m.moic)}</td>
+    <td class="number ${m.irr !== null && m.irr >= 0 ? 'positive' : 'negative'}">${formatIRR(m.irr)}</td>
+    <td class="number">${formatCurrency(m.outstandingCommitment)}</td>
+    <td class="center">
+      ${group.groupId !== null ? `<button class="btn-icon table-action-btn" data-action="edit-group" data-group-id="${group.groupId}" title="Edit Group" aria-label="Edit ${escapeHtml(group.groupName)}">⚙</button>` : ''}
     </td>
   `;
 }
