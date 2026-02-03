@@ -85,6 +85,15 @@ export function calculateIRR(cashFlows: IRRCashFlow[], guess: number = CONFIG.IR
     rate = newRate;
   }
 
+  // Newton-Raphson failed to converge within max iterations
+  // This can happen with pathological cash flow patterns (e.g., multiple sign changes)
+  console.debug('IRR: Max iterations reached without convergence', {
+    finalRate: rate,
+    finalNpv: npv(rate),
+    cashFlowCount: cashFlows.length,
+    daySpan: daysDiff,
+  });
+
   return null;
 }
 

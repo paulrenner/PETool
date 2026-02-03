@@ -5,7 +5,7 @@
 import type { FundWithMetrics } from '../types';
 import { CONFIG } from '../core/config';
 import { AppState } from '../core/state';
-import { getAllFunds, getAllGroups, getAllFundNameObjects } from '../core/db';
+import { getAllFunds, getAllGroups, getAllFundNameObjects, getAuditLog } from '../core/db';
 import { calculateMetrics } from '../calculations';
 import { escapeCSV } from '../utils/escaping';
 import { showStatus, showLoading, hideLoading } from './modals';
@@ -51,11 +51,13 @@ export async function exportDatabase(): Promise<void> {
     const funds = await getAllFunds();
     const fundNamesData = await getAllFundNameObjects();
     const groupsData = await getAllGroups();
+    const auditLog = await getAuditLog();
 
     const exportData = {
       funds,
       fundNames: fundNamesData,
       groups: groupsData,
+      auditLog,
       exportDate: new Date().toISOString(),
     };
 

@@ -5,6 +5,20 @@ import { parseCurrency } from '../utils/formatting';
 import { calculateIRR, calculateMOIC, type IRRCashFlow } from './irr';
 
 /**
+ * Round a currency value to 2 decimal places.
+ *
+ * JavaScript uses IEEE 754 double-precision floats, which can cause cumulative
+ * rounding errors in financial calculations (e.g., 0.1 + 0.2 !== 0.3).
+ * This helper ensures currency values are rounded to cents precision.
+ *
+ * Note: JavaScript floats have ~15 significant digits of precision, so this
+ * is sufficient for typical PE fund amounts up to trillions of dollars.
+ */
+export function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/**
  * Parse currency with logging for failures.
  * Logs a warning if parseCurrency returns null on non-empty input.
  */
@@ -264,14 +278,16 @@ export function calculateMetrics(fund: Fund, cutoffDate?: Date): FundMetrics {
   const sortedNavsDesc = [...navs].sort((a, b) => b.timestamp - a.timestamp);
 
   // Calculate called capital (sum of contributions)
-  const calledCapital = sortedCashFlows
+  // Use roundCurrency to prevent floating-point precision issues
+  const calledCapital = roundCurrency(sortedCashFlows
     .filter(cf => cf.type === 'Contribution')
-    .reduce((sum, cf) => sum + Math.abs(cf.amount), 0);
+    .reduce((sum, cf) => sum + Math.abs(cf.amount), 0));
 
   // Calculate distributions
-  const distributions = sortedCashFlows
+  // Use roundCurrency to prevent floating-point precision issues
+  const distributions = roundCurrency(sortedCashFlows
     .filter(cf => cf.type === 'Distribution')
-    .reduce((sum, cf) => sum + Math.abs(cf.amount), 0);
+    .reduce((sum, cf) => sum + Math.abs(cf.amount), 0));
 
   // Get latest NAV with adjustments for subsequent cash flows
   let nav = 0;
@@ -316,7 +332,8 @@ export function calculateMetrics(fund: Fund, cutoffDate?: Date): FundMetrics {
     : null;
 
   // Calculate investment return
-  const investmentReturn = distributions + nav - calledCapital;
+  // Use roundCurrency to prevent floating-point precision issues
+  const investmentReturn = roundCurrency(distributions + nav - calledCapital);
 
   // Build cash flows for IRR (excluding adjustments)
   const irrFlows: IRRCashFlow[] = sortedCashFlows
