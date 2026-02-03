@@ -80,13 +80,21 @@ function parseFundData(fund: Fund, cutoffDate?: Date): {
 
 /**
  * Get vintage year (first contribution year)
+ * Optimized: O(n) single-pass instead of O(n log n) sort
  */
 export function getVintageYear(fund: Fund): number | null {
-  const contributions = (fund.cashFlows || [])
-    .filter((cf) => cf.type === 'Contribution' && isValidDate(cf.date))
-    .sort((a, b) => parseDateLocal(a.date).getTime() - parseDateLocal(b.date).getTime());
+  let earliest: string | null = null;
 
-  return contributions.length > 0 ? parseDateLocal(contributions[0]!.date).getFullYear() : null;
+  for (const cf of fund.cashFlows || []) {
+    if (cf.type === 'Contribution' && isValidDate(cf.date)) {
+      // String comparison works for YYYY-MM-DD format
+      if (earliest === null || cf.date < earliest) {
+        earliest = cf.date;
+      }
+    }
+  }
+
+  return earliest ? parseDateLocal(earliest).getFullYear() : null;
 }
 
 /**

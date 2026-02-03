@@ -710,42 +710,27 @@ function checkDuplicatePair(
 }
 
 /**
+ * Roman numeral to Arabic mapping (longest patterns first for correct matching)
+ */
+const ROMAN_TO_ARABIC: Record<string, string> = {
+  xxv: '25', xxiv: '24', xxiii: '23', xxii: '22', xxi: '21', xx: '20',
+  xix: '19', xviii: '18', xvii: '17', xvi: '16', xv: '15', xiv: '14',
+  xiii: '13', xii: '12', xi: '11', x: '10', ix: '9', viii: '8',
+  vii: '7', vi: '6', v: '5', iv: '4', iii: '3', ii: '2', i: '1',
+};
+
+/**
+ * Pre-compiled regex for Roman numeral matching (longest patterns first)
+ * Optimized: single regex with alternation instead of 26 sequential replacements
+ */
+const ROMAN_PATTERN = /\b(xxv|xxiv|xxiii|xxii|xxi|xx|xix|xviii|xvii|xvi|xv|xiv|xiii|xii|xi|x|ix|viii|vii|vi|v|iv|iii|ii|i)\b/gi;
+
+/**
  * Convert Roman numerals to Arabic numerals in a string
+ * Optimized: O(n) single-pass instead of 26 sequential passes
  */
 function romanToArabic(str: string): string {
-  const romanNumerals: [RegExp, string][] = [
-    [/\bxxv\b/gi, '25'],
-    [/\bxxiv\b/gi, '24'],
-    [/\bxxiii\b/gi, '23'],
-    [/\bxxii\b/gi, '22'],
-    [/\bxxi\b/gi, '21'],
-    [/\bxx\b/gi, '20'],
-    [/\bxix\b/gi, '19'],
-    [/\bxviii\b/gi, '18'],
-    [/\bxvii\b/gi, '17'],
-    [/\bxvi\b/gi, '16'],
-    [/\bxv\b/gi, '15'],
-    [/\bxiv\b/gi, '14'],
-    [/\bxiii\b/gi, '13'],
-    [/\bxii\b/gi, '12'],
-    [/\bxi\b/gi, '11'],
-    [/\bx\b/gi, '10'],
-    [/\bix\b/gi, '9'],
-    [/\bviii\b/gi, '8'],
-    [/\bvii\b/gi, '7'],
-    [/\bvi\b/gi, '6'],
-    [/\bv\b/gi, '5'],
-    [/\biv\b/gi, '4'],
-    [/\biii\b/gi, '3'],
-    [/\bii\b/gi, '2'],
-    [/\bi\b/gi, '1'],
-  ];
-
-  let result = str;
-  for (const [pattern, replacement] of romanNumerals) {
-    result = result.replace(pattern, replacement);
-  }
-  return result;
+  return str.replace(ROMAN_PATTERN, (match) => ROMAN_TO_ARABIC[match.toLowerCase()] || match);
 }
 
 /**
@@ -791,32 +776,43 @@ function calculateNameSimilarity(name1: string, name2: string): number {
 
 /**
  * Calculate Levenshtein distance between two strings
+ * Optimized: O(min(m,n)) space using two-row approach instead of O(m×n) matrix
  */
 function levenshteinDistance(s1: string, s2: string): number {
+  // Ensure s1 is the shorter string for minimal space usage
+  if (s1.length > s2.length) {
+    [s1, s2] = [s2, s1];
+  }
+
   const m = s1.length;
   const n = s2.length;
 
-  // Create matrix
-  const dp: number[][] = Array(m + 1)
-    .fill(null)
-    .map(() => Array(n + 1).fill(0));
+  // Use two rows instead of full matrix
+  let prevRow = new Array<number>(m + 1);
+  let currRow = new Array<number>(m + 1);
 
-  // Initialize first row and column
-  for (let i = 0; i <= m; i++) dp[i]![0] = i;
-  for (let j = 0; j <= n; j++) dp[0]![j] = j;
-
-  // Fill matrix
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
-      dp[i]![j] = Math.min(
-        dp[i - 1]![j]! + 1, // deletion
-        dp[i]![j - 1]! + 1, // insertion
-        dp[i - 1]![j - 1]! + cost // substitution
-      );
-    }
+  // Initialize first row
+  for (let i = 0; i <= m; i++) {
+    prevRow[i] = i;
   }
 
-  return dp[m]![n]!;
+  // Fill rows
+  for (let j = 1; j <= n; j++) {
+    currRow[0] = j;
+
+    for (let i = 1; i <= m; i++) {
+      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+      currRow[i] = Math.min(
+        prevRow[i]! + 1,      // deletion
+        currRow[i - 1]! + 1,  // insertion
+        prevRow[i - 1]! + cost // substitution
+      );
+    }
+
+    // Swap rows
+    [prevRow, currRow] = [currRow, prevRow];
+  }
+
+  return prevRow[m]!;
 }
 

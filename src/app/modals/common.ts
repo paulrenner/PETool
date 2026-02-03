@@ -8,22 +8,42 @@ let previouslyFocusedElement: HTMLElement | null = null;
 // Track active focus trap handler for cleanup
 let activeFocusTrapHandler: ((e: KeyboardEvent) => void) | null = null;
 
+// Cache focusable elements per modal to avoid repeated DOM queries
+const focusableElementsCache = new WeakMap<HTMLElement, HTMLElement[]>();
+
+// Selector for focusable elements
+const FOCUSABLE_SELECTORS = [
+  'button:not([disabled]):not([tabindex="-1"])',
+  'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"])',
+  'select:not([disabled]):not([tabindex="-1"])',
+  'textarea:not([disabled]):not([tabindex="-1"])',
+  'a[href]:not([tabindex="-1"])',
+  '[tabindex]:not([tabindex="-1"]):not([disabled])',
+].join(', ');
+
 /**
- * Get all focusable elements within a container
+ * Get all focusable elements within a container (cached)
  */
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
-  const focusableSelectors = [
-    'button:not([disabled]):not([tabindex="-1"])',
-    'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"])',
-    'select:not([disabled]):not([tabindex="-1"])',
-    'textarea:not([disabled]):not([tabindex="-1"])',
-    'a[href]:not([tabindex="-1"])',
-    '[tabindex]:not([tabindex="-1"]):not([disabled])',
-  ].join(', ');
+  // Check cache first
+  const cached = focusableElementsCache.get(container);
+  if (cached) {
+    return cached;
+  }
 
-  return Array.from(container.querySelectorAll<HTMLElement>(focusableSelectors)).filter(
+  const elements = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)).filter(
     (el) => el.offsetParent !== null // Only visible elements
   );
+
+  focusableElementsCache.set(container, elements);
+  return elements;
+}
+
+/**
+ * Invalidate the focusable elements cache for a modal
+ */
+function invalidateFocusableCache(container: HTMLElement): void {
+  focusableElementsCache.delete(container);
 }
 
 /**
@@ -34,6 +54,9 @@ function setupFocusTrap(modal: HTMLElement): void {
   if (activeFocusTrapHandler) {
     document.removeEventListener('keydown', activeFocusTrapHandler);
   }
+
+  // Invalidate cache on modal open to get fresh focusable elements
+  invalidateFocusableCache(modal);
 
   activeFocusTrapHandler = (e: KeyboardEvent) => {
     if (e.key !== 'Tab') return;

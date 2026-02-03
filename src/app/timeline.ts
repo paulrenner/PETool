@@ -439,7 +439,7 @@ function renderTimelineTable(funds: Fund[]): void {
 
   if (!funds || funds.length === 0) {
     container.innerHTML = '<p class="timeline-no-data">No investments to display. <a href="#" data-action="showAddFundModal" style="color: var(--color-action);">Add your first investment</a> with cash flows to see the timeline.</p>';
-    attachTimelineActionListeners(container);
+    setupTimelineEventDelegation(container);
     return;
   }
 
@@ -547,23 +547,32 @@ function renderTimelineTable(funds: Fund[]): void {
   }
 
   container.innerHTML = html;
-  attachTimelineActionListeners(container);
+  setupTimelineEventDelegation(container);
 }
 
+// Track if timeline event delegation has been set up
+let timelineEventDelegationSetup = false;
+
 /**
- * Attach event listeners for timeline action links (avoids inline onclick)
+ * Set up event delegation for timeline action links
+ * Called once, uses event delegation to avoid listener accumulation on re-renders
  */
-function attachTimelineActionListeners(container: HTMLElement): void {
-  container.querySelectorAll('a[data-action]').forEach((link) => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      const action = (link as HTMLElement).dataset.action;
-      if (action === 'showAddFundModal' && typeof (window as any).showAddFundModal === 'function') {
-        (window as any).showAddFundModal();
-      } else if (action === 'showManageFundsModal' && typeof (window as any).showManageFundsModal === 'function') {
-        (window as any).showManageFundsModal();
-      }
-    });
+function setupTimelineEventDelegation(container: HTMLElement): void {
+  if (timelineEventDelegationSetup) return;
+  timelineEventDelegationSetup = true;
+
+  container.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const link = target.closest('a[data-action]') as HTMLElement | null;
+    if (!link) return;
+
+    e.preventDefault();
+    const action = link.dataset.action;
+    if (action === 'showAddFundModal' && typeof (window as any).showAddFundModal === 'function') {
+      (window as any).showAddFundModal();
+    } else if (action === 'showManageFundsModal' && typeof (window as any).showManageFundsModal === 'function') {
+      (window as any).showManageFundsModal();
+    }
   });
 }
 

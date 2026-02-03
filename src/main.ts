@@ -810,24 +810,17 @@ function updatePaginationUI(displayedCount: number, totalCount: number): void {
   }
 
   // Show pagination info and Load More button
+  // Note: Click handler uses event delegation (set up in initializeEventListeners)
+  // to avoid accumulating listeners on each render
   paginationContainer.style.display = 'flex';
   paginationContainer.innerHTML = `
     <div class="pagination-info">
       Showing <strong>${displayedCount}</strong> of <strong>${totalCount}</strong> investments
     </div>
-    <button type="button" class="btn-secondary load-more-btn" id="loadMoreBtn">
+    <button type="button" class="btn-secondary load-more-btn" data-action="load-more">
       Load More
     </button>
   `;
-
-  // Attach click handler
-  const loadMoreBtn = document.getElementById('loadMoreBtn');
-  if (loadMoreBtn) {
-    loadMoreBtn.addEventListener('click', async () => {
-      AppState.loadMore();
-      await renderTable();
-    });
-  }
 }
 
 // ===========================
@@ -2024,6 +2017,16 @@ function initializeEventListeners(): void {
   if (tableBody) {
     tableBody.addEventListener('click', handleActionButtonClick);
   }
+
+  // Pagination container - use event delegation to avoid listener accumulation
+  // The container is created dynamically, so we listen on document and check target
+  document.addEventListener('click', async (e) => {
+    const target = e.target as HTMLElement;
+    if (target.dataset.action === 'load-more') {
+      AppState.loadMore();
+      await renderTable();
+    }
+  });
 
   // Action dropdown actions
   const actionEdit = document.getElementById('actionEdit');
