@@ -12,6 +12,7 @@ let requestIdCounter = 0;
 const pendingRequests = new Map<number, {
   resolve: (results: Array<{ fundId: number | undefined; metrics: FundMetrics }>) => void;
   reject: (error: Error) => void;
+  timeoutId: ReturnType<typeof setTimeout>;
 }>();
 
 /**
@@ -51,6 +52,8 @@ export function initMetricsWorker(): Promise<void> {
         if (data.type === 'metricsResult') {
           const pending = pendingRequests.get(data.requestId);
           if (pending) {
+            // Clear timeout before resolving to prevent memory leaks
+            clearTimeout(pending.timeoutId);
             pending.resolve(data.results);
             pendingRequests.delete(data.requestId);
           }
@@ -59,8 +62,9 @@ export function initMetricsWorker(): Promise<void> {
 
       metricsWorker.onerror = (error) => {
         console.error('Metrics worker error:', error);
-        // Reject all pending requests
+        // Reject all pending requests and clear their timeouts
         for (const [id, pending] of pendingRequests) {
+          clearTimeout(pending.timeoutId);
           pending.reject(new Error('Worker error'));
           pendingRequests.delete(id);
         }
@@ -92,7 +96,18 @@ export function calculateMetricsInWorker(
     }
 
     const requestId = ++requestIdCounter;
-    pendingRequests.set(requestId, { resolve, reject });
+
+    // Set up timeout with cleanup reference
+    const timeoutId = setTimeout(() => {
+      const pending = pendingRequests.get(requestId);
+      if (pending) {
+        pending.reject(new Error('Worker request timeout'));
+        pendingRequests.delete(requestId);
+      }
+    }, 30000);
+
+    // Store request with timeout ID for proper cleanup
+    pendingRequests.set(requestId, { resolve, reject, timeoutId });
 
     const request: MetricsWorkerRequest = {
       type: 'calculateMetrics',
@@ -102,25 +117,21 @@ export function calculateMetricsInWorker(
     };
 
     metricsWorker.postMessage(request);
-
-    // Timeout for long-running requests (30 seconds)
-    setTimeout(() => {
-      const pending = pendingRequests.get(requestId);
-      if (pending) {
-        pending.reject(new Error('Worker request timeout'));
-        pendingRequests.delete(requestId);
-      }
-    }, 30000);
   });
 }
 
 /**
- * Terminate the worker
+ * Terminate the worker and clean up all pending requests
  */
 export function terminateMetricsWorker(): void {
   if (metricsWorker) {
     metricsWorker.terminate();
     metricsWorker = null;
+
+    // Clear all pending request timeouts to prevent memory leaks
+    for (const pending of pendingRequests.values()) {
+      clearTimeout(pending.timeoutId);
+    }
     pendingRequests.clear();
   }
 }

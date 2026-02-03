@@ -30,6 +30,7 @@ import {
   initMetricsWorker,
   calculateMetricsInWorker,
   isWorkerReady,
+  terminateMetricsWorker,
 } from './workers';
 
 // App imports
@@ -281,8 +282,25 @@ function stopExportReminderInterval(): void {
   }
 }
 
-// Clean up interval on page unload to prevent memory leaks
-window.addEventListener('beforeunload', stopExportReminderInterval);
+/**
+ * Clean up all timers and resources on page unload
+ */
+function cleanupOnUnload(): void {
+  // Clean up export reminder interval
+  stopExportReminderInterval();
+
+  // Clean up all search debounce timers
+  for (const timer of searchDebounceTimers.values()) {
+    clearTimeout(timer);
+  }
+  searchDebounceTimers.clear();
+
+  // Terminate the metrics worker (clears pending request timeouts)
+  terminateMetricsWorker();
+}
+
+// Clean up on page unload to prevent memory leaks
+window.addEventListener('beforeunload', cleanupOnUnload);
 
 // ===========================
 // Health Check Functions

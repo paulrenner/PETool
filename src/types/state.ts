@@ -19,6 +19,7 @@ export interface SortColumn {
 export interface MetricsCacheEntry {
   metrics: FundMetrics;
   timestamp: number;
+  dataVersion: number; // Data version when cached - invalidates on data change
 }
 
 /**

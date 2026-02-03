@@ -108,10 +108,21 @@ class AppStateClass {
   getMetricsFromCache(fundId: number, cutoffDate: string): FundMetrics | null {
     const key = `${fundId}-${cutoffDate}`;
     const cached = this.metricsCache.get(key);
-    if (cached && Date.now() - cached.timestamp < CONFIG.METRICS_CACHE_TTL) {
-      return cached.metrics;
+    if (!cached) return null;
+
+    // Invalidate if data has changed since cache was set (correctness fix)
+    if (cached.dataVersion !== this.dataVersion) {
+      this.metricsCache.delete(key);
+      return null;
     }
-    return null;
+
+    // Also check TTL for time-based expiration
+    if (Date.now() - cached.timestamp >= CONFIG.METRICS_CACHE_TTL) {
+      this.metricsCache.delete(key);
+      return null;
+    }
+
+    return cached.metrics;
   }
 
   setMetricsCache(fundId: number, cutoffDate: string, metrics: FundMetrics): void {
@@ -125,7 +136,7 @@ class AppStateClass {
       }
     }
 
-    this.metricsCache.set(key, { metrics, timestamp: Date.now() });
+    this.metricsCache.set(key, { metrics, timestamp: Date.now(), dataVersion: this.dataVersion });
   }
 
   // Consolidated metrics cache (for grouped view) - O(1) lookup with hash
