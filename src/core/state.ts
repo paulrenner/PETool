@@ -6,8 +6,49 @@ import type {
   SortColumn,
   MetricsCacheEntry,
   ConsolidatedMetricsCacheEntry,
+  FilterCacheEntry,
+  GroupTreeCacheEntry,
 } from '../types';
 import { CONFIG } from './config';
+
+/**
+ * Fast hash function for arrays of numbers (FNV-1a inspired)
+ */
+function hashNumberArray(arr: number[]): string {
+  let hash = 2166136261;
+  for (let i = 0; i < arr.length; i++) {
+    const val = arr[i];
+    if (val !== undefined) {
+      hash ^= val;
+      hash = (hash * 16777619) >>> 0;
+    }
+  }
+  return hash.toString(36);
+}
+
+/**
+ * Hash function for filter state
+ */
+function hashFilterState(filters: Record<string, string[]>): string {
+  const keys = Object.keys(filters).sort();
+  let hash = 2166136261;
+  for (const key of keys) {
+    for (const char of key) {
+      hash ^= char.charCodeAt(0);
+      hash = (hash * 16777619) >>> 0;
+    }
+    const values = filters[key];
+    if (values) {
+      for (const val of values) {
+        for (const char of val) {
+          hash ^= char.charCodeAt(0);
+          hash = (hash * 16777619) >>> 0;
+        }
+      }
+    }
+  }
+  return hash.toString(36);
+}
 
 /**
  * Centralized application state management
@@ -42,6 +83,9 @@ class AppStateClass {
   consolidatedMetricsCache: Map<string, ConsolidatedMetricsCacheEntry> = new Map();
   groupDescendantsCache: Map<number, number[]> = new Map();
   ancestorCache: Map<number, number[]> = new Map();
+  childrenByParentId: Map<number | null, number[]> = new Map(); // O(1) children lookup
+  filterCache: FilterCacheEntry | null = null; // Cached filter results
+  groupTreeCache: GroupTreeCacheEntry | null = null; // Cached group tree
 
   // Performance
   abortController: AbortController | null = null;
@@ -84,27 +128,20 @@ class AppStateClass {
     this.metricsCache.set(key, { metrics, timestamp: Date.now() });
   }
 
-  // Consolidated metrics cache (for grouped view)
+  // Consolidated metrics cache (for grouped view) - O(1) lookup with hash
   getConsolidatedMetricsFromCache(
     fundName: string,
     cutoffDate: string,
     fundIds: number[]
   ): FundMetrics | null {
-    const key = `${fundName}-${cutoffDate}`;
+    const sortedIds = [...fundIds].sort((a, b) => a - b);
+    const idsHash = hashNumberArray(sortedIds);
+    const key = `${fundName}-${cutoffDate}-${idsHash}`;
     const cached = this.consolidatedMetricsCache.get(key);
     if (!cached) return null;
 
     // Invalidate if data has changed
     if (cached.dataVersion !== this.dataVersion) return null;
-
-    // Invalidate if fund set has changed (different filters applied)
-    const sortedIds = [...fundIds].sort((a, b) => a - b);
-    if (
-      cached.fundIds.length !== sortedIds.length ||
-      !cached.fundIds.every((id, i) => id === sortedIds[i])
-    ) {
-      return null;
-    }
 
     return cached.metrics;
   }
@@ -115,13 +152,91 @@ class AppStateClass {
     fundIds: number[],
     metrics: FundMetrics
   ): void {
-    const key = `${fundName}-${cutoffDate}`;
     const sortedIds = [...fundIds].sort((a, b) => a - b);
+    const idsHash = hashNumberArray(sortedIds);
+    const key = `${fundName}-${cutoffDate}-${idsHash}`;
     this.consolidatedMetricsCache.set(key, {
       metrics,
-      fundIds: sortedIds,
+      fundIdsHash: idsHash,
       dataVersion: this.dataVersion,
     });
+  }
+
+  // Filter results cache
+  getFilteredFundsFromCache(
+    filterState: Record<string, string[]>,
+    cutoffDateStr: string
+  ): number[] | null {
+    if (!this.filterCache) return null;
+    if (this.filterCache.dataVersion !== this.dataVersion) return null;
+
+    const currentHash = hashFilterState(filterState) + '-' + cutoffDateStr;
+    if (this.filterCache.filterHash !== currentHash) return null;
+
+    return this.filterCache.fundIds;
+  }
+
+  setFilteredFundsCache(
+    filterState: Record<string, string[]>,
+    cutoffDateStr: string,
+    fundIds: number[]
+  ): void {
+    const filterHash = hashFilterState(filterState) + '-' + cutoffDateStr;
+    this.filterCache = {
+      fundIds,
+      filterHash,
+      dataVersion: this.dataVersion,
+    };
+  }
+
+  clearFilterCache(): void {
+    this.filterCache = null;
+  }
+
+  // Group tree cache
+  getGroupTreeFromCache(
+    fundIds: number[],
+    expandedGroupIds: Set<number | string>
+  ): unknown | null {
+    if (!this.groupTreeCache) return null;
+    if (this.groupTreeCache.dataVersion !== this.dataVersion) return null;
+
+    const sortedIds = [...fundIds].sort((a, b) => a - b);
+    const idsHash = hashNumberArray(sortedIds);
+    if (this.groupTreeCache.fundIdsHash !== idsHash) return null;
+
+    const expandedArr = Array.from(expandedGroupIds).map(id =>
+      typeof id === 'string' ? parseInt(id) : id
+    ).filter(id => !isNaN(id)).sort((a, b) => a - b);
+    const expandedHash = hashNumberArray(expandedArr);
+    if (this.groupTreeCache.expandedHash !== expandedHash) return null;
+
+    return this.groupTreeCache.tree;
+  }
+
+  setGroupTreeCache(
+    fundIds: number[],
+    expandedGroupIds: Set<number | string>,
+    tree: unknown
+  ): void {
+    const sortedIds = [...fundIds].sort((a, b) => a - b);
+    const idsHash = hashNumberArray(sortedIds);
+
+    const expandedArr = Array.from(expandedGroupIds).map(id =>
+      typeof id === 'string' ? parseInt(id) : id
+    ).filter(id => !isNaN(id)).sort((a, b) => a - b);
+    const expandedHash = hashNumberArray(expandedArr);
+
+    this.groupTreeCache = {
+      tree,
+      fundIdsHash: idsHash,
+      expandedHash,
+      dataVersion: this.dataVersion,
+    };
+  }
+
+  clearGroupTreeCache(): void {
+    this.groupTreeCache = null;
   }
 
   clearConsolidatedMetricsCache(): void {
@@ -138,9 +253,20 @@ class AppStateClass {
     // Update O(1) lookup map
     this.groupsMap.clear();
     groupList.forEach((g) => this.groupsMap.set(g.id, g));
+
+    // Build children index for O(1) child lookups
+    this.childrenByParentId.clear();
+    for (const group of groupList) {
+      const parentId = group.parentGroupId;
+      const existing = this.childrenByParentId.get(parentId) || [];
+      existing.push(group.id);
+      this.childrenByParentId.set(parentId, existing);
+    }
+
     // Clear caches since groups changed
     this.ancestorCache.clear();
     this.groupDescendantsCache.clear();
+    this.groupTreeCache = null;
   }
 
   // O(1) group lookup by ID
@@ -148,15 +274,14 @@ class AppStateClass {
     return this.groupsMap.get(groupId);
   }
 
-  // Get direct child group IDs
+  // Get direct child group IDs - O(1) lookup
   getDirectChildIds(groupId: number): number[] {
-    const children: number[] = [];
-    for (const [id, group] of this.groupsMap) {
-      if (group.parentGroupId === groupId) {
-        children.push(id);
-      }
-    }
-    return children;
+    return this.childrenByParentId.get(groupId) || [];
+  }
+
+  // Get top-level group IDs (no parent) - O(1) lookup
+  getTopLevelGroupIds(): number[] {
+    return this.childrenByParentId.get(null) || [];
   }
 
   // Get ancestor group IDs with memoization
@@ -180,7 +305,7 @@ class AppStateClass {
     return ancestors;
   }
 
-  // Get descendant group IDs with memoization (depth-first order)
+  // Get descendant group IDs with memoization (depth-first order) - uses O(1) children lookup
   getDescendantIds(groupId: number): number[] {
     const cached = this.groupDescendantsCache.get(groupId);
     if (cached) {
@@ -188,13 +313,12 @@ class AppStateClass {
     }
 
     const descendants: number[] = [groupId];
+    const childIds = this.childrenByParentId.get(groupId) || [];
 
-    for (const [id, group] of this.groupsMap) {
-      if (group.parentGroupId === groupId) {
-        // Add child and all its descendants (proper depth-first order)
-        const childDescendants = this.getDescendantIds(id);
-        descendants.push(...childDescendants);
-      }
+    for (const childId of childIds) {
+      // Add child and all its descendants (proper depth-first order)
+      const childDescendants = this.getDescendantIds(childId);
+      descendants.push(...childDescendants);
     }
 
     this.groupDescendantsCache.set(groupId, descendants);

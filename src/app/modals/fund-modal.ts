@@ -12,7 +12,7 @@ import {
   getAllFundNameObjects,
   saveFundName,
 } from '../../core/db';
-import { calculateMetrics } from '../../calculations';
+import { calculateMetrics, calculateMetricsCached } from '../../calculations';
 import { escapeHtml, escapeAttribute } from '../../utils/escaping';
 import { formatCurrency, parseCurrency, formatNumberWithCommas } from '../../utils/formatting';
 import { buildGroupsTree } from '../filters';
@@ -879,8 +879,8 @@ export async function showDetailsModal(
   if (modalTitle) modalTitle.textContent = fund.fundName;
   if (modalSubtitle) modalSubtitle.textContent = fund.accountNumber;
 
-  // Update summary
-  const metrics = calculateMetrics(fund);
+  // Update summary - use cached metrics if available (from table render)
+  const metrics = calculateMetricsCached(fund);
   const setElement = (id: string, value: string) => {
     const el = document.getElementById(id);
     if (el) el.textContent = value;

@@ -26,6 +26,25 @@ export interface MetricsCacheEntry {
  */
 export interface ConsolidatedMetricsCacheEntry {
   metrics: FundMetrics;
-  fundIds: number[]; // Sorted fund IDs that were consolidated
+  fundIdsHash: string; // Hash of sorted fund IDs for fast comparison
   dataVersion: number; // Data version when cached
+}
+
+/**
+ * Cached filter results
+ */
+export interface FilterCacheEntry {
+  fundIds: number[]; // Resulting fund IDs after filtering
+  filterHash: string; // Hash of filter state
+  dataVersion: number; // Data version when cached
+}
+
+/**
+ * Cached group tree entry
+ */
+export interface GroupTreeCacheEntry {
+  tree: unknown; // ConsolidatedGroup[] - using unknown to avoid circular import
+  fundIdsHash: string; // Hash of fund IDs used to build tree
+  expandedHash: string; // Hash of expanded group IDs
+  dataVersion: number;
 }

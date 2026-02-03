@@ -25,6 +25,60 @@ function parseDateLocal(dateStr: string): Date {
 }
 
 /**
+ * Pre-parsed cash flow with timestamp for efficient sorting/filtering
+ */
+interface ParsedCashFlow {
+  date: string;
+  timestamp: number;
+  type: string;
+  amount: number;
+  affectsCommitment: boolean;
+}
+
+/**
+ * Pre-parsed NAV entry with timestamp
+ */
+interface ParsedNav {
+  date: string;
+  timestamp: number;
+  amount: number;
+}
+
+/**
+ * Pre-parse all cash flows and NAVs once for a fund
+ * This avoids repeated date parsing across multiple metric calculations
+ */
+function parseFundData(fund: Fund, cutoffDate?: Date): {
+  cashFlows: ParsedCashFlow[];
+  navs: ParsedNav[];
+  cutoffTimestamp: number | null;
+} {
+  const cutoffTimestamp = cutoffDate ? cutoffDate.getTime() : null;
+
+  const cashFlows: ParsedCashFlow[] = (fund.cashFlows || [])
+    .filter(cf => isValidDate(cf.date))
+    .map(cf => ({
+      date: cf.date,
+      timestamp: parseDateLocal(cf.date).getTime(),
+      type: cf.type,
+      amount: safeParseCurrency(cf.amount, 'cash flow amount'),
+      affectsCommitment: cf.affectsCommitment !== false,
+    }))
+    .filter(cf => cutoffTimestamp === null || cf.timestamp <= cutoffTimestamp);
+
+  const navs: ParsedNav[] = (fund.monthlyNav || [])
+    .filter(n => isValidDate(n.date))
+    .map(n => ({
+      date: n.date,
+      timestamp: parseDateLocal(n.date).getTime(),
+      amount: safeParseCurrency(n.amount, 'NAV amount'),
+    }))
+    .filter(n => cutoffTimestamp === null || n.timestamp <= cutoffTimestamp);
+
+  return { cashFlows, navs, cutoffTimestamp };
+}
+
+/**
  * Get vintage year (first contribution year)
  */
 export function getVintageYear(fund: Fund): number | null {
@@ -186,21 +240,94 @@ export function parseCashFlowsForIRR(fund: Fund, cutoffDate?: Date): IRRCashFlow
 }
 
 /**
- * Calculate all metrics for a fund
+ * Calculate all metrics for a fund (optimized version)
+ * Parses all dates once and reuses across calculations
  */
 export function calculateMetrics(fund: Fund, cutoffDate?: Date): FundMetrics {
   const commitment = safeParseCurrency(fund.commitment, 'commitment');
-  const calledCapital = getTotalByType(fund, 'Contribution', cutoffDate);
-  const distributions = getTotalByType(fund, 'Distribution', cutoffDate);
-  const nav = getLatestNav(fund, cutoffDate);
-  const navDate = getLatestNavDate(fund, cutoffDate);
-  const outstandingCommitment = getOutstandingCommitment(fund, cutoffDate);
-  const vintageYear = getVintageYear(fund);
+
+  // Parse all dates once
+  const { cashFlows, navs } = parseFundData(fund, cutoffDate);
+
+  // Sort cash flows by date (ascending) - done once
+  const sortedCashFlows = [...cashFlows].sort((a, b) => a.timestamp - b.timestamp);
+
+  // Sort NAVs by date (descending for latest first)
+  const sortedNavsDesc = [...navs].sort((a, b) => b.timestamp - a.timestamp);
+
+  // Calculate called capital (sum of contributions)
+  const calledCapital = sortedCashFlows
+    .filter(cf => cf.type === 'Contribution')
+    .reduce((sum, cf) => sum + Math.abs(cf.amount), 0);
+
+  // Calculate distributions
+  const distributions = sortedCashFlows
+    .filter(cf => cf.type === 'Distribution')
+    .reduce((sum, cf) => sum + Math.abs(cf.amount), 0);
+
+  // Get latest NAV with adjustments for subsequent cash flows
+  let nav = 0;
+  let navDate: string | null = null;
+  if (sortedNavsDesc.length > 0) {
+    const latestNav = sortedNavsDesc[0]!;
+    nav = latestNav.amount;
+    navDate = latestNav.date;
+    const navTimestamp = latestNav.timestamp;
+
+    // Adjust for cash flows after NAV date
+    for (const cf of sortedCashFlows) {
+      if (cf.timestamp > navTimestamp) {
+        if (cf.type === 'Contribution') {
+          nav += Math.abs(cf.amount);
+        } else if (cf.type === 'Distribution') {
+          nav -= Math.abs(cf.amount);
+        }
+      }
+    }
+  }
+
+  // Calculate outstanding commitment
+  let outstandingCommitment = commitment;
+  for (const cf of sortedCashFlows) {
+    if (cf.type === 'Adjustment') {
+      outstandingCommitment -= cf.amount;
+    } else if (cf.affectsCommitment) {
+      if (cf.type === 'Contribution') {
+        outstandingCommitment -= Math.abs(cf.amount);
+      } else if (cf.type === 'Distribution') {
+        outstandingCommitment += Math.abs(cf.amount);
+      }
+    }
+  }
+  outstandingCommitment = Math.max(0, outstandingCommitment);
+
+  // Get vintage year (first contribution year)
+  const firstContribution = sortedCashFlows.find(cf => cf.type === 'Contribution');
+  const vintageYear = firstContribution
+    ? new Date(firstContribution.timestamp).getFullYear()
+    : null;
+
+  // Calculate investment return
   const investmentReturn = distributions + nav - calledCapital;
 
-  const cashFlowsForIRR = parseCashFlowsForIRR(fund, cutoffDate);
-  const irr = calculateIRR(cashFlowsForIRR);
-  const moic = calculateMOIC(cashFlowsForIRR);
+  // Build cash flows for IRR (excluding adjustments)
+  const irrFlows: IRRCashFlow[] = sortedCashFlows
+    .filter(cf => cf.type !== 'Adjustment')
+    .map(cf => ({
+      date: cf.date,
+      amount: cf.type === 'Contribution' ? -Math.abs(cf.amount) : Math.abs(cf.amount),
+    }));
+
+  // Add NAV as final cash flow for IRR/MOIC
+  if (sortedNavsDesc.length > 0) {
+    irrFlows.push({ date: sortedNavsDesc[0]!.date, amount: nav });
+  }
+
+  // Sort IRR flows by date
+  irrFlows.sort((a, b) => parseDateLocal(a.date).getTime() - parseDateLocal(b.date).getTime());
+
+  const irr = calculateIRR(irrFlows);
+  const moic = calculateMOIC(irrFlows);
 
   // Calculate DPI, RVPI, TVPI
   const dpi = calledCapital > 0 ? distributions / calledCapital : null;

@@ -19,10 +19,18 @@ import {
   dismissHealthIssue,
   dismissFundIssue,
 } from './core/db';
-import type { FundWithMetrics, FundNameData } from './types';
+import type { Fund, FundWithMetrics, FundNameData } from './types';
 
 // Calculation imports
 import { calculateMetrics } from './calculations';
+
+// Worker imports
+import {
+  isWorkerSupported,
+  initMetricsWorker,
+  calculateMetricsInWorker,
+  isWorkerReady,
+} from './workers';
 
 // App imports
 import {
@@ -37,6 +45,7 @@ import {
   consolidateFundsByName,
   consolidateFundsByGroup,
   flattenGroupTree,
+  type ConsolidatedGroup,
 } from './app/table';
 
 import {
@@ -48,6 +57,7 @@ import {
   toggleAllVisibleOptions,
   updateSelectAllCheckbox,
   applyCurrentFilters,
+  getFilterState,
   resetFilters,
   updateActiveFiltersIndicator,
   handleGroupFilterCascade,
@@ -634,23 +644,39 @@ function initColumnResizing(): void {
 
       // Track current width for saving on mouseup (avoid localStorage writes during drag)
       let currentWidth = startWidth;
+      let rafId: number | null = null;
+      let pendingPageX = startX;
 
       const onMouseMove = (e: MouseEvent) => {
-        const diff = e.pageX - startX;
-        currentWidth = Math.max(CONFIG.MIN_COLUMN_WIDTH, startWidth + diff);
-        (th as HTMLElement).style.width = currentWidth + 'px';
-        (th as HTMLElement).style.minWidth = currentWidth + 'px';
-        (th as HTMLElement).style.maxWidth = currentWidth + 'px';
+        pendingPageX = e.pageX;
 
-        // Apply width to cached TD elements
-        columnTds.forEach((td) => {
-          (td as HTMLElement).style.width = currentWidth + 'px';
-          (td as HTMLElement).style.minWidth = currentWidth + 'px';
-          (td as HTMLElement).style.maxWidth = currentWidth + 'px';
+        // Throttle DOM updates with requestAnimationFrame
+        if (rafId !== null) return;
+
+        rafId = requestAnimationFrame(() => {
+          const diff = pendingPageX - startX;
+          currentWidth = Math.max(CONFIG.MIN_COLUMN_WIDTH, startWidth + diff);
+          (th as HTMLElement).style.width = currentWidth + 'px';
+          (th as HTMLElement).style.minWidth = currentWidth + 'px';
+          (th as HTMLElement).style.maxWidth = currentWidth + 'px';
+
+          // Apply width to cached TD elements
+          columnTds.forEach((td) => {
+            (td as HTMLElement).style.width = currentWidth + 'px';
+            (td as HTMLElement).style.minWidth = currentWidth + 'px';
+            (td as HTMLElement).style.maxWidth = currentWidth + 'px';
+          });
+
+          rafId = null;
         });
       };
 
       const cleanup = () => {
+        // Cancel any pending RAF
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
         th.classList.remove('resizing');
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
@@ -815,14 +841,27 @@ async function renderTable(): Promise<void> {
     const funds = await getAllFunds();
     AppState.setFunds(funds);
 
-    // Apply filters
-    let filtered = applyCurrentFilters(funds);
-
     // Get cutoff date (needed for consistent sorting and display)
     const cutoffDateInput = document.getElementById('cutoffDate') as HTMLInputElement;
-    const cutoffDateValue = cutoffDateInput?.value;
+    const cutoffDateValue = cutoffDateInput?.value || '';
     // Append time to force local timezone interpretation (see CLAUDE.md)
     const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue + 'T00:00:00') : undefined;
+
+    // Check filter cache first
+    const filterState = getFilterState();
+    const cachedFundIds = AppState.getFilteredFundsFromCache(filterState, cutoffDateValue);
+
+    let filtered: Fund[];
+    if (cachedFundIds) {
+      // Use cached filter results - O(n) lookup by ID
+      const fundMap = new Map(funds.map(f => [f.id, f]));
+      filtered = cachedFundIds.map(id => fundMap.get(id)).filter((f): f is Fund => f !== undefined);
+    } else {
+      // Apply filters and cache the result
+      filtered = applyCurrentFilters(funds);
+      const filteredIds = filtered.map(f => f.id).filter((id): id is number => id !== undefined);
+      AppState.setFilteredFundsCache(filterState, cutoffDateValue, filteredIds);
+    }
 
     // Apply sorting (with cutoffDate for consistent metrics calculation)
     if (AppState.sortColumns.length > 0) {
@@ -834,10 +873,35 @@ async function renderTable(): Promise<void> {
     updateActiveFiltersIndicator();
 
     // Calculate metrics for each fund
-    const fundsWithMetrics: FundWithMetrics[] = filtered.map((fund) => ({
-      ...fund,
-      metrics: calculateMetrics(fund, cutoffDate),
-    }));
+    // Use Web Worker for large datasets (>100 funds) to keep UI responsive
+    let fundsWithMetrics: FundWithMetrics[];
+
+    const WORKER_THRESHOLD = 100;
+    if (filtered.length >= WORKER_THRESHOLD && isWorkerReady()) {
+      try {
+        const workerResults = await calculateMetricsInWorker(filtered, cutoffDate);
+        const metricsMap = new Map(
+          workerResults.map(r => [r.fundId, r.metrics])
+        );
+        fundsWithMetrics = filtered.map(fund => ({
+          ...fund,
+          metrics: metricsMap.get(fund.id) || calculateMetrics(fund, cutoffDate),
+        }));
+      } catch (error) {
+        // Fallback to synchronous calculation if worker fails
+        console.warn('Worker calculation failed, falling back to sync:', error);
+        fundsWithMetrics = filtered.map((fund) => ({
+          ...fund,
+          metrics: calculateMetrics(fund, cutoffDate),
+        }));
+      }
+    } else {
+      // Use synchronous calculation for small datasets or if worker not ready
+      fundsWithMetrics = filtered.map((fund) => ({
+        ...fund,
+        metrics: calculateMetrics(fund, cutoffDate),
+      }));
+    }
 
     // Update portfolio summary
     updatePortfolioSummary(fundsWithMetrics, cutoffDate);
@@ -918,7 +982,18 @@ async function renderTable(): Promise<void> {
         expandedGroupIds = new Set();
       }
 
-      const groupTree = consolidateFundsByGroup(fundsWithMetrics, cutoffDate, expandedGroupIds);
+      // Check group tree cache
+      const fundIds = fundsWithMetrics.map(f => f.id).filter((id): id is number => id !== undefined);
+      const cachedTree = AppState.getGroupTreeFromCache(fundIds, expandedGroupIds) as ConsolidatedGroup[] | null;
+
+      let groupTree: ConsolidatedGroup[];
+      if (cachedTree) {
+        groupTree = cachedTree;
+      } else {
+        groupTree = consolidateFundsByGroup(fundsWithMetrics, cutoffDate, expandedGroupIds);
+        AppState.setGroupTreeCache(fundIds, expandedGroupIds, groupTree);
+      }
+
       const flattenedGroups = flattenGroupTree(groupTree);
 
       // Use DocumentFragment for batch DOM insertion
@@ -2650,6 +2725,13 @@ async function init(): Promise<void> {
 
     // Initialize database
     await initDB();
+
+    // Initialize Web Worker for metrics calculations (non-blocking)
+    if (isWorkerSupported()) {
+      initMetricsWorker().catch(err => {
+        console.warn('Failed to initialize metrics worker, will use sync calculations:', err);
+      });
+    }
 
     // Load initial data
     const funds = await getAllFunds();

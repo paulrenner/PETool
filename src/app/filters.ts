@@ -436,19 +436,26 @@ export const FilterConfigs: FilterConfig[] = [
 ];
 
 /**
- * Apply all current filters to a list of funds
+ * Get the current filter state as a record for caching
  */
-export function applyCurrentFilters(funds: Fund[]): Fund[] {
-  const filterValues = {
+export function getFilterState(): Record<string, string[]> {
+  return {
     fundFilter: getMultiSelectValues('fundFilter'),
     accountFilter: getMultiSelectValues('accountFilter'),
     groupFilter: getMultiSelectValues('groupFilter'),
     tagFilter: getMultiSelectValues('tagFilter'),
     vintageFilter: getMultiSelectValues('vintageFilter'),
   };
+}
+
+/**
+ * Apply all current filters to a list of funds
+ */
+export function applyCurrentFilters(funds: Fund[]): Fund[] {
+  const filterValues = getFilterState();
 
   // Pre-compute group filter data for O(1) lookups (optimization)
-  const groupFilterVals = filterValues.groupFilter;
+  const groupFilterVals = filterValues.groupFilter || [];
   let groupMatchSet: Set<number> | null = null;
   if (groupFilterVals.length > 0) {
     groupMatchSet = new Set<number>();
@@ -463,8 +470,9 @@ export function applyCurrentFilters(funds: Fund[]): Fund[] {
   }
 
   // Convert tag filter to Set for O(1) lookup
-  const tagFilterSet = filterValues.tagFilter.length > 0
-    ? new Set(filterValues.tagFilter)
+  const tagFilterVals = filterValues.tagFilter || [];
+  const tagFilterSet = tagFilterVals.length > 0
+    ? new Set(tagFilterVals)
     : null;
 
   return funds.filter((fund) => {
