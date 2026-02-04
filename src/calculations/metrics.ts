@@ -141,7 +141,7 @@ export function getTotalByType(
  *
  * Note: This is an estimate. True NAV requires updated portfolio valuations.
  */
-export function getLatestNav(fund: Fund, cutoffDate?: Date): number {
+function getLatestNav(fund: Fund, cutoffDate?: Date): number {
   const navs = (fund.monthlyNav || [])
     .filter((n) => isValidDate(n.date) && (!cutoffDate || parseDateLocal(n.date) <= cutoffDate))
     .sort((a, b) => parseDateLocal(b.date).getTime() - parseDateLocal(a.date).getTime());
@@ -183,48 +183,6 @@ export function getLatestNavDate(fund: Fund, cutoffDate?: Date): string | null {
     .sort((a, b) => parseDateLocal(b.date).getTime() - parseDateLocal(a.date).getTime());
 
   return navs.length > 0 ? navs[0]!.date : null;
-}
-
-/**
- * Calculate outstanding commitment
- */
-export function getOutstandingCommitment(fund: Fund, cutoffDate?: Date): number {
-  let outstanding = safeParseCurrency(fund.commitment, 'commitment');
-
-  (fund.cashFlows || [])
-    .filter(
-      (cf) =>
-        isValidDate(cf.date) &&
-        (!cutoffDate || parseDateLocal(cf.date) <= cutoffDate)
-    )
-    .forEach((cf) => {
-      const amount = safeParseCurrency(cf.amount, 'cash flow amount');
-
-      // Adjustments ALWAYS affect commitment - that's their only purpose
-      // (they're excluded from IRR, MOIC, NAV, and timeline)
-      if (cf.type === 'Adjustment') {
-        // Positive reduces outstanding, negative increases outstanding
-        outstanding -= amount;
-        return;
-      }
-
-      // For Contributions/Distributions, respect the affectsCommitment flag
-      if (cf.affectsCommitment === false) return;
-
-      if (cf.type === 'Contribution') {
-        outstanding -= Math.abs(amount);
-      } else if (cf.type === 'Distribution') {
-        // NOTE: This implements RECALLABLE distributions where returned capital
-        // can be called again by the fund. This is unusual - most PE funds have
-        // non-recallable distributions that don't restore unfunded commitment.
-        //
-        // For standard (non-recallable) distributions, set `affectsCommitment: false`
-        // on the cash flow to prevent it from adding back to outstanding commitment.
-        outstanding += Math.abs(amount);
-      }
-    });
-
-  return Math.max(0, outstanding);
 }
 
 /**

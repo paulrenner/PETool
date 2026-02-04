@@ -6,7 +6,6 @@ import {
     parseCashFlowsForIRR,
     calculateMetrics
 } from '../src/calculations';
-import { getLatestNav, getOutstandingCommitment } from '../src/calculations/metrics';
 
 describe('calculateIRR', () => {
     test('returns null for empty array', () => {
@@ -233,10 +232,10 @@ describe('getTotalByType', () => {
     });
 });
 
-describe('getLatestNav', () => {
+describe('calculateMetrics nav calculation', () => {
     test('returns 0 for fund with no NAV', () => {
-        const fund = { monthlyNav: [] };
-        expect(getLatestNav(fund)).toBe(0);
+        const fund = { monthlyNav: [], cashFlows: [] };
+        expect(calculateMetrics(fund).nav).toBe(0);
     });
 
     test('returns latest NAV value', () => {
@@ -248,7 +247,7 @@ describe('getLatestNav', () => {
             ],
             cashFlows: []
         };
-        expect(getLatestNav(fund)).toBe(1500);
+        expect(calculateMetrics(fund).nav).toBe(1500);
     });
 
     test('adjusts NAV for subsequent contributions', () => {
@@ -261,7 +260,7 @@ describe('getLatestNav', () => {
                 { date: '2022-03-31', type: 'Contribution', amount: -500 }
             ]
         };
-        expect(getLatestNav(fund)).toBe(2000); // 1500 + 500 (fund received cash)
+        expect(calculateMetrics(fund).nav).toBe(2000); // 1500 + 500 (fund received cash)
     });
 
     test('adjusts NAV for subsequent distributions', () => {
@@ -274,7 +273,7 @@ describe('getLatestNav', () => {
                 { date: '2022-03-31', type: 'Distribution', amount: 300 }
             ]
         };
-        expect(getLatestNav(fund)).toBe(1200); // 1500 - 300 (fund paid out cash)
+        expect(calculateMetrics(fund).nav).toBe(1200); // 1500 - 300 (fund paid out cash)
     });
 
     test('respects cutoff date', () => {
@@ -286,17 +285,18 @@ describe('getLatestNav', () => {
             cashFlows: []
         };
         const cutoff = new Date('2021-06-30');
-        expect(getLatestNav(fund, cutoff)).toBe(1000);
+        expect(calculateMetrics(fund, cutoff).nav).toBe(1000);
     });
 });
 
-describe('getOutstandingCommitment', () => {
+describe('calculateMetrics outstandingCommitment calculation', () => {
     test('returns full commitment with no contributions', () => {
         const fund = {
             commitment: 10000,
-            cashFlows: []
+            cashFlows: [],
+            monthlyNav: []
         };
-        expect(getOutstandingCommitment(fund)).toBe(10000);
+        expect(calculateMetrics(fund).outstandingCommitment).toBe(10000);
     });
 
     test('reduces commitment by contributions', () => {
@@ -305,9 +305,10 @@ describe('getOutstandingCommitment', () => {
             cashFlows: [
                 { date: '2020-01-01', type: 'Contribution', amount: -3000, affectsCommitment: true },
                 { date: '2021-01-01', type: 'Contribution', amount: -2000, affectsCommitment: true }
-            ]
+            ],
+            monthlyNav: []
         };
-        expect(getOutstandingCommitment(fund)).toBe(5000);
+        expect(calculateMetrics(fund).outstandingCommitment).toBe(5000);
     });
 
     test('ignores contributions that do not affect commitment', () => {
@@ -316,9 +317,10 @@ describe('getOutstandingCommitment', () => {
             cashFlows: [
                 { date: '2020-01-01', type: 'Contribution', amount: -3000, affectsCommitment: true },
                 { date: '2021-01-01', type: 'Contribution', amount: -2000, affectsCommitment: false }
-            ]
+            ],
+            monthlyNav: []
         };
-        expect(getOutstandingCommitment(fund)).toBe(7000);
+        expect(calculateMetrics(fund).outstandingCommitment).toBe(7000);
     });
 
     test('does not go below zero', () => {
@@ -326,9 +328,10 @@ describe('getOutstandingCommitment', () => {
             commitment: 10000,
             cashFlows: [
                 { date: '2020-01-01', type: 'Contribution', amount: -12000, affectsCommitment: true }
-            ]
+            ],
+            monthlyNav: []
         };
-        expect(getOutstandingCommitment(fund)).toBe(0);
+        expect(calculateMetrics(fund).outstandingCommitment).toBe(0);
     });
 
     test('ignores non-recallable distributions', () => {
@@ -337,9 +340,10 @@ describe('getOutstandingCommitment', () => {
             cashFlows: [
                 { date: '2020-01-01', type: 'Contribution', amount: -3000, affectsCommitment: true },
                 { date: '2021-01-01', type: 'Distribution', amount: 5000, affectsCommitment: false }
-            ]
+            ],
+            monthlyNav: []
         };
-        expect(getOutstandingCommitment(fund)).toBe(7000);
+        expect(calculateMetrics(fund).outstandingCommitment).toBe(7000);
     });
 
     test('handles recallable distributions', () => {
@@ -348,10 +352,11 @@ describe('getOutstandingCommitment', () => {
             cashFlows: [
                 { date: '2020-01-01', type: 'Contribution', amount: -5000, affectsCommitment: true },
                 { date: '2021-01-01', type: 'Distribution', amount: 2000, affectsCommitment: true }
-            ]
+            ],
+            monthlyNav: []
         };
         // 10000 - 5000 + 2000 = 7000
-        expect(getOutstandingCommitment(fund)).toBe(7000);
+        expect(calculateMetrics(fund).outstandingCommitment).toBe(7000);
     });
 });
 

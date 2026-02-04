@@ -1,7 +1,6 @@
 import {
     parseCurrency,
     formatCurrency,
-    formatNumber,
     formatNumberWithCommas,
 } from '../src/utils/formatting';
 import {
@@ -138,32 +137,6 @@ describe('formatCurrency', () => {
     test('handles very small numbers', () => {
         expect(formatCurrency(0.01, true)).toBe('$0.01');
         expect(formatCurrency(0.001, true)).toBe('$0.00');
-    });
-});
-
-describe('formatNumber', () => {
-    test('formats number with 2 decimal places', () => {
-        expect(formatNumber(1000)).toBe('1000.00');
-        expect(formatNumber(1234.5)).toBe('1234.50');
-    });
-
-    test('handles zero', () => {
-        expect(formatNumber(0)).toBe('0.00');
-    });
-
-    test('returns 0 for NaN or Infinity', () => {
-        expect(formatNumber(NaN)).toBe('0');
-        expect(formatNumber(Infinity)).toBe('0');
-        expect(formatNumber(-Infinity)).toBe('0');
-    });
-
-    test('handles negative numbers', () => {
-        expect(formatNumber(-1234.56)).toBe('-1234.56');
-    });
-
-    test('rounds to 2 decimal places', () => {
-        expect(formatNumber(1.234)).toBe('1.23');
-        expect(formatNumber(1.235)).toBe('1.24');
     });
 });
 

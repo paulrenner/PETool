@@ -22,7 +22,6 @@ import {
     parseCashFlowsForIRR,
     calculateMetrics
 } from '../src/calculations';
-import { getLatestNav } from '../src/calculations/metrics';
 
 // ============================================================================
 // 1. DATA VALIDATION TESTS (validateFund)
@@ -462,7 +461,7 @@ describe('NAV Adjustment Logic', () => {
                 ]
             };
             // Fund received 200k cash, assets increase
-            expect(getLatestNav(fund)).toBe(1200000);
+            expect(calculateMetrics(fund).nav).toBe(1200000);
         });
 
         test('multiple contributions after NAV accumulate', () => {
@@ -474,7 +473,7 @@ describe('NAV Adjustment Logic', () => {
                     { date: '2022-03-15', type: 'Contribution', amount: 50000 }
                 ]
             };
-            expect(getLatestNav(fund)).toBe(1300000);  // 1M + 100k + 150k + 50k
+            expect(calculateMetrics(fund).nav).toBe(1300000);  // 1M + 100k + 150k + 50k
         });
     });
 
@@ -487,7 +486,7 @@ describe('NAV Adjustment Logic', () => {
                 ]
             };
             // Fund paid out 200k cash, assets decrease
-            expect(getLatestNav(fund)).toBe(800000);
+            expect(calculateMetrics(fund).nav).toBe(800000);
         });
 
         test('multiple distributions after NAV accumulate', () => {
@@ -498,7 +497,7 @@ describe('NAV Adjustment Logic', () => {
                     { date: '2022-02-15', type: 'Distribution', amount: 200000 }
                 ]
             };
-            expect(getLatestNav(fund)).toBe(700000);  // 1M - 100k - 200k
+            expect(calculateMetrics(fund).nav).toBe(700000);  // 1M - 100k - 200k
         });
     });
 
@@ -513,7 +512,7 @@ describe('NAV Adjustment Logic', () => {
                 ]
             };
             // 1M + 300k - 150k + 100k = 1.25M
-            expect(getLatestNav(fund)).toBe(1250000);
+            expect(calculateMetrics(fund).nav).toBe(1250000);
         });
 
         test('adjustments do not affect NAV', () => {
@@ -525,7 +524,7 @@ describe('NAV Adjustment Logic', () => {
                 ]
             };
             // Adjustment should not affect NAV
-            expect(getLatestNav(fund)).toBe(1100000);  // Only contribution affects it
+            expect(calculateMetrics(fund).nav).toBe(1100000);  // Only contribution affects it
         });
     });
 
@@ -539,7 +538,7 @@ describe('NAV Adjustment Logic', () => {
                 ]
             };
             // Only cash flows AFTER NAV date should adjust
-            expect(getLatestNav(fund)).toBe(1000000);
+            expect(calculateMetrics(fund).nav).toBe(1000000);
         });
 
         test('cash flows on same day as NAV do not adjust', () => {
@@ -549,7 +548,7 @@ describe('NAV Adjustment Logic', () => {
                     { date: '2021-12-31', type: 'Contribution', amount: 500000 }
                 ]
             };
-            expect(getLatestNav(fund)).toBe(1000000);
+            expect(calculateMetrics(fund).nav).toBe(1000000);
         });
     });
 });

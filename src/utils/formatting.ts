@@ -40,14 +40,6 @@ export function formatCurrency(value: number | string, showCents: boolean = fals
   });
 }
 
-/**
- * Format number without currency symbol (for CSV export)
- */
-export function formatNumber(value: number | string): string {
-  const val = typeof value === 'string' ? parseFloat(value) : value;
-  if (!isFinite(val) || isNaN(val)) return '0';
-  return val.toFixed(2);
-}
 
 /**
  * Format date for display
