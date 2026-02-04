@@ -24,22 +24,35 @@ function formatNumberForCSV(value: number | null | undefined): string {
 
 /**
  * Sanitize value for CSV to prevent formula injection
- * Note: Negative numbers are safe and should not be quoted
+ * Prefixes dangerous characters with single quote to prevent Excel/Sheets formula execution
  */
 function sanitizeForCSV(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '';
-  const str = String(value);
 
-  // If it's a valid number (including negative), don't add quote prefix
-  if (!isNaN(Number(str)) && str.trim() !== '') {
-    return str;
+  // If it's already a number type, it's safe
+  if (typeof value === 'number') {
+    return isFinite(value) ? String(value) : '';
   }
 
-  // For non-numeric strings, prevent formula injection
+  const str = String(value);
+  if (str.length === 0) return '';
+
+  // Check first character for formula injection characters
+  // Must check BEFORE numeric validation since "=2+3" would pass Number() check
   const firstChar = str.charAt(0);
-  if (str.length > 0 && ['=', '+', '-', '@', '\t', '\r'].includes(firstChar)) {
+  if (['=', '+', '@', '\t', '\r'].includes(firstChar)) {
     return "'" + str;
   }
+
+  // For strings starting with '-', only prefix if NOT a valid negative number
+  // This prevents "-100" from becoming "'-100" while still protecting "-DANGEROUS"
+  if (firstChar === '-') {
+    const num = Number(str);
+    if (isNaN(num) || !isFinite(num)) {
+      return "'" + str;
+    }
+  }
+
   return str;
 }
 

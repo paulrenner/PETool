@@ -41,11 +41,28 @@ export function initMetricsWorker(): Promise<void> {
       // Use inline worker (bundled as blob URL)
       metricsWorker = new MetricsWorker();
 
+      // Track initialization state to prevent double resolve/reject
+      let initResolved = false;
+
+      const wrappedResolve = () => {
+        if (!initResolved) {
+          initResolved = true;
+          resolve();
+        }
+      };
+
+      const wrappedReject = (err: Error) => {
+        if (!initResolved) {
+          initResolved = true;
+          reject(err);
+        }
+      };
+
       metricsWorker.onmessage = (event: MessageEvent<MetricsWorkerResponse | { type: 'ready' }>) => {
         const data = event.data;
 
         if (data.type === 'ready') {
-          resolve();
+          wrappedResolve();
           return;
         }
 
@@ -62,6 +79,7 @@ export function initMetricsWorker(): Promise<void> {
 
       metricsWorker.onerror = (error) => {
         console.error('Metrics worker error:', error);
+        wrappedReject(new Error('Worker initialization failed'));
         // Reject all pending requests and clear their timeouts
         for (const [id, pending] of pendingRequests) {
           clearTimeout(pending.timeoutId);
@@ -70,12 +88,10 @@ export function initMetricsWorker(): Promise<void> {
         }
       };
 
-      // Timeout for initialization
+      // Timeout for initialization (2s is sufficient for inline worker)
       setTimeout(() => {
-        if (!metricsWorker) {
-          reject(new Error('Worker initialization timeout'));
-        }
-      }, 5000);
+        wrappedReject(new Error('Worker initialization timeout'));
+      }, 2000);
     } catch (error) {
       reject(error);
     }

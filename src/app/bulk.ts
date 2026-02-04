@@ -157,9 +157,9 @@ export async function applyBulkCashFlow(onComplete: () => Promise<void>): Promis
   try {
     const funds = await getAllFunds();
     const matchingFunds = funds.filter((f) => f.fundName === fundName);
-    let updated = 0;
 
-    for (const fund of matchingFunds) {
+    // Parallelize database writes for better performance
+    const savePromises = matchingFunds.map((fund) => {
       const rawAmount = fund.commitment * (percentage / 100);
       const amount = type === 'Contribution' ? -rawAmount : rawAmount;
 
@@ -172,9 +172,11 @@ export async function applyBulkCashFlow(onComplete: () => Promise<void>): Promis
         timestamp: new Date().toISOString(),
       };
 
-      await saveFundToDB(updatedFund);
-      updated++;
-    }
+      return saveFundToDB(updatedFund);
+    });
+
+    await Promise.all(savePromises);
+    const updated = matchingFunds.length;
 
     AppState.clearMetricsCache();
     showStatus(`Successfully added cash flow to ${updated} investment(s)`);
@@ -250,14 +252,14 @@ export async function applyBulkRemoveFund(onComplete: () => Promise<void>): Prom
   try {
     const funds = await getAllFunds();
     const matchingFunds = funds.filter((f) => f.fundName === fundName);
-    let deleted = 0;
 
-    for (const fund of matchingFunds) {
-      if (fund.id) {
-        await deleteFundFromDB(fund.id);
-        deleted++;
-      }
-    }
+    // Parallelize database deletes for better performance
+    const deletePromises = matchingFunds
+      .filter((fund) => fund.id)
+      .map((fund) => deleteFundFromDB(fund.id!));
+
+    await Promise.all(deletePromises);
+    const deleted = deletePromises.length;
 
     AppState.clearMetricsCache();
     showStatus(`Successfully removed ${deleted} investment(s)`);
@@ -341,18 +343,20 @@ export async function applyBulkAssignGroup(onComplete: () => Promise<void>): Pro
   try {
     const funds = await getAllFunds();
     const matchingFunds = funds.filter((f) => f.accountNumber === accountNumber);
-    let updated = 0;
 
-    for (const fund of matchingFunds) {
+    // Parallelize database writes for better performance
+    const savePromises = matchingFunds.map((fund) => {
       const updatedFund: Fund = {
         ...fund,
         groupId,
         timestamp: new Date().toISOString(),
       };
 
-      await saveFundToDB(updatedFund);
-      updated++;
-    }
+      return saveFundToDB(updatedFund);
+    });
+
+    await Promise.all(savePromises);
+    const updated = matchingFunds.length;
 
     AppState.clearMetricsCache();
     showStatus(`Successfully updated ${updated} investment(s)`);

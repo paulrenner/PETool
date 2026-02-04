@@ -466,6 +466,9 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
       );
     }
 
+    // Prepare all fund data first, tracking duplicates
+    const fundsToSave: Array<{ index: number; fund: any; fundData: Fund }> = [];
+
     for (let i = 0; i < fundsToImport.length; i++) {
       const fund = fundsToImport[i];
       // Normalize accountNumber (strip whitespace) to match how it's stored in DB
@@ -477,47 +480,59 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
         continue;
       }
 
-      try {
-        existingFundKeys.add(importKey);
+      existingFundKeys.add(importKey);
 
-        const cashFlows: CashFlow[] = (fund.cashFlows || []).map((cf: any) => ({
-          date: cf.date,
-          amount: parseCurrency(cf.amount),
-          type: cf.type || (cf.amount < 0 ? 'Contribution' : 'Distribution'),
-          affectsCommitment: cf.affectsCommitment !== undefined ? cf.affectsCommitment : true,
-        }));
+      const cashFlows: CashFlow[] = (fund.cashFlows || []).map((cf: any) => ({
+        date: cf.date,
+        amount: parseCurrency(cf.amount),
+        type: cf.type || (cf.amount < 0 ? 'Contribution' : 'Distribution'),
+        affectsCommitment: cf.affectsCommitment !== undefined ? cf.affectsCommitment : true,
+      }));
 
-        const monthlyNav: Nav[] = (fund.monthlyNav || []).map((nav: any) => ({
-          date: nav.date,
-          amount: parseCurrency(nav.amount),
-        }));
+      const monthlyNav: Nav[] = (fund.monthlyNav || []).map((nav: any) => ({
+        date: nav.date,
+        amount: parseCurrency(nav.amount),
+      }));
 
-        let groupId = null;
-        if (fund.groupId != null) {
-          if (fund._groupAutoFilled) {
-            groupId = fund.groupId;
-          } else if (oldGroupIdToNew[fund.groupId]) {
-            groupId = oldGroupIdToNew[fund.groupId];
-          }
+      let groupId = null;
+      if (fund.groupId != null) {
+        if (fund._groupAutoFilled) {
+          groupId = fund.groupId;
+        } else if (oldGroupIdToNew[fund.groupId]) {
+          groupId = oldGroupIdToNew[fund.groupId];
         }
-
-        const fundData: Fund = {
-          fundName: fund.fundName,
-          accountNumber: (fund.accountNumber || '').replace(/\s/g, ''),
-          groupId,
-          commitment: parseCurrency(fund.commitment),
-          cashFlows,
-          monthlyNav,
-          timestamp: fund.timestamp || new Date().toISOString(),
-        };
-
-        await saveFundToDB(fundData);
-        imported++;
-      } catch (fundErr) {
-        console.error(`Error importing fund at index ${i}:`, fundErr);
-        failedImports.push({ index: i, name: fund.fundName || fund.accountNumber || 'Unknown', error: (fundErr as Error).message });
       }
+
+      const fundData: Fund = {
+        fundName: fund.fundName,
+        accountNumber: (fund.accountNumber || '').replace(/\s/g, ''),
+        groupId,
+        commitment: parseCurrency(fund.commitment),
+        cashFlows,
+        monthlyNav,
+        timestamp: fund.timestamp || new Date().toISOString(),
+      };
+
+      fundsToSave.push({ index: i, fund, fundData });
     }
+
+    // Parallelize database writes for better performance
+    const saveResults = await Promise.allSettled(
+      fundsToSave.map(({ fundData }) => saveFundToDB(fundData))
+    );
+
+    // Process results
+    saveResults.forEach((result, idx) => {
+      const entry = fundsToSave[idx];
+      if (!entry) return; // Safety check (should never happen)
+      const { index, fund } = entry;
+      if (result.status === 'fulfilled') {
+        imported++;
+      } else {
+        console.error(`Error importing fund at index ${index}:`, result.reason);
+        failedImports.push({ index, name: fund.fundName || fund.accountNumber || 'Unknown', error: result.reason?.message || 'Unknown error' });
+      }
+    });
 
     // Show result
     if (failedImports.length > 0 || skippedDuplicates.length > 0) {

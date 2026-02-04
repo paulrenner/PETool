@@ -936,7 +936,7 @@ async function renderTable(): Promise<void> {
               <div style="padding: 40px;">
                 <h3 style="margin-bottom: 10px;">No matching investments</h3>
                 <p style="margin-bottom: 15px;">No investments match your current filters.</p>
-                <button type="button" class="btn-secondary" id="clearFiltersBtn">Clear All Filters</button>
+                <button type="button" class="btn-secondary" data-action="clear-filters">Clear All Filters</button>
               </div>
             </td>
           </tr>
@@ -948,7 +948,7 @@ async function renderTable(): Promise<void> {
               <div style="padding: 40px;">
                 <h3 style="margin-bottom: 10px;">No investments yet</h3>
                 <p style="margin-bottom: 15px;">Add your first investment to start tracking your portfolio.</p>
-                <button type="button" class="btn-primary" id="addFirstInvestmentBtn">Add Investment</button>
+                <button type="button" class="btn-primary" data-action="add-first-investment">Add Investment</button>
               </div>
             </td>
           </tr>
@@ -956,19 +956,7 @@ async function renderTable(): Promise<void> {
       }
       tbody.innerHTML = emptyStateHtml;
 
-      // Attach event listeners for empty state buttons
-      const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-      if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', () => {
-          resetFilters();
-          applyFilters();
-        });
-      }
-
-      const addFirstBtn = document.getElementById('addFirstInvestmentBtn');
-      if (addFirstBtn) {
-        addFirstBtn.addEventListener('click', showAddFundModal);
-      }
+      // Event listeners handled by delegation in initializeEventListeners()
 
       return;
     }
@@ -2018,13 +2006,20 @@ function initializeEventListeners(): void {
     tableBody.addEventListener('click', handleActionButtonClick);
   }
 
-  // Pagination container - use event delegation to avoid listener accumulation
-  // The container is created dynamically, so we listen on document and check target
+  // Document-level event delegation for dynamically created buttons
+  // This avoids listener accumulation when elements are recreated
   document.addEventListener('click', async (e) => {
     const target = e.target as HTMLElement;
-    if (target.dataset.action === 'load-more') {
+    const action = target.dataset.action;
+
+    if (action === 'load-more') {
       AppState.loadMore();
       await renderTable();
+    } else if (action === 'clear-filters') {
+      resetFilters();
+      applyFilters();
+    } else if (action === 'add-first-investment') {
+      showAddFundModal();
     }
   });
 

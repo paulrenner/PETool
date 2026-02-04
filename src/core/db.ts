@@ -203,7 +203,8 @@ export function saveFundToDB(fundData: Fund): Promise<number> {
     const validation = validateFund(fundData);
     if (!validation.valid) {
       const errorMsg = `Fund validation failed: ${validation.errors.join('; ')}`;
-      console.error(errorMsg, fundData);
+      // Log only non-sensitive identifiers, not full fund data
+      console.error(errorMsg, { fundId: fundData.id, fundName: fundData.fundName });
       reject(new Error(errorMsg));
       return;
     }
