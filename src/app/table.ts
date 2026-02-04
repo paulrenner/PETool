@@ -770,7 +770,7 @@ export function renderGroupRow(
   const groupType = group.group?.type ? ` <span class="group-type-badge">${escapeHtml(group.group.type)}</span>` : '';
 
   return `
-    <td style="padding-left: ${indentPx + 8}px;">
+    <td style="--group-indent: ${indentPx + 8}px">
       <div class="group-name-cell">
         ${hasChildren ? `<button class="btn-expand" data-group-id="${group.groupId}" title="${group.isExpanded ? 'Collapse' : 'Expand'}">${expandIcon}</button>` : `<span class="expand-placeholder">${expandIcon}</span>`}
         <span class="group-name">${escapeHtml(group.groupName)}</span>${groupType}

@@ -3286,6 +3286,7 @@
            =========================== */
         .grouped-group-row td:first-child {
             font-weight: 600;
+            padding-left: var(--group-indent, 8px);
         }
 
         .group-name-cell {
