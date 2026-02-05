@@ -2699,8 +2699,9 @@ function initializeEventListeners(): void {
         icon.textContent = isExpanded ? '▼' : '▶';
       }
 
-      // Toggle fund detail rows
-      timelineContainer.querySelectorAll(`.timeline-fund-row[data-type="${type}"]`).forEach((fundRow) => {
+      // Toggle fund detail rows (CSS.escape for safe selector construction)
+      const escapedType = CSS.escape(type || '');
+      timelineContainer.querySelectorAll(`.timeline-fund-row[data-type="${escapedType}"]`).forEach((fundRow) => {
         fundRow.classList.toggle('visible', isExpanded);
       });
     });

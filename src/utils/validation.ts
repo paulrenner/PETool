@@ -116,7 +116,7 @@ export function validateFund(fund: unknown): FundValidationResult {
       errors.push('Monthly NAV must be an array');
     } else {
       f.monthlyNav.forEach((nav: unknown, i: number) => {
-        if (!nav || typeof nav === 'object') {
+        if (nav && typeof nav === 'object') {
           const navEntry = nav as Record<string, unknown>;
 
           // Amount validation
