@@ -410,43 +410,39 @@ function renderHealthCheckResults(results: HealthCheckResult): void {
     </div>
   `;
 
-  // Build results HTML
-  let html = '';
-  let hasSections = false;
+  // Build results HTML using array for efficient concatenation
+  const htmlParts: string[] = [];
 
   // Render group issues section if any (show first as they're critical)
   if (results.groupIssues.length > 0) {
-    html += `<div class="health-check-section-header">Group Issues</div>`;
-    html += results.groupIssues.map((issue) => renderGroupIssue(issue)).join('');
-    hasSections = true;
+    htmlParts.push('<div class="health-check-section-header">Group Issues</div>');
+    htmlParts.push(...results.groupIssues.map((issue) => renderGroupIssue(issue)));
   }
 
   // Render duplicates section if any
   if (results.duplicates.length > 0) {
-    html += `<div class="health-check-section-header">Potential Duplicates</div>`;
-    html += results.duplicates.map((dup) => renderDuplicatePair(dup)).join('');
-    hasSections = true;
+    htmlParts.push('<div class="health-check-section-header">Potential Duplicates</div>');
+    htmlParts.push(...results.duplicates.map((dup) => renderDuplicatePair(dup)));
   }
 
   // Render issues section
   if (results.issues.length > 0) {
-    if (hasSections) {
-      html += `<div class="health-check-section-header">Data Issues</div>`;
+    if (htmlParts.length > 0) {
+      htmlParts.push('<div class="health-check-section-header">Data Issues</div>');
     }
-    html += results.issues.map((issue) => renderHealthIssue(issue)).join('');
-    hasSections = true;
+    htmlParts.push(...results.issues.map((issue) => renderHealthIssue(issue)));
   }
 
   // Show empty state if no issues, no duplicates, and no group issues
-  if (!hasSections) {
-    html = `
+  if (htmlParts.length === 0) {
+    htmlParts.push(`
       <div class="health-check-empty">
         All funds and groups passed health checks!
       </div>
-    `;
+    `);
   }
 
-  resultsDiv.innerHTML = html;
+  resultsDiv.innerHTML = htmlParts.join('');
 }
 
 /**
@@ -681,15 +677,22 @@ function initColumnResizing(): void {
         rafId = requestAnimationFrame(() => {
           const diff = pendingPageX - startX;
           currentWidth = Math.max(CONFIG.MIN_COLUMN_WIDTH, startWidth + diff);
-          (th as HTMLElement).style.width = currentWidth + 'px';
-          (th as HTMLElement).style.minWidth = currentWidth + 'px';
-          (th as HTMLElement).style.maxWidth = currentWidth + 'px';
 
-          // Apply width to cached TD elements
+          // Pre-compute width string once to avoid repeated concatenation
+          const widthPx = currentWidth + 'px';
+
+          // Batch header style updates
+          const thStyle = (th as HTMLElement).style;
+          thStyle.width = widthPx;
+          thStyle.minWidth = widthPx;
+          thStyle.maxWidth = widthPx;
+
+          // Apply width to cached TD elements in single pass
           columnTds.forEach((td) => {
-            (td as HTMLElement).style.width = currentWidth + 'px';
-            (td as HTMLElement).style.minWidth = currentWidth + 'px';
-            (td as HTMLElement).style.maxWidth = currentWidth + 'px';
+            const tdStyle = (td as HTMLElement).style;
+            tdStyle.width = widthPx;
+            tdStyle.minWidth = widthPx;
+            tdStyle.maxWidth = widthPx;
           });
 
           rafId = null;

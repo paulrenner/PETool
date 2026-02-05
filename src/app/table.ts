@@ -323,20 +323,30 @@ export function updatePortfolioSummary(
  * Uses CSS ::after pseudo-elements for indicators (no DOM manipulation)
  */
 export function updateSortIndicators(sortColumns: SortColumn[]): void {
-  // Clear existing indicators using CSS classes only
-  document.querySelectorAll('#fundsTable th').forEach((th) => {
-    th.classList.remove('sorted-asc', 'sorted-desc');
-    (th as HTMLElement).removeAttribute('data-sort-priority');
+  // Single DOM query, cache for reuse
+  const allThs = document.querySelectorAll('#fundsTable th');
+
+  // Build a map of column name to sort info for O(1) lookup
+  const sortMap = new Map<string, { direction: string; priority: number }>();
+  sortColumns.forEach(({ column, direction }, index) => {
+    sortMap.set(column, { direction, priority: index + 1 });
   });
 
-  // Add CSS-based indicators for current sort columns
-  sortColumns.forEach(({ column, direction }, index) => {
-    const th = document.querySelector(`#fundsTable th[data-sort="${column}"]`);
-    if (th) {
-      th.classList.add(direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
-      // Set priority for multi-column sort (CSS handles the display)
-      if (sortColumns.length > 1) {
-        (th as HTMLElement).setAttribute('data-sort-priority', (index + 1).toString());
+  // Single pass through all headers
+  allThs.forEach((th) => {
+    // Clear existing indicators
+    th.classList.remove('sorted-asc', 'sorted-desc');
+    (th as HTMLElement).removeAttribute('data-sort-priority');
+
+    // Apply new indicators if this column is sorted
+    const sortCol = (th as HTMLElement).getAttribute('data-sort');
+    if (sortCol) {
+      const sortInfo = sortMap.get(sortCol);
+      if (sortInfo) {
+        th.classList.add(sortInfo.direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
+        if (sortColumns.length > 1) {
+          (th as HTMLElement).setAttribute('data-sort-priority', sortInfo.priority.toString());
+        }
       }
     }
   });
@@ -383,7 +393,10 @@ export function consolidateFundsByName(
       let latestNavDate: string | null = null;
 
       for (const fund of funds) {
-        allCashFlows.push(...fund.cashFlows);
+        // Use direct iteration instead of spread to avoid repeated array allocations
+        for (const cf of fund.cashFlows) {
+          allCashFlows.push(cf);
+        }
         sumCommitment += fund.commitment;
 
         // Sum each fund's NAV (already correctly calculated in metrics)
@@ -628,7 +641,10 @@ export function consolidateFundsByGroup(
     const uniqueFunds = new Set<string>();
 
     for (const fund of allFunds) {
-      allCashFlows.push(...fund.cashFlows);
+      // Use direct iteration instead of spread to avoid repeated array allocations
+      for (const cf of fund.cashFlows) {
+        allCashFlows.push(cf);
+      }
       sumCommitment += fund.commitment;
       totalNav += fund.metrics.nav;
       uniqueFunds.add(fund.fundName);
