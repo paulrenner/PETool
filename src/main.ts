@@ -416,13 +416,17 @@ function renderHealthCheckResults(results: HealthCheckResult): void {
   // Render group issues section if any (show first as they're critical)
   if (results.groupIssues.length > 0) {
     htmlParts.push('<div class="health-check-section-header">Group Issues</div>');
-    htmlParts.push(...results.groupIssues.map((issue) => renderGroupIssue(issue)));
+    for (const issue of results.groupIssues) {
+      htmlParts.push(renderGroupIssue(issue));
+    }
   }
 
   // Render duplicates section if any
   if (results.duplicates.length > 0) {
     htmlParts.push('<div class="health-check-section-header">Potential Duplicates</div>');
-    htmlParts.push(...results.duplicates.map((dup) => renderDuplicatePair(dup)));
+    for (const dup of results.duplicates) {
+      htmlParts.push(renderDuplicatePair(dup));
+    }
   }
 
   // Render issues section
@@ -430,7 +434,9 @@ function renderHealthCheckResults(results: HealthCheckResult): void {
     if (htmlParts.length > 0) {
       htmlParts.push('<div class="health-check-section-header">Data Issues</div>');
     }
-    htmlParts.push(...results.issues.map((issue) => renderHealthIssue(issue)));
+    for (const issue of results.issues) {
+      htmlParts.push(renderHealthIssue(issue));
+    }
   }
 
   // Show empty state if no issues, no duplicates, and no group issues
@@ -2004,7 +2010,13 @@ function toggleMultiSelectOption(
 // Event Listener Setup
 // ===========================
 
+let eventListenersInitialized = false;
+
 function initializeEventListeners(): void {
+  // Guard against duplicate initialization
+  if (eventListenersInitialized) return;
+  eventListenersInitialized = true;
+
   // Table header click (sorting)
   const tableHeader = document.querySelector('#fundsTable thead');
   if (tableHeader) {

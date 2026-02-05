@@ -909,8 +909,9 @@ export async function showDetailsModal(
   // Render cash flows
   if (cashFlowsBody) {
     cashFlowsBody.innerHTML = '';
+    // Append time component to ensure local timezone interpretation (YYYY-MM-DD alone is UTC)
     const sortedCashFlows = [...fund.cashFlows].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      (a, b) => new Date(a.date + 'T00:00:00').getTime() - new Date(b.date + 'T00:00:00').getTime()
     );
 
     sortedCashFlows.forEach((cf, index) => {
@@ -939,8 +940,9 @@ export async function showDetailsModal(
   // Render NAV entries
   if (navBody) {
     navBody.innerHTML = '';
+    // Append time component to ensure local timezone interpretation (YYYY-MM-DD alone is UTC)
     const sortedNavs = [...fund.monthlyNav].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      (a, b) => new Date(a.date + 'T00:00:00').getTime() - new Date(b.date + 'T00:00:00').getTime()
     );
 
     sortedNavs.forEach((nav, index) => {

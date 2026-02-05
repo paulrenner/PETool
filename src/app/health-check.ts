@@ -289,9 +289,7 @@ function checkFund(fund: Fund): HealthIssue[] {
     }
 
     // Check: Future dates (more than 30 days from now)
-    const futureThreshold = new Date();
-    futureThreshold.setDate(futureThreshold.getDate() + 30);
-    const futureDateStr = futureThreshold.toISOString().split('T')[0]!;
+    // Note: futureDateStr is pre-computed at the start of this function
 
     // Use pre-filtered validCashFlows instead of re-filtering
     const futureCashFlows = validCashFlows.filter((cf) => cf.date > futureDateStr);
