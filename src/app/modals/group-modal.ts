@@ -81,9 +81,9 @@ export async function saveGroupFromModal(
   const typeSelect = document.getElementById('newGroupType') as HTMLSelectElement;
 
   const name = nameInput?.value?.trim() || '';
-  const parentGroupId = parentSelect?.value ? parseInt(parentSelect.value) : null;
+  const parentGroupId = parentSelect?.value ? parseInt(parentSelect.value, 10) : null;
   const type = typeSelect?.value || '';
-  const editId = editGroupIdInput?.value ? parseInt(editGroupIdInput.value) : null;
+  const editId = editGroupIdInput?.value ? parseInt(editGroupIdInput.value, 10) : null;
 
   if (!name) {
     showStatus('Please enter a group name', 'error');

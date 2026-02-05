@@ -217,7 +217,7 @@ class AppStateClass {
     if (this.groupTreeCache.fundIdsHash !== idsHash) return null;
 
     const expandedArr = Array.from(expandedGroupIds).map(id =>
-      typeof id === 'string' ? parseInt(id) : id
+      typeof id === 'string' ? parseInt(id, 10) : id
     ).filter(id => !isNaN(id)).sort((a, b) => a - b);
     const expandedHash = hashNumberArray(expandedArr);
     if (this.groupTreeCache.expandedHash !== expandedHash) return null;
@@ -234,7 +234,7 @@ class AppStateClass {
     const idsHash = hashNumberArray(sortedIds);
 
     const expandedArr = Array.from(expandedGroupIds).map(id =>
-      typeof id === 'string' ? parseInt(id) : id
+      typeof id === 'string' ? parseInt(id, 10) : id
     ).filter(id => !isNaN(id)).sort((a, b) => a - b);
     const expandedHash = hashNumberArray(expandedArr);
 

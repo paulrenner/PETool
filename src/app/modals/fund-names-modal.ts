@@ -166,7 +166,7 @@ export async function saveEditedFundName(onSave: () => Promise<void>): Promise<v
   const originalName = originalInput?.value;
   const newName = nameInput?.value?.trim();
   const termStartDate = termStartInput?.value || null;
-  const termYears = termYearsInput?.value ? parseInt(termYearsInput.value) : null;
+  const termYears = termYearsInput?.value ? parseInt(termYearsInput.value, 10) : null;
 
   if (!newName) {
     showStatus('Please enter a fund name', 'error');
@@ -280,7 +280,7 @@ export async function addNewFundNameFromModal(onComplete: () => Promise<void>): 
 
   const name = nameInput?.value?.trim();
   const termStartDate = termStartInput?.value || null;
-  const termYears = termYearsInput?.value ? parseInt(termYearsInput.value) : null;
+  const termYears = termYearsInput?.value ? parseInt(termYearsInput.value, 10) : null;
 
   if (!name) {
     showStatus('Please enter a fund name', 'error');

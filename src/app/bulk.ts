@@ -296,7 +296,7 @@ export async function previewBulkAssignGroup(): Promise<void> {
   const applyBtn = document.getElementById('applyBulkAssignGroupBtn') as HTMLButtonElement;
 
   const accountNumber = accountSelect?.value;
-  const groupId = groupSelect?.value ? parseInt(groupSelect.value) : null;
+  const groupId = groupSelect?.value ? parseInt(groupSelect.value, 10) : null;
 
   if (!accountNumber) {
     showStatus('Please select an account', 'error');
@@ -330,7 +330,7 @@ export async function applyBulkAssignGroup(onComplete: () => Promise<void>): Pro
   const groupSelect = document.getElementById('bulkAssignGroupTarget') as HTMLSelectElement;
 
   const accountNumber = accountSelect?.value;
-  const groupId = groupSelect?.value ? parseInt(groupSelect.value) : null;
+  const groupId = groupSelect?.value ? parseInt(groupSelect.value, 10) : null;
 
   if (!accountNumber) {
     showStatus('Please select an account', 'error');

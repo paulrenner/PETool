@@ -137,7 +137,12 @@ export function updateMultiSelectDisplay(id: string): void {
     const label = option?.querySelector('label')?.textContent || selected[0];
     display.innerHTML = escapeHtml(label);
   } else {
-    display.innerHTML = `<span class="multi-select-count">${selected.length} selected</span>`;
+    // Use textContent for safety even though selected.length is a number
+    const countSpan = document.createElement('span');
+    countSpan.className = 'multi-select-count';
+    countSpan.textContent = `${selected.length} selected`;
+    display.innerHTML = '';
+    display.appendChild(countSpan);
   }
 }
 
@@ -460,7 +465,7 @@ export function applyCurrentFilters(funds: Fund[]): Fund[] {
   if (groupFilterVals.length > 0) {
     groupMatchSet = new Set<number>();
     for (const groupIdStr of groupFilterVals) {
-      const groupId = parseInt(groupIdStr);
+      const groupId = parseInt(groupIdStr, 10);
       // Add the group itself and all its descendants
       const descendants = AppState.getDescendantIds(groupId);
       for (const id of descendants) {
@@ -551,7 +556,8 @@ export function handleGroupFilterCascade(
   if (!optionsContainer) return;
 
   const setOptionSelected = (groupId: number, selected: boolean) => {
-    const option = optionsContainer.querySelector(`[data-value="${groupId}"]`);
+    // Use CSS.escape for safe selector construction
+    const option = optionsContainer.querySelector(`[data-value="${CSS.escape(String(groupId))}"]`);
     if (option) {
       if (selected) {
         option.classList.add('selected');
@@ -565,7 +571,8 @@ export function handleGroupFilterCascade(
   };
 
   const isOptionSelected = (groupId: number): boolean => {
-    const option = optionsContainer.querySelector(`[data-value="${groupId}"]`);
+    // Use CSS.escape for safe selector construction
+    const option = optionsContainer.querySelector(`[data-value="${CSS.escape(String(groupId))}"]`);
     return option ? option.classList.contains('selected') : false;
   };
 
@@ -657,7 +664,8 @@ export function handleGroupFilterCascadeBatch(
 
   // Batch DOM updates - single pass through all affected options
   groupsToUpdate.forEach((groupId) => {
-    const option = optionsContainer.querySelector(`[data-value="${groupId}"]`);
+    // Use CSS.escape for safe selector construction
+    const option = optionsContainer.querySelector(`[data-value="${CSS.escape(String(groupId))}"]`);
     if (option) {
       if (isNowSelected) {
         option.classList.add('selected');
@@ -686,7 +694,7 @@ export function updateFilterDropdowns(allFunds: Fund[]): void {
   if (currentGroupValues.length > 0) {
     groupFilterSet = new Set<number>();
     for (const groupIdStr of currentGroupValues) {
-      const gId = parseInt(groupIdStr);
+      const gId = parseInt(groupIdStr, 10);
       const descendants = AppState.getDescendantIds(gId);
       for (const id of descendants) {
         groupFilterSet.add(id);
@@ -824,7 +832,7 @@ export function updateFilterDropdowns(allFunds: Fund[]): void {
     value: year.toString(),
     label: year.toString(),
   }));
-  const validVintageValues = currentVintageValues.filter((v) => vintages.has(parseInt(v)));
+  const validVintageValues = currentVintageValues.filter((v) => vintages.has(parseInt(v, 10)));
   populateMultiSelect('vintageFilter', vintageOptions, validVintageValues);
 
   // 5. Update TAG dropdown

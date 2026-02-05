@@ -216,7 +216,7 @@ async function handleAccountNumberChange(): Promise<void> {
   if (!accountInput || !groupInput) return;
 
   const accountNumber = accountInput.value.trim();
-  const excludeFundId = fundIdInput?.value ? parseInt(fundIdInput.value) : null;
+  const excludeFundId = fundIdInput?.value ? parseInt(fundIdInput.value, 10) : null;
 
   // Remove any existing auto-fill indicator
   removeGroupAutoFillIndicator();
@@ -295,13 +295,13 @@ async function handleGroupChange(): Promise<void> {
   const accountNumber = accountInput.value.trim();
   if (!accountNumber) return;
 
-  const selectedGroupId = groupInput.value ? parseInt(groupInput.value) : null;
+  const selectedGroupId = groupInput.value ? parseInt(groupInput.value, 10) : null;
 
   // If user changed to a different group than suggested
   if (selectedGroupId !== suggestedGroupId) {
     // Look up existing groups for this account
     const fundIdInput = document.getElementById('fundId') as HTMLInputElement;
-    const excludeFundId = fundIdInput?.value ? parseInt(fundIdInput.value) : null;
+    const excludeFundId = fundIdInput?.value ? parseInt(fundIdInput.value, 10) : null;
     const result = await lookupGroupForAccount(accountNumber, excludeFundId);
 
     if (result.conflictingGroups.length > 0 || result.groupId !== null) {
@@ -657,10 +657,18 @@ export async function saveFundFromModal(
 
   let fundName = fundNameSelect?.value || '';
   const accountNumber = (accountNumberInput?.value || '').replace(/\s/g, '');
-  const groupId = fundGroupInput?.value ? parseInt(fundGroupInput.value) : null;
+  const groupId = fundGroupInput?.value ? parseInt(fundGroupInput.value, 10) : null;
   const commitment = parseCurrency(commitmentInput?.value || '0');
   const isDuplicate = isDuplicateInput?.value === 'true';
-  const multiplier = parseFloat(duplicateMultiplierInput?.value || '1') || 1;
+  let multiplier = parseFloat(duplicateMultiplierInput?.value || '1') || 1;
+
+  // Validate multiplier bounds to prevent data corruption
+  if (isDuplicate) {
+    if (!isFinite(multiplier) || multiplier <= 0 || multiplier > 1000) {
+      showStatus('Multiplier must be between 0 and 1000', 'error');
+      return;
+    }
+  }
 
   // Handle inline new fund name creation
   if (fundName === '__new__') {
@@ -733,7 +741,7 @@ export async function saveFundFromModal(
 
     if (isDuplicate && fundIdInput?.value) {
       // Duplicate fund
-      const originalFund = await getFundById(parseInt(fundIdInput.value));
+      const originalFund = await getFundById(parseInt(fundIdInput.value, 10));
       if (!originalFund) {
         showStatus('Original fund not found', 'error');
         hideLoading();
@@ -760,7 +768,7 @@ export async function saveFundFromModal(
       showStatus('Investment duplicated successfully');
     } else if (fundIdInput?.value) {
       // Update existing fund
-      const existingFund = await getFundById(parseInt(fundIdInput.value));
+      const existingFund = await getFundById(parseInt(fundIdInput.value, 10));
       if (!existingFund) {
         showStatus('Fund not found', 'error');
         hideLoading();

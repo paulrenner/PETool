@@ -105,15 +105,18 @@ export async function exportDatabase(): Promise<void> {
       }
     }
 
-    // Fallback to download link
+    // Fallback to download link - use try/finally to ensure URL cleanup
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
 
     AppState.markDataExported();
     showStatus('Data exported successfully');
@@ -233,14 +236,18 @@ export async function exportToCSV(): Promise<void> {
 
     const link = document.createElement('a');
     if (link.download !== undefined) {
+      // Use try/finally to ensure URL cleanup even if click fails
       const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      try {
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
     }
 
     showStatus('CSV exported successfully');

@@ -224,11 +224,11 @@ function getTimelineYearRange(
 
   // Collect all years that have data
   const dataYears = new Set<number>();
-  Object.keys(historical.calls).forEach((y) => dataYears.add(parseInt(y)));
-  Object.keys(historical.distributions).forEach((y) => dataYears.add(parseInt(y)));
-  Object.keys(projected.projectedCalls).forEach((y) => dataYears.add(parseInt(y)));
+  Object.keys(historical.calls).forEach((y) => dataYears.add(parseInt(y, 10)));
+  Object.keys(historical.distributions).forEach((y) => dataYears.add(parseInt(y, 10)));
+  Object.keys(projected.projectedCalls).forEach((y) => dataYears.add(parseInt(y, 10)));
   // Include estimated years (from funds missing term start date)
-  Object.keys(projected.estimatedCalls || {}).forEach((y) => dataYears.add(parseInt(y)));
+  Object.keys(projected.estimatedCalls || {}).forEach((y) => dataYears.add(parseInt(y, 10)));
 
   // Find the min and max years with data
   const yearsWithData = Array.from(dataYears);

@@ -1144,7 +1144,7 @@ function updateHeader(): void {
   if (!headerTitle || !headerSubtitle) return;
 
   if (groupFilterValues.length === 1 && groupFilterValues[0]) {
-    const groupId = parseInt(groupFilterValues[0]);
+    const groupId = parseInt(groupFilterValues[0], 10);
     const group = AppState.getGroupByIdSync(groupId);
 
     if (group) {
@@ -1158,7 +1158,7 @@ function updateHeader(): void {
     }
   } else if (groupFilterValues.length > 1) {
     // Check if all selected groups share a parent
-    const selectedGroups = groupFilterValues.map((id) => AppState.getGroupByIdSync(parseInt(id)));
+    const selectedGroups = groupFilterValues.map((id) => AppState.getGroupByIdSync(parseInt(id, 10)));
     const parentIds = new Set(selectedGroups.map((g) => g?.parentGroupId).filter((id) => id != null));
 
     if (parentIds.size === 1) {
@@ -1262,7 +1262,7 @@ function handleExpandButtonClick(event: Event): void {
     expandedGroups = [];
   }
 
-  const groupIdNum = parseInt(groupId);
+  const groupIdNum = parseInt(groupId, 10);
   const index = expandedGroups.findIndex(id => id === groupIdNum || id === groupId);
 
   if (index >= 0) {
@@ -1312,7 +1312,7 @@ function handleActionButtonClick(event: Event): void {
       showManageGroupsModal();
       // Pre-select the group for editing after modal opens
       setTimeout(() => {
-        const group = AppState.getGroupByIdSync(parseInt(groupId));
+        const group = AppState.getGroupByIdSync(parseInt(groupId, 10));
         if (group) {
           // Trigger edit mode for this group
           const editGroupId = document.getElementById('editGroupId') as HTMLInputElement;
@@ -1348,7 +1348,7 @@ function handleActionButtonClick(event: Event): void {
 
   // Handle menu action (normal view)
   if (action === 'menu') {
-    const fundId = parseInt(button.dataset.fundId || '0');
+    const fundId = parseInt(button.dataset.fundId || '0', 10);
     if (!fundId) return;
 
     setCurrentActionFundId(fundId);
@@ -1621,7 +1621,7 @@ function initMultiSelectDropdowns(): void {
           if (container.id === 'groupFilter') {
             const selectedOptions = container.querySelectorAll('.multi-select-option.selected:not(.multi-select-all-option)');
             const groupIds = Array.from(selectedOptions).map(
-              (opt) => parseInt((opt as HTMLElement).getAttribute('data-value') || '0')
+              (opt) => parseInt((opt as HTMLElement).getAttribute('data-value') || '0', 10)
             ).filter((id) => id > 0);
             if (groupIds.length > 0) {
               handleGroupFilterCascadeBatch(container as HTMLElement, groupIds, true);
@@ -1984,7 +1984,7 @@ function toggleMultiSelectOption(
 
   // Handle cascading for group filter
   if (container.id === 'groupFilter') {
-    const groupId = parseInt(option.getAttribute('data-value') || '0');
+    const groupId = parseInt(option.getAttribute('data-value') || '0', 10);
     const isNowSelected = option.classList.contains('selected');
     handleGroupFilterCascade(container, groupId, isNowSelected);
   }
@@ -2262,7 +2262,7 @@ function initializeEventListeners(): void {
     editFundTagsContainer.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
       if (target.classList.contains('tag-remove')) {
-        const index = parseInt(target.dataset.index || '0');
+        const index = parseInt(target.dataset.index || '0', 10);
         removeEditTag(index);
       }
     });
@@ -2311,7 +2311,7 @@ function initializeEventListeners(): void {
       if (!btn) return;
 
       const action = btn.dataset.action;
-      const id = parseInt(btn.dataset.id || '0');
+      const id = parseInt(btn.dataset.id || '0', 10);
 
       if (action === 'editGroup' && !isNaN(id)) {
         const group = AppState.getGroupByIdSync(id);
