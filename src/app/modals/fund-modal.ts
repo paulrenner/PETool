@@ -83,6 +83,8 @@ let suggestedGroupId: number | null = null;
 let accountHasExistingGroups = false;
 // Request tracking to prevent race conditions in async lookups
 let accountLookupRequestId = 0;
+// Debounce timer for account number input (module-level for cleanup)
+let accountDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * Reset module-level state when modal closes
@@ -91,6 +93,11 @@ function resetFundModalState(): void {
   suggestedGroupId = null;
   accountHasExistingGroups = false;
   accountLookupRequestId = 0;
+  // Clear debounce timer to prevent stale execution after modal close
+  if (accountDebounceTimer) {
+    clearTimeout(accountDebounceTimer);
+    accountDebounceTimer = null;
+  }
 }
 
 /**
@@ -344,12 +351,10 @@ export function initAccountNumberAutoFill(): void {
 
   if (!accountInput) return;
 
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-
   accountInput.addEventListener('input', () => {
-    // Debounce to avoid too many lookups while typing
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(handleAccountNumberChange, 300);
+    // Debounce to avoid too many lookups while typing (uses module-level timer for cleanup)
+    if (accountDebounceTimer) clearTimeout(accountDebounceTimer);
+    accountDebounceTimer = setTimeout(handleAccountNumberChange, 300);
   });
 
   // Also trigger on blur for immediate feedback

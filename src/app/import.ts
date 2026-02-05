@@ -266,15 +266,29 @@ export async function applyImport(onComplete: () => Promise<void>): Promise<void
 
       // Validate and sort groups by hierarchy
       const groupIds = new Set(data.groups.map((g: any) => g.id));
+      const modifiedGroups: Array<{ name: string; reason: string }> = [];
       for (const group of data.groups) {
         if (group.parentGroupId != null) {
           if (!groupIds.has(group.parentGroupId)) {
+            modifiedGroups.push({
+              name: group.name,
+              reason: `Parent group ID ${group.parentGroupId} not found in import`,
+            });
             group.parentGroupId = null;
-          }
-          if (group.id === group.parentGroupId) {
+          } else if (group.id === group.parentGroupId) {
+            modifiedGroups.push({
+              name: group.name,
+              reason: 'Self-referencing parent removed',
+            });
             group.parentGroupId = null;
           }
         }
+      }
+      if (modifiedGroups.length > 0) {
+        console.warn(
+          `Import: ${modifiedGroups.length} group(s) had invalid parent references and were moved to root level:`,
+          modifiedGroups
+        );
       }
 
       // Sort groups (parents before children)

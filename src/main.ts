@@ -1412,7 +1412,7 @@ function initializeDarkMode(): void {
   if (!checkbox) return;
 
   // Check saved preference or system preference
-  const savedTheme = localStorage.getItem('theme');
+  const savedTheme = localStorage.getItem(CONFIG.STORAGE_THEME);
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
 
@@ -1422,7 +1422,7 @@ function initializeDarkMode(): void {
   checkbox.addEventListener('change', () => {
     const theme = checkbox.checked ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
+    localStorage.setItem(CONFIG.STORAGE_THEME, theme);
   });
 }
 
@@ -2383,12 +2383,12 @@ function initializeEventListeners(): void {
   if (sidebarShowTagsCheckbox) {
     sidebarShowTagsCheckbox.addEventListener('change', async () => {
       const checked = (sidebarShowTagsCheckbox as HTMLInputElement).checked;
-      localStorage.setItem('showTags', checked.toString());
+      localStorage.setItem(CONFIG.STORAGE_SHOW_TAGS, checked.toString());
       await renderTable();
     });
 
     // Restore saved preference
-    const savedShowTags = localStorage.getItem('showTags');
+    const savedShowTags = localStorage.getItem(CONFIG.STORAGE_SHOW_TAGS);
     if (savedShowTags !== null) {
       (sidebarShowTagsCheckbox as HTMLInputElement).checked = savedShowTags === 'true';
     }

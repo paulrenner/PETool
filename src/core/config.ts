@@ -52,6 +52,7 @@ export const CONFIG = {
   DANGEROUS_KEYS: ['__proto__', 'constructor', 'prototype'] as const,
 
   // LocalStorage keys
+  STORAGE_THEME: 'pe-tool-theme',
   STORAGE_COLUMN_WIDTHS: 'columnWidths',
   STORAGE_SHOW_TAGS: 'showTags',
   STORAGE_GROUP_BY_FUND: 'groupByFund',
