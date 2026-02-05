@@ -83,7 +83,13 @@ export function initDB(): Promise<IDBDatabase> {
         const fundNamesStore = transaction.objectStore(CONFIG.FUNDNAMES_STORE);
         const fundNameTagsMap = new Map<string, Set<string>>();
 
-        fundsStore.openCursor().onsuccess = function (event) {
+        const cursorRequest = fundsStore.openCursor();
+
+        cursorRequest.onerror = function () {
+          console.error('Cursor error during v8 migration:', cursorRequest.error);
+        };
+
+        cursorRequest.onsuccess = function (event) {
           const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
           if (cursor) {
             const fund = cursor.value as Fund & { tags?: string[] };
@@ -97,7 +103,13 @@ export function initDB(): Promise<IDBDatabase> {
             cursor.update(fund);
             cursor.continue();
           } else {
-            fundNamesStore.getAll().onsuccess = function (event) {
+            const getAllRequest = fundNamesStore.getAll();
+
+            getAllRequest.onerror = function () {
+              console.error('Error getting fund names during v8 migration:', getAllRequest.error);
+            };
+
+            getAllRequest.onsuccess = function (event) {
               const fundNames = (event.target as IDBRequest<FundNameData[]>).result;
               fundNames.forEach((fundNameObj) => {
                 const name = fundNameObj.name;

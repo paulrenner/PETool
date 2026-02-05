@@ -269,7 +269,14 @@ function startExportReminderInterval(): void {
   if (exportReminderIntervalId !== null) {
     clearInterval(exportReminderIntervalId);
   }
-  exportReminderIntervalId = setInterval(checkExportReminder, EXPORT_REMINDER_INTERVAL);
+  // Wrap in try-catch to prevent unhandled errors from breaking the interval
+  exportReminderIntervalId = setInterval(() => {
+    try {
+      checkExportReminder();
+    } catch (err) {
+      console.error('Export reminder error:', err);
+    }
+  }, EXPORT_REMINDER_INTERVAL);
 }
 
 /**

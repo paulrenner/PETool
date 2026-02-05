@@ -93,22 +93,29 @@ export function runHealthCheck(
   // Check for duplicate funds
   let duplicates = findDuplicateFunds(funds);
 
-  // Filter out dismissed items
+  // Filter out dismissed items using Set lookups for O(1) instead of O(n) .some()
   if (dismissedIssues.length > 0) {
-    // Filter dismissed duplicate pairs (fund2Id > 0)
+    // Build Sets for O(1) lookup instead of O(n) .some() calls
+    const dismissedDuplicateKeys = new Set(
+      dismissedIssues
+        .filter((d) => d.fund2Id > 0)
+        .map((d) => `${Math.min(d.fund1Id, d.fund2Id)}-${Math.max(d.fund1Id, d.fund2Id)}`)
+    );
+    const dismissedIssueKeys = new Set(
+      dismissedIssues
+        .filter((d) => d.fund2Id === 0)
+        .map((d) => `${d.fund1Id}|${d.category}|${d.message}`)
+    );
+
+    // Filter using Set.has() - O(1) per item
     duplicates = duplicates.filter((dup) => {
-      const normalizedId1 = Math.min(dup.fund1Id, dup.fund2Id);
-      const normalizedId2 = Math.max(dup.fund1Id, dup.fund2Id);
-      return !dismissedIssues.some(
-        (d) => d.fund2Id > 0 && d.fund1Id === normalizedId1 && d.fund2Id === normalizedId2
-      );
+      const key = `${Math.min(dup.fund1Id, dup.fund2Id)}-${Math.max(dup.fund1Id, dup.fund2Id)}`;
+      return !dismissedDuplicateKeys.has(key);
     });
 
-    // Filter dismissed fund issues (fund2Id === 0)
     issues = issues.filter((issue) => {
-      return !dismissedIssues.some(
-        (d) => d.fund2Id === 0 && d.fund1Id === issue.fundId && d.category === issue.category && d.message === issue.message
-      );
+      const key = `${issue.fundId}|${issue.category}|${issue.message}`;
+      return !dismissedIssueKeys.has(key);
     });
   }
 
@@ -125,15 +132,24 @@ export function runHealthCheck(
     fundsWithIssuesSet.add(issue.fundId);
   }
 
+  // Single-pass severity counting instead of 6 separate filter operations
+  const severityCounts = { error: 0, warning: 0, info: 0 };
+  for (const issue of issues) {
+    severityCounts[issue.severity]++;
+  }
+  for (const issue of groupIssues) {
+    severityCounts[issue.severity]++;
+  }
+
   return {
     totalFunds: funds.length,
     fundsWithIssues: fundsWithIssuesSet.size,
     issues,
     duplicates,
     groupIssues,
-    errorCount: issues.filter((i) => i.severity === 'error').length + groupIssues.filter((i) => i.severity === 'error').length,
-    warningCount: issues.filter((i) => i.severity === 'warning').length + groupIssues.filter((i) => i.severity === 'warning').length,
-    infoCount: issues.filter((i) => i.severity === 'info').length + groupIssues.filter((i) => i.severity === 'info').length,
+    errorCount: severityCounts.error,
+    warningCount: severityCounts.warning,
+    infoCount: severityCounts.info,
     timestamp: new Date().toISOString(),
   };
 }
@@ -198,6 +214,15 @@ function checkFund(fund: Fund): HealthIssue[] {
   const fundId = fund.id!;
   const fundName = fund.fundName;
 
+  // Pre-compute valid entries once for reuse throughout (avoid repeated isValidDate calls)
+  const validCashFlows = (fund.cashFlows || []).filter((cf) => isValidDate(cf.date));
+  const validNavs = (fund.monthlyNav || []).filter((nav) => isValidDate(nav.date));
+
+  // Pre-compute future threshold once
+  const futureThreshold = new Date();
+  futureThreshold.setDate(futureThreshold.getDate() + 30);
+  const futureDateStr = futureThreshold.toISOString().split('T')[0]!;
+
   // Check: Zero or negative commitment
   if (fund.commitment <= 0) {
     issues.push({
@@ -219,13 +244,13 @@ function checkFund(fund: Fund): HealthIssue[] {
       message: 'No cash flows recorded',
     });
   } else {
-    // Cash flow checks
-    const contributions = fund.cashFlows
-      .filter((cf) => cf.type === 'Contribution' && isValidDate(cf.date))
+    // Use pre-computed validCashFlows from above
+    const contributions = validCashFlows
+      .filter((cf) => cf.type === 'Contribution')
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    const distributions = fund.cashFlows
-      .filter((cf) => cf.type === 'Distribution' && isValidDate(cf.date))
+    const distributions = validCashFlows
+      .filter((cf) => cf.type === 'Distribution')
       .sort((a, b) => a.date.localeCompare(b.date));
 
     // Check: Distributions before first contribution
@@ -268,9 +293,8 @@ function checkFund(fund: Fund): HealthIssue[] {
     futureThreshold.setDate(futureThreshold.getDate() + 30);
     const futureDateStr = futureThreshold.toISOString().split('T')[0]!;
 
-    const futureCashFlows = fund.cashFlows.filter(
-      (cf) => isValidDate(cf.date) && cf.date > futureDateStr
-    );
+    // Use pre-filtered validCashFlows instead of re-filtering
+    const futureCashFlows = validCashFlows.filter((cf) => cf.date > futureDateStr);
     if (futureCashFlows.length > 0) {
       issues.push({
         fundId,
@@ -297,18 +321,14 @@ function checkFund(fund: Fund): HealthIssue[] {
     }
   }
 
-  // NAV checks
-  if (fund.monthlyNav && fund.monthlyNav.length > 0) {
+  // NAV checks (use pre-computed validNavs and validCashFlows)
+  if (validNavs.length > 0) {
     // Check: NAV before first cash flow
-    const sortedCashFlows = (fund.cashFlows || [])
-      .filter((cf) => isValidDate(cf.date))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    const sortedCashFlows = [...validCashFlows].sort((a, b) => a.date.localeCompare(b.date));
 
     if (sortedCashFlows.length > 0) {
       const firstCashFlowDate = sortedCashFlows[0]!.date;
-      const earlyNavs = fund.monthlyNav.filter(
-        (nav) => isValidDate(nav.date) && nav.date < firstCashFlowDate
-      );
+      const earlyNavs = validNavs.filter((nav) => nav.date < firstCashFlowDate);
       if (earlyNavs.length > 0) {
         issues.push({
           fundId,
@@ -320,8 +340,8 @@ function checkFund(fund: Fund): HealthIssue[] {
       }
     }
 
-    // Check: Duplicate NAV dates
-    const navDates = fund.monthlyNav.filter((n) => isValidDate(n.date)).map((n) => n.date);
+    // Check: Duplicate NAV dates (use pre-computed validNavs)
+    const navDates = validNavs.map((n) => n.date);
     const uniqueNavDates = new Set(navDates);
     if (navDates.length !== uniqueNavDates.size) {
       issues.push({
@@ -333,14 +353,8 @@ function checkFund(fund: Fund): HealthIssue[] {
       });
     }
 
-    // Check: Future NAV dates
-    const futureThreshold = new Date();
-    futureThreshold.setDate(futureThreshold.getDate() + 30);
-    const futureDateStr = futureThreshold.toISOString().split('T')[0]!;
-
-    const futureNavs = fund.monthlyNav.filter(
-      (nav) => isValidDate(nav.date) && nav.date > futureDateStr
-    );
+    // Check: Future NAV dates (use pre-computed futureDateStr)
+    const futureNavs = validNavs.filter((nav) => nav.date > futureDateStr);
     if (futureNavs.length > 0) {
       issues.push({
         fundId,
@@ -356,10 +370,10 @@ function checkFund(fund: Fund): HealthIssue[] {
   const metrics = calculateMetrics(fund);
 
   // Check: Short holding period - IRR may not be meaningful
-  const sortedDates = (fund.cashFlows || [])
-    .filter((cf) => isValidDate(cf.date))
+  // Use pre-computed validCashFlows and validNavs
+  const sortedDates = validCashFlows
     .map((cf) => cf.date)
-    .concat((fund.monthlyNav || []).filter((n) => isValidDate(n.date)).map((n) => n.date))
+    .concat(validNavs.map((n) => n.date))
     .sort();
   if (sortedDates.length >= 2) {
     const firstDate = new Date(sortedDates[0]! + 'T00:00:00').getTime();
@@ -624,33 +638,73 @@ function checkProportionalityIssues(funds: Fund[]): HealthIssue[] {
 // ===========================
 
 /**
+ * Pre-computed fund data for efficient duplicate detection
+ */
+interface PrecomputedFundData {
+  fund: Fund;
+  normalizedName: string;
+  normalizedAccount: string;
+  vintageYear: number | null;
+}
+
+/**
  * Find potential duplicate funds
+ * Optimized: O(n) pre-computation + O(m²) per account group instead of O(n²) global
  */
 function findDuplicateFunds(funds: Fund[]): DuplicatePair[] {
   const duplicates: DuplicatePair[] = [];
   const seen = new Set<string>(); // Track pairs we've already flagged
 
-  for (let i = 0; i < funds.length; i++) {
-    for (let j = i + 1; j < funds.length; j++) {
-      const fund1 = funds[i]!;
-      const fund2 = funds[j]!;
+  // Step 1: Pre-compute normalized data for all funds (O(n))
+  const precomputed: PrecomputedFundData[] = [];
+  for (const fund of funds) {
+    if (fund.id == null) continue;
+    precomputed.push({
+      fund,
+      normalizedName: normalizeName(fund.fundName),
+      normalizedAccount: fund.accountNumber ? normalizeAccountNumber(fund.accountNumber) : '',
+      vintageYear: calculateMetrics(fund).vintageYear,
+    });
+  }
 
-      if (fund1.id == null || fund2.id == null) continue;
+  // Step 2: Group funds by normalized account number (O(n))
+  // Duplicates must share an account number, so we only compare within groups
+  const accountGroups = new Map<string, PrecomputedFundData[]>();
+  for (const data of precomputed) {
+    if (!data.normalizedAccount) continue; // Skip funds without account numbers
+    if (!accountGroups.has(data.normalizedAccount)) {
+      accountGroups.set(data.normalizedAccount, []);
+    }
+    accountGroups.get(data.normalizedAccount)!.push(data);
+  }
 
-      const pairKey = `${Math.min(fund1.id, fund2.id)}-${Math.max(fund1.id, fund2.id)}`;
-      if (seen.has(pairKey)) continue;
+  // Step 3: Compare only within account groups (O(m²) per group, much smaller than O(n²))
+  for (const [, groupFunds] of accountGroups) {
+    if (groupFunds.length < 2) continue;
 
-      const match = checkDuplicatePair(fund1, fund2);
-      if (match) {
-        seen.add(pairKey);
-        duplicates.push({
-          fund1Id: fund1.id,
-          fund1Name: fund1.fundName,
-          fund2Id: fund2.id,
-          fund2Name: fund2.fundName,
-          reason: match.reason,
-          confidence: match.confidence,
-        });
+    for (let i = 0; i < groupFunds.length; i++) {
+      for (let j = i + 1; j < groupFunds.length; j++) {
+        const data1 = groupFunds[i]!;
+        const data2 = groupFunds[j]!;
+        const fund1 = data1.fund;
+        const fund2 = data2.fund;
+
+        const pairKey = `${Math.min(fund1.id!, fund2.id!)}-${Math.max(fund1.id!, fund2.id!)}`;
+        if (seen.has(pairKey)) continue;
+
+        // Use pre-computed values for comparison
+        const match = checkDuplicatePairOptimized(data1, data2);
+        if (match) {
+          seen.add(pairKey);
+          duplicates.push({
+            fund1Id: fund1.id!,
+            fund1Name: fund1.fundName,
+            fund2Id: fund2.id!,
+            fund2Name: fund2.fundName,
+            reason: match.reason,
+            confidence: match.confidence,
+          });
+        }
       }
     }
   }
@@ -663,39 +717,29 @@ function findDuplicateFunds(funds: Fund[]): DuplicatePair[] {
 }
 
 /**
- * Check if two funds are potential duplicates
- *
- * Note: Multiple investments can legitimately share the same fund name
- * (different investors in the same PE fund). Only flag as duplicate if
- * there's evidence of accidental duplication (same account, same data).
+ * Check if two funds are potential duplicates using pre-computed data
+ * Optimized: Uses pre-computed normalized names and vintage years
  */
-function checkDuplicatePair(
-  fund1: Fund,
-  fund2: Fund
+function checkDuplicatePairOptimized(
+  data1: PrecomputedFundData,
+  data2: PrecomputedFundData
 ): { reason: string; confidence: 'high' | 'medium' | 'low' } | null {
-  const sameAccountNumber =
-    fund1.accountNumber &&
-    fund2.accountNumber &&
-    normalizeAccountNumber(fund1.accountNumber) === normalizeAccountNumber(fund2.accountNumber);
-  const sameFundName = normalizeName(fund1.fundName) === normalizeName(fund2.fundName);
+  // Both funds have the same account (guaranteed by grouping)
+  const sameFundName = data1.normalizedName === data2.normalizedName;
 
   // Check 1: Same name + same account number = likely duplicate
-  if (sameFundName && sameAccountNumber) {
+  if (sameFundName) {
     return { reason: 'Identical fund name and account number', confidence: 'high' };
   }
 
-  // Note: Proportionality check is now done separately via checkProportionalityIssues()
-  // to avoid N-1 pairwise alerts when one fund has non-proportional cash flows
-
   // Check 2: Very similar names + same account = possible typo/duplicate
-  // BUT: If vintage years are different, they're likely a fund series (e.g., "Fund X" and "Fund XI")
-  const similarity = calculateNameSimilarity(fund1.fundName, fund2.fundName);
-  if (similarity >= 0.85 && sameAccountNumber) {
-    const metrics1 = calculateMetrics(fund1);
-    const metrics2 = calculateMetrics(fund2);
-    const vintage1 = metrics1.vintageYear;
-    const vintage2 = metrics2.vintageYear;
-    const differentVintageYears = vintage1 != null && vintage2 != null && vintage1 !== vintage2;
+  // Use pre-computed vintage years to avoid recalculating metrics
+  const similarity = calculateNameSimilarity(data1.fund.fundName, data2.fund.fundName);
+  if (similarity >= 0.85) {
+    const differentVintageYears =
+      data1.vintageYear != null &&
+      data2.vintageYear != null &&
+      data1.vintageYear !== data2.vintageYear;
 
     // Fund series with different vintage years are not duplicates
     if (!differentVintageYears) {
