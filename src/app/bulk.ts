@@ -11,7 +11,7 @@ import {
   deleteFundFromDB,
 } from '../core/db';
 import { escapeHtml } from '../utils/escaping';
-import { formatCurrency } from '../utils/formatting';
+import { formatCurrency, formatNumberWithCommas, parseCurrency } from '../utils/formatting';
 import {
   showStatus,
   showLoading,
@@ -62,6 +62,23 @@ async function populateAccountDropdown(selectId: string): Promise<void> {
 // ===========================
 // Bulk Cash Flow
 // ===========================
+
+/**
+ * Update the total amount displayed in the bulk cash flow preview
+ * when user edits individual amounts
+ */
+function updateBulkCashFlowTotal(): void {
+  const inputs = document.querySelectorAll('.bulk-amount-input') as NodeListOf<HTMLInputElement>;
+  let total = 0;
+  inputs.forEach(input => {
+    const amount = parseCurrency(input.value) || 0;
+    total += amount;
+  });
+  const totalEl = document.getElementById('bulkCashFlowTotalAmount');
+  if (totalEl) {
+    totalEl.textContent = formatCurrency(total, true);
+  }
+}
 
 export async function showBulkCashFlowModal(): Promise<void> {
   await populateBulkFundNameDropdown('bulkCashFlowFundName');
@@ -114,7 +131,7 @@ export async function previewBulkCashFlow(): Promise<void> {
     return;
   }
 
-  // Generate preview
+  // Generate preview with editable amount inputs
   let html = '<table style="width: 100%; font-size: 0.9em;"><thead><tr><th>Account</th><th style="text-align: right;">Commitment</th><th style="text-align: right;">Amount</th></tr></thead><tbody>';
 
   let totalAmount = 0;
@@ -122,15 +139,30 @@ export async function previewBulkCashFlow(): Promise<void> {
     const amount = fund.commitment * (percentage / 100);
     totalAmount += amount;
     const displayAmount = type === 'Contribution' ? -amount : amount;
-    html += `<tr><td>${escapeHtml(fund.accountNumber)}</td><td style="text-align: right;">${formatCurrency(fund.commitment)}</td><td style="text-align: right;">${formatCurrency(displayAmount)}</td></tr>`;
+    html += `<tr data-fund-id="${fund.id}">
+      <td>${escapeHtml(fund.accountNumber)}</td>
+      <td style="text-align: right;">${formatCurrency(fund.commitment, true)}</td>
+      <td style="text-align: right;">
+        <input type="text" class="bulk-amount-input"
+               value="${formatNumberWithCommas(displayAmount, 2)}"
+               data-fund-id="${fund.id}"
+               style="width: 120px; text-align: right; border: 1px solid var(--color-border); padding: 2px 4px; font-size: inherit; background: var(--color-bg); color: var(--color-text);">
+      </td>
+    </tr>`;
   });
 
   const displayTotal = type === 'Contribution' ? -totalAmount : totalAmount;
-  html += `</tbody><tfoot><tr style="font-weight: bold;"><td>Total (${matchingFunds.length} investors)</td><td></td><td style="text-align: right;">${formatCurrency(displayTotal)}</td></tr></tfoot></table>`;
+  html += `</tbody><tfoot><tr style="font-weight: bold;"><td>Total (${matchingFunds.length} investors)</td><td></td><td id="bulkCashFlowTotalAmount" style="text-align: right;">${formatCurrency(displayTotal, true)}</td></tr></tfoot></table>`;
 
   if (previewContent) previewContent.innerHTML = html;
   if (preview) preview.classList.add('show');
   if (applyBtn) applyBtn.disabled = false;
+
+  // Add input event listeners to update total when amounts change
+  const amountInputs = previewContent?.querySelectorAll('.bulk-amount-input');
+  amountInputs?.forEach(input => {
+    input.addEventListener('input', updateBulkCashFlowTotal);
+  });
 }
 
 export async function applyBulkCashFlow(onComplete: () => Promise<void>): Promise<void> {
@@ -155,13 +187,30 @@ export async function applyBulkCashFlow(onComplete: () => Promise<void>): Promis
   showLoading('Applying bulk cash flow...');
 
   try {
+    // Build map of fund ID to edited amount from the preview inputs
+    const amountInputs = document.querySelectorAll('.bulk-amount-input') as NodeListOf<HTMLInputElement>;
+    const editedAmounts = new Map<number, number>();
+    amountInputs.forEach(input => {
+      const fundId = parseInt(input.dataset.fundId || '0', 10);
+      const amount = parseCurrency(input.value) || 0;
+      if (fundId) {
+        editedAmounts.set(fundId, amount);
+      }
+    });
+
     const funds = await getAllFunds();
     const matchingFunds = funds.filter((f) => f.fundName === fundName);
 
     // Parallelize database writes for better performance
     const savePromises = matchingFunds.map((fund) => {
-      const rawAmount = fund.commitment * (percentage / 100);
-      const amount = type === 'Contribution' ? -rawAmount : rawAmount;
+      // Use edited amount if available, otherwise calculate from percentage
+      let amount: number;
+      if (fund.id && editedAmounts.has(fund.id)) {
+        amount = editedAmounts.get(fund.id)!;
+      } else {
+        const rawAmount = fund.commitment * (percentage / 100);
+        amount = type === 'Contribution' ? -rawAmount : rawAmount;
+      }
 
       const updatedFund: Fund = {
         ...fund,
