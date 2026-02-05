@@ -43,10 +43,16 @@ export function initMetricsWorker(): Promise<void> {
 
       // Track initialization state to prevent double resolve/reject
       let initResolved = false;
+      let initTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
       const wrappedResolve = () => {
         if (!initResolved) {
           initResolved = true;
+          // Clear timeout on successful init to prevent stale rejection
+          if (initTimeoutId) {
+            clearTimeout(initTimeoutId);
+            initTimeoutId = null;
+          }
           resolve();
         }
       };
@@ -54,6 +60,10 @@ export function initMetricsWorker(): Promise<void> {
       const wrappedReject = (err: Error) => {
         if (!initResolved) {
           initResolved = true;
+          if (initTimeoutId) {
+            clearTimeout(initTimeoutId);
+            initTimeoutId = null;
+          }
           reject(err);
         }
       };
@@ -89,7 +99,7 @@ export function initMetricsWorker(): Promise<void> {
       };
 
       // Timeout for initialization (2s is sufficient for inline worker)
-      setTimeout(() => {
+      initTimeoutId = setTimeout(() => {
         wrappedReject(new Error('Worker initialization timeout'));
       }, 2000);
     } catch (error) {
@@ -112,6 +122,11 @@ export function calculateMetricsInWorker(
     }
 
     const requestId = ++requestIdCounter;
+
+    // Prevent counter overflow (reset well before MAX_SAFE_INTEGER)
+    if (requestIdCounter > Number.MAX_SAFE_INTEGER - 1000) {
+      requestIdCounter = 0;
+    }
 
     // Set up timeout with cleanup reference
     const timeoutId = setTimeout(() => {

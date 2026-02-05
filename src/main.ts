@@ -739,7 +739,7 @@ function initColumnResizing(): void {
 // ===========================
 
 /**
- * Debounce function
+ * Debounce function with async error handling
  */
 function debounce<T extends (...args: any[]) => any>(
   func: T,
@@ -747,9 +747,13 @@ function debounce<T extends (...args: any[]) => any>(
 ): (...args: Parameters<T>) => void {
   let timeout: ReturnType<typeof setTimeout>;
   return function executedFunction(...args: Parameters<T>) {
-    const later = () => {
+    const later = async () => {
       clearTimeout(timeout);
-      func(...args);
+      try {
+        await func(...args);
+      } catch (err) {
+        console.error('Debounced function error:', err);
+      }
     };
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
@@ -1785,7 +1789,13 @@ function initSearchableSelects(): void {
  * Single consolidated handler for closing dropdowns on outside click.
  * This avoids multiple global document listeners.
  */
+let globalClickHandlerInitialized = false;
+
 function initGlobalClickHandler(): void {
+  // Guard against duplicate initialization
+  if (globalClickHandlerInitialized) return;
+  globalClickHandlerInitialized = true;
+
   document.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
 
@@ -2013,14 +2023,21 @@ function initializeEventListeners(): void {
     const target = e.target as HTMLElement;
     const action = target.dataset.action;
 
-    if (action === 'load-more') {
-      AppState.loadMore();
-      await renderTable();
-    } else if (action === 'clear-filters') {
-      resetFilters();
-      applyFilters();
-    } else if (action === 'add-first-investment') {
-      showAddFundModal();
+    if (!action) return;
+
+    try {
+      if (action === 'load-more') {
+        AppState.loadMore();
+        await renderTable();
+      } else if (action === 'clear-filters') {
+        resetFilters();
+        await applyFilters();
+      } else if (action === 'add-first-investment') {
+        showAddFundModal();
+      }
+    } catch (err) {
+      console.error('Error handling action:', action, err);
+      showStatus('An error occurred', 'error');
     }
   });
 
@@ -2385,9 +2402,14 @@ function initializeEventListeners(): void {
   const sidebarShowTagsCheckbox = document.getElementById('sidebarShowTagsCheckbox');
   if (sidebarShowTagsCheckbox) {
     sidebarShowTagsCheckbox.addEventListener('change', async () => {
-      const checked = (sidebarShowTagsCheckbox as HTMLInputElement).checked;
-      localStorage.setItem(CONFIG.STORAGE_SHOW_TAGS, checked.toString());
-      await renderTable();
+      try {
+        const checked = (sidebarShowTagsCheckbox as HTMLInputElement).checked;
+        localStorage.setItem(CONFIG.STORAGE_SHOW_TAGS, checked.toString());
+        await renderTable();
+      } catch (err) {
+        console.error('Error toggling tags display:', err);
+        showStatus('Error updating display', 'error');
+      }
     });
 
     // Restore saved preference
@@ -2407,21 +2429,26 @@ function initializeEventListeners(): void {
     }
 
     groupByFundToggle.addEventListener('click', async () => {
-      const currentState = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND) === 'true';
-      const newState = !currentState;
-      groupByFundToggle.classList.toggle('active', newState);
-      localStorage.setItem(CONFIG.STORAGE_GROUP_BY_FUND, newState.toString());
+      try {
+        const currentState = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND) === 'true';
+        const newState = !currentState;
+        groupByFundToggle.classList.toggle('active', newState);
+        localStorage.setItem(CONFIG.STORAGE_GROUP_BY_FUND, newState.toString());
 
-      // If enabling group-by-fund, disable group-by-group to avoid confusion
-      if (newState) {
-        localStorage.setItem(CONFIG.STORAGE_GROUP_BY_GROUP, 'false');
-        const sidebarGroupByGroupCheckbox = document.getElementById('sidebarGroupByGroupCheckbox') as HTMLInputElement;
-        if (sidebarGroupByGroupCheckbox) {
-          sidebarGroupByGroupCheckbox.checked = false;
+        // If enabling group-by-fund, disable group-by-group to avoid confusion
+        if (newState) {
+          localStorage.setItem(CONFIG.STORAGE_GROUP_BY_GROUP, 'false');
+          const sidebarGroupByGroupCheckbox = document.getElementById('sidebarGroupByGroupCheckbox') as HTMLInputElement;
+          if (sidebarGroupByGroupCheckbox) {
+            sidebarGroupByGroupCheckbox.checked = false;
+          }
         }
-      }
 
-      await renderTable();
+        await renderTable();
+      } catch (err) {
+        console.error('Error toggling group by fund:', err);
+        showStatus('Error updating display', 'error');
+      }
     });
   }
 
@@ -2447,19 +2474,24 @@ function initializeEventListeners(): void {
   const sidebarGroupByGroupCheckbox = document.getElementById('sidebarGroupByGroupCheckbox');
   if (sidebarGroupByGroupCheckbox) {
     sidebarGroupByGroupCheckbox.addEventListener('change', async () => {
-      const checked = (sidebarGroupByGroupCheckbox as HTMLInputElement).checked;
-      localStorage.setItem(CONFIG.STORAGE_GROUP_BY_GROUP, checked.toString());
+      try {
+        const checked = (sidebarGroupByGroupCheckbox as HTMLInputElement).checked;
+        localStorage.setItem(CONFIG.STORAGE_GROUP_BY_GROUP, checked.toString());
 
-      // If enabling group-by-group, disable group-by-fund to avoid confusion
-      if (checked) {
-        localStorage.setItem(CONFIG.STORAGE_GROUP_BY_FUND, 'false');
-        const groupByFundToggle = document.getElementById('groupByFundToggle');
-        if (groupByFundToggle) {
-          groupByFundToggle.classList.remove('active');
+        // If enabling group-by-group, disable group-by-fund to avoid confusion
+        if (checked) {
+          localStorage.setItem(CONFIG.STORAGE_GROUP_BY_FUND, 'false');
+          const groupByFundToggle = document.getElementById('groupByFundToggle');
+          if (groupByFundToggle) {
+            groupByFundToggle.classList.remove('active');
+          }
         }
-      }
 
-      await renderTable();
+        await renderTable();
+      } catch (err) {
+        console.error('Error toggling group by group:', err);
+        showStatus('Error updating display', 'error');
+      }
     });
 
     // Restore saved preference
@@ -2506,7 +2538,12 @@ function initializeEventListeners(): void {
     sidebarExportCSV.addEventListener('click', async (e) => {
       e.preventDefault();
       closeSidebar();
-      await exportToCSV();
+      try {
+        await exportToCSV();
+      } catch (err) {
+        console.error('Error exporting CSV:', err);
+        showStatus('Error exporting CSV', 'error');
+      }
     });
   }
 
@@ -2516,8 +2553,13 @@ function initializeEventListeners(): void {
     sidebarExportJSON.addEventListener('click', async (e) => {
       e.preventDefault();
       closeSidebar();
-      await exportDatabase();
-      updateLastBackupTime();
+      try {
+        await exportDatabase();
+        updateLastBackupTime();
+      } catch (err) {
+        console.error('Error exporting JSON:', err);
+        showStatus('Error exporting data', 'error');
+      }
     });
   }
 
