@@ -899,12 +899,12 @@ export async function showDetailsModal(
     if (el) el.textContent = value;
   };
 
-  setElement('detailsSummaryCommitment', formatCurrency(fund.commitment));
-  setElement('detailsSummaryContributions', formatCurrency(metrics.calledCapital));
-  setElement('detailsSummaryDistributions', formatCurrency(metrics.distributions));
-  setElement('detailsSummaryValue', formatCurrency(metrics.nav));
-  setElement('detailsSummaryReturn', formatCurrency(metrics.investmentReturn || 0));
-  setElement('detailsSummaryOutstanding', formatCurrency(metrics.outstandingCommitment));
+  setElement('detailsSummaryCommitment', formatCurrency(fund.commitment, true));
+  setElement('detailsSummaryContributions', formatCurrency(metrics.calledCapital, true));
+  setElement('detailsSummaryDistributions', formatCurrency(metrics.distributions, true));
+  setElement('detailsSummaryValue', formatCurrency(metrics.nav, true));
+  setElement('detailsSummaryReturn', formatCurrency(metrics.investmentReturn || 0, true));
+  setElement('detailsSummaryOutstanding', formatCurrency(metrics.outstandingCommitment, true));
 
   // Render cash flows
   if (cashFlowsBody) {
@@ -918,7 +918,7 @@ export async function showDetailsModal(
       const row = document.createElement('tr');
       row.innerHTML = `
         <td><input type="date" value="${cf.date}" data-field="date" data-index="${index}"></td>
-        <td class="number"><input type="text" value="${formatNumberWithCommas(parseCurrency(cf.amount) || 0)}" data-field="amount" data-index="${index}"></td>
+        <td class="number"><input type="text" value="${formatNumberWithCommas(parseCurrency(cf.amount) || 0, 2)}" data-field="amount" data-index="${index}"></td>
         <td class="center">
           <select data-field="type" data-index="${index}">
             <option value="Contribution" ${cf.type === 'Contribution' ? 'selected' : ''}>Contribution</option>
@@ -949,7 +949,7 @@ export async function showDetailsModal(
       const row = document.createElement('tr');
       row.innerHTML = `
         <td><input type="date" value="${nav.date}" data-field="date" data-index="${index}"></td>
-        <td><input type="text" value="${formatNumberWithCommas(parseCurrency(nav.amount) || 0)}" data-field="amount" data-index="${index}"></td>
+        <td><input type="text" value="${formatNumberWithCommas(parseCurrency(nav.amount) || 0, 2)}" data-field="amount" data-index="${index}"></td>
         <td>
           <button class="delete-row-btn" data-action="deleteNav" data-index="${index}" title="Delete">×</button>
         </td>
@@ -975,7 +975,7 @@ export function addCashFlowRow(): void {
   const row = document.createElement('tr');
   row.innerHTML = `
     <td><input type="date" value="${today}" data-field="date" data-index="${index}"></td>
-    <td class="number"><input type="text" value="" placeholder="0" data-field="amount" data-index="${index}"></td>
+    <td class="number"><input type="text" value="" placeholder="0.00" data-field="amount" data-index="${index}"></td>
     <td class="center">
       <select data-field="type" data-index="${index}">
         <option value="Contribution" selected>Contribution</option>
@@ -991,8 +991,8 @@ export function addCashFlowRow(): void {
     </td>
   `;
 
-  // Insert at the beginning
-  tbody.insertBefore(row, tbody.firstChild);
+  // Insert at the end
+  tbody.appendChild(row);
   AppState.setUnsavedChanges(true);
 }
 
@@ -1009,13 +1009,14 @@ export function addNavRow(): void {
   const row = document.createElement('tr');
   row.innerHTML = `
     <td><input type="date" value="${today}" data-field="date" data-index="${index}"></td>
-    <td><input type="text" value="" placeholder="0" data-field="amount" data-index="${index}"></td>
+    <td><input type="text" value="" placeholder="0.00" data-field="amount" data-index="${index}"></td>
     <td>
       <button class="delete-row-btn" data-action="deleteNav" data-index="${index}" title="Delete">×</button>
     </td>
   `;
 
-  tbody.insertBefore(row, tbody.firstChild);
+  // Insert at the end
+  tbody.appendChild(row);
   AppState.setUnsavedChanges(true);
 }
 
@@ -1082,12 +1083,12 @@ export async function updateDetailsSummary(): Promise<void> {
     if (el) el.textContent = value;
   };
 
-  setElement('detailsSummaryCommitment', formatCurrency(fund.commitment));
-  setElement('detailsSummaryContributions', formatCurrency(metrics.calledCapital));
-  setElement('detailsSummaryDistributions', formatCurrency(metrics.distributions));
-  setElement('detailsSummaryValue', formatCurrency(metrics.nav));
-  setElement('detailsSummaryReturn', formatCurrency(metrics.investmentReturn || 0));
-  setElement('detailsSummaryOutstanding', formatCurrency(metrics.outstandingCommitment));
+  setElement('detailsSummaryCommitment', formatCurrency(fund.commitment, true));
+  setElement('detailsSummaryContributions', formatCurrency(metrics.calledCapital, true));
+  setElement('detailsSummaryDistributions', formatCurrency(metrics.distributions, true));
+  setElement('detailsSummaryValue', formatCurrency(metrics.nav, true));
+  setElement('detailsSummaryReturn', formatCurrency(metrics.investmentReturn || 0, true));
+  setElement('detailsSummaryOutstanding', formatCurrency(metrics.outstandingCommitment, true));
 }
 
 /**

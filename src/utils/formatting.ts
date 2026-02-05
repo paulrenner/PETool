@@ -19,9 +19,10 @@ export function parseCurrency(val: unknown): number {
 /**
  * Format number with commas
  */
-export function formatNumberWithCommas(num: number | null | undefined): string {
+export function formatNumberWithCommas(num: number | null | undefined, decimals?: number): string {
   if (num === null || num === undefined || isNaN(num)) return '';
-  const parts = num.toString().split('.');
+  const value = decimals !== undefined ? num.toFixed(decimals) : num.toString();
+  const parts = value.split('.');
   parts[0] = parts[0]!.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return parts.join('.');
 }
