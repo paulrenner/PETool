@@ -980,13 +980,8 @@ async function renderTable(): Promise<void> {
     if (groupByGroup) {
       // Render hierarchical group view
       const expandedGroupsStr = localStorage.getItem(CONFIG.STORAGE_EXPANDED_GROUPS) || '[]';
-      let expandedGroupIds: Set<number | string>;
-      try {
-        const parsed = JSON.parse(expandedGroupsStr);
-        expandedGroupIds = new Set(parsed);
-      } catch {
-        expandedGroupIds = new Set();
-      }
+      const parsed = safeJSONParse<(number | string)[]>(expandedGroupsStr);
+      const expandedGroupIds: Set<number | string> = new Set(Array.isArray(parsed) ? parsed : []);
 
       // Check group tree cache
       const fundIds = fundsWithMetrics.map(f => f.id).filter((id): id is number => id !== undefined);
@@ -1255,12 +1250,8 @@ function handleExpandButtonClick(event: Event): void {
 
   // Toggle expanded state in localStorage
   const expandedGroupsStr = localStorage.getItem(CONFIG.STORAGE_EXPANDED_GROUPS) || '[]';
-  let expandedGroups: (number | string)[];
-  try {
-    expandedGroups = JSON.parse(expandedGroupsStr);
-  } catch {
-    expandedGroups = [];
-  }
+  const parsed = safeJSONParse<(number | string)[]>(expandedGroupsStr);
+  let expandedGroups: (number | string)[] = Array.isArray(parsed) ? parsed : [];
 
   const groupIdNum = parseInt(groupId, 10);
   const index = expandedGroups.findIndex(id => id === groupIdNum || id === groupId);
