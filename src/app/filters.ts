@@ -137,7 +137,7 @@ export function updateMultiSelectDisplay(id: string): void {
     const label = option?.querySelector('label')?.textContent || selected[0];
     display.innerHTML = escapeHtml(label);
   } else {
-    // Use textContent for safety even though selected.length is a number
+    // Use textContent instead of innerHTML for safety (avoids XSS risk)
     const countSpan = document.createElement('span');
     countSpan.className = 'multi-select-count';
     countSpan.textContent = `${selected.length} selected`;

@@ -17,6 +17,13 @@ function parseDateLocal(dateStr: string): number {
 }
 
 /**
+ * Check if a rate is within acceptable IRR bounds
+ */
+function isRateWithinBounds(rate: number): boolean {
+  return rate >= CONFIG.IRR_MIN_RATE && rate <= CONFIG.IRR_MAX_RATE;
+}
+
+/**
  * Calculate IRR (Internal Rate of Return) using Newton-Raphson method
  * @param cashFlows - Array of {date, amount} objects
  * @param guess - Initial guess for IRR
@@ -71,15 +78,13 @@ export function calculateIRR(cashFlows: IRRCashFlow[], guess: number = CONFIG.IR
     const derivativeValue = dNpv(rate);
 
     if (Math.abs(npvValue) < CONFIG.IRR_PRECISION) {
-      if (rate > CONFIG.IRR_MAX_RATE || rate < CONFIG.IRR_MIN_RATE) return null;
-      return rate;
+      return isRateWithinBounds(rate) ? rate : null;
     }
     if (Math.abs(derivativeValue) < CONFIG.IRR_PRECISION) return null;
 
     const newRate = rate - npvValue / derivativeValue;
     if (Math.abs(newRate - rate) < CONFIG.IRR_PRECISION) {
-      if (newRate > CONFIG.IRR_MAX_RATE || newRate < CONFIG.IRR_MIN_RATE) return null;
-      return newRate;
+      return isRateWithinBounds(newRate) ? newRate : null;
     }
 
     rate = newRate;

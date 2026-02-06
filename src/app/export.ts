@@ -17,9 +17,9 @@ import { sortData, consolidateFundsByName } from './table';
  */
 function formatNumberForCSV(value: number | null | undefined): string {
   if (value === null || value === undefined) return '';
-  const val = typeof value === 'number' ? value : parseFloat(String(value));
-  if (!isFinite(val) || isNaN(val)) return '';
-  return val.toFixed(2);
+  // TypeScript guarantees value is a number at this point
+  if (!Number.isFinite(value)) return '';
+  return value.toFixed(2);
 }
 
 /**
