@@ -368,11 +368,11 @@ export function updateSelectAllCheckbox(container: HTMLElement): void {
 
 // Cache for group tree to avoid rebuilding on every filter update
 let cachedGroupTree: Array<Group & { children: any[] }> | null = null;
-let cachedGroupsRef: Group[] | null = null;
+let cachedGroupDataVersion: number = -1;
 
 /**
  * Build a tree structure from flat groups array, sorted alphabetically
- * Uses caching since group hierarchy rarely changes
+ * Uses caching based on AppState.dataVersion for proper invalidation
  */
 export function buildGroupsTree(
   groups: Group[],
@@ -380,12 +380,12 @@ export function buildGroupsTree(
 ): Array<Group & { children: Array<Group & { children: any[] }> }> {
   // For root-level call (parentId === null), use caching
   if (parentId === null) {
-    // Return cached tree if groups array reference hasn't changed
-    if (cachedGroupTree && cachedGroupsRef === groups) {
+    // Return cached tree if data hasn't changed (use dataVersion instead of reference equality)
+    if (cachedGroupTree && cachedGroupDataVersion === AppState.dataVersion) {
       return cachedGroupTree;
     }
-    // Build new tree and cache it
-    cachedGroupsRef = groups;
+    // Build new tree and cache it with current dataVersion
+    cachedGroupDataVersion = AppState.dataVersion;
     cachedGroupTree = buildGroupsTreeInternal(groups, null);
     return cachedGroupTree;
   }

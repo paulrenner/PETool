@@ -24,10 +24,10 @@ export function roundCurrency(value: number): number {
  */
 function safeParseCurrency(value: unknown, context: string): number {
   const result = parseCurrency(value);
-  if (result === null && value != null && value !== '' && value !== 0) {
+  if (Number.isNaN(result) && value != null && value !== '' && value !== 0) {
     console.warn(`Currency parse failed (${context}):`, value);
   }
-  return result || 0;
+  return Number.isNaN(result) ? 0 : result;
 }
 
 /**

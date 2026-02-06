@@ -357,17 +357,25 @@ function showHealthCheckModal(): void {
 
   // Run health check after modal is visible (allows spinner to render)
   setTimeout(async () => {
-    const funds = AppState.getFunds();
-    const groups = AppState.getGroups();
-    const dismissedPairs = await getDismissedHealthIssues();
-    const results = runHealthCheck(funds, groups, dismissedPairs);
+    try {
+      const funds = AppState.getFunds();
+      const groups = AppState.getGroups();
+      const dismissedPairs = await getDismissedHealthIssues();
+      const results = runHealthCheck(funds, groups, dismissedPairs);
 
-    // Cache results with timestamp and mark health check as run
-    cachedHealthCheckResults = results;
-    healthCheckCacheTimestamp = Date.now();
-    AppState.markHealthCheckRun();
+      // Cache results with timestamp and mark health check as run
+      cachedHealthCheckResults = results;
+      healthCheckCacheTimestamp = Date.now();
+      AppState.markHealthCheckRun();
 
-    renderHealthCheckResults(results);
+      renderHealthCheckResults(results);
+    } catch (err) {
+      console.error('Health check error:', err);
+      const resultsDiv = document.getElementById('healthCheckResults');
+      if (resultsDiv) {
+        resultsDiv.innerHTML = '<p style="color: var(--color-error);">Error running health check. Please try again.</p>';
+      }
+    }
   }, 50);
 }
 
@@ -1323,34 +1331,38 @@ function handleActionButtonClick(event: Event): void {
       showManageGroupsModal();
       // Pre-select the group for editing after modal opens
       setTimeout(() => {
-        const group = AppState.getGroupByIdSync(parseInt(groupId, 10));
-        if (group) {
-          // Trigger edit mode for this group
-          const editGroupId = document.getElementById('editGroupId') as HTMLInputElement;
-          const newGroupName = document.getElementById('newGroupName') as HTMLInputElement;
-          const saveGroupBtn = document.getElementById('saveGroupBtn');
-          const cancelEditBtn = document.getElementById('cancelEditBtn');
-          const groupFormTitle = document.getElementById('groupFormTitle');
+        try {
+          const group = AppState.getGroupByIdSync(parseInt(groupId, 10));
+          if (group) {
+            // Trigger edit mode for this group
+            const editGroupId = document.getElementById('editGroupId') as HTMLInputElement;
+            const newGroupName = document.getElementById('newGroupName') as HTMLInputElement;
+            const saveGroupBtn = document.getElementById('saveGroupBtn');
+            const cancelEditBtn = document.getElementById('cancelEditBtn');
+            const groupFormTitle = document.getElementById('groupFormTitle');
 
-          if (editGroupId && newGroupName && saveGroupBtn && cancelEditBtn && groupFormTitle) {
-            editGroupId.value = groupId;
-            newGroupName.value = group.name;
-            saveGroupBtn.textContent = 'Save Changes';
-            cancelEditBtn.classList.remove('hidden');
-            groupFormTitle.textContent = 'Edit Group';
+            if (editGroupId && newGroupName && saveGroupBtn && cancelEditBtn && groupFormTitle) {
+              editGroupId.value = groupId;
+              newGroupName.value = group.name;
+              saveGroupBtn.textContent = 'Save Changes';
+              cancelEditBtn.classList.remove('hidden');
+              groupFormTitle.textContent = 'Edit Group';
 
-            // Set parent group if exists
-            const newGroupParent = document.getElementById('newGroupParent') as HTMLInputElement;
-            if (newGroupParent && group.parentGroupId) {
-              newGroupParent.value = group.parentGroupId.toString();
-            }
+              // Set parent group if exists
+              const newGroupParent = document.getElementById('newGroupParent') as HTMLInputElement;
+              if (newGroupParent && group.parentGroupId) {
+                newGroupParent.value = group.parentGroupId.toString();
+              }
 
-            // Set type if exists
-            const newGroupType = document.getElementById('newGroupType') as HTMLSelectElement;
-            if (newGroupType && group.type) {
-              newGroupType.value = group.type;
+              // Set type if exists
+              const newGroupType = document.getElementById('newGroupType') as HTMLSelectElement;
+              if (newGroupType && group.type) {
+                newGroupType.value = group.type;
+              }
             }
           }
+        } catch (err) {
+          console.error('Error pre-selecting group for edit:', err);
         }
       }, 100);
     }

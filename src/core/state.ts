@@ -166,6 +166,15 @@ class AppStateClass {
     const sortedIds = [...fundIds].sort((a, b) => a - b);
     const idsHash = hashNumberArray(sortedIds);
     const key = `${fundName}-${cutoffDate}-${idsHash}`;
+
+    // Evict oldest entry if cache is at capacity (FIFO eviction - O(1) using Map insertion order)
+    if (this.consolidatedMetricsCache.size >= CONFIG.MAX_METRICS_CACHE_SIZE) {
+      const firstKey = this.consolidatedMetricsCache.keys().next().value;
+      if (firstKey) {
+        this.consolidatedMetricsCache.delete(firstKey);
+      }
+    }
+
     this.consolidatedMetricsCache.set(key, {
       metrics,
       fundIdsHash: idsHash,
