@@ -2193,11 +2193,16 @@ function initializeEventListeners(): void {
   });
 
   // Handle delete buttons in details modal
+  // Use initialization guard to prevent listener accumulation
   const cashFlowsTable = document.getElementById('cashFlowsTable');
   const navTable = document.getElementById('navTable');
 
   [cashFlowsTable, navTable].forEach((table) => {
     if (table) {
+      // Guard against duplicate listener registration
+      if ((table as any)._detailsListenersInitialized) return;
+      (table as any)._detailsListenersInitialized = true;
+
       table.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
         const deleteBtn = target.closest('.delete-row-btn') as HTMLElement;

@@ -40,6 +40,15 @@ export function initDB(): Promise<IDBDatabase> {
       const oldVersion = event.oldVersion;
       const transaction = (event.target as IDBOpenDBRequest).transaction!;
 
+      // Transaction-level error handling for migrations
+      transaction.onerror = () => {
+        console.error('Migration transaction error:', transaction.error);
+      };
+
+      transaction.onabort = () => {
+        console.error('Migration transaction aborted:', transaction.error);
+      };
+
       // Funds store
       if (!database.objectStoreNames.contains(CONFIG.FUNDS_STORE)) {
         const fundsStore = database.createObjectStore(CONFIG.FUNDS_STORE, {
@@ -101,7 +110,7 @@ export function initDB(): Promise<IDBDatabase> {
         const cursorRequest = fundsStore.openCursor();
 
         cursorRequest.onerror = function () {
-          console.error('Cursor error during v8 migration:', cursorRequest.error);
+          console.error('Cursor error during v5-v6 migration:', cursorRequest.error);
         };
 
         cursorRequest.onsuccess = function (event) {
@@ -121,7 +130,7 @@ export function initDB(): Promise<IDBDatabase> {
             const getAllRequest = fundNamesStore.getAll();
 
             getAllRequest.onerror = function () {
-              console.error('Error getting fund names during v8 migration:', getAllRequest.error);
+              console.error('Error getting fund names during v5-v6 migration:', getAllRequest.error);
             };
 
             getAllRequest.onsuccess = function (event) {
@@ -606,6 +615,21 @@ export function clearAllData(): Promise<void> {
     let completed = 0;
     let settled = false;
     const storeNames = [CONFIG.FUNDS_STORE, CONFIG.FUNDNAMES_STORE, CONFIG.GROUPS_STORE];
+
+    // Transaction-level error handlers to catch quota exceeded, abort, etc.
+    tx.onerror = () => {
+      if (settled) return;
+      settled = true;
+      console.error('Transaction error in clearAllData:', tx.error);
+      reject(tx.error || new Error('Transaction failed'));
+    };
+
+    tx.onabort = () => {
+      if (settled) return;
+      settled = true;
+      console.error('Transaction aborted in clearAllData:', tx.error);
+      reject(tx.error || new Error('Transaction aborted'));
+    };
 
     storeNames.forEach((storeName) => {
       const store = tx.objectStore(storeName);

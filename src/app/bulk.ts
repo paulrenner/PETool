@@ -154,15 +154,23 @@ export async function previewBulkCashFlow(): Promise<void> {
   const displayTotal = type === 'Contribution' ? -totalAmount : totalAmount;
   html += `</tbody><tfoot><tr style="font-weight: bold;"><td>Total (${matchingFunds.length} investors)</td><td></td><td id="bulkCashFlowTotalAmount" style="text-align: right;">${formatCurrency(displayTotal, true)}</td></tr></tfoot></table>`;
 
-  if (previewContent) previewContent.innerHTML = html;
+  if (previewContent) {
+    previewContent.innerHTML = html;
+
+    // Use event delegation on the container to avoid listener accumulation
+    // Only set up the delegated listener once
+    if (!(previewContent as any)._bulkInputDelegationSetup) {
+      (previewContent as any)._bulkInputDelegationSetup = true;
+      previewContent.addEventListener('input', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains('bulk-amount-input')) {
+          updateBulkCashFlowTotal();
+        }
+      });
+    }
+  }
   if (preview) preview.classList.add('show');
   if (applyBtn) applyBtn.disabled = false;
-
-  // Add input event listeners to update total when amounts change
-  const amountInputs = previewContent?.querySelectorAll('.bulk-amount-input');
-  amountInputs?.forEach(input => {
-    input.addEventListener('input', updateBulkCashFlowTotal);
-  });
 }
 
 export async function applyBulkCashFlow(onComplete: () => Promise<void>): Promise<void> {
