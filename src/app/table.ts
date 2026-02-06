@@ -48,6 +48,26 @@ function formatIRR(irr: number | null): string {
 }
 
 /**
+ * Helper: Render fund tags HTML
+ * Reduces duplication between renderFundRow and renderGroupedFundRow
+ */
+function renderFundTags(fundName: string, showTags: boolean): string {
+  if (!showTags) return '';
+  const fundNameObj = AppState.fundNameData.get(fundName);
+  const tags = fundNameObj?.tags || [];
+  if (tags.length === 0) return '';
+  return `<div class="table-tags">${tags.map((tag) => `<span class="table-tag">${escapeHtml(tag)}</span>`).join('')}</div>`;
+}
+
+/**
+ * Helper: Calculate investment return from metrics
+ * Reduces duplication across row rendering functions
+ */
+function getInvestmentReturn(m: FundMetrics): number {
+  return m.investmentReturn ?? (m.distributions + m.nav - m.calledCapital);
+}
+
+/**
  * Get immediate parent group name for a fund
  */
 function getImmediateParentName(fund: Fund): string {
@@ -165,14 +185,8 @@ export function renderFundRow(
   showTags: boolean = false
 ): string {
   const m = fund.metrics;
-  const fundNameObj = AppState.fundNameData.get(fund.fundName);
-  const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
-  const tagsHtml =
-    showTags && tags.length > 0
-      ? `<div class="table-tags">${tags.map((tag) => `<span class="table-tag">${escapeHtml(tag)}</span>`).join('')}</div>`
-      : '';
-
-  const investmentReturn = m.investmentReturn ?? (m.distributions + m.nav - m.calledCapital);
+  const tagsHtml = renderFundTags(fund.fundName, showTags);
+  const investmentReturn = getInvestmentReturn(m);
 
   return `
     <td>
@@ -526,21 +540,15 @@ export function renderGroupedFundRow(
   showTags: boolean = false
 ): string {
   const m = fund.consolidatedMetrics;
-  const fundNameObj = AppState.fundNameData.get(fund.fundName);
-  const tags = fundNameObj && fundNameObj.tags ? fundNameObj.tags : [];
-  const tagsHtml =
-    showTags && tags.length > 0
-      ? `<div class="table-tags">${tags.map((tag) => `<span class="table-tag">${escapeHtml(tag)}</span>`).join('')}</div>`
-      : '';
-
-  const investmentReturn = m.investmentReturn ?? (m.distributions + m.nav - m.calledCapital);
+  const tagsHtml = renderFundTags(fund.fundName, showTags);
+  const investmentReturn = getInvestmentReturn(m);
 
   return `
     <td>
       <div>${escapeHtml(fund.fundName)}</div>
       ${tagsHtml}
     </td>
-    <td class="center"><span class="investor-count">${fund.investorCount} investor${fund.investorCount !== 1 ? 's' : ''}</span></td>
+    <td class="center"><span class="investor-count" aria-label="${fund.investorCount} investor${fund.investorCount !== 1 ? 's' : ''}">${fund.investorCount} investor${fund.investorCount !== 1 ? 's' : ''}</span></td>
     <td class="center">${m.vintageYear || 'N/A'}</td>
     <td class="number">${formatCurrency(m.commitment || 0)}</td>
     <td class="number">${formatCurrency(m.calledCapital)}</td>
@@ -778,7 +786,7 @@ export function renderGroupRow(
   _index: number
 ): string {
   const m = group.metrics;
-  const investmentReturn = m.investmentReturn ?? (m.distributions + m.nav - m.calledCapital);
+  const investmentReturn = getInvestmentReturn(m);
   const hasChildren = group.children.length > 0;
   const expandIcon = hasChildren
     ? (group.isExpanded ? '&#9660;' : '&#9654;')
@@ -786,15 +794,16 @@ export function renderGroupRow(
 
   const indentPx = group.depth * 20;
   const groupType = group.group?.type ? ` <span class="group-type-badge">${escapeHtml(group.group.type)}</span>` : '';
+  const expandLabel = group.isExpanded ? `Collapse ${group.groupName}` : `Expand ${group.groupName}`;
 
   return `
     <td style="--group-indent: ${indentPx + 8}px">
       <div class="group-name-cell">
-        ${hasChildren ? `<button class="btn-expand" data-group-id="${group.groupId}" title="${group.isExpanded ? 'Collapse' : 'Expand'}">${expandIcon}</button>` : `<span class="expand-placeholder">${expandIcon}</span>`}
+        ${hasChildren ? `<button class="btn-expand" data-group-id="${group.groupId}" title="${group.isExpanded ? 'Collapse' : 'Expand'}" aria-label="${escapeAttribute(expandLabel)}" aria-expanded="${group.isExpanded}">${expandIcon}</button>` : `<span class="expand-placeholder">${expandIcon}</span>`}
         <span class="group-name">${escapeHtml(group.groupName)}</span>${groupType}
       </div>
     </td>
-    <td class="center"><span class="investor-count">${group.fundCount} fund${group.fundCount !== 1 ? 's' : ''}, ${group.investorCount} position${group.investorCount !== 1 ? 's' : ''}</span></td>
+    <td class="center"><span class="investor-count" aria-label="${group.fundCount} fund${group.fundCount !== 1 ? 's' : ''}, ${group.investorCount} position${group.investorCount !== 1 ? 's' : ''}">${group.fundCount} fund${group.fundCount !== 1 ? 's' : ''}, ${group.investorCount} position${group.investorCount !== 1 ? 's' : ''}</span></td>
     <td class="center">${m.vintageYear || 'N/A'}</td>
     <td class="number">${formatCurrency(m.commitment || 0)}</td>
     <td class="number">${formatCurrency(m.calledCapital)}</td>

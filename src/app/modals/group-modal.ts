@@ -171,9 +171,12 @@ export async function deleteGroupById(
         saveFundToDB({ ...fund, groupId: null })
       );
       const results = await Promise.allSettled(updatePromises);
-      const failed = results.filter((r) => r.status === 'rejected').length;
-      if (failed > 0) {
-        showStatus(`Warning: ${failed} fund(s) could not be updated`, 'warning');
+      const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+      if (rejected.length > 0) {
+        rejected.forEach((r, i) => {
+          console.error(`Failed to update fund ${fundsInGroup[i]?.id}:`, r.reason);
+        });
+        showStatus(`Warning: ${rejected.length} fund(s) could not be updated`, 'warning');
       }
     }
 
@@ -364,14 +367,21 @@ export async function applySyncAccountGroups(onComplete: () => Promise<void>): P
 
     const results = await Promise.allSettled(updatePromises);
     const succeeded = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
+    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+
+    // Log individual failures for debugging
+    if (rejected.length > 0) {
+      rejected.forEach((r, i) => {
+        console.error(`Account group sync failed for operation ${i + 1}:`, r.reason);
+      });
+    }
 
     resetGroupModalState();
     AppState.clearMetricsCache();
     closeModal('syncAccountGroupsModal');
 
-    if (failed > 0) {
-      showStatus(`Synced ${succeeded} investment(s), ${failed} failed`, 'warning');
+    if (rejected.length > 0) {
+      showStatus(`Synced ${succeeded} investment(s), ${rejected.length} failed`, 'warning');
     } else {
       showStatus(`Synced groups for ${succeeded} investment${succeeded !== 1 ? 's' : ''}`);
     }

@@ -2046,6 +2046,31 @@ function initializeEventListeners(): void {
   const tableBody = document.getElementById('fundsTableBody');
   if (tableBody) {
     tableBody.addEventListener('click', handleActionButtonClick);
+
+    // Keyboard navigation for table rows (accessibility)
+    tableBody.addEventListener('keydown', async (e) => {
+      const event = e as KeyboardEvent;
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+
+      const target = event.target as HTMLElement;
+      const row = target.closest('tr');
+      if (!row) return;
+
+      // Don't handle if focus is on a button inside the row
+      if (target.tagName === 'BUTTON') return;
+
+      event.preventDefault();
+
+      const fundId = row.dataset.fundId;
+      if (fundId) {
+        // Normal fund row - open details modal
+        try {
+          await showDetailsModal(parseInt(fundId, 10), applyFilters);
+        } catch (err) {
+          console.error('Error opening fund details:', err);
+        }
+      }
+    });
   }
 
   // Document-level event delegation for dynamically created buttons

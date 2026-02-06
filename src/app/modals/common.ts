@@ -111,10 +111,13 @@ export function showStatus(message: string, type: 'success' | 'error' | 'warning
 
   const statusDiv = document.createElement('div');
   statusDiv.className = `status-message ${type}`;
+  // Use role="alert" for errors (assertive), role="status" for success/warning (polite)
+  statusDiv.setAttribute('role', type === 'error' ? 'alert' : 'status');
 
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-status';
   closeBtn.innerHTML = '&times;';
+  closeBtn.setAttribute('aria-label', 'Dismiss message');
 
   const messageText = document.createElement('span');
   messageText.textContent = message;
