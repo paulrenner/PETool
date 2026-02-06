@@ -42,6 +42,7 @@ export const CONFIG = {
   MAX_METRICS_CACHE_SIZE: 1000, // Maximum entries in metrics cache (prevents memory bloat)
   LAZY_RENDER_TIMELINE: true, // Only render timeline when expanded
   TABLE_LOADING_DELAY: 150, // Show loading indicator after this delay (ms)
+  WORKER_THRESHOLD: 100, // Use Web Worker for datasets >= this size (balance overhead vs. UI responsiveness)
 
   // Validation & Security
   ALLOWED_FUND_NAME_PATTERN: /^[a-zA-Z0-9\s\-_.,&']+$/,

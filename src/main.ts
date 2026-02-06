@@ -754,7 +754,11 @@ function initColumnResizing(): void {
 
 /**
  * Debounce function with async error handling
+ * @param func - The function to debounce (can be sync or async)
+ * @param wait - Delay in milliseconds before executing
+ * @returns Debounced function that delays execution until wait ms after last call
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
@@ -777,7 +781,10 @@ function debounce<T extends (...args: any[]) => any>(
 /**
  * Throttle function using requestAnimationFrame
  * Batches high-frequency events (like mouseover) to next animation frame
+ * @param func - The function to throttle
+ * @returns Throttled function that executes at most once per animation frame
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rafThrottle<T extends (...args: any[]) => any>(
   func: T
 ): (...args: Parameters<T>) => void {
@@ -918,11 +925,10 @@ async function renderTable(): Promise<void> {
     }
 
     // Calculate metrics for each fund
-    // Use Web Worker for large datasets (>100 funds) to keep UI responsive
+    // Use Web Worker for large datasets to keep UI responsive
     let fundsWithMetrics: FundWithMetrics[];
 
-    const WORKER_THRESHOLD = 100;
-    if (filtered.length >= WORKER_THRESHOLD && isWorkerReady()) {
+    if (filtered.length >= CONFIG.WORKER_THRESHOLD && isWorkerReady()) {
       try {
         const workerResults = await calculateMetricsInWorker(filtered, cutoffDate);
 
