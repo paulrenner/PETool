@@ -123,8 +123,8 @@ export function calculateMetricsInWorker(
 
     const requestId = ++requestIdCounter;
 
-    // Prevent counter overflow (reset well before MAX_SAFE_INTEGER)
-    if (requestIdCounter > Number.MAX_SAFE_INTEGER - 1000) {
+    // Prevent counter overflow - only reset when no pending requests to avoid ID collisions
+    if (requestIdCounter > Number.MAX_SAFE_INTEGER - 1000 && pendingRequests.size === 0) {
       requestIdCounter = 0;
     }
 

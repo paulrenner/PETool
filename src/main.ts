@@ -911,6 +911,12 @@ async function renderTable(): Promise<void> {
     updateFilterDropdowns(funds);
     updateActiveFiltersIndicator();
 
+    // Check if operation was aborted before expensive calculations
+    if (AppState.abortController?.signal.aborted) {
+      clearTimeout(loadingTimeout);
+      return;
+    }
+
     // Calculate metrics for each fund
     // Use Web Worker for large datasets (>100 funds) to keep UI responsive
     let fundsWithMetrics: FundWithMetrics[];
@@ -919,6 +925,13 @@ async function renderTable(): Promise<void> {
     if (filtered.length >= WORKER_THRESHOLD && isWorkerReady()) {
       try {
         const workerResults = await calculateMetricsInWorker(filtered, cutoffDate);
+
+        // Check if aborted while worker was processing
+        if (AppState.abortController?.signal.aborted) {
+          clearTimeout(loadingTimeout);
+          return;
+        }
+
         const metricsMap = new Map(
           workerResults.map(r => [r.fundId, r.metrics])
         );
@@ -1543,6 +1556,9 @@ function initMultiSelectDropdowns(): void {
     const dropdown = container.querySelector('.multi-select-dropdown');
 
     if (!trigger || !dropdown) return;
+
+    // Set initial aria-expanded state
+    trigger.setAttribute('aria-expanded', 'false');
 
     // Toggle dropdown
     trigger.addEventListener('click', (e) => {
