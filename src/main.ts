@@ -2102,9 +2102,14 @@ function initializeEventListeners(): void {
   if (actionDelete) {
     actionDelete.addEventListener('click', async (e) => {
       e.preventDefault();
-      const fundId = getCurrentActionFundId();
-      if (fundId) {
-        await deleteFund(fundId, renderTable);
+      try {
+        const fundId = getCurrentActionFundId();
+        if (fundId) {
+          await deleteFund(fundId, renderTable);
+        }
+      } catch (err) {
+        console.error('Error deleting fund:', err);
+        showStatus('Error deleting fund', 'error');
       }
       document.getElementById('actionDropdown')?.classList.remove('show');
     });
@@ -2115,7 +2120,12 @@ function initializeEventListeners(): void {
   if (fundForm) {
     fundForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      await saveFundFromModal(renderTable);
+      try {
+        await saveFundFromModal(renderTable);
+      } catch (err) {
+        console.error('Error saving fund:', err);
+        showStatus('Error saving fund', 'error');
+      }
     });
   }
 
@@ -2164,16 +2174,20 @@ function initializeEventListeners(): void {
   [cancelDetailsModalBtn, closeDetailsModalBtn].forEach((btn) => {
     if (btn) {
       btn.addEventListener('click', async () => {
-        if (AppState.hasUnsavedChanges) {
-          const confirmed = await showConfirm('You have unsaved changes. Discard them?', {
-            title: 'Unsaved Changes',
-            confirmText: 'Discard',
-            cancelText: 'Keep Editing',
-          });
-          if (!confirmed) return;
+        try {
+          if (AppState.hasUnsavedChanges) {
+            const confirmed = await showConfirm('You have unsaved changes. Discard them?', {
+              title: 'Unsaved Changes',
+              confirmText: 'Discard',
+              cancelText: 'Keep Editing',
+            });
+            if (!confirmed) return;
+          }
+          AppState.setUnsavedChanges(false);
+          closeModal('detailsModal');
+        } catch (err) {
+          console.error('Error closing details modal:', err);
         }
-        AppState.setUnsavedChanges(false);
-        closeModal('detailsModal');
       });
     }
   });
@@ -2246,10 +2260,15 @@ function initializeEventListeners(): void {
       const action = btn.dataset.action;
       const name = btn.dataset.name;
 
-      if (action === 'editFundName' && name) {
-        showEditFundNameModal(name);
-      } else if (action === 'deleteFundName' && name) {
-        await deleteFundNameByName(name, renderTable);
+      try {
+        if (action === 'editFundName' && name) {
+          showEditFundNameModal(name);
+        } else if (action === 'deleteFundName' && name) {
+          await deleteFundNameByName(name, renderTable);
+        }
+      } catch (err) {
+        console.error('Error handling fund name action:', err);
+        showStatus('Error processing request', 'error');
       }
     });
   }
@@ -2343,29 +2362,34 @@ function initializeEventListeners(): void {
       const action = btn.dataset.action;
       const id = parseInt(btn.dataset.id || '0', 10);
 
-      if (action === 'editGroup' && !isNaN(id)) {
-        const group = AppState.getGroupByIdSync(id);
-        if (group) {
-          const editGroupId = document.getElementById('editGroupId') as HTMLInputElement;
-          const newGroupName = document.getElementById('newGroupName') as HTMLInputElement;
-          const newGroupType = document.getElementById('newGroupType') as HTMLSelectElement;
-          const saveGroupBtn = document.getElementById('saveGroupBtn');
-          const cancelEditBtn = document.getElementById('cancelEditBtn');
-          const groupFormTitle = document.getElementById('groupFormTitle');
+      try {
+        if (action === 'editGroup' && !isNaN(id)) {
+          const group = AppState.getGroupByIdSync(id);
+          if (group) {
+            const editGroupId = document.getElementById('editGroupId') as HTMLInputElement;
+            const newGroupName = document.getElementById('newGroupName') as HTMLInputElement;
+            const newGroupType = document.getElementById('newGroupType') as HTMLSelectElement;
+            const saveGroupBtn = document.getElementById('saveGroupBtn');
+            const cancelEditBtn = document.getElementById('cancelEditBtn');
+            const groupFormTitle = document.getElementById('groupFormTitle');
 
-          if (editGroupId) editGroupId.value = id.toString();
-          if (newGroupName) newGroupName.value = group.name;
-          if (newGroupType) newGroupType.value = group.type || '';
-          if (saveGroupBtn) saveGroupBtn.textContent = 'Update Group';
-          if (cancelEditBtn) cancelEditBtn.classList.remove('hidden');
-          if (groupFormTitle) groupFormTitle.textContent = 'Edit Group';
+            if (editGroupId) editGroupId.value = id.toString();
+            if (newGroupName) newGroupName.value = group.name;
+            if (newGroupType) newGroupType.value = group.type || '';
+            if (saveGroupBtn) saveGroupBtn.textContent = 'Update Group';
+            if (cancelEditBtn) cancelEditBtn.classList.remove('hidden');
+            if (groupFormTitle) groupFormTitle.textContent = 'Edit Group';
 
-          // Populate parent dropdown excluding this group and its descendants
-          populateGroupDropdown('newGroupParent', id);
-          setSearchableSelectValue('newGroupParent', group.parentGroupId?.toString() || '');
+            // Populate parent dropdown excluding this group and its descendants
+            populateGroupDropdown('newGroupParent', id);
+            setSearchableSelectValue('newGroupParent', group.parentGroupId?.toString() || '');
+          }
+        } else if (action === 'deleteGroup' && !isNaN(id)) {
+          await deleteGroupById(id, renderTable);
         }
-      } else if (action === 'deleteGroup' && !isNaN(id)) {
-        await deleteGroupById(id, renderTable);
+      } catch (err) {
+        console.error('Error handling group action:', err);
+        showStatus('Error processing request', 'error');
       }
     });
   }
