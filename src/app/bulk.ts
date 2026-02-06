@@ -224,11 +224,16 @@ export async function applyBulkCashFlow(onComplete: () => Promise<void>): Promis
       return saveFundToDB(updatedFund);
     });
 
-    await Promise.all(savePromises);
-    const updated = matchingFunds.length;
+    const results = await Promise.allSettled(savePromises);
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
 
     AppState.clearMetricsCache();
-    showStatus(`Successfully added cash flow to ${updated} investment(s)`);
+    if (failed > 0) {
+      showStatus(`Added cash flow to ${succeeded} investment(s), ${failed} failed`, 'warning');
+    } else {
+      showStatus(`Successfully added cash flow to ${succeeded} investment(s)`);
+    }
     await onComplete();
   } catch (err) {
     showStatus('Error applying bulk cash flow: ' + (err as Error).message, 'error');
@@ -307,11 +312,16 @@ export async function applyBulkRemoveFund(onComplete: () => Promise<void>): Prom
       .filter((fund) => fund.id)
       .map((fund) => deleteFundFromDB(fund.id!));
 
-    await Promise.all(deletePromises);
-    const deleted = deletePromises.length;
+    const results = await Promise.allSettled(deletePromises);
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
 
     AppState.clearMetricsCache();
-    showStatus(`Successfully removed ${deleted} investment(s)`);
+    if (failed > 0) {
+      showStatus(`Removed ${succeeded} investment(s), ${failed} failed`, 'warning');
+    } else {
+      showStatus(`Successfully removed ${succeeded} investment(s)`);
+    }
     await onComplete();
   } catch (err) {
     showStatus('Error removing investments: ' + (err as Error).message, 'error');
@@ -404,11 +414,16 @@ export async function applyBulkAssignGroup(onComplete: () => Promise<void>): Pro
       return saveFundToDB(updatedFund);
     });
 
-    await Promise.all(savePromises);
-    const updated = matchingFunds.length;
+    const results = await Promise.allSettled(savePromises);
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
 
     AppState.clearMetricsCache();
-    showStatus(`Successfully updated ${updated} investment(s)`);
+    if (failed > 0) {
+      showStatus(`Updated ${succeeded} investment(s), ${failed} failed`, 'warning');
+    } else {
+      showStatus(`Successfully updated ${succeeded} investment(s)`);
+    }
     await onComplete();
   } catch (err) {
     showStatus('Error assigning group: ' + (err as Error).message, 'error');

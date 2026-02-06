@@ -9,12 +9,28 @@ export function escapeHtml(text: unknown): string {
 }
 
 /**
- * Escape CSV value
+ * Escape CSV value with formula injection protection
+ * Prevents spreadsheet formula injection (=, +, -, @, tab, carriage return)
  */
 export function escapeCSV(value: unknown): string {
   if (value === null || value === undefined) return '';
-  const str = String(value);
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+  let str = String(value);
+  if (str.length === 0) return '';
+
+  // Formula injection protection - prefix dangerous first characters
+  const firstChar = str.charAt(0);
+  if (['=', '+', '@', '\t', '\r'].includes(firstChar)) {
+    str = "'" + str;
+  } else if (firstChar === '-') {
+    // Only prefix '-' if NOT a valid negative number
+    const num = Number(str);
+    if (isNaN(num) || !isFinite(num)) {
+      str = "'" + str;
+    }
+  }
+
+  // Standard CSV escaping - quote if contains special characters
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes("'")) {
     return '"' + str.replace(/"/g, '""') + '"';
   }
   return str;

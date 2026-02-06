@@ -4,6 +4,21 @@ import { CONFIG } from './config';
 import { validateFund } from '../utils/validation';
 import { AppState } from './state';
 
+// Import showStatus lazily to avoid circular dependency
+let showStatus: ((message: string, type?: 'success' | 'error' | 'warning') => void) | null = null;
+async function getShowStatus() {
+  if (!showStatus) {
+    const mod = await import('../app/modals/common');
+    showStatus = mod.showStatus;
+  }
+  return showStatus;
+}
+
+// Safe wrapper that doesn't throw if import fails
+function safeShowStatus(message: string, type: 'success' | 'error' | 'warning' = 'success') {
+  getShowStatus().then(fn => fn?.(message, type)).catch(console.error);
+}
+
 // Database instance
 let db: IDBDatabase | null = null;
 
@@ -399,25 +414,29 @@ export function deleteFundFromDB(id: number): Promise<void> {
       return;
     }
 
+    // Use a SINGLE readwrite transaction for both get and delete to prevent race conditions
+    const tx = db.transaction([CONFIG.FUNDS_STORE], 'readwrite');
+    const objectStore = tx.objectStore(CONFIG.FUNDS_STORE);
+
     // Get the fund data before deleting for audit log
-    const getRequest = db.transaction([CONFIG.FUNDS_STORE], 'readonly')
-      .objectStore(CONFIG.FUNDS_STORE)
-      .get(id);
+    const getRequest = objectStore.get(id);
 
     getRequest.onsuccess = () => {
       const fundToDelete = getRequest.result ? normalizeFund(getRequest.result) : null;
 
-      const tx = db!.transaction([CONFIG.FUNDS_STORE], 'readwrite');
-      const objectStore = tx.objectStore(CONFIG.FUNDS_STORE);
+      // Delete within the same transaction
       const deleteRequest = objectStore.delete(id);
 
       deleteRequest.onsuccess = () => {
         // Mark data as changed
         AppState.markDataChanged();
 
-        // Log audit entry (async, don't wait)
+        // Log audit entry (async, don't wait) - warn user if audit fails
         if (fundToDelete) {
-          logFundModification('DELETE', fundToDelete).catch(console.error);
+          logFundModification('DELETE', fundToDelete).catch((err) => {
+            console.error('[AUDIT] Failed to log deletion:', err);
+            safeShowStatus('Warning: Deletion succeeded but audit log failed', 'warning');
+          });
         }
         resolve();
       };
@@ -425,11 +444,8 @@ export function deleteFundFromDB(id: number): Promise<void> {
     };
 
     getRequest.onerror = () => {
-      // Still try to delete even if get fails
-      const tx = db!.transaction([CONFIG.FUNDS_STORE], 'readwrite');
-      const objectStore = tx.objectStore(CONFIG.FUNDS_STORE);
+      // Still try to delete even if get fails (within same transaction)
       const deleteRequest = objectStore.delete(id);
-
       deleteRequest.onsuccess = () => resolve();
       deleteRequest.onerror = () => reject(deleteRequest.error);
     };

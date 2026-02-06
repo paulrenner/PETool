@@ -60,6 +60,9 @@ export function validateFund(fund: unknown): FundValidationResult {
     errors.push('Account number is required');
   }
 
+  // Maximum allowed value (1 quadrillion) to prevent precision loss
+  const MAX_AMOUNT = 1e15;
+
   // Commitment validation (critical for financial calculations)
   if (typeof f.commitment !== 'number') {
     errors.push('Commitment must be a number');
@@ -69,6 +72,8 @@ export function validateFund(fund: unknown): FundValidationResult {
     errors.push('Commitment must be a finite number');
   } else if (f.commitment < 0) {
     errors.push('Commitment cannot be negative');
+  } else if (f.commitment > MAX_AMOUNT) {
+    errors.push(`Commitment exceeds maximum allowed value (${MAX_AMOUNT})`);
   }
 
   // Cash flows validation
@@ -91,6 +96,8 @@ export function validateFund(fund: unknown): FundValidationResult {
           errors.push(`Cash flow ${i}: amount is NaN (invalid number)`);
         } else if (!isFinite(cashFlow.amount)) {
           errors.push(`Cash flow ${i}: amount must be finite`);
+        } else if (Math.abs(cashFlow.amount) > MAX_AMOUNT) {
+          errors.push(`Cash flow ${i}: amount exceeds maximum allowed value`);
         }
 
         // Date validation
@@ -126,6 +133,8 @@ export function validateFund(fund: unknown): FundValidationResult {
             errors.push(`NAV ${i}: amount is NaN (invalid number)`);
           } else if (!isFinite(navEntry.amount)) {
             errors.push(`NAV ${i}: amount must be finite`);
+          } else if (Math.abs(navEntry.amount) > MAX_AMOUNT) {
+            errors.push(`NAV ${i}: amount exceeds maximum allowed value`);
           }
 
           // Date validation

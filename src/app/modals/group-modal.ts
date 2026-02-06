@@ -160,15 +160,25 @@ export async function deleteGroupById(
 
   try {
     showLoading('Deleting...');
-    await deleteGroup(groupId);
 
-    // Update funds that were in this group
+    // Update funds FIRST (remove group association) before deleting the group
+    // This prevents orphaned references if deletion succeeds but updates fail
     const funds = await getAllFunds();
-    for (const fund of funds) {
-      if (fund.groupId === groupId) {
-        await saveFundToDB({ ...fund, groupId: null });
+    const fundsInGroup = funds.filter((fund) => fund.groupId === groupId);
+
+    if (fundsInGroup.length > 0) {
+      const updatePromises = fundsInGroup.map((fund) =>
+        saveFundToDB({ ...fund, groupId: null })
+      );
+      const results = await Promise.allSettled(updatePromises);
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      if (failed > 0) {
+        showStatus(`Warning: ${failed} fund(s) could not be updated`, 'warning');
       }
     }
+
+    // Now safe to delete the group
+    await deleteGroup(groupId);
 
     // Refresh groups
     const groups = await getAllGroups();
@@ -334,23 +344,37 @@ export async function applySyncAccountGroups(onComplete: () => Promise<void>): P
   try {
     showLoading('Syncing account groups...');
 
-    let updatedCount = 0;
+    // Collect all funds that need updating
+    const updateOperations: Array<{ fundId: number; suggestedGroupId: number | null }> = [];
     for (const item of pendingSyncData) {
       for (const fund of item.funds) {
         if (fund.groupId !== item.suggestedGroupId) {
-          const fullFund = await getFundById(fund.id);
-          if (fullFund) {
-            await saveFundToDB({ ...fullFund, groupId: item.suggestedGroupId });
-            updatedCount++;
-          }
+          updateOperations.push({ fundId: fund.id, suggestedGroupId: item.suggestedGroupId });
         }
       }
     }
 
+    // Perform all updates in parallel with proper error handling
+    const updatePromises = updateOperations.map(async ({ fundId, suggestedGroupId }) => {
+      const fullFund = await getFundById(fundId);
+      if (fullFund) {
+        await saveFundToDB({ ...fullFund, groupId: suggestedGroupId });
+      }
+    });
+
+    const results = await Promise.allSettled(updatePromises);
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+
     resetGroupModalState();
     AppState.clearMetricsCache();
     closeModal('syncAccountGroupsModal');
-    showStatus(`Synced groups for ${updatedCount} investment${updatedCount !== 1 ? 's' : ''}`);
+
+    if (failed > 0) {
+      showStatus(`Synced ${succeeded} investment(s), ${failed} failed`, 'warning');
+    } else {
+      showStatus(`Synced groups for ${succeeded} investment${succeeded !== 1 ? 's' : ''}`);
+    }
     await onComplete();
   } catch (err) {
     console.error('Error syncing account groups:', err);
