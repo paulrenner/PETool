@@ -108,7 +108,12 @@ export async function handleImportFileSelect(event: Event): Promise<void> {
   // Validate file size
   if (file.size > CONFIG.MAX_FILE_SIZE) {
     if (previewContent) {
-      previewContent.innerHTML = `<p style="color: var(--color-danger);">File too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum size is ${CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB.</p>`;
+      // Use textContent for safety instead of innerHTML
+      const errorP = document.createElement('p');
+      errorP.style.color = 'var(--color-danger)';
+      errorP.textContent = `File too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum size is ${CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB.`;
+      previewContent.innerHTML = '';
+      previewContent.appendChild(errorP);
     }
     input.value = '';
     return;
@@ -117,6 +122,21 @@ export async function handleImportFileSelect(event: Event): Promise<void> {
   try {
     const text = await file.text();
     const data = safeJSONParse<any>(text);
+
+    // Validate parsed data structure
+    if (data === null || typeof data !== 'object') {
+      if (previewContent) {
+        const errorP = document.createElement('p');
+        errorP.style.color = 'var(--color-danger)';
+        errorP.textContent = 'Invalid file format: expected JSON object or array.';
+        previewContent.innerHTML = '';
+        previewContent.appendChild(errorP);
+      }
+      if (applyBtn) applyBtn.disabled = true;
+      input.value = '';
+      return;
+    }
+
     pendingImportData = data;
 
     // Generate preview

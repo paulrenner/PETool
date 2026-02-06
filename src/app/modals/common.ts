@@ -312,8 +312,9 @@ export function closeModal(modalId: string): void {
 
   modal.classList.remove('show');
 
-  // Remove focus trap
+  // Remove focus trap and invalidate focusable elements cache
   removeFocusTrap();
+  invalidateFocusableCache(modal);
 
   // Restore focus to the previously focused element
   if (previouslyFocusedElement && previouslyFocusedElement.focus) {
