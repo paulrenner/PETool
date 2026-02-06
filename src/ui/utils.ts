@@ -41,6 +41,42 @@ export function safeJSONParse<T>(jsonString: string): T {
 }
 
 /**
+ * Safe localStorage getItem - handles private browsing and storage errors
+ */
+export function safeLocalStorageGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    console.warn(`Failed to read localStorage key: ${key}`);
+    return null;
+  }
+}
+
+/**
+ * Safe localStorage setItem - handles private browsing and quota errors
+ */
+export function safeLocalStorageSet(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (err) {
+    console.warn(`Failed to write localStorage key: ${key}`, err);
+    return false;
+  }
+}
+
+/**
+ * Safe parseInt with NaN fallback
+ */
+export function safeParseInt(value: string | null | undefined, fallback: number = 0): number {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? fallback : parsed;
+}
+
+/**
  * Announce message to screen readers
  */
 export function announceToScreenReader(message: string): void {

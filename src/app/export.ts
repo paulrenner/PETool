@@ -8,6 +8,7 @@ import { AppState } from '../core/state';
 import { getAllFunds, getAllGroups, getAllFundNameObjects, getAuditLog } from '../core/db';
 import { calculateMetrics } from '../calculations';
 import { escapeCSV } from '../utils/escaping';
+import { safeLocalStorageGet } from '../ui/utils';
 import { showStatus, showLoading, hideLoading } from './modals';
 import { applyCurrentFilters } from './filters';
 import { sortData, consolidateFundsByName } from './table';
@@ -151,7 +152,7 @@ export async function exportToCSV(): Promise<void> {
     }));
 
     // Check if "group by fund" toggle is enabled
-    const groupByFund = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND) === 'true';
+    const groupByFund = safeLocalStorageGet(CONFIG.STORAGE_GROUP_BY_FUND) === 'true';
 
     let headers: string[];
     let rows: string[];

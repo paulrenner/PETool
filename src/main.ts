@@ -142,7 +142,7 @@ import {
 } from './app/health-check';
 
 import { escapeHtml, escapeAttribute } from './utils/escaping';
-import { announceToScreenReader, safeJSONParse } from './ui/utils';
+import { announceToScreenReader, safeJSONParse, safeLocalStorageGet, safeLocalStorageSet, safeParseInt } from './ui/utils';
 
 // Search debounce timers (per-container)
 const searchDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -175,15 +175,15 @@ function closeBackupWarning(): void {
  * Update last backup timestamp
  */
 function updateLastBackupTime(): void {
-  localStorage.setItem(CONFIG.STORAGE_LAST_BACKUP, new Date().toISOString());
+  safeLocalStorageSet(CONFIG.STORAGE_LAST_BACKUP, new Date().toISOString());
 }
 
 /**
  * Check if backup reminder should be shown
  */
 function checkBackupReminder(): void {
-  const lastBackup = localStorage.getItem(CONFIG.STORAGE_LAST_BACKUP);
-  const warningDismissed = localStorage.getItem(CONFIG.STORAGE_BACKUP_WARNING);
+  const lastBackup = safeLocalStorageGet(CONFIG.STORAGE_LAST_BACKUP);
+  const warningDismissed = safeLocalStorageGet(CONFIG.STORAGE_BACKUP_WARNING);
 
   // If warning was permanently dismissed, don't show
   if (warningDismissed === 'true') {
@@ -227,7 +227,7 @@ function initBackupWarningListeners(): void {
   if (remindLaterBtn) {
     remindLaterBtn.addEventListener('click', () => {
       if (dontShowCheckbox?.checked) {
-        localStorage.setItem(CONFIG.STORAGE_BACKUP_WARNING, 'true');
+        safeLocalStorageSet(CONFIG.STORAGE_BACKUP_WARNING, 'true');
       }
       closeBackupWarning();
     });
@@ -617,9 +617,9 @@ let lastMousedownOnResizer = false;
  * Save column width to localStorage
  */
 function saveColumnWidth(columnIndex: number, width: number): void {
-  const savedWidths = safeJSONParse<Record<number, number>>(localStorage.getItem(CONFIG.STORAGE_COLUMN_WIDTHS) || '{}');
+  const savedWidths = safeJSONParse<Record<number, number>>(safeLocalStorageGet(CONFIG.STORAGE_COLUMN_WIDTHS) || '{}');
   savedWidths[columnIndex] = width;
-  localStorage.setItem(CONFIG.STORAGE_COLUMN_WIDTHS, JSON.stringify(savedWidths));
+  safeLocalStorageSet(CONFIG.STORAGE_COLUMN_WIDTHS, JSON.stringify(savedWidths));
 }
 
 /**
@@ -629,7 +629,7 @@ function restoreColumnWidths(): void {
   const table = document.getElementById('fundsTable') as HTMLTableElement;
   if (!table) return;
 
-  const savedWidths = safeJSONParse<Record<number, number>>(localStorage.getItem(CONFIG.STORAGE_COLUMN_WIDTHS) || '{}');
+  const savedWidths = safeJSONParse<Record<number, number>>(safeLocalStorageGet(CONFIG.STORAGE_COLUMN_WIDTHS) || '{}');
   const ths = table.querySelectorAll('thead th');
 
   ths.forEach((th, index) => {
@@ -763,17 +763,19 @@ function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: ReturnType<typeof setTimeout>;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   return function executedFunction(...args: Parameters<T>) {
     const later = async () => {
-      clearTimeout(timeout);
+      timeout = undefined;
       try {
         await func(...args);
       } catch (err) {
         console.error('Debounced function error:', err);
       }
     };
-    clearTimeout(timeout);
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+    }
     timeout = setTimeout(later, wait);
   };
 }
@@ -1013,8 +1015,8 @@ async function renderTable(): Promise<void> {
     }
 
     const showTags = (document.getElementById('sidebarShowTagsCheckbox') as HTMLInputElement)?.checked ?? true;
-    const groupByFund = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND) === 'true';
-    const groupByGroup = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_GROUP) === 'true';
+    const groupByFund = safeLocalStorageGet(CONFIG.STORAGE_GROUP_BY_FUND) === 'true';
+    const groupByGroup = safeLocalStorageGet(CONFIG.STORAGE_GROUP_BY_GROUP) === 'true';
 
     // Calculate totals from ALL filtered funds (before pagination)
     const totals = calculateTotals(fundsWithMetrics, cutoffDate);
@@ -1023,7 +1025,7 @@ async function renderTable(): Promise<void> {
 
     if (groupByGroup) {
       // Render hierarchical group view
-      const expandedGroupsStr = localStorage.getItem(CONFIG.STORAGE_EXPANDED_GROUPS) || '[]';
+      const expandedGroupsStr = safeLocalStorageGet(CONFIG.STORAGE_EXPANDED_GROUPS) || '[]';
       const parsed = safeJSONParse<(number | string)[]>(expandedGroupsStr);
       const expandedGroupIds: Set<number | string> = new Set(Array.isArray(parsed) ? parsed : []);
 
@@ -1297,11 +1299,11 @@ async function handleExpandButtonClick(event: Event): Promise<void> {
   const scrollTop = window.scrollY || document.documentElement.scrollTop;
 
   // Toggle expanded state in localStorage
-  const expandedGroupsStr = localStorage.getItem(CONFIG.STORAGE_EXPANDED_GROUPS) || '[]';
+  const expandedGroupsStr = safeLocalStorageGet(CONFIG.STORAGE_EXPANDED_GROUPS) || '[]';
   const parsed = safeJSONParse<(number | string)[]>(expandedGroupsStr);
   let expandedGroups: (number | string)[] = Array.isArray(parsed) ? parsed : [];
 
-  const groupIdNum = parseInt(groupId, 10);
+  const groupIdNum = safeParseInt(groupId, 0);
   const index = expandedGroups.findIndex(id => id === groupIdNum || id === groupId);
 
   if (index >= 0) {
@@ -1312,7 +1314,7 @@ async function handleExpandButtonClick(event: Event): Promise<void> {
     expandedGroups.push(groupIdNum);
   }
 
-  localStorage.setItem(CONFIG.STORAGE_EXPANDED_GROUPS, JSON.stringify(expandedGroups));
+  safeLocalStorageSet(CONFIG.STORAGE_EXPANDED_GROUPS, JSON.stringify(expandedGroups));
   await renderTable();
 
   // Restore scroll position after re-rendering
@@ -1467,7 +1469,7 @@ function initializeDarkMode(): void {
   if (!checkbox) return;
 
   // Check saved preference or system preference
-  const savedTheme = localStorage.getItem(CONFIG.STORAGE_THEME);
+  const savedTheme = safeLocalStorageGet(CONFIG.STORAGE_THEME);
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
 
@@ -1477,7 +1479,7 @@ function initializeDarkMode(): void {
   checkbox.addEventListener('change', () => {
     const theme = checkbox.checked ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem(CONFIG.STORAGE_THEME, theme);
+    safeLocalStorageSet(CONFIG.STORAGE_THEME, theme);
   });
 }
 
@@ -2515,7 +2517,7 @@ function initializeEventListeners(): void {
     sidebarShowTagsCheckbox.addEventListener('change', async () => {
       try {
         const checked = (sidebarShowTagsCheckbox as HTMLInputElement).checked;
-        localStorage.setItem(CONFIG.STORAGE_SHOW_TAGS, checked.toString());
+        safeLocalStorageSet(CONFIG.STORAGE_SHOW_TAGS, checked.toString());
         await renderTable();
       } catch (err) {
         console.error('Error toggling tags display:', err);
@@ -2524,7 +2526,7 @@ function initializeEventListeners(): void {
     });
 
     // Restore saved preference
-    const savedShowTags = localStorage.getItem(CONFIG.STORAGE_SHOW_TAGS);
+    const savedShowTags = safeLocalStorageGet(CONFIG.STORAGE_SHOW_TAGS);
     if (savedShowTags !== null) {
       (sidebarShowTagsCheckbox as HTMLInputElement).checked = savedShowTags === 'true';
     }
@@ -2534,21 +2536,21 @@ function initializeEventListeners(): void {
   const groupByFundToggle = document.getElementById('groupByFundToggle');
   if (groupByFundToggle) {
     // Initialize toggle state from localStorage
-    const savedGroupByFund = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND);
+    const savedGroupByFund = safeLocalStorageGet(CONFIG.STORAGE_GROUP_BY_FUND);
     if (savedGroupByFund === 'true') {
       groupByFundToggle.classList.add('active');
     }
 
     groupByFundToggle.addEventListener('click', async () => {
       try {
-        const currentState = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_FUND) === 'true';
+        const currentState = safeLocalStorageGet(CONFIG.STORAGE_GROUP_BY_FUND) === 'true';
         const newState = !currentState;
         groupByFundToggle.classList.toggle('active', newState);
-        localStorage.setItem(CONFIG.STORAGE_GROUP_BY_FUND, newState.toString());
+        safeLocalStorageSet(CONFIG.STORAGE_GROUP_BY_FUND, newState.toString());
 
         // If enabling group-by-fund, disable group-by-group to avoid confusion
         if (newState) {
-          localStorage.setItem(CONFIG.STORAGE_GROUP_BY_GROUP, 'false');
+          safeLocalStorageSet(CONFIG.STORAGE_GROUP_BY_GROUP, 'false');
           const sidebarGroupByGroupCheckbox = document.getElementById('sidebarGroupByGroupCheckbox') as HTMLInputElement;
           if (sidebarGroupByGroupCheckbox) {
             sidebarGroupByGroupCheckbox.checked = false;
@@ -2568,12 +2570,12 @@ function initializeEventListeners(): void {
   if (sidebarMaskAccountsCheckbox) {
     sidebarMaskAccountsCheckbox.addEventListener('change', () => {
       const checked = (sidebarMaskAccountsCheckbox as HTMLInputElement).checked;
-      localStorage.setItem(CONFIG.STORAGE_MASK_ACCOUNTS, checked.toString());
+      safeLocalStorageSet(CONFIG.STORAGE_MASK_ACCOUNTS, checked.toString());
       document.documentElement.setAttribute('data-mask-accounts', checked.toString());
     });
 
     // Restore saved preference
-    const savedMaskAccounts = localStorage.getItem(CONFIG.STORAGE_MASK_ACCOUNTS);
+    const savedMaskAccounts = safeLocalStorageGet(CONFIG.STORAGE_MASK_ACCOUNTS);
     if (savedMaskAccounts !== null) {
       const isMasked = savedMaskAccounts === 'true';
       (sidebarMaskAccountsCheckbox as HTMLInputElement).checked = isMasked;
@@ -2587,11 +2589,11 @@ function initializeEventListeners(): void {
     sidebarGroupByGroupCheckbox.addEventListener('change', async () => {
       try {
         const checked = (sidebarGroupByGroupCheckbox as HTMLInputElement).checked;
-        localStorage.setItem(CONFIG.STORAGE_GROUP_BY_GROUP, checked.toString());
+        safeLocalStorageSet(CONFIG.STORAGE_GROUP_BY_GROUP, checked.toString());
 
         // If enabling group-by-group, disable group-by-fund to avoid confusion
         if (checked) {
-          localStorage.setItem(CONFIG.STORAGE_GROUP_BY_FUND, 'false');
+          safeLocalStorageSet(CONFIG.STORAGE_GROUP_BY_FUND, 'false');
           const groupByFundToggle = document.getElementById('groupByFundToggle');
           if (groupByFundToggle) {
             groupByFundToggle.classList.remove('active');
@@ -2606,7 +2608,7 @@ function initializeEventListeners(): void {
     });
 
     // Restore saved preference
-    const savedGroupByGroup = localStorage.getItem(CONFIG.STORAGE_GROUP_BY_GROUP);
+    const savedGroupByGroup = safeLocalStorageGet(CONFIG.STORAGE_GROUP_BY_GROUP);
     if (savedGroupByGroup !== null) {
       (sidebarGroupByGroupCheckbox as HTMLInputElement).checked = savedGroupByGroup === 'true';
     }
