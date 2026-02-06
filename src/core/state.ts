@@ -11,38 +11,46 @@ import type {
 } from '../types';
 import { CONFIG } from './config';
 
+// FNV-1a hash constants for fast hashing
+const FNV_OFFSET_BASIS = 2166136261;
+const FNV_PRIME = 16777619;
+
 /**
  * Fast hash function for arrays of numbers (FNV-1a inspired)
+ * @param arr - Array of numbers to hash
+ * @returns Base-36 encoded hash string
  */
 function hashNumberArray(arr: number[]): string {
-  let hash = 2166136261;
+  let hash = FNV_OFFSET_BASIS;
   for (let i = 0; i < arr.length; i++) {
     const val = arr[i];
     if (val !== undefined) {
       hash ^= val;
-      hash = (hash * 16777619) >>> 0;
+      hash = (hash * FNV_PRIME) >>> 0;
     }
   }
   return hash.toString(36);
 }
 
 /**
- * Hash function for filter state
+ * Hash function for filter state objects
+ * @param filters - Record of filter key to value arrays
+ * @returns Base-36 encoded hash string
  */
 function hashFilterState(filters: Record<string, string[]>): string {
   const keys = Object.keys(filters).sort();
-  let hash = 2166136261;
+  let hash = FNV_OFFSET_BASIS;
   for (const key of keys) {
     for (const char of key) {
       hash ^= char.charCodeAt(0);
-      hash = (hash * 16777619) >>> 0;
+      hash = (hash * FNV_PRIME) >>> 0;
     }
     const values = filters[key];
     if (values) {
       for (const val of values) {
         for (const char of val) {
           hash ^= char.charCodeAt(0);
-          hash = (hash * 16777619) >>> 0;
+          hash = (hash * FNV_PRIME) >>> 0;
         }
       }
     }

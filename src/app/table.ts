@@ -32,7 +32,9 @@ export interface ConsolidatedGroup {
 }
 
 /**
- * Format MOIC for display
+ * Format MOIC (Multiple on Invested Capital) for display
+ * @param moic - MOIC value as decimal (e.g., 1.5 = 1.5x)
+ * @returns Formatted string with 'x' suffix, or 'N/A' if invalid
  */
 function formatMOIC(moic: number | null): string {
   if (moic === null || moic === undefined || !isFinite(moic)) return 'N/A';
@@ -40,7 +42,9 @@ function formatMOIC(moic: number | null): string {
 }
 
 /**
- * Format IRR for display
+ * Format IRR (Internal Rate of Return) for display
+ * @param irr - IRR as decimal (e.g., 0.15 = 15%)
+ * @returns Formatted percentage string, or 'N/A' if invalid
  */
 function formatIRR(irr: number | null): string {
   if (irr === null || irr === undefined || !isFinite(irr)) return 'N/A';
@@ -48,8 +52,10 @@ function formatIRR(irr: number | null): string {
 }
 
 /**
- * Helper: Render fund tags HTML
- * Reduces duplication between renderFundRow and renderGroupedFundRow
+ * Render fund tags as HTML badges
+ * @param fundName - The fund name to look up tags for
+ * @param showTags - Whether tags should be displayed
+ * @returns HTML string with tag badges, or empty string
  */
 function renderFundTags(fundName: string, showTags: boolean): string {
   if (!showTags) return '';
@@ -60,15 +66,18 @@ function renderFundTags(fundName: string, showTags: boolean): string {
 }
 
 /**
- * Helper: Calculate investment return from metrics
- * Reduces duplication across row rendering functions
+ * Calculate investment return from fund metrics
+ * @param m - Fund metrics object
+ * @returns Investment return value (distributions + NAV - called capital)
  */
 function getInvestmentReturn(m: FundMetrics): number {
   return m.investmentReturn ?? (m.distributions + m.nav - m.calledCapital);
 }
 
 /**
- * Get immediate parent group name for a fund
+ * Get the immediate parent group name for a fund
+ * @param fund - The fund to look up
+ * @returns Parent group name, or empty string if no group
  */
 function getImmediateParentName(fund: Fund): string {
   if (!fund.groupId) return '';
@@ -77,7 +86,9 @@ function getImmediateParentName(fund: Fund): string {
 }
 
 /**
- * Get parent name + account display text
+ * Get display text showing parent group and account number
+ * @param fund - The fund to display
+ * @returns Formatted string like "Parent Name (ACC123)" or just account number
  */
 function getParentAccountDisplay(fund: Fund): string {
   const parentName = getImmediateParentName(fund);
@@ -85,7 +96,9 @@ function getParentAccountDisplay(fund: Fund): string {
 }
 
 /**
- * Get HTML for investor cell display
+ * Generate HTML for investor cell with group name and account number
+ * @param fund - The fund to display
+ * @returns HTML string for investor cell content
  */
 function getInvestorCellHtml(fund: Fund): string {
   const groupName = getImmediateParentName(fund);

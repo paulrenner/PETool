@@ -4,6 +4,7 @@
 
 import type { Fund, FundMetrics } from '../types';
 import type { MetricsWorkerRequest, MetricsWorkerResponse } from './metrics.worker';
+import { CONFIG } from '../core/config';
 // Import worker as inline using Vite's ?worker&inline query
 import MetricsWorker from './metrics.worker?worker&inline';
 
@@ -98,10 +99,10 @@ export function initMetricsWorker(): Promise<void> {
         }
       };
 
-      // Timeout for initialization (2s is sufficient for inline worker)
+      // Timeout for initialization
       initTimeoutId = setTimeout(() => {
         wrappedReject(new Error('Worker initialization timeout'));
-      }, 2000);
+      }, CONFIG.WORKER_INIT_TIMEOUT);
     } catch (error) {
       reject(error);
     }
@@ -135,7 +136,7 @@ export function calculateMetricsInWorker(
         pending.reject(new Error('Worker request timeout'));
         pendingRequests.delete(requestId);
       }
-    }, 30000);
+    }, CONFIG.WORKER_CALCULATION_TIMEOUT);
 
     // Store request with timeout ID for proper cleanup
     pendingRequests.set(requestId, { resolve, reject, timeoutId });

@@ -77,7 +77,8 @@ export function safeParseInt(value: string | null | undefined, fallback: number 
 }
 
 /**
- * Announce message to screen readers
+ * Announce message to screen readers via ARIA live region
+ * @param message - The message to announce
  */
 export function announceToScreenReader(message: string): void {
   const announcer = document.getElementById('srAnnounce');
@@ -86,6 +87,6 @@ export function announceToScreenReader(message: string): void {
     // Clear after announcement to allow repeat announcements
     setTimeout(() => {
       announcer.textContent = '';
-    }, 1000);
+    }, CONFIG.SR_ANNOUNCEMENT_DURATION);
   }
 }

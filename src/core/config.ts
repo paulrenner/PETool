@@ -65,6 +65,23 @@ export const CONFIG = {
 
   // Backup reminder
   BACKUP_REMINDER_DAYS: 30,
+
+  // Time constants (ms)
+  MS_PER_DAY: 24 * 60 * 60 * 1000,
+  MS_PER_YEAR: 365.25 * 24 * 60 * 60 * 1000,
+
+  // Toast/notification durations (ms)
+  TOAST_SUCCESS_DURATION: 3000,
+  TOAST_ERROR_DURATION: 8000,
+  SR_ANNOUNCEMENT_DURATION: 1000,
+
+  // Worker timeouts (ms)
+  WORKER_INIT_TIMEOUT: 2000,
+  WORKER_CALCULATION_TIMEOUT: 30000,
+
+  // Health check thresholds
+  HEALTH_CONTRIBUTION_EXCEED_THRESHOLD: 1.2, // Warn when contributions exceed commitment by 20%
+  HEALTH_FUTURE_DAYS_THRESHOLD: 30, // Days in future to flag as potential issue
 } as const;
 
 export type Config = typeof CONFIG;

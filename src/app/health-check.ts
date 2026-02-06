@@ -3,6 +3,7 @@
  */
 
 import type { Fund, Group, DismissedHealthIssue } from '../types';
+import { CONFIG } from '../core/config';
 import { calculateMetrics, getTotalByType } from '../calculations';
 import { isValidDate } from '../utils/validation';
 
@@ -220,7 +221,7 @@ function checkFund(fund: Fund): HealthIssue[] {
 
   // Pre-compute future threshold once
   const futureThreshold = new Date();
-  futureThreshold.setDate(futureThreshold.getDate() + 30);
+  futureThreshold.setDate(futureThreshold.getDate() + CONFIG.HEALTH_FUTURE_DAYS_THRESHOLD);
   const futureDateStr = futureThreshold.toISOString().split('T')[0]!;
 
   // Check: Zero or negative commitment
@@ -299,7 +300,7 @@ function checkFund(fund: Fund): HealthIssue[] {
         fundName,
         severity: 'warning',
         category: 'Timeline Issue',
-        message: `${futureCashFlows.length} cash flow(s) dated more than 30 days in the future`,
+        message: `${futureCashFlows.length} cash flow(s) dated more than ${CONFIG.HEALTH_FUTURE_DAYS_THRESHOLD} days in the future`,
       });
     }
 
@@ -307,7 +308,7 @@ function checkFund(fund: Fund): HealthIssue[] {
     if (fund.commitment > 0) {
       const totalContributions = getTotalByType(fund, 'Contribution');
       const ratio = totalContributions / fund.commitment;
-      if (ratio > 1.2) {
+      if (ratio > CONFIG.HEALTH_CONTRIBUTION_EXCEED_THRESHOLD) {
         issues.push({
           fundId,
           fundName,
@@ -359,7 +360,7 @@ function checkFund(fund: Fund): HealthIssue[] {
         fundName,
         severity: 'warning',
         category: 'Timeline Issue',
-        message: `${futureNavs.length} NAV entry(ies) dated more than 30 days in the future`,
+        message: `${futureNavs.length} NAV entry(ies) dated more than ${CONFIG.HEALTH_FUTURE_DAYS_THRESHOLD} days in the future`,
       });
     }
   }
@@ -376,14 +377,14 @@ function checkFund(fund: Fund): HealthIssue[] {
   if (sortedDates.length >= 2) {
     const firstDate = new Date(sortedDates[0]! + 'T00:00:00').getTime();
     const lastDate = new Date(sortedDates[sortedDates.length - 1]! + 'T00:00:00').getTime();
-    const daysDiff = (lastDate - firstDate) / (24 * 60 * 60 * 1000);
-    if (daysDiff > 0 && daysDiff < 30) {
+    const daysDiff = (lastDate - firstDate) / CONFIG.MS_PER_DAY;
+    if (daysDiff > 0 && daysDiff < CONFIG.IRR_MIN_DAYS) {
       issues.push({
         fundId,
         fundName,
         severity: 'info',
         category: 'Calculation Note',
-        message: `Short holding period (${Math.round(daysDiff)} days) - IRR not calculated for periods under 30 days`,
+        message: `Short holding period (${Math.round(daysDiff)} days) - IRR not calculated for periods under ${CONFIG.IRR_MIN_DAYS} days`,
       });
     }
   }

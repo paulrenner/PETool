@@ -48,16 +48,15 @@ export function calculateIRR(cashFlows: IRRCashFlow[], guess: number = CONFIG.IR
   // IRR requires meaningful time elapsed to calculate an annualized rate
   // With very short periods, small gains/losses produce extreme annualized rates
   // that are mathematically correct but practically meaningless
-  const daysDiff = (lastDateTime - firstDateTime) / (24 * 60 * 60 * 1000);
+  const daysDiff = (lastDateTime - firstDateTime) / CONFIG.MS_PER_DAY;
   if (daysDiff < CONFIG.IRR_MIN_DAYS) {
     return null;
   }
 
   // Pre-compute yearsDiff for each flow (avoids repeated calculation in loop)
-  const msPerYear = 365.25 * 24 * 60 * 60 * 1000;
   const flowsWithYears = flowsWithTime.map((f) => ({
     amount: f.amount,
-    yearsDiff: (f.timestamp - firstDateTime) / msPerYear,
+    yearsDiff: (f.timestamp - firstDateTime) / CONFIG.MS_PER_YEAR,
   }));
 
   const npv = (rate: number): number =>

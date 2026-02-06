@@ -2,6 +2,8 @@
  * Common modal utilities - status messages, loading, confirm dialogs, modal open/close
  */
 
+import { CONFIG } from '../../core/config';
+
 // Track the element that triggered the modal for focus restoration
 let previouslyFocusedElement: HTMLElement | null = null;
 
@@ -134,7 +136,7 @@ export function showStatus(message: string, type: 'success' | 'error' | 'warning
   };
   closeBtn.addEventListener('click', handleClose);
 
-  const dismissTime = type === 'success' ? 3000 : 8000;
+  const dismissTime = type === 'success' ? CONFIG.TOAST_SUCCESS_DURATION : CONFIG.TOAST_ERROR_DURATION;
   setTimeout(() => {
     if (!closed && statusDiv.parentNode) {
       handleClose();
