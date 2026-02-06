@@ -117,7 +117,8 @@ export function sortData(funds: Fund[], sortColumns: SortColumn[], cutoffDate?: 
           comparison = getParentAccountDisplay(a).localeCompare(getParentAccountDisplay(b));
           break;
         case 'vintage':
-          comparison = (metricsA!.vintageYear || 0) - (metricsB!.vintageYear || 0);
+          // Treat N/A (null) as newest so it appears at end when ascending, start when descending
+          comparison = (metricsA!.vintageYear ?? Infinity) - (metricsB!.vintageYear ?? Infinity);
           break;
         case 'commitment':
           comparison = (metricsA!.commitment || 0) - (metricsB!.commitment || 0);
@@ -471,7 +472,8 @@ export function consolidateFundsByName(
             comparison = a.investorCount - b.investorCount;
             break;
           case 'vintage':
-            comparison = (metricsA.vintageYear || 0) - (metricsB.vintageYear || 0);
+            // Treat N/A (null) as newest so it appears at end when ascending, start when descending
+            comparison = (metricsA.vintageYear ?? Infinity) - (metricsB.vintageYear ?? Infinity);
             break;
           case 'commitment':
             comparison = (metricsA.commitment || 0) - (metricsB.commitment || 0);
