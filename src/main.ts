@@ -866,6 +866,10 @@ function updatePaginationUI(displayedCount: number, totalCount: number): void {
  * Render the main funds table
  */
 async function renderTable(): Promise<void> {
+  // Capture abort controller reference at start to avoid race conditions
+  // (AppState.abortController could be replaced during async operations)
+  const currentAbortSignal = AppState.abortController?.signal;
+
   // Set up debounced loading indicator
   const tbody = document.getElementById('fundsTableBody');
   const loadingTimeout = setTimeout(() => {
@@ -919,7 +923,7 @@ async function renderTable(): Promise<void> {
     updateActiveFiltersIndicator();
 
     // Check if operation was aborted before expensive calculations
-    if (AppState.abortController?.signal.aborted) {
+    if (currentAbortSignal?.aborted) {
       clearTimeout(loadingTimeout);
       return;
     }
@@ -933,7 +937,7 @@ async function renderTable(): Promise<void> {
         const workerResults = await calculateMetricsInWorker(filtered, cutoffDate);
 
         // Check if aborted while worker was processing
-        if (AppState.abortController?.signal.aborted) {
+        if (currentAbortSignal?.aborted) {
           clearTimeout(loadingTimeout);
           return;
         }

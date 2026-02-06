@@ -50,10 +50,8 @@ function invalidateFocusableCache(container: HTMLElement): void {
  * Set up focus trap within a modal
  */
 function setupFocusTrap(modal: HTMLElement): void {
-  // Remove any existing focus trap
-  if (activeFocusTrapHandler) {
-    document.removeEventListener('keydown', activeFocusTrapHandler);
-  }
+  // Always clean up existing focus trap first to prevent memory leaks
+  removeFocusTrap();
 
   // Invalidate cache on modal open to get fresh focusable elements
   invalidateFocusableCache(modal);
@@ -126,8 +124,11 @@ export function showStatus(message: string, type: 'success' | 'error' | 'warning
   statusDiv.appendChild(closeBtn);
   container.appendChild(statusDiv);
 
-  // Use named handler for proper cleanup
+  // Use flag to prevent double removal of event listener
+  let closed = false;
   const handleClose = () => {
+    if (closed) return;
+    closed = true;
     closeBtn.removeEventListener('click', handleClose);
     statusDiv.remove();
   };
@@ -135,9 +136,8 @@ export function showStatus(message: string, type: 'success' | 'error' | 'warning
 
   const dismissTime = type === 'success' ? 3000 : 8000;
   setTimeout(() => {
-    if (statusDiv.parentNode) {
-      closeBtn.removeEventListener('click', handleClose);
-      statusDiv.remove();
+    if (!closed && statusDiv.parentNode) {
+      handleClose();
     }
   }, dismissTime);
 }

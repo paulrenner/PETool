@@ -620,15 +620,23 @@ export function clearAllData(): Promise<void> {
     tx.onerror = () => {
       if (settled) return;
       settled = true;
+      const errorName = tx.error?.name || '';
+      const errorMessage = errorName === 'QuotaExceededError'
+        ? 'Storage quota exceeded. Please free up browser storage and try again.'
+        : `Database error: ${tx.error?.message || 'Transaction failed'}`;
       console.error('Transaction error in clearAllData:', tx.error);
-      reject(tx.error || new Error('Transaction failed'));
+      reject(new Error(errorMessage));
     };
 
     tx.onabort = () => {
       if (settled) return;
       settled = true;
+      const errorName = tx.error?.name || '';
+      const errorMessage = errorName === 'QuotaExceededError'
+        ? 'Storage quota exceeded. Please free up browser storage and try again.'
+        : `Database error: ${tx.error?.message || 'Transaction aborted'}`;
       console.error('Transaction aborted in clearAllData:', tx.error);
-      reject(tx.error || new Error('Transaction aborted'));
+      reject(new Error(errorMessage));
     };
 
     storeNames.forEach((storeName) => {

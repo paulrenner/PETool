@@ -10,7 +10,7 @@ import {
   saveFundToDB,
   deleteFundFromDB,
 } from '../core/db';
-import { escapeHtml } from '../utils/escaping';
+import { escapeHtml, escapeAttribute } from '../utils/escaping';
 import { formatCurrency, formatNumberWithCommas, parseCurrency } from '../utils/formatting';
 import {
   showStatus,
@@ -139,13 +139,13 @@ export async function previewBulkCashFlow(): Promise<void> {
     const amount = fund.commitment * (percentage / 100);
     totalAmount += amount;
     const displayAmount = type === 'Contribution' ? -amount : amount;
-    html += `<tr data-fund-id="${fund.id}">
+    html += `<tr data-fund-id="${escapeAttribute(String(fund.id))}">
       <td>${escapeHtml(fund.accountNumber)}</td>
       <td style="text-align: right;">${formatCurrency(fund.commitment, true)}</td>
       <td style="text-align: right;">
         <input type="text" class="bulk-amount-input"
-               value="${formatNumberWithCommas(displayAmount, 2)}"
-               data-fund-id="${fund.id}"
+               value="${escapeAttribute(formatNumberWithCommas(displayAmount, 2))}"
+               data-fund-id="${escapeAttribute(String(fund.id))}"
                style="width: 120px; text-align: right; border: 1px solid var(--color-border); padding: 2px 4px; font-size: inherit; background: var(--color-bg); color: var(--color-text);">
       </td>
     </tr>`;
