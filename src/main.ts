@@ -1252,14 +1252,18 @@ async function handleHeaderClick(event: Event): Promise<void> {
 /**
  * Handle expand/collapse button click for group-by-group view
  */
-function handleExpandButtonClick(event: Event): void {
+async function handleExpandButtonClick(event: Event): Promise<void> {
   const target = event.target as HTMLElement;
   const button = target.closest('.btn-expand') as HTMLElement;
   if (!button) return;
 
   event.stopPropagation();
+  event.preventDefault();
   const groupId = button.dataset.groupId;
   if (!groupId) return;
+
+  // Save scroll position before re-rendering
+  const scrollTop = window.scrollY || document.documentElement.scrollTop;
 
   // Toggle expanded state in localStorage
   const expandedGroupsStr = localStorage.getItem(CONFIG.STORAGE_EXPANDED_GROUPS) || '[]';
@@ -1278,7 +1282,10 @@ function handleExpandButtonClick(event: Event): void {
   }
 
   localStorage.setItem(CONFIG.STORAGE_EXPANDED_GROUPS, JSON.stringify(expandedGroups));
-  renderTable();
+  await renderTable();
+
+  // Restore scroll position after re-rendering
+  window.scrollTo(0, scrollTop);
 }
 
 /**
