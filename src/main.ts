@@ -147,11 +147,17 @@ import { announceToScreenReader, safeJSONParse, safeLocalStorageGet, safeLocalSt
 // Search debounce timers (per-container)
 const searchDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-// Cleanup debounce timers on page unload to prevent memory leaks
-window.addEventListener('unload', () => {
+/**
+ * Clear all search debounce timers
+ * Exported for testing and cleanup purposes
+ */
+export function clearSearchDebounceTimers(): void {
   searchDebounceTimers.forEach((timer) => clearTimeout(timer));
   searchDebounceTimers.clear();
-});
+}
+
+// Cleanup debounce timers on page unload to prevent memory leaks
+window.addEventListener('unload', clearSearchDebounceTimers);
 
 // ===========================
 // Backup Reminder Functions

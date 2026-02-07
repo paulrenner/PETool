@@ -113,6 +113,14 @@ export function getVintageYear(fund: Fund): number | null {
 
 /**
  * Get total contributions or distributions by type
+ *
+ * @param fund - The fund to calculate totals for
+ * @param type - Either 'Contribution' or 'Distribution'
+ * @param cutoffDate - Optional date to filter cash flows (only include flows on or before)
+ * @returns Sum of absolute amounts for matching cash flows, or 0 if no cash flows exist
+ *
+ * Note: Returns 0 for funds with no cash flows or empty cashFlows array.
+ * This is intentional as funds without activity have zero contributions/distributions.
  */
 export function getTotalByType(
   fund: Fund,

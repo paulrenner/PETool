@@ -133,6 +133,24 @@ export function sortData(funds: Fund[], sortColumns: SortColumn[], cutoffDate?: 
     return calculateMetricsCached(fund, cutoffDate);
   };
 
+  // Cache parent account display strings to avoid repeated group lookups during sort
+  // This is O(n) upfront vs O(n log n) lookups in the comparator
+  const needsAccountSort = sortColumns.some(({ column }) => column === 'accountNumber');
+  const accountDisplayMap = new Map<number, string>();
+  if (needsAccountSort) {
+    for (const fund of funds) {
+      if (fund.id != null) {
+        accountDisplayMap.set(fund.id, getParentAccountDisplay(fund));
+      }
+    }
+  }
+  const getAccountDisplay = (fund: Fund): string => {
+    if (fund.id != null) {
+      return accountDisplayMap.get(fund.id) ?? getParentAccountDisplay(fund);
+    }
+    return getParentAccountDisplay(fund);
+  };
+
   return [...funds].sort((a, b) => {
     for (const { column, direction } of sortColumns) {
       const multiplier = direction === 'asc' ? 1 : -1;
@@ -147,7 +165,7 @@ export function sortData(funds: Fund[], sortColumns: SortColumn[], cutoffDate?: 
           comparison = a.fundName.localeCompare(b.fundName);
           break;
         case 'accountNumber':
-          comparison = getParentAccountDisplay(a).localeCompare(getParentAccountDisplay(b));
+          comparison = getAccountDisplay(a).localeCompare(getAccountDisplay(b));
           break;
         case 'vintage':
           // Treat N/A (null) as newest so it appears at end when ascending, start when descending
@@ -191,6 +209,10 @@ export function sortData(funds: Fund[], sortColumns: SortColumn[], cutoffDate?: 
 
 /**
  * Render fund row HTML
+ * @param fund - Fund with calculated metrics
+ * @param _index - Row index (unused, kept for API consistency with array.map callbacks)
+ * @param showTags - Whether to display fund tags
+ * @returns HTML string for the table row cells
  */
 export function renderFundRow(
   fund: FundWithMetrics,
