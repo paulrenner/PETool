@@ -312,13 +312,16 @@ export function saveFundToDB(fundData: Fund): Promise<number> {
         // Mark data as changed for export reminders and health check cache
         AppState.markDataChanged();
 
-        // Log audit entry (async, don't wait)
+        // Log audit entry (async, don't wait - audit is secondary to data operation)
+        // Note: If audit fails, data is still saved. Error is logged for debugging.
         const savedFund = { ...fundData, id: savedId };
         logFundModification(
           isUpdate ? 'UPDATE' : 'CREATE',
           savedFund,
           previousFund
-        ).catch(console.error);
+        ).catch((err) => {
+          console.error('Audit log failed for fund:', { fundId: savedId, action: isUpdate ? 'UPDATE' : 'CREATE' }, err);
+        });
 
         resolve(savedId);
       };

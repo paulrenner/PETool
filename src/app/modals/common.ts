@@ -24,13 +24,17 @@ const FOCUSABLE_SELECTORS = [
 ].join(', ');
 
 /**
- * Get all focusable elements within a container (cached)
+ * Get all focusable elements within a container
+ * Note: We don't cache aggressively because DOM can change while modal is open
+ * (e.g., dynamically added buttons, conditional elements becoming visible)
  */
-function getFocusableElements(container: HTMLElement): HTMLElement[] {
-  // Check cache first
-  const cached = focusableElementsCache.get(container);
-  if (cached) {
-    return cached;
+function getFocusableElements(container: HTMLElement, useCache: boolean = false): HTMLElement[] {
+  // Only use cache for initial focus, not for ongoing Tab navigation
+  if (useCache) {
+    const cached = focusableElementsCache.get(container);
+    if (cached) {
+      return cached;
+    }
   }
 
   const elements = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)).filter(

@@ -147,6 +147,12 @@ import { announceToScreenReader, safeJSONParse, safeLocalStorageGet, safeLocalSt
 // Search debounce timers (per-container)
 const searchDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
+// Cleanup debounce timers on page unload to prevent memory leaks
+window.addEventListener('unload', () => {
+  searchDebounceTimers.forEach((timer) => clearTimeout(timer));
+  searchDebounceTimers.clear();
+});
+
 // ===========================
 // Backup Reminder Functions
 // ===========================
@@ -1312,6 +1318,17 @@ async function handleHeaderClick(event: Event): Promise<void> {
   }
 
   updateSortIndicators(AppState.sortColumns);
+
+  // Announce sort change to screen readers
+  if (AppState.sortColumns.length > 0) {
+    const sortDescription = AppState.sortColumns
+      .map(s => `${s.column} ${s.direction === 'asc' ? 'ascending' : 'descending'}`)
+      .join(', then ');
+    announceToScreenReader(`Table sorted by ${sortDescription}`);
+  } else {
+    announceToScreenReader('Table sort cleared');
+  }
+
   await renderTable();
 }
 

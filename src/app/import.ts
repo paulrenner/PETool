@@ -112,8 +112,7 @@ export async function handleImportFileSelect(event: Event): Promise<void> {
       const errorP = document.createElement('p');
       errorP.style.color = 'var(--color-danger)';
       errorP.textContent = `File too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum size is ${CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB.`;
-      previewContent.innerHTML = '';
-      previewContent.appendChild(errorP);
+      previewContent.replaceChildren(errorP);
     }
     input.value = '';
     return;
@@ -129,8 +128,7 @@ export async function handleImportFileSelect(event: Event): Promise<void> {
         const errorP = document.createElement('p');
         errorP.style.color = 'var(--color-danger)';
         errorP.textContent = 'Invalid file format: expected JSON object or array.';
-        previewContent.innerHTML = '';
-        previewContent.appendChild(errorP);
+        previewContent.replaceChildren(errorP);
       }
       if (applyBtn) applyBtn.disabled = true;
       input.value = '';

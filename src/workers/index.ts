@@ -14,7 +14,26 @@ const pendingRequests = new Map<number, {
   resolve: (results: Array<{ fundId: number | undefined; metrics: FundMetrics }>) => void;
   reject: (error: Error) => void;
   timeoutId: ReturnType<typeof setTimeout>;
+  createdAt: number; // Timestamp for stale request cleanup
 }>();
+
+// Periodic cleanup interval for stale requests
+let cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
+const STALE_REQUEST_THRESHOLD = CONFIG.WORKER_CALCULATION_TIMEOUT * 2;
+
+/**
+ * Clean up stale pending requests that weren't properly resolved
+ */
+function cleanupStaleRequests(): void {
+  const now = Date.now();
+  for (const [id, pending] of pendingRequests) {
+    if (now - pending.createdAt > STALE_REQUEST_THRESHOLD) {
+      clearTimeout(pending.timeoutId);
+      pending.reject(new Error('Request expired during cleanup'));
+      pendingRequests.delete(id);
+    }
+  }
+}
 
 /**
  * Check if Web Workers are supported
@@ -73,6 +92,10 @@ export function initMetricsWorker(): Promise<void> {
         const data = event.data;
 
         if (data.type === 'ready') {
+          // Start periodic cleanup of stale requests
+          if (!cleanupIntervalId) {
+            cleanupIntervalId = setInterval(cleanupStaleRequests, STALE_REQUEST_THRESHOLD);
+          }
           wrappedResolve();
           return;
         }
@@ -146,8 +169,8 @@ export function calculateMetricsInWorker(
       }
     }, CONFIG.WORKER_CALCULATION_TIMEOUT);
 
-    // Store request with timeout ID for proper cleanup
-    pendingRequests.set(requestId, { resolve, reject, timeoutId });
+    // Store request with timeout ID and timestamp for proper cleanup
+    pendingRequests.set(requestId, { resolve, reject, timeoutId, createdAt: Date.now() });
 
     const request: MetricsWorkerRequest = {
       type: 'calculateMetrics',
@@ -173,6 +196,12 @@ export function terminateMetricsWorker(): void {
       clearTimeout(pending.timeoutId);
     }
     pendingRequests.clear();
+
+    // Stop cleanup interval
+    if (cleanupIntervalId) {
+      clearInterval(cleanupIntervalId);
+      cleanupIntervalId = null;
+    }
   }
 }
 
