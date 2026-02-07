@@ -5,7 +5,20 @@
 import { CONFIG } from '../core/config';
 
 /**
+ * Check if a key is dangerous for prototype pollution
+ */
+function isDangerousKey(key: string): boolean {
+  return (CONFIG.DANGEROUS_KEYS as readonly string[]).includes(key) ||
+    key === '__defineGetter__' ||
+    key === '__defineSetter__' ||
+    key === '__lookupGetter__' ||
+    key === '__lookupSetter__';
+}
+
+/**
  * Sanitize object to prevent prototype pollution attacks
+ * Uses Object.create(null) to create objects without prototype chain
+ * Recursively sanitizes all nested objects and arrays
  */
 function sanitizeObject<T>(obj: T, depth = 0): T {
   if (depth > CONFIG.MAX_JSON_DEPTH) {
@@ -20,13 +33,25 @@ function sanitizeObject<T>(obj: T, depth = 0): T {
     return obj.map((item) => sanitizeObject(item, depth + 1)) as T;
   }
 
+  // Create object with null prototype to prevent prototype pollution
   const sanitized = Object.create(null) as Record<string, unknown>;
-  for (const key of Object.keys(obj as object)) {
+
+  // Use Object.getOwnPropertyNames to catch non-enumerable properties too
+  for (const key of Object.getOwnPropertyNames(obj)) {
     // Skip dangerous keys that could cause prototype pollution
-    if ((CONFIG.DANGEROUS_KEYS as readonly string[]).includes(key)) {
+    if (isDangerousKey(key)) {
       console.warn(`Blocked potentially dangerous key: ${key}`);
       continue;
     }
+
+    // Get property descriptor to check for getters/setters
+    const descriptor = Object.getOwnPropertyDescriptor(obj, key);
+    if (descriptor && (descriptor.get || descriptor.set)) {
+      // Skip accessor properties as they could execute malicious code
+      console.warn(`Blocked accessor property: ${key}`);
+      continue;
+    }
+
     sanitized[key] = sanitizeObject((obj as Record<string, unknown>)[key], depth + 1);
   }
   return sanitized as T;

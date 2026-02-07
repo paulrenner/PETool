@@ -864,10 +864,43 @@ function updatePaginationUI(displayedCount: number, totalCount: number): void {
 // Main Render Function
 // ===========================
 
+// Rendering lock to prevent concurrent renders
+let isRendering = false;
+let pendingRender: (() => void) | null = null;
+
 /**
  * Render the main funds table
+ * Uses a lock to prevent concurrent renders which could cause UI thrashing
  */
 async function renderTable(): Promise<void> {
+  // If already rendering, queue this render to run after current completes
+  if (isRendering) {
+    return new Promise<void>((resolve) => {
+      pendingRender = resolve;
+    });
+  }
+
+  isRendering = true;
+
+  try {
+    await doRenderTable();
+  } finally {
+    isRendering = false;
+    // If a render was queued while we were rendering, run it now
+    if (pendingRender) {
+      const pending = pendingRender;
+      pendingRender = null;
+      pending();
+      // Start the queued render
+      renderTable();
+    }
+  }
+}
+
+/**
+ * Internal render implementation
+ */
+async function doRenderTable(): Promise<void> {
   // Capture abort controller reference at start to avoid race conditions
   // (AppState.abortController could be replaced during async operations)
   const currentAbortSignal = AppState.abortController?.signal;

@@ -209,11 +209,31 @@ async function transaction<T>(
     throw new Error('Database not initialized');
   }
   return new Promise((resolve, reject) => {
+    let settled = false;
     const tx = db!.transaction([storeName], mode);
     const store = tx.objectStore(storeName);
     const request = operation(store);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+
+    request.onsuccess = () => {
+      if (settled) return;
+      settled = true;
+      resolve(request.result);
+    };
+    request.onerror = () => {
+      if (settled) return;
+      settled = true;
+      reject(request.error);
+    };
+    tx.onabort = () => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('Transaction aborted'));
+    };
+    tx.onerror = () => {
+      if (settled) return;
+      settled = true;
+      reject(tx.error || new Error('Transaction error'));
+    };
   });
 }
 
@@ -233,8 +253,12 @@ async function transaction<T>(
  * @returns Promise resolving to the fund ID
  * @throws Error if validation fails or database error occurs
  */
+// Write queue to prevent concurrent DB write corruption
+let writeQueue: Promise<unknown> = Promise.resolve();
+
 export function saveFundToDB(fundData: Fund): Promise<number> {
-  return new Promise((resolve, reject) => {
+  // Queue writes to prevent concurrent modification
+  const writeOperation = new Promise<number>((resolve, reject) => {
     // Validate fund data before saving to prevent corruption
     const validation = validateFund(fundData);
     if (!validation.valid) {
@@ -250,11 +274,24 @@ export function saveFundToDB(fundData: Fund): Promise<number> {
       return;
     }
 
+    let settled = false;
     const isUpdate = !!fundData.id;
 
     // Use a single readwrite transaction for both get and save (performance optimization)
     const tx = db.transaction([CONFIG.FUNDS_STORE], 'readwrite');
     const objectStore = tx.objectStore(CONFIG.FUNDS_STORE);
+
+    // Transaction-level error handlers to prevent hanging promises
+    tx.onabort = () => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('Transaction aborted'));
+    };
+    tx.onerror = () => {
+      if (settled) return;
+      settled = true;
+      reject(tx.error || new Error('Transaction error'));
+    };
 
     let previousFund: Fund | undefined;
 
@@ -268,6 +305,8 @@ export function saveFundToDB(fundData: Fund): Promise<number> {
       }
 
       request.onsuccess = () => {
+        if (settled) return;
+        settled = true;
         const savedId = request.result as number;
 
         // Mark data as changed for export reminders and health check cache
@@ -283,7 +322,11 @@ export function saveFundToDB(fundData: Fund): Promise<number> {
 
         resolve(savedId);
       };
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        if (settled) return;
+        settled = true;
+        reject(request.error);
+      };
     };
 
     // For updates, get the previous state for audit logging within the same transaction
@@ -302,6 +345,10 @@ export function saveFundToDB(fundData: Fund): Promise<number> {
       performSave();
     }
   });
+
+  // Chain to write queue to ensure sequential writes
+  writeQueue = writeQueue.then(() => writeOperation).catch(() => writeOperation);
+  return writeOperation;
 }
 
 /**

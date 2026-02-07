@@ -82,7 +82,13 @@ export function initMetricsWorker(): Promise<void> {
           if (pending) {
             // Clear timeout before resolving to prevent memory leaks
             clearTimeout(pending.timeoutId);
-            pending.resolve(data.results);
+
+            // Validate response structure before resolving
+            if (Array.isArray(data.results)) {
+              pending.resolve(data.results);
+            } else {
+              pending.reject(new Error('Invalid worker response: results is not an array'));
+            }
             pendingRequests.delete(data.requestId);
           }
         }
@@ -122,10 +128,12 @@ export function calculateMetricsInWorker(
       return;
     }
 
-    const requestId = ++requestIdCounter;
+    // Generate unique request ID using timestamp + counter to prevent collisions
+    // This avoids overflow issues and ensures uniqueness even with rapid requests
+    const requestId = Date.now() * 1000 + (++requestIdCounter % 1000);
 
-    // Prevent counter overflow - only reset when no pending requests to avoid ID collisions
-    if (requestIdCounter > Number.MAX_SAFE_INTEGER - 1000 && pendingRequests.size === 0) {
+    // Reset counter periodically to prevent overflow (doesn't affect uniqueness due to timestamp)
+    if (requestIdCounter > 1000000) {
       requestIdCounter = 0;
     }
 
