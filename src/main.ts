@@ -1201,6 +1201,8 @@ async function applyFilters(): Promise<void> {
     updateHeader();
     if (signal.aborted) return;
     await renderTable();
+    if (signal.aborted) return;
+    renderTimeline();
 
     const investmentCount = document.getElementById('summaryInvestmentCount')?.textContent || '0';
     announceToScreenReader(`Filter applied. Showing ${investmentCount} investments.`);
