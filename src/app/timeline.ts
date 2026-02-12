@@ -687,12 +687,14 @@ export function exportTimelineToCSV(): void {
   ): number {
     const isProjected = yearRange.firstProjectedYear !== null && year >= yearRange.firstProjectedYear;
     if (isProjected) {
+      // Only capital calls have projected values; distributions have none
+      if (dataType === 'distributions') return 0;
       const projVal = (projected.byFund[fundName]?.[year]) || 0;
       const estVal = (projected.estimatedByFund[fundName]?.[year]) || 0;
       return projVal + estVal;
     }
     let value = historical.byFund[fundName]?.[dataType]?.[year] || 0;
-    if (year === yearRange.cutoffYear) {
+    if (year === yearRange.cutoffYear && dataType === 'calls') {
       value += (projected.byFund[fundName]?.[year] || 0)
              + (projected.estimatedByFund[fundName]?.[year] || 0);
     }
