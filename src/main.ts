@@ -128,7 +128,7 @@ import {
   initBulkOperationListeners,
 } from './app/bulk';
 
-import { renderTimeline } from './app/timeline';
+import { renderTimeline, exportTimelineToCSV } from './app/timeline';
 
 import {
   runHealthCheck,
@@ -2886,6 +2886,16 @@ function initializeEventListeners(): void {
       if (isExpanded) {
         renderTimeline();
       }
+    });
+  }
+
+  // Timeline CSV export
+  const timelineExportBtn = document.getElementById('timelineExportCSV');
+  if (timelineExportBtn) {
+    timelineExportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      exportTimelineToCSV();
     });
   }
 

@@ -6,8 +6,10 @@
 import type { Fund, FundNameData } from '../types';
 import { AppState } from '../core/state';
 import { formatCurrency } from '../utils/formatting';
-import { escapeHtml, escapeAttribute } from '../utils/escaping';
+import { escapeHtml, escapeAttribute, escapeCSV } from '../utils/escaping';
 import { applyCurrentFilters } from './filters';
+import { formatNumberForCSV, sanitizeForCSV } from './export';
+import { showStatus } from './modals/common';
 import { CONFIG } from '../core/config';
 
 // ===========================
@@ -613,4 +615,156 @@ export function renderTimeline(): void {
   const funds = AppState.getFunds();
   const filtered = applyCurrentFilters(funds);
   renderTimelineTable(filtered);
+}
+
+/**
+ * Export the cash flow timeline data to CSV
+ */
+export function exportTimelineToCSV(): void {
+  const funds = AppState.getFunds();
+  const filtered = applyCurrentFilters(funds);
+
+  if (!filtered || filtered.length === 0) {
+    showStatus('No data to export', 'error');
+    return;
+  }
+
+  // Get the cutoff date from the filter
+  const cutoffDateInput = document.getElementById('cutoffDate') as HTMLInputElement;
+  const cutoffDateValue = cutoffDateInput?.value;
+  const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue + 'T00:00:00') : null;
+  const cutoffYear = cutoffDate ? cutoffDate.getFullYear() : null;
+
+  // Compute timeline data using existing helpers
+  const historical = aggregateHistoricalCashFlows(filtered, cutoffDate);
+  const projected = calculateProjectedCalls(filtered, AppState.fundNameData, cutoffDate);
+  const yearRange = getTimelineYearRange(historical, projected, cutoffYear);
+
+  if (yearRange.years.length === 0) {
+    showStatus('No timeline data to export', 'error');
+    return;
+  }
+
+  const fundNames = [...new Set(filtered.map((f) => f.fundName))].sort();
+
+  // Helper to get value for a year in a given row type
+  function getYearValue(
+    year: number,
+    historicalData: Record<number, number>,
+    projectedData: Record<number, number>,
+    estimatedData: Record<number, number> = {}
+  ): number {
+    const isProjected = yearRange.firstProjectedYear !== null && year >= yearRange.firstProjectedYear;
+    if (isProjected) {
+      return (projectedData[year] || 0) + (estimatedData[year] || 0);
+    }
+    let value = historicalData[year] || 0;
+    if (year === yearRange.cutoffYear) {
+      value += (projectedData[year] || 0) + (estimatedData[year] || 0);
+    }
+    return value;
+  }
+
+  function getFundYearValue(
+    fundName: string,
+    year: number,
+    dataType: 'calls' | 'distributions'
+  ): number {
+    const isProjected = yearRange.firstProjectedYear !== null && year >= yearRange.firstProjectedYear;
+    if (isProjected) {
+      const projVal = (projected.byFund[fundName]?.[year]) || 0;
+      const estVal = (projected.estimatedByFund[fundName]?.[year]) || 0;
+      return projVal + estVal;
+    }
+    let value = historical.byFund[fundName]?.[dataType]?.[year] || 0;
+    if (year === yearRange.cutoffYear) {
+      value += (projected.byFund[fundName]?.[year] || 0)
+             + (projected.estimatedByFund[fundName]?.[year] || 0);
+    }
+    return value;
+  }
+
+  // Build header row
+  const headerCols = yearRange.years.map((year) => {
+    const isProjected = yearRange.firstProjectedYear !== null && year >= yearRange.firstProjectedYear;
+    const isEstimated = yearRange.estimatedYears && yearRange.estimatedYears.has(year);
+    let suffix = '';
+    if (isEstimated) {
+      suffix = '\u2020'; // †
+    } else if (isProjected) {
+      suffix = '*';
+    }
+    return sanitizeForCSV(year + suffix);
+  });
+
+  const rows: string[] = [];
+  rows.push(['', ...headerCols].join(','));
+
+  // Capital Calls row (negative = outflow)
+  const callsCols = yearRange.years.map((year) => {
+    const val = getYearValue(year, historical.calls, projected.projectedCalls, projected.estimatedCalls);
+    return val > 0 ? formatNumberForCSV(-val) : formatNumberForCSV(0);
+  });
+  rows.push([escapeCSV('Capital Calls'), ...callsCols].join(','));
+
+  // Per-fund call breakdown
+  fundNames.forEach((fundName) => {
+    const hasAnyData = yearRange.years.some((year) => getFundYearValue(fundName, year, 'calls') > 0);
+    if (!hasAnyData) return;
+    const cols = yearRange.years.map((year) => {
+      const val = getFundYearValue(fundName, year, 'calls');
+      return val > 0 ? formatNumberForCSV(-val) : formatNumberForCSV(0);
+    });
+    rows.push([escapeCSV('  ' + fundName), ...cols].join(','));
+  });
+
+  // Distributions row (positive = inflow)
+  const distCols = yearRange.years.map((year) => {
+    const val = getYearValue(year, historical.distributions, {}, {});
+    return formatNumberForCSV(val);
+  });
+  rows.push([escapeCSV('Distributions'), ...distCols].join(','));
+
+  // Per-fund distribution breakdown
+  fundNames.forEach((fundName) => {
+    const hasAnyData = yearRange.years.some((year) => getFundYearValue(fundName, year, 'distributions') > 0);
+    if (!hasAnyData) return;
+    const cols = yearRange.years.map((year) => {
+      const val = getFundYearValue(fundName, year, 'distributions');
+      return formatNumberForCSV(val);
+    });
+    rows.push([escapeCSV('  ' + fundName), ...cols].join(','));
+  });
+
+  // Net Cash Flow row
+  const netCols = yearRange.years.map((year) => {
+    const calls = getYearValue(year, historical.calls, projected.projectedCalls, projected.estimatedCalls);
+    const distributions = getYearValue(year, historical.distributions, {}, {});
+    const net = distributions - calls;
+    return formatNumberForCSV(net);
+  });
+  rows.push([escapeCSV('Net Cash Flow'), ...netCols].join(','));
+
+  // Create and download CSV
+  const csv = rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+  const filename = `pe-timeline-export-${timestamp}.csv`;
+
+  const link = document.createElement('a');
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    try {
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  showStatus('Timeline CSV exported successfully');
 }

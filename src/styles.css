@@ -434,6 +434,29 @@
             gap: 8px;
         }
 
+        .timeline-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-timeline-export {
+            padding: 2px 8px;
+            font-size: 11px;
+            background: transparent;
+            border: 1px solid var(--color-border);
+            border-radius: 3px;
+            color: var(--color-text-light);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .btn-timeline-export:hover {
+            background: var(--color-hover-bg);
+            color: var(--color-text);
+            border-color: var(--color-text-light);
+        }
+
         .timeline-toggle {
             font-size: 12px;
             color: var(--color-text-light);

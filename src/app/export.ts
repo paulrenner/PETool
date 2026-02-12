@@ -16,7 +16,7 @@ import { sortData, consolidateFundsByName } from './table';
 /**
  * Format number for CSV export
  */
-function formatNumberForCSV(value: number | null | undefined): string {
+export function formatNumberForCSV(value: number | null | undefined): string {
   if (value === null || value === undefined) return '';
   // TypeScript guarantees value is a number at this point
   if (!Number.isFinite(value)) return '';
@@ -27,7 +27,7 @@ function formatNumberForCSV(value: number | null | undefined): string {
  * Sanitize value for CSV to prevent formula injection
  * Prefixes dangerous characters with single quote to prevent Excel/Sheets formula execution
  */
-function sanitizeForCSV(value: string | number | null | undefined): string {
+export function sanitizeForCSV(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '';
 
   // If it's already a number type, it's safe
