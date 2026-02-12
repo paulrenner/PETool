@@ -741,8 +741,6 @@ export function exportTimelineToCSV(): void {
 
   // Per-fund call breakdown
   fundNames.forEach((fundName) => {
-    const hasAnyData = yearRange.years.some((year) => getFundYearValue(fundName, year, 'calls') > 0);
-    if (!hasAnyData) return;
     const cols = yearRange.years.map((year) => {
       const val = getFundYearValue(fundName, year, 'calls');
       return val > 0 ? formatNumberForCSV(-val) : formatNumberForCSV(0);
@@ -759,8 +757,6 @@ export function exportTimelineToCSV(): void {
 
   // Per-fund distribution breakdown
   fundNames.forEach((fundName) => {
-    const hasAnyData = yearRange.years.some((year) => getFundYearValue(fundName, year, 'distributions') > 0);
-    if (!hasAnyData) return;
     const cols = yearRange.years.map((year) => {
       const val = getFundYearValue(fundName, year, 'distributions');
       return formatNumberForCSV(val);
