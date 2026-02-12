@@ -664,6 +664,7 @@ export function consolidateFundsByGroup(
           distributions: 0,
           nav: 0,
           navDate: null,
+          navAdjusted: false,
           outstandingCommitment: 0,
           investmentReturn: 0,
           irr: null,

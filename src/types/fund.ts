@@ -111,6 +111,8 @@ export interface FundMetrics {
   rvpi: number | null;
   /** Total Value to Paid-In = (Distributions + NAV) / Contributions */
   tvpi: number | null;
+  /** Whether NAV was adjusted for cash flows after the latest NAV date */
+  navAdjusted: boolean;
   /** Remaining unfunded commitment */
   outstandingCommitment: number;
   /** Year of first contribution */

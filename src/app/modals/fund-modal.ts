@@ -905,6 +905,9 @@ export async function showDetailsModal(
   setElement('detailsSummaryValue', formatCurrency(metrics.nav, true));
   setElement('detailsSummaryReturn', formatCurrency(metrics.investmentReturn || 0, true));
   setElement('detailsSummaryOutstanding', formatCurrency(metrics.outstandingCommitment, true));
+  setElement('detailsSummaryValueLabel', metrics.navAdjusted ? 'Current Value*' : 'Current Value');
+  const footnote = document.getElementById('detailsSummaryFootnote');
+  if (footnote) footnote.style.display = metrics.navAdjusted ? '' : 'none';
 
   // Render cash flows
   if (cashFlowsBody) {
@@ -1089,6 +1092,9 @@ export async function updateDetailsSummary(): Promise<void> {
   setElement('detailsSummaryValue', formatCurrency(metrics.nav, true));
   setElement('detailsSummaryReturn', formatCurrency(metrics.investmentReturn || 0, true));
   setElement('detailsSummaryOutstanding', formatCurrency(metrics.outstandingCommitment, true));
+  setElement('detailsSummaryValueLabel', metrics.navAdjusted ? 'Current Value*' : 'Current Value');
+  const footnote = document.getElementById('detailsSummaryFootnote');
+  if (footnote) footnote.style.display = metrics.navAdjusted ? '' : 'none';
 }
 
 /**

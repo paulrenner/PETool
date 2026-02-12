@@ -2537,6 +2537,13 @@
             cursor: not-allowed;
         }
 
+        .details-footnote {
+            font-size: 11px;
+            color: var(--color-text-light);
+            font-style: italic;
+            margin-top: 6px;
+        }
+
         /* Details Table */
         .details-table-wrapper {
             overflow-x: auto;

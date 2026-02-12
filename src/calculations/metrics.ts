@@ -258,6 +258,7 @@ export function calculateMetrics(fund: Fund, cutoffDate?: Date): FundMetrics {
   // Get latest NAV with adjustments for subsequent cash flows
   let nav = 0;
   let navDate: string | null = null;
+  let navAdjusted = false;
   if (sortedNavsDesc.length > 0) {
     const latestNav = sortedNavsDesc[0]!;
     nav = latestNav.amount;
@@ -269,8 +270,10 @@ export function calculateMetrics(fund: Fund, cutoffDate?: Date): FundMetrics {
       if (cf.timestamp > navTimestamp) {
         if (cf.type === 'Contribution') {
           nav += Math.abs(cf.amount);
+          navAdjusted = true;
         } else if (cf.type === 'Distribution') {
           nav -= Math.abs(cf.amount);
+          navAdjusted = true;
         }
       }
     }
@@ -330,6 +333,7 @@ export function calculateMetrics(fund: Fund, cutoffDate?: Date): FundMetrics {
     distributions,
     nav,
     navDate,
+    navAdjusted,
     irr,
     moic,
     dpi,
