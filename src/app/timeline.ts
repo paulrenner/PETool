@@ -179,8 +179,8 @@ function calculateProjectedCalls(
 
     if (uncalledCapital <= 0) return;
 
-    // Calculate years remaining in investment period (starting after cutoff year)
-    const startYear = Math.max(referenceYear + 1, termStart.getFullYear());
+    // Calculate years remaining in investment period (including cutoff year)
+    const startYear = Math.max(referenceYear, termStart.getFullYear());
     const endYear = investmentEndDate.getFullYear();
     const yearsRemaining: number[] = [];
 
@@ -310,14 +310,20 @@ function buildTimelineRow(
       const estimatedValue = estimatedData[year] || 0;
       value = projectedValue + estimatedValue;
       hasEstimatedValue = estimatedValue > 0;
-    } else if (historicalData[year]) {
-      value = historicalData[year]!;
+    } else {
+      value = historicalData[year] || 0;
+      if (year === yearRange.cutoffYear) {
+        const projectedValue = projectedData[year] || 0;
+        const estimatedValue = estimatedData[year] || 0;
+        value += projectedValue + estimatedValue;
+        hasEstimatedValue = estimatedValue > 0;
+      }
     }
 
     let cellClass = isDivider ? 'timeline-divider' : '';
     if (isEstimated && hasEstimatedValue) {
       cellClass += ' year-estimated';
-    } else if (isProjected) {
+    } else if (isProjected || (year === yearRange.cutoffYear && (projectedData[year] || estimatedData[year]))) {
       cellClass += ' year-projected';
     }
     // Show capital calls as negative (cash outflow)
@@ -345,14 +351,22 @@ function buildTimelineRow(
           const estimatedValue = (estimatedByFund[fundName] && estimatedByFund[fundName]![year]) || 0;
           value = projectedValue + estimatedValue;
           hasEstimatedValue = estimatedValue > 0;
-        } else if (historicalByFund[fundName] && historicalByFund[fundName]![dataType] && historicalByFund[fundName]![dataType][year]) {
-          value = historicalByFund[fundName]![dataType][year]!;
+        } else {
+          if (historicalByFund[fundName]?.[dataType]?.[year]) {
+            value = historicalByFund[fundName]![dataType][year]!;
+          }
+          if (year === yearRange.cutoffYear) {
+            const projectedValue = (projectedByFund[fundName]?.[year]) || 0;
+            const estimatedValue = (estimatedByFund[fundName]?.[year]) || 0;
+            value += projectedValue + estimatedValue;
+            hasEstimatedValue = estimatedValue > 0;
+          }
         }
 
         let cellClass = isDivider ? 'timeline-divider' : '';
         if (isEstimated && hasEstimatedValue) {
           cellClass += ' year-estimated';
-        } else if (isProjected) {
+        } else if (isProjected || (year === yearRange.cutoffYear && ((projectedByFund[fundName]?.[year]) || (estimatedByFund[fundName]?.[year])))) {
           cellClass += ' year-projected';
         }
         // Show capital calls as negative (cash outflow)
@@ -393,13 +407,18 @@ function buildNetCashFlowRow(yearRange: TimelineYearRange, historical: Historica
     } else {
       calls = historical.calls[year] || 0;
       distributions = historical.distributions[year] || 0;
+      if (year === yearRange.cutoffYear) {
+        calls += (projected.projectedCalls[year] || 0)
+               + (projected.estimatedCalls?.[year] || 0);
+        hasEstimatedValue = (projected.estimatedCalls?.[year] || 0) > 0;
+      }
     }
 
     const net = distributions - calls;
     let cellClass = isDivider ? 'timeline-divider' : '';
     if (isEstimated && hasEstimatedValue) {
       cellClass += ' year-estimated';
-    } else if (isProjected) {
+    } else if (isProjected || (year === yearRange.cutoffYear && ((projected.projectedCalls[year] || 0) + (projected.estimatedCalls?.[year] || 0)) > 0)) {
       cellClass += ' year-projected';
     }
     cellClass += ` ${net >= 0 ? 'positive' : 'negative'}`;
