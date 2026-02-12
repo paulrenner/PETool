@@ -8,6 +8,7 @@ import { AppState } from '../core/state';
 import { formatCurrency } from '../utils/formatting';
 import { escapeHtml, escapeAttribute, escapeCSV } from '../utils/escaping';
 import { applyCurrentFilters } from './filters';
+import { sortData } from './table';
 import { formatNumberForCSV, sanitizeForCSV } from './export';
 import { showStatus } from './modals/common';
 import { CONFIG } from '../core/config';
@@ -517,8 +518,8 @@ function renderTimelineTable(funds: Fund[]): void {
   // Body
   html += '<tbody>';
 
-  // Get unique fund names for expandable rows
-  const fundNames = [...new Set(funds.map((f) => f.fundName))].sort();
+  // Get unique fund names for expandable rows (preserves sort order from main table)
+  const fundNames = [...new Set(funds.map((f) => f.fundName))];
 
   // Capital Calls row (expandable) - include estimated data
   html += buildTimelineRow(
@@ -628,7 +629,16 @@ function setupTimelineEventDelegation(container: HTMLElement): void {
  */
 export function renderTimeline(): void {
   const funds = AppState.getFunds();
-  const filtered = applyCurrentFilters(funds);
+  let filtered = applyCurrentFilters(funds);
+
+  // Apply sorting to match main table order
+  const cutoffDateInput = document.getElementById('cutoffDate') as HTMLInputElement;
+  const cutoffDateValue = cutoffDateInput?.value;
+  const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue + 'T00:00:00') : null;
+  if (AppState.sortColumns.length > 0) {
+    filtered = sortData(filtered, AppState.sortColumns, cutoffDate ?? undefined);
+  }
+
   renderTimelineTable(filtered);
 }
 
@@ -637,7 +647,7 @@ export function renderTimeline(): void {
  */
 export function exportTimelineToCSV(): void {
   const funds = AppState.getFunds();
-  const filtered = applyCurrentFilters(funds);
+  let filtered = applyCurrentFilters(funds);
 
   if (!filtered || filtered.length === 0) {
     showStatus('No data to export', 'error');
@@ -650,6 +660,11 @@ export function exportTimelineToCSV(): void {
   const cutoffDate = cutoffDateValue ? new Date(cutoffDateValue + 'T00:00:00') : null;
   const cutoffYear = cutoffDate ? cutoffDate.getFullYear() : null;
 
+  // Apply sorting to match main table order
+  if (AppState.sortColumns.length > 0) {
+    filtered = sortData(filtered, AppState.sortColumns, cutoffDate ?? undefined);
+  }
+
   // Compute timeline data using existing helpers
   const historical = aggregateHistoricalCashFlows(filtered, cutoffDate);
   const projected = calculateProjectedCalls(filtered, AppState.fundNameData, cutoffDate);
@@ -660,7 +675,7 @@ export function exportTimelineToCSV(): void {
     return;
   }
 
-  const fundNames = [...new Set(filtered.map((f) => f.fundName))].sort();
+  const fundNames = [...new Set(filtered.map((f) => f.fundName))];
 
   // Helper to get value for a year in a given row type
   function getYearValue(
