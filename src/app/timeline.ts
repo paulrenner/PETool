@@ -40,6 +40,27 @@ interface TimelineYearRange {
 // ===========================
 
 /**
+ * Calculate uncalled capital for a fund, matching the metrics.ts formula.
+ * Accounts for adjustments, the affectsCommitment flag, and recallable distributions.
+ */
+function calculateUncalledCapital(fund: Fund, cutoffDate: Date | null): number {
+  let outstanding = fund.commitment || 0;
+  for (const cf of fund.cashFlows || []) {
+    if (cutoffDate && new Date(cf.date + 'T00:00:00') > cutoffDate) continue;
+    if (cf.type === 'Adjustment') {
+      outstanding -= cf.amount;
+    } else if (cf.affectsCommitment !== false) {
+      if (cf.type === 'Contribution') {
+        outstanding -= Math.abs(cf.amount);
+      } else if (cf.type === 'Distribution') {
+        outstanding += Math.abs(cf.amount);
+      }
+    }
+  }
+  return Math.max(0, outstanding);
+}
+
+/**
  * Aggregate historical cash flows by year
  * @param funds - Array of fund objects
  * @param cutoffDate - Cutoff date for separating historical from projected
@@ -125,16 +146,8 @@ function calculateProjectedCalls(
 
     // Handle funds missing term start date or investment term
     if (!investmentTermStartDate || !investmentTermYears) {
-      // Calculate remaining uncalled capital
-      const commitment = fund.commitment || 0;
-      const totalCalled = (fund.cashFlows || [])
-        .filter((cf) => {
-          if (cf.type === 'Adjustment') return false; // Adjustments don't count as capital calls
-          if (cutoffDate && new Date(cf.date + 'T00:00:00') > cutoffDate) return false;
-          return cf.type === 'Contribution';
-        })
-        .reduce((sum, cf) => sum + Math.abs(cf.amount), 0);
-      const uncalledCapital = Math.max(0, commitment - totalCalled);
+      // Calculate remaining uncalled capital (matching metrics.ts formula)
+      const uncalledCapital = calculateUncalledCapital(fund, cutoffDate);
 
       if (uncalledCapital > 0) {
         // Spread remaining commitment across DEFAULT_ESTIMATION_YEARS starting next year
@@ -164,18 +177,8 @@ function calculateProjectedCalls(
     // Skip if investment period has ended relative to cutoff date
     if (investmentEndDate < referenceDate) return;
 
-    // Calculate remaining uncalled capital as of cutoff date
-    const commitment = fund.commitment || 0;
-    const totalCalled = (fund.cashFlows || [])
-      .filter((cf) => {
-        // Adjustments don't count as capital calls
-        if (cf.type === 'Adjustment') return false;
-        // Only count contributions on or before cutoff date
-        if (cutoffDate && new Date(cf.date + 'T00:00:00') > cutoffDate) return false;
-        return cf.type === 'Contribution';
-      })
-      .reduce((sum, cf) => sum + Math.abs(cf.amount), 0);
-    const uncalledCapital = Math.max(0, commitment - totalCalled);
+    // Calculate remaining uncalled capital as of cutoff date (matching metrics.ts formula)
+    const uncalledCapital = calculateUncalledCapital(fund, cutoffDate);
 
     if (uncalledCapital <= 0) return;
 
