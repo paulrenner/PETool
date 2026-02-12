@@ -2413,7 +2413,14 @@ function initializeEventListeners(): void {
 
   const saveEditedFundNameBtn = document.getElementById('saveEditedFundNameBtn');
   if (saveEditedFundNameBtn) {
-    saveEditedFundNameBtn.addEventListener('click', () => saveEditedFundName(renderTable));
+    saveEditedFundNameBtn.addEventListener('click', () => {
+      const tagsInput = document.getElementById('editFundTagsInput') as HTMLInputElement;
+      if (tagsInput && tagsInput.value.trim()) {
+        addEditTag(tagsInput.value.trim());
+        tagsInput.value = '';
+      }
+      saveEditedFundName(renderTable);
+    });
   }
 
   // Edit fund name tags input

@@ -122,6 +122,10 @@ export function showEditFundNameModal(fundName: string): void {
   // Render tags
   renderEditTags();
 
+  // Clear any leftover text in tag input from previous opens
+  const tagsInput = document.getElementById('editFundTagsInput') as HTMLInputElement;
+  if (tagsInput) tagsInput.value = '';
+
   // Populate datalist with existing tags
   if (tagsDatalist) {
     tagsDatalist.innerHTML = '';
