@@ -179,8 +179,16 @@ function calculateProjectedCalls(
 
     if (uncalledCapital <= 0) return;
 
-    // Calculate years remaining in investment period (including cutoff year)
-    const startYear = Math.max(referenceYear, termStart.getFullYear());
+    // Calculate years remaining in investment period
+    // Include cutoff year only when an explicit cutoff date is set AND it's mid-year
+    // (not Dec 31), meaning there are remaining days in the year for projected calls.
+    // Without an explicit cutoff, or when cutoff is Dec 31, start from next year.
+    const cutoffIsMidYear = cutoffDate !== null
+      && !(referenceDate.getMonth() === 11 && referenceDate.getDate() === 31);
+    const startYear = Math.max(
+      cutoffIsMidYear ? referenceYear : referenceYear + 1,
+      termStart.getFullYear()
+    );
     const endYear = investmentEndDate.getFullYear();
     const yearsRemaining: number[] = [];
 
