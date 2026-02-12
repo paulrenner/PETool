@@ -1338,6 +1338,7 @@ async function handleHeaderClick(event: Event): Promise<void> {
   }
 
   await renderTable();
+  renderTimeline();
 }
 
 /**
