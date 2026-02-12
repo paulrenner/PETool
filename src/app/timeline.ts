@@ -269,11 +269,11 @@ function getTimelineYearRange(
     allYears.push(y);
   }
 
-  // Limit to reasonable display (last 10 historical + next 6 projected = 16 years max)
+  // Show all historical years; cap projected at 6
   const historicalYears = allYears.filter((y) => y <= dividerYear);
   const projectedYears = allYears.filter((y) => y > dividerYear);
 
-  const displayHistorical = historicalYears.slice(-10);
+  const displayHistorical = historicalYears;
   const displayProjected = projectedYears.slice(0, 6);
 
   return {
@@ -580,6 +580,21 @@ function renderTimelineTable(funds: Fund[]): void {
 
   container.innerHTML = html;
   setupTimelineEventDelegation(container);
+
+  // Auto-scroll so the current/cutoff year column is visible
+  const scrollContainer = container.closest('.timeline-content');
+  if (scrollContainer) {
+    const targetYear = cutoffYear ?? new Date().getFullYear();
+    const headerCells = container.querySelectorAll('thead th');
+    for (const cell of headerCells) {
+      if (cell.textContent?.startsWith(String(targetYear))) {
+        const cellLeft = (cell as HTMLElement).offsetLeft;
+        const containerWidth = scrollContainer.clientWidth;
+        scrollContainer.scrollLeft = Math.max(0, cellLeft - containerWidth / 2);
+        break;
+      }
+    }
+  }
 }
 
 // Track if timeline event delegation has been set up
