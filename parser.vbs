@@ -4,8 +4,9 @@
 
 Option Explicit
 
-Dim fso, scriptDir, tempDir
+Dim fso, scriptDir, tempDir, log
 Set fso = CreateObject("Scripting.FileSystemObject")
+log = ""
 
 ' Get script directory (where .xlsm will be saved)
 scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
@@ -46,9 +47,9 @@ For i = 0 To UBound(modules)
   ts.Write contents(i)
   ts.Close
 Next
+log = log & "Wrote " & (UBound(modules) + 1) & " .bas files to temp" & vbCrLf
 
 ' Start Excel
-WScript.Echo "Starting Excel..."
 Dim xl, wb
 Set xl = CreateObject("Excel.Application")
 xl.Visible = False
@@ -60,22 +61,34 @@ Set wb = xl.Workbooks.Add
 Dim testAccess
 testAccess = wb.VBProject.VBComponents.Count
 If Err.Number <> 0 Then
-  WScript.Echo "ERROR: VBA project access is blocked."
-  WScript.Echo "Enable it: File > Options > Trust Center > Trust Center Settings >"
-  WScript.Echo "  Macro Settings > check 'Trust access to the VBA project object model'"
-  wb.Close False
   xl.Quit
   Cleanup
+  MsgBox "ERROR: VBA project access is blocked." & vbCrLf & vbCrLf & _
+    "Enable it: File > Options > Trust Center > Trust Center Settings >" & vbCrLf & _
+    "  Macro Settings > check 'Trust access to the VBA project object model'", _
+    vbCritical, "PDFExtractor Setup"
   WScript.Quit 1
 End If
 On Error GoTo 0
 
 ' Import each .bas file
-WScript.Echo "Importing modules..."
 For i = 0 To UBound(modules)
   filePath = fso.BuildPath(tempDir, modules(i))
-  WScript.Echo "  Importing " & modules(i) & "..."
+  On Error Resume Next
   wb.VBProject.VBComponents.Import filePath
+  If Err.Number <> 0 Then
+    Dim importErr
+    importErr = Err.Description
+    On Error GoTo 0
+    wb.Close False
+    xl.Quit
+    Cleanup
+    MsgBox "ERROR importing " & modules(i) & ":" & vbCrLf & importErr, _
+      vbCritical, "PDFExtractor Setup"
+    WScript.Quit 1
+  End If
+  On Error GoTo 0
+  log = log & "  Imported " & modules(i) & vbCrLf
 Next
 
 ' Add reference to Microsoft VBScript Regular Expressions 5.5
@@ -86,23 +99,45 @@ On Error GoTo 0
 ' Save as .xlsm
 Dim savePath
 savePath = fso.BuildPath(scriptDir, "PDFExtractor.xlsm")
-WScript.Echo "Saving to: " & savePath
+
+On Error Resume Next
 wb.SaveAs savePath, 52  ' 52 = xlOpenXMLWorkbookMacroEnabled
+If Err.Number <> 0 Then
+  Dim saveErr
+  saveErr = Err.Description
+  On Error GoTo 0
+  wb.Close False
+  xl.Quit
+  Cleanup
+  MsgBox "ERROR saving .xlsm:" & vbCrLf & saveErr & vbCrLf & vbCrLf & _
+    "Attempted path: " & savePath, vbCritical, "PDFExtractor Setup"
+  WScript.Quit 1
+End If
+On Error GoTo 0
 
 wb.Close False
 xl.Quit
 
+' Verify the file was actually created
+If Not fso.FileExists(savePath) Then
+  Cleanup
+  MsgBox "ERROR: SaveAs completed but file not found at:" & vbCrLf & savePath, _
+    vbCritical, "PDFExtractor Setup"
+  WScript.Quit 1
+End If
+
 ' Clean up temp files
 Cleanup
 
-WScript.Echo ""
-WScript.Echo "SUCCESS: Created " & savePath
-WScript.Echo ""
-WScript.Echo "Available macros:"
-WScript.Echo "  ExtractPDFText        - Extract raw PDF text to worksheet"
-WScript.Echo "  ExtractUBSStatement   - Extract structured UBS data to worksheet"
-WScript.Echo "  ExtractAndWriteQPR    - Extract from PDF and write to QPR workbook"
-WScript.Echo "  BatchExtractToQPR     - Multiple PDFs to QPR"
+MsgBox "SUCCESS: Created PDFExtractor.xlsm" & vbCrLf & vbCrLf & _
+  "Location: " & savePath & vbCrLf & vbCrLf & _
+  log & vbCrLf & _
+  "Available macros:" & vbCrLf & _
+  "  ExtractPDFText" & vbCrLf & _
+  "  ExtractUBSStatement" & vbCrLf & _
+  "  ExtractAndWriteQPR" & vbCrLf & _
+  "  BatchExtractToQPR", _
+  vbInformation, "PDFExtractor Setup"
 
 Set wb = Nothing
 Set xl = Nothing
