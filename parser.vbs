@@ -101,20 +101,8 @@ Dim savePath
 savePath = fso.BuildPath(scriptDir, "PDFExtractor.xlsm")
 xl.DisplayAlerts = True
 
-On Error Resume Next
+' SaveAs — no error suppression so we see the real error if it fails
 wb.SaveAs savePath, 52  ' 52 = xlOpenXMLWorkbookMacroEnabled
-If Err.Number <> 0 Then
-  Dim saveErr
-  saveErr = Err.Description
-  On Error GoTo 0
-  wb.Close False
-  xl.Quit
-  Cleanup
-  MsgBox "ERROR saving .xlsm:" & vbCrLf & saveErr & vbCrLf & vbCrLf & _
-    "Attempted path: " & savePath, vbCritical, "PDFExtractor Setup"
-  WScript.Quit 1
-End If
-On Error GoTo 0
 
 ' Check where Excel thinks it saved
 Dim actualPath
