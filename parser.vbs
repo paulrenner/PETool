@@ -116,14 +116,38 @@ If Err.Number <> 0 Then
 End If
 On Error GoTo 0
 
+' Check where Excel thinks it saved
+Dim actualPath
+actualPath = wb.FullName
+log = log & "Excel wb.FullName: " & actualPath & vbCrLf
+
 wb.Close False
 xl.Quit
 
-' Verify the file was actually created
-If Not fso.FileExists(savePath) Then
+' Scan for the file - check expected path and what Excel reported
+Dim found
+found = False
+Dim foundPath
+If fso.FileExists(savePath) Then
+  found = True
+  foundPath = savePath
+ElseIf fso.FileExists(actualPath) Then
+  found = True
+  foundPath = actualPath
+End If
+
+If Not found Then
+  ' List files in scriptDir to help debug
+  Dim dirList, f
+  dirList = "Files in " & scriptDir & ":" & vbCrLf
+  For Each f In fso.GetFolder(scriptDir).Files
+    dirList = dirList & "  " & f.Name & vbCrLf
+  Next
   Cleanup
-  MsgBox "ERROR: SaveAs completed but file not found at:" & vbCrLf & savePath, _
-    vbCritical, "PDFExtractor Setup"
+  MsgBox "ERROR: File not found after SaveAs" & vbCrLf & vbCrLf & _
+    "Expected: " & savePath & vbCrLf & _
+    "Excel reported: " & actualPath & vbCrLf & vbCrLf & _
+    dirList, vbCritical, "PDFExtractor Setup"
   WScript.Quit 1
 End If
 
