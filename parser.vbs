@@ -29,26 +29,35 @@ Dim modules(8)
   modules(7) = "QPRWriter.bas"
   modules(8) = "PDFExtractorMain.bas"
 
-' Get embedded content for each module
-Dim contents(8)
-  contents(0) = GetModule_PDFCrypto()
-  contents(1) = GetModule_PDFDeflate()
-  contents(2) = GetModule_PDFReader()
-  contents(3) = GetModule_PDFTextExtract()
-  contents(4) = GetModule_UBSExtract()
-  contents(5) = GetModule_UBSLoanExtract()
-  contents(6) = GetModule_UBSSummary()
-  contents(7) = GetModule_QPRWriter()
-  contents(8) = GetModule_PDFExtractorMain()
-
-' Write .bas files to temp directory
-Dim i, filePath, ts
-For i = 0 To UBound(modules)
-  filePath = fso.BuildPath(tempDir, modules(i))
-  Set ts = fso.CreateTextFile(filePath, True)
-  ts.Write contents(i)
+' Write each .bas file to temp directory (line by line, no giant strings)
+Dim ts
+  Set ts = fso.CreateTextFile(fso.BuildPath(tempDir, modules(0)), True)
+  WriteModule_PDFCrypto ts
   ts.Close
-Next
+  Set ts = fso.CreateTextFile(fso.BuildPath(tempDir, modules(1)), True)
+  WriteModule_PDFDeflate ts
+  ts.Close
+  Set ts = fso.CreateTextFile(fso.BuildPath(tempDir, modules(2)), True)
+  WriteModule_PDFReader ts
+  ts.Close
+  Set ts = fso.CreateTextFile(fso.BuildPath(tempDir, modules(3)), True)
+  WriteModule_PDFTextExtract ts
+  ts.Close
+  Set ts = fso.CreateTextFile(fso.BuildPath(tempDir, modules(4)), True)
+  WriteModule_UBSExtract ts
+  ts.Close
+  Set ts = fso.CreateTextFile(fso.BuildPath(tempDir, modules(5)), True)
+  WriteModule_UBSLoanExtract ts
+  ts.Close
+  Set ts = fso.CreateTextFile(fso.BuildPath(tempDir, modules(6)), True)
+  WriteModule_UBSSummary ts
+  ts.Close
+  Set ts = fso.CreateTextFile(fso.BuildPath(tempDir, modules(7)), True)
+  WriteModule_QPRWriter ts
+  ts.Close
+  Set ts = fso.CreateTextFile(fso.BuildPath(tempDir, modules(8)), True)
+  WriteModule_PDFExtractorMain ts
+  ts.Close
 
 ' Start Excel (visible)
 Dim xl, wb
@@ -72,7 +81,7 @@ End If
 On Error GoTo 0
 
 ' Import each .bas file
-Dim importCount
+Dim i, filePath, importCount
 importCount = 0
 For i = 0 To UBound(modules)
   filePath = fso.BuildPath(tempDir, modules(i))
@@ -128,8905 +137,8878 @@ Sub Cleanup()
 End Sub
 
 ' ============================================================
-' Embedded module content
+' Module writers — each sub writes one .bas file line by line
 ' ============================================================
 
-Function GetModule_PDFCrypto()
-  Dim s
-  s = ""
-  s = s & "Attribute VB_Name = ""PDFCrypto""" & vbCrLf
-  s = s & "Option Explicit" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' PDF Standard Encryption (V1/R2) - RC4 40-bit with empty password" & vbCrLf
-  s = s & "' Used by UBS financial statement PDFs" & vbCrLf
-  s = s & "'" & vbCrLf
-  s = s & "' Key derivation: MD5(padding + O_value + P_bytes + fileID)[:5]" & vbCrLf
-  s = s & "' Per-object key: MD5(base_key + obj_num_bytes + gen_num_bytes)[:10]" & vbCrLf
-  s = s & "' Stream decryption: RC4 with per-object key" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Windows CryptoAPI declarations for MD5 ---" & vbCrLf
-  s = s & "#If VBA7 Then" & vbCrLf
-  s = s & "    Private Declare PtrSafe Function CryptAcquireContext Lib ""advapi32.dll"" Alias ""CryptAcquireContextA"" _" & vbCrLf
-  s = s & "        (ByRef phProv As LongPtr, ByVal pszContainer As String, ByVal pszProvider As String, _" & vbCrLf
-  s = s & "         ByVal dwProvType As Long, ByVal dwFlags As Long) As Long" & vbCrLf
-  s = s & "    Private Declare PtrSafe Function CryptReleaseContext Lib ""advapi32.dll"" _" & vbCrLf
-  s = s & "        (ByVal hProv As LongPtr, ByVal dwFlags As Long) As Long" & vbCrLf
-  s = s & "    Private Declare PtrSafe Function CryptCreateHash Lib ""advapi32.dll"" _" & vbCrLf
-  s = s & "        (ByVal hProv As LongPtr, ByVal algId As Long, ByVal hKey As LongPtr, _" & vbCrLf
-  s = s & "         ByVal dwFlags As Long, ByRef phHash As LongPtr) As Long" & vbCrLf
-  s = s & "    Private Declare PtrSafe Function CryptHashData Lib ""advapi32.dll"" _" & vbCrLf
-  s = s & "        (ByVal hHash As LongPtr, ByRef pbData As Byte, ByVal dwDataLen As Long, _" & vbCrLf
-  s = s & "         ByVal dwFlags As Long) As Long" & vbCrLf
-  s = s & "    Private Declare PtrSafe Function CryptGetHashParam Lib ""advapi32.dll"" _" & vbCrLf
-  s = s & "        (ByVal hHash As LongPtr, ByVal dwParam As Long, ByRef pbData As Byte, _" & vbCrLf
-  s = s & "         ByRef pdwDataLen As Long, ByVal dwFlags As Long) As Long" & vbCrLf
-  s = s & "    Private Declare PtrSafe Function CryptDestroyHash Lib ""advapi32.dll"" _" & vbCrLf
-  s = s & "        (ByVal hHash As LongPtr) As Long" & vbCrLf
-  s = s & "    Private mCryptProv As LongPtr" & vbCrLf
-  s = s & "#Else" & vbCrLf
-  s = s & "    Private Declare Function CryptAcquireContext Lib ""advapi32.dll"" Alias ""CryptAcquireContextA"" _" & vbCrLf
-  s = s & "        (ByRef phProv As Long, ByVal pszContainer As String, ByVal pszProvider As String, _" & vbCrLf
-  s = s & "         ByVal dwProvType As Long, ByVal dwFlags As Long) As Long" & vbCrLf
-  s = s & "    Private Declare Function CryptReleaseContext Lib ""advapi32.dll"" _" & vbCrLf
-  s = s & "        (ByVal hProv As Long, ByVal dwFlags As Long) As Long" & vbCrLf
-  s = s & "    Private Declare Function CryptCreateHash Lib ""advapi32.dll"" _" & vbCrLf
-  s = s & "        (ByVal hProv As Long, ByVal algId As Long, ByVal hKey As Long, _" & vbCrLf
-  s = s & "         ByVal dwFlags As Long, ByRef phHash As Long) As Long" & vbCrLf
-  s = s & "    Private Declare Function CryptHashData Lib ""advapi32.dll"" _" & vbCrLf
-  s = s & "        (ByVal hHash As Long, ByRef pbData As Byte, ByVal dwDataLen As Long, _" & vbCrLf
-  s = s & "         ByVal dwFlags As Long) As Long" & vbCrLf
-  s = s & "    Private Declare Function CryptGetHashParam Lib ""advapi32.dll"" _" & vbCrLf
-  s = s & "        (ByVal hHash As Long, ByVal dwParam As Long, ByRef pbData As Byte, _" & vbCrLf
-  s = s & "         ByRef pdwDataLen As Long, ByVal dwFlags As Long) As Long" & vbCrLf
-  s = s & "    Private Declare Function CryptDestroyHash Lib ""advapi32.dll"" _" & vbCrLf
-  s = s & "        (ByVal hHash As Long) As Long" & vbCrLf
-  s = s & "    Private mCryptProv As Long" & vbCrLf
-  s = s & "#End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Const PROV_RSA_FULL As Long = 1" & vbCrLf
-  s = s & "Private Const CRYPT_VERIFYCONTEXT As Long = &HF0000000" & vbCrLf
-  s = s & "Private Const CALG_MD5 As Long = &H8003&" & vbCrLf
-  s = s & "Private Const HP_HASHVAL As Long = &H2" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' PDF standard password padding (32 bytes) - per PDF spec Table 3.19" & vbCrLf
-  s = s & "Private Function GetPadding() As Byte()" & vbCrLf
-  s = s & "    Dim p(0 To 31) As Byte" & vbCrLf
-  s = s & "    p(0) = &H28: p(1) = &HBF: p(2) = &H4E: p(3) = &H5E" & vbCrLf
-  s = s & "    p(4) = &H4E: p(5) = &H75: p(6) = &H8A: p(7) = &H41" & vbCrLf
-  s = s & "    p(8) = &H64: p(9) = &H0:  p(10) = &H4E: p(11) = &H56" & vbCrLf
-  s = s & "    p(12) = &HFF: p(13) = &HFA: p(14) = &H1: p(15) = &H8" & vbCrLf
-  s = s & "    p(16) = &H2E: p(17) = &H2E: p(18) = &H0: p(19) = &HB6" & vbCrLf
-  s = s & "    p(20) = &HD0: p(21) = &H68: p(22) = &H3E: p(23) = &H80" & vbCrLf
-  s = s & "    p(24) = &H2F: p(25) = &HC:  p(26) = &HA9: p(27) = &HFE" & vbCrLf
-  s = s & "    p(28) = &H64: p(29) = &H53: p(30) = &H69: p(31) = &H7A" & vbCrLf
-  s = s & "    GetPadding = p" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Initialize CryptoAPI provider (call once)" & vbCrLf
-  s = s & "Public Sub InitCrypto()" & vbCrLf
-  s = s & "    If mCryptProv = 0 Then" & vbCrLf
-  s = s & "        CryptAcquireContext mCryptProv, vbNullString, vbNullString, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Release CryptoAPI provider" & vbCrLf
-  s = s & "Public Sub ReleaseCrypto()" & vbCrLf
-  s = s & "    If mCryptProv <> 0 Then" & vbCrLf
-  s = s & "        CryptReleaseContext mCryptProv, 0" & vbCrLf
-  s = s & "        mCryptProv = 0" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Compute MD5 hash of a byte array" & vbCrLf
-  s = s & "Public Function MD5Hash(data() As Byte) As Byte()" & vbCrLf
-  s = s & "    #If VBA7 Then" & vbCrLf
-  s = s & "        Dim hHash As LongPtr" & vbCrLf
-  s = s & "    #Else" & vbCrLf
-  s = s & "        Dim hHash As Long" & vbCrLf
-  s = s & "    #End If" & vbCrLf
-  s = s & "    Dim result(0 To 15) As Byte" & vbCrLf
-  s = s & "    Dim hashLen As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    InitCrypto" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If CryptCreateHash(mCryptProv, CALG_MD5, 0, 0, hHash) = 0 Then" & vbCrLf
-  s = s & "        Err.Raise vbObjectError + 10, ""PDFCrypto"", ""CryptCreateHash failed""" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If UBound(data) >= LBound(data) Then" & vbCrLf
-  s = s & "        CryptHashData hHash, data(LBound(data)), UBound(data) - LBound(data) + 1, 0" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    hashLen = 16" & vbCrLf
-  s = s & "    CryptGetHashParam hHash, HP_HASHVAL, result(0), hashLen, 0" & vbCrLf
-  s = s & "    CryptDestroyHash hHash" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    MD5Hash = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' MD5 hash of concatenated byte arrays" & vbCrLf
-  s = s & "Public Function MD5HashMulti(ParamArray arrays() As Variant) As Byte()" & vbCrLf
-  s = s & "    #If VBA7 Then" & vbCrLf
-  s = s & "        Dim hHash As LongPtr" & vbCrLf
-  s = s & "    #Else" & vbCrLf
-  s = s & "        Dim hHash As Long" & vbCrLf
-  s = s & "    #End If" & vbCrLf
-  s = s & "    Dim result(0 To 15) As Byte" & vbCrLf
-  s = s & "    Dim hashLen As Long" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    Dim arr() As Byte" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    InitCrypto" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If CryptCreateHash(mCryptProv, CALG_MD5, 0, 0, hHash) = 0 Then" & vbCrLf
-  s = s & "        Err.Raise vbObjectError + 10, ""PDFCrypto"", ""CryptCreateHash failed""" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    For i = LBound(arrays) To UBound(arrays)" & vbCrLf
-  s = s & "        arr = arrays(i)" & vbCrLf
-  s = s & "        If UBound(arr) >= LBound(arr) Then" & vbCrLf
-  s = s & "            CryptHashData hHash, arr(LBound(arr)), UBound(arr) - LBound(arr) + 1, 0" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    hashLen = 16" & vbCrLf
-  s = s & "    CryptGetHashParam hHash, HP_HASHVAL, result(0), hashLen, 0" & vbCrLf
-  s = s & "    CryptDestroyHash hHash" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    MD5HashMulti = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' RC4 encrypt/decrypt (symmetric)" & vbCrLf
-  s = s & "Public Function RC4(key() As Byte, data() As Byte) As Byte()" & vbCrLf
-  s = s & "    Dim S(0 To 255) As Long" & vbCrLf
-  s = s & "    Dim i As Long, j As Long, temp As Long" & vbCrLf
-  s = s & "    Dim keyLen As Long, dataLen As Long" & vbCrLf
-  s = s & "    Dim result() As Byte" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    keyLen = UBound(key) - LBound(key) + 1" & vbCrLf
-  s = s & "    dataLen = UBound(data) - LBound(data) + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Key scheduling" & vbCrLf
-  s = s & "    For i = 0 To 255" & vbCrLf
-  s = s & "        S(i) = i" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    j = 0" & vbCrLf
-  s = s & "    For i = 0 To 255" & vbCrLf
-  s = s & "        j = (j + S(i) + key(LBound(key) + (i Mod keyLen))) Mod 256" & vbCrLf
-  s = s & "        temp = S(i): S(i) = S(j): S(j) = temp" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Cipher" & vbCrLf
-  s = s & "    ReDim result(0 To dataLen - 1)" & vbCrLf
-  s = s & "    i = 0: j = 0" & vbCrLf
-  s = s & "    Dim k As Long" & vbCrLf
-  s = s & "    For k = 0 To dataLen - 1" & vbCrLf
-  s = s & "        i = (i + 1) Mod 256" & vbCrLf
-  s = s & "        j = (j + S(i)) Mod 256" & vbCrLf
-  s = s & "        temp = S(i): S(i) = S(j): S(j) = temp" & vbCrLf
-  s = s & "        result(k) = data(LBound(data) + k) Xor S((S(i) + S(j)) Mod 256)" & vbCrLf
-  s = s & "    Next k" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    RC4 = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Compute the base encryption key for a PDF with empty user password" & vbCrLf
-  s = s & "' Algorithm 2 from PDF spec (for R=2)" & vbCrLf
-  s = s & "Public Function ComputeEncryptionKey(oValue() As Byte, pValue As Long, fileID() As Byte) As Byte()" & vbCrLf
-  s = s & "    Dim padding() As Byte" & vbCrLf
-  s = s & "    Dim pBytes(0 To 3) As Byte" & vbCrLf
-  s = s & "    Dim md5Result() As Byte" & vbCrLf
-  s = s & "    Dim encKey(0 To 4) As Byte" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    padding = GetPadding()" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' P as 4-byte little-endian (using AND masks to avoid VBA division sign issues)" & vbCrLf
-  s = s & "    ' VBA Long has same bit pattern as unsigned 32-bit, so mask-then-shift works correctly" & vbCrLf
-  s = s & "    pBytes(0) = CByte(pValue And &HFF&)" & vbCrLf
-  s = s & "    pBytes(1) = CByte((pValue And &HFF00&) \ &H100&)" & vbCrLf
-  s = s & "    pBytes(2) = CByte((pValue And &HFF0000) \ &H10000)" & vbCrLf
-  s = s & "    ' Byte 3: high byte including sign bit" & vbCrLf
-  s = s & "    pBytes(3) = CByte(((pValue And &H7F000000) \ &H1000000) Or IIf(pValue < 0, &H80, 0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' MD5(padding + O + P_bytes + fileID)" & vbCrLf
-  s = s & "    md5Result = MD5HashMulti(padding, oValue, pBytes, fileID)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Take first 5 bytes (40-bit key for R=2)" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To 4" & vbCrLf
-  s = s & "        encKey(i) = md5Result(i)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ComputeEncryptionKey = encKey" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Compute per-object decryption key" & vbCrLf
-  s = s & "' MD5(base_key + obj_num[3 bytes LE] + gen_num[2 bytes LE])[:10]" & vbCrLf
-  s = s & "Public Function ComputeObjectKey(baseKey() As Byte, objNum As Long, genNum As Long) As Byte()" & vbCrLf
-  s = s & "    Dim input_data() As Byte" & vbCrLf
-  s = s & "    Dim baseLen As Long" & vbCrLf
-  s = s & "    Dim md5Result() As Byte" & vbCrLf
-  s = s & "    Dim objKey() As Byte" & vbCrLf
-  s = s & "    Dim keyLen As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    baseLen = UBound(baseKey) - LBound(baseKey) + 1" & vbCrLf
-  s = s & "    ReDim input_data(0 To baseLen + 4)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Copy base key" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To baseLen - 1" & vbCrLf
-  s = s & "        input_data(i) = baseKey(LBound(baseKey) + i)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Object number as 3 bytes little-endian" & vbCrLf
-  s = s & "    input_data(baseLen) = objNum And &HFF" & vbCrLf
-  s = s & "    input_data(baseLen + 1) = (objNum \ &H100) And &HFF" & vbCrLf
-  s = s & "    input_data(baseLen + 2) = (objNum \ &H10000) And &HFF" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Generation number as 2 bytes little-endian" & vbCrLf
-  s = s & "    input_data(baseLen + 3) = genNum And &HFF" & vbCrLf
-  s = s & "    input_data(baseLen + 4) = (genNum \ &H100) And &HFF" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    md5Result = MD5Hash(input_data)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Take min(baseLen + 5, 16) bytes" & vbCrLf
-  s = s & "    keyLen = baseLen + 5" & vbCrLf
-  s = s & "    If keyLen > 16 Then keyLen = 16" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ReDim objKey(0 To keyLen - 1)" & vbCrLf
-  s = s & "    For i = 0 To keyLen - 1" & vbCrLf
-  s = s & "        objKey(i) = md5Result(i)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ComputeObjectKey = objKey" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Decrypt a PDF stream" & vbCrLf
-  s = s & "Public Function DecryptStream(baseKey() As Byte, objNum As Long, genNum As Long, streamData() As Byte) As Byte()" & vbCrLf
-  s = s & "    Dim objKey() As Byte" & vbCrLf
-  s = s & "    objKey = ComputeObjectKey(baseKey, objNum, genNum)" & vbCrLf
-  s = s & "    DecryptStream = RC4(objKey, streamData)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Decrypt a PDF string" & vbCrLf
-  s = s & "Public Function DecryptString(baseKey() As Byte, objNum As Long, genNum As Long, strData() As Byte) As Byte()" & vbCrLf
-  s = s & "    DecryptString = DecryptStream(baseKey, objNum, genNum, strData)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  GetModule_PDFCrypto = s
-End Function
+Sub WriteModule_PDFCrypto(ts)
+  ts.WriteLine "Attribute VB_Name = ""PDFCrypto"""
+  ts.WriteLine "Option Explicit"
+  ts.WriteLine ""
+  ts.WriteLine "' PDF Standard Encryption (V1/R2) - RC4 40-bit with empty password"
+  ts.WriteLine "' Used by UBS financial statement PDFs"
+  ts.WriteLine "'"
+  ts.WriteLine "' Key derivation: MD5(padding + O_value + P_bytes + fileID)[:5]"
+  ts.WriteLine "' Per-object key: MD5(base_key + obj_num_bytes + gen_num_bytes)[:10]"
+  ts.WriteLine "' Stream decryption: RC4 with per-object key"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Windows CryptoAPI declarations for MD5 ---"
+  ts.WriteLine "#If VBA7 Then"
+  ts.WriteLine "    Private Declare PtrSafe Function CryptAcquireContext Lib ""advapi32.dll"" Alias ""CryptAcquireContextA"" _"
+  ts.WriteLine "        (ByRef phProv As LongPtr, ByVal pszContainer As String, ByVal pszProvider As String, _"
+  ts.WriteLine "         ByVal dwProvType As Long, ByVal dwFlags As Long) As Long"
+  ts.WriteLine "    Private Declare PtrSafe Function CryptReleaseContext Lib ""advapi32.dll"" _"
+  ts.WriteLine "        (ByVal hProv As LongPtr, ByVal dwFlags As Long) As Long"
+  ts.WriteLine "    Private Declare PtrSafe Function CryptCreateHash Lib ""advapi32.dll"" _"
+  ts.WriteLine "        (ByVal hProv As LongPtr, ByVal algId As Long, ByVal hKey As LongPtr, _"
+  ts.WriteLine "         ByVal dwFlags As Long, ByRef phHash As LongPtr) As Long"
+  ts.WriteLine "    Private Declare PtrSafe Function CryptHashData Lib ""advapi32.dll"" _"
+  ts.WriteLine "        (ByVal hHash As LongPtr, ByRef pbData As Byte, ByVal dwDataLen As Long, _"
+  ts.WriteLine "         ByVal dwFlags As Long) As Long"
+  ts.WriteLine "    Private Declare PtrSafe Function CryptGetHashParam Lib ""advapi32.dll"" _"
+  ts.WriteLine "        (ByVal hHash As LongPtr, ByVal dwParam As Long, ByRef pbData As Byte, _"
+  ts.WriteLine "         ByRef pdwDataLen As Long, ByVal dwFlags As Long) As Long"
+  ts.WriteLine "    Private Declare PtrSafe Function CryptDestroyHash Lib ""advapi32.dll"" _"
+  ts.WriteLine "        (ByVal hHash As LongPtr) As Long"
+  ts.WriteLine "    Private mCryptProv As LongPtr"
+  ts.WriteLine "#Else"
+  ts.WriteLine "    Private Declare Function CryptAcquireContext Lib ""advapi32.dll"" Alias ""CryptAcquireContextA"" _"
+  ts.WriteLine "        (ByRef phProv As Long, ByVal pszContainer As String, ByVal pszProvider As String, _"
+  ts.WriteLine "         ByVal dwProvType As Long, ByVal dwFlags As Long) As Long"
+  ts.WriteLine "    Private Declare Function CryptReleaseContext Lib ""advapi32.dll"" _"
+  ts.WriteLine "        (ByVal hProv As Long, ByVal dwFlags As Long) As Long"
+  ts.WriteLine "    Private Declare Function CryptCreateHash Lib ""advapi32.dll"" _"
+  ts.WriteLine "        (ByVal hProv As Long, ByVal algId As Long, ByVal hKey As Long, _"
+  ts.WriteLine "         ByVal dwFlags As Long, ByRef phHash As Long) As Long"
+  ts.WriteLine "    Private Declare Function CryptHashData Lib ""advapi32.dll"" _"
+  ts.WriteLine "        (ByVal hHash As Long, ByRef pbData As Byte, ByVal dwDataLen As Long, _"
+  ts.WriteLine "         ByVal dwFlags As Long) As Long"
+  ts.WriteLine "    Private Declare Function CryptGetHashParam Lib ""advapi32.dll"" _"
+  ts.WriteLine "        (ByVal hHash As Long, ByVal dwParam As Long, ByRef pbData As Byte, _"
+  ts.WriteLine "         ByRef pdwDataLen As Long, ByVal dwFlags As Long) As Long"
+  ts.WriteLine "    Private Declare Function CryptDestroyHash Lib ""advapi32.dll"" _"
+  ts.WriteLine "        (ByVal hHash As Long) As Long"
+  ts.WriteLine "    Private mCryptProv As Long"
+  ts.WriteLine "#End If"
+  ts.WriteLine ""
+  ts.WriteLine "Private Const PROV_RSA_FULL As Long = 1"
+  ts.WriteLine "Private Const CRYPT_VERIFYCONTEXT As Long = &HF0000000"
+  ts.WriteLine "Private Const CALG_MD5 As Long = &H8003&"
+  ts.WriteLine "Private Const HP_HASHVAL As Long = &H2"
+  ts.WriteLine ""
+  ts.WriteLine "' PDF standard password padding (32 bytes) - per PDF spec Table 3.19"
+  ts.WriteLine "Private Function GetPadding() As Byte()"
+  ts.WriteLine "    Dim p(0 To 31) As Byte"
+  ts.WriteLine "    p(0) = &H28: p(1) = &HBF: p(2) = &H4E: p(3) = &H5E"
+  ts.WriteLine "    p(4) = &H4E: p(5) = &H75: p(6) = &H8A: p(7) = &H41"
+  ts.WriteLine "    p(8) = &H64: p(9) = &H0:  p(10) = &H4E: p(11) = &H56"
+  ts.WriteLine "    p(12) = &HFF: p(13) = &HFA: p(14) = &H1: p(15) = &H8"
+  ts.WriteLine "    p(16) = &H2E: p(17) = &H2E: p(18) = &H0: p(19) = &HB6"
+  ts.WriteLine "    p(20) = &HD0: p(21) = &H68: p(22) = &H3E: p(23) = &H80"
+  ts.WriteLine "    p(24) = &H2F: p(25) = &HC:  p(26) = &HA9: p(27) = &HFE"
+  ts.WriteLine "    p(28) = &H64: p(29) = &H53: p(30) = &H69: p(31) = &H7A"
+  ts.WriteLine "    GetPadding = p"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Initialize CryptoAPI provider (call once)"
+  ts.WriteLine "Public Sub InitCrypto()"
+  ts.WriteLine "    If mCryptProv = 0 Then"
+  ts.WriteLine "        CryptAcquireContext mCryptProv, vbNullString, vbNullString, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' Release CryptoAPI provider"
+  ts.WriteLine "Public Sub ReleaseCrypto()"
+  ts.WriteLine "    If mCryptProv <> 0 Then"
+  ts.WriteLine "        CryptReleaseContext mCryptProv, 0"
+  ts.WriteLine "        mCryptProv = 0"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' Compute MD5 hash of a byte array"
+  ts.WriteLine "Public Function MD5Hash(data() As Byte) As Byte()"
+  ts.WriteLine "    #If VBA7 Then"
+  ts.WriteLine "        Dim hHash As LongPtr"
+  ts.WriteLine "    #Else"
+  ts.WriteLine "        Dim hHash As Long"
+  ts.WriteLine "    #End If"
+  ts.WriteLine "    Dim result(0 To 15) As Byte"
+  ts.WriteLine "    Dim hashLen As Long"
+  ts.WriteLine ""
+  ts.WriteLine "    InitCrypto"
+  ts.WriteLine ""
+  ts.WriteLine "    If CryptCreateHash(mCryptProv, CALG_MD5, 0, 0, hHash) = 0 Then"
+  ts.WriteLine "        Err.Raise vbObjectError + 10, ""PDFCrypto"", ""CryptCreateHash failed"""
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If UBound(data) >= LBound(data) Then"
+  ts.WriteLine "        CryptHashData hHash, data(LBound(data)), UBound(data) - LBound(data) + 1, 0"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    hashLen = 16"
+  ts.WriteLine "    CryptGetHashParam hHash, HP_HASHVAL, result(0), hashLen, 0"
+  ts.WriteLine "    CryptDestroyHash hHash"
+  ts.WriteLine ""
+  ts.WriteLine "    MD5Hash = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' MD5 hash of concatenated byte arrays"
+  ts.WriteLine "Public Function MD5HashMulti(ParamArray arrays() As Variant) As Byte()"
+  ts.WriteLine "    #If VBA7 Then"
+  ts.WriteLine "        Dim hHash As LongPtr"
+  ts.WriteLine "    #Else"
+  ts.WriteLine "        Dim hHash As Long"
+  ts.WriteLine "    #End If"
+  ts.WriteLine "    Dim result(0 To 15) As Byte"
+  ts.WriteLine "    Dim hashLen As Long"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    Dim arr() As Byte"
+  ts.WriteLine ""
+  ts.WriteLine "    InitCrypto"
+  ts.WriteLine ""
+  ts.WriteLine "    If CryptCreateHash(mCryptProv, CALG_MD5, 0, 0, hHash) = 0 Then"
+  ts.WriteLine "        Err.Raise vbObjectError + 10, ""PDFCrypto"", ""CryptCreateHash failed"""
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    For i = LBound(arrays) To UBound(arrays)"
+  ts.WriteLine "        arr = arrays(i)"
+  ts.WriteLine "        If UBound(arr) >= LBound(arr) Then"
+  ts.WriteLine "            CryptHashData hHash, arr(LBound(arr)), UBound(arr) - LBound(arr) + 1, 0"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    hashLen = 16"
+  ts.WriteLine "    CryptGetHashParam hHash, HP_HASHVAL, result(0), hashLen, 0"
+  ts.WriteLine "    CryptDestroyHash hHash"
+  ts.WriteLine ""
+  ts.WriteLine "    MD5HashMulti = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' RC4 encrypt/decrypt (symmetric)"
+  ts.WriteLine "Public Function RC4(key() As Byte, data() As Byte) As Byte()"
+  ts.WriteLine "    Dim S(0 To 255) As Long"
+  ts.WriteLine "    Dim i As Long, j As Long, temp As Long"
+  ts.WriteLine "    Dim keyLen As Long, dataLen As Long"
+  ts.WriteLine "    Dim result() As Byte"
+  ts.WriteLine ""
+  ts.WriteLine "    keyLen = UBound(key) - LBound(key) + 1"
+  ts.WriteLine "    dataLen = UBound(data) - LBound(data) + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Key scheduling"
+  ts.WriteLine "    For i = 0 To 255"
+  ts.WriteLine "        S(i) = i"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    j = 0"
+  ts.WriteLine "    For i = 0 To 255"
+  ts.WriteLine "        j = (j + S(i) + key(LBound(key) + (i Mod keyLen))) Mod 256"
+  ts.WriteLine "        temp = S(i): S(i) = S(j): S(j) = temp"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Cipher"
+  ts.WriteLine "    ReDim result(0 To dataLen - 1)"
+  ts.WriteLine "    i = 0: j = 0"
+  ts.WriteLine "    Dim k As Long"
+  ts.WriteLine "    For k = 0 To dataLen - 1"
+  ts.WriteLine "        i = (i + 1) Mod 256"
+  ts.WriteLine "        j = (j + S(i)) Mod 256"
+  ts.WriteLine "        temp = S(i): S(i) = S(j): S(j) = temp"
+  ts.WriteLine "        result(k) = data(LBound(data) + k) Xor S((S(i) + S(j)) Mod 256)"
+  ts.WriteLine "    Next k"
+  ts.WriteLine ""
+  ts.WriteLine "    RC4 = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Compute the base encryption key for a PDF with empty user password"
+  ts.WriteLine "' Algorithm 2 from PDF spec (for R=2)"
+  ts.WriteLine "Public Function ComputeEncryptionKey(oValue() As Byte, pValue As Long, fileID() As Byte) As Byte()"
+  ts.WriteLine "    Dim padding() As Byte"
+  ts.WriteLine "    Dim pBytes(0 To 3) As Byte"
+  ts.WriteLine "    Dim md5Result() As Byte"
+  ts.WriteLine "    Dim encKey(0 To 4) As Byte"
+  ts.WriteLine ""
+  ts.WriteLine "    padding = GetPadding()"
+  ts.WriteLine ""
+  ts.WriteLine "    ' P as 4-byte little-endian (using AND masks to avoid VBA division sign issues)"
+  ts.WriteLine "    ' VBA Long has same bit pattern as unsigned 32-bit, so mask-then-shift works correctly"
+  ts.WriteLine "    pBytes(0) = CByte(pValue And &HFF&)"
+  ts.WriteLine "    pBytes(1) = CByte((pValue And &HFF00&) \ &H100&)"
+  ts.WriteLine "    pBytes(2) = CByte((pValue And &HFF0000) \ &H10000)"
+  ts.WriteLine "    ' Byte 3: high byte including sign bit"
+  ts.WriteLine "    pBytes(3) = CByte(((pValue And &H7F000000) \ &H1000000) Or IIf(pValue < 0, &H80, 0))"
+  ts.WriteLine ""
+  ts.WriteLine "    ' MD5(padding + O + P_bytes + fileID)"
+  ts.WriteLine "    md5Result = MD5HashMulti(padding, oValue, pBytes, fileID)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Take first 5 bytes (40-bit key for R=2)"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To 4"
+  ts.WriteLine "        encKey(i) = md5Result(i)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ComputeEncryptionKey = encKey"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Compute per-object decryption key"
+  ts.WriteLine "' MD5(base_key + obj_num[3 bytes LE] + gen_num[2 bytes LE])[:10]"
+  ts.WriteLine "Public Function ComputeObjectKey(baseKey() As Byte, objNum As Long, genNum As Long) As Byte()"
+  ts.WriteLine "    Dim input_data() As Byte"
+  ts.WriteLine "    Dim baseLen As Long"
+  ts.WriteLine "    Dim md5Result() As Byte"
+  ts.WriteLine "    Dim objKey() As Byte"
+  ts.WriteLine "    Dim keyLen As Long"
+  ts.WriteLine ""
+  ts.WriteLine "    baseLen = UBound(baseKey) - LBound(baseKey) + 1"
+  ts.WriteLine "    ReDim input_data(0 To baseLen + 4)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Copy base key"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To baseLen - 1"
+  ts.WriteLine "        input_data(i) = baseKey(LBound(baseKey) + i)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Object number as 3 bytes little-endian"
+  ts.WriteLine "    input_data(baseLen) = objNum And &HFF"
+  ts.WriteLine "    input_data(baseLen + 1) = (objNum \ &H100) And &HFF"
+  ts.WriteLine "    input_data(baseLen + 2) = (objNum \ &H10000) And &HFF"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Generation number as 2 bytes little-endian"
+  ts.WriteLine "    input_data(baseLen + 3) = genNum And &HFF"
+  ts.WriteLine "    input_data(baseLen + 4) = (genNum \ &H100) And &HFF"
+  ts.WriteLine ""
+  ts.WriteLine "    md5Result = MD5Hash(input_data)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Take min(baseLen + 5, 16) bytes"
+  ts.WriteLine "    keyLen = baseLen + 5"
+  ts.WriteLine "    If keyLen > 16 Then keyLen = 16"
+  ts.WriteLine ""
+  ts.WriteLine "    ReDim objKey(0 To keyLen - 1)"
+  ts.WriteLine "    For i = 0 To keyLen - 1"
+  ts.WriteLine "        objKey(i) = md5Result(i)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ComputeObjectKey = objKey"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Decrypt a PDF stream"
+  ts.WriteLine "Public Function DecryptStream(baseKey() As Byte, objNum As Long, genNum As Long, streamData() As Byte) As Byte()"
+  ts.WriteLine "    Dim objKey() As Byte"
+  ts.WriteLine "    objKey = ComputeObjectKey(baseKey, objNum, genNum)"
+  ts.WriteLine "    DecryptStream = RC4(objKey, streamData)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Decrypt a PDF string"
+  ts.WriteLine "Public Function DecryptString(baseKey() As Byte, objNum As Long, genNum As Long, strData() As Byte) As Byte()"
+  ts.WriteLine "    DecryptString = DecryptStream(baseKey, objNum, genNum, strData)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+End Sub
 
-Function GetModule_PDFDeflate()
-  Dim s
-  s = ""
-  s = s & "Attribute VB_Name = ""PDFDeflate""" & vbCrLf
-  s = s & "Option Explicit" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Pure VBA implementation of RFC 1951 DEFLATE decompression" & vbCrLf
-  s = s & "' Used to decompress PDF FlateDecode streams (zlib format)" & vbCrLf
-  s = s & "'" & vbCrLf
-  s = s & "' Zlib format: 2-byte header + deflate data + 4-byte Adler32 checksum" & vbCrLf
-  s = s & "' We strip the header/checksum and inflate the raw deflate data." & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Bit reader state" & vbCrLf
-  s = s & "Private mData() As Byte" & vbCrLf
-  s = s & "Private mBitPos As Long      ' Current bit position in the data" & vbCrLf
-  s = s & "Private mDataLen As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Fixed Huffman tables (built once, reused)" & vbCrLf
-  s = s & "Private mFixedLitLenLengths() As Long" & vbCrLf
-  s = s & "Private mFixedDistLengths() As Long" & vbCrLf
-  s = s & "Private mFixedBuilt As Boolean" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Power-of-2 lookup (avoids 2^n floating point in hot loops)" & vbCrLf
-  s = s & "Private mPow2(0 To 15) As Long" & vbCrLf
-  s = s & "Private mPow2Built As Boolean" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub BuildPow2()" & vbCrLf
-  s = s & "    If mPow2Built Then Exit Sub" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    mPow2(0) = 1" & vbCrLf
-  s = s & "    For i = 1 To 15" & vbCrLf
-  s = s & "        mPow2(i) = mPow2(i - 1) * 2" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    mPow2Built = True" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Bit reader ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub InitBitReader(data() As Byte)" & vbCrLf
-  s = s & "    mData = data" & vbCrLf
-  s = s & "    mBitPos = 0" & vbCrLf
-  s = s & "    mDataLen = UBound(data) - LBound(data) + 1" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ReadBits(numBits As Long) As Long" & vbCrLf
-  s = s & "    Dim result As Long" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    Dim byteIdx As Long" & vbCrLf
-  s = s & "    Dim bitIdx As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    result = 0" & vbCrLf
-  s = s & "    For i = 0 To numBits - 1" & vbCrLf
-  s = s & "        byteIdx = mBitPos \ 8" & vbCrLf
-  s = s & "        bitIdx = mBitPos Mod 8" & vbCrLf
-  s = s & "        If byteIdx < mDataLen Then" & vbCrLf
-  s = s & "            If (mData(LBound(mData) + byteIdx) And mPow2(bitIdx)) <> 0 Then" & vbCrLf
-  s = s & "                result = result Or mPow2(i)" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        mBitPos = mBitPos + 1" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    ReadBits = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub AlignToByte()" & vbCrLf
-  s = s & "    If (mBitPos Mod 8) <> 0 Then" & vbCrLf
-  s = s & "        mBitPos = mBitPos + (8 - (mBitPos Mod 8))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ReadByte_() As Byte" & vbCrLf
-  s = s & "    Dim byteIdx As Long" & vbCrLf
-  s = s & "    byteIdx = mBitPos \ 8" & vbCrLf
-  s = s & "    ReadByte_ = mData(LBound(mData) + byteIdx)" & vbCrLf
-  s = s & "    mBitPos = mBitPos + 8" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ReadUInt16() As Long" & vbCrLf
-  s = s & "    Dim lo As Long, hi As Long" & vbCrLf
-  s = s & "    lo = CLng(ReadByte_())" & vbCrLf
-  s = s & "    hi = CLng(ReadByte_())" & vbCrLf
-  s = s & "    ReadUInt16 = lo Or (hi * 256)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Huffman decoding ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Build a Huffman decode table from code lengths" & vbCrLf
-  s = s & "' Returns an array where index = code value, value = symbol" & vbCrLf
-  s = s & "' Uses canonical Huffman code construction" & vbCrLf
-  s = s & "Private Type HuffmanTable" & vbCrLf
-  s = s & "    maxBits As Long" & vbCrLf
-  s = s & "    counts() As Long     ' count of codes at each bit length" & vbCrLf
-  s = s & "    symbols() As Long    ' symbols sorted by code" & vbCrLf
-  s = s & "    offsets() As Long    ' first index in symbols[] for each bit length" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function BuildHuffmanTable(codeLengths() As Long, numSymbols As Long) As HuffmanTable" & vbCrLf
-  s = s & "    Dim ht As HuffmanTable" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    Dim maxBits As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find max bit length" & vbCrLf
-  s = s & "    maxBits = 0" & vbCrLf
-  s = s & "    For i = 0 To numSymbols - 1" & vbCrLf
-  s = s & "        If codeLengths(i) > maxBits Then maxBits = codeLengths(i)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    If maxBits = 0 Then maxBits = 1" & vbCrLf
-  s = s & "    ht.maxBits = maxBits" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Count codes at each bit length" & vbCrLf
-  s = s & "    ReDim ht.counts(0 To maxBits)" & vbCrLf
-  s = s & "    For i = 0 To numSymbols - 1" & vbCrLf
-  s = s & "        If codeLengths(i) > 0 Then" & vbCrLf
-  s = s & "            ht.counts(codeLengths(i)) = ht.counts(codeLengths(i)) + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Compute offsets (where symbols for each length start)" & vbCrLf
-  s = s & "    ReDim ht.offsets(0 To maxBits + 1)" & vbCrLf
-  s = s & "    ht.offsets(1) = 0" & vbCrLf
-  s = s & "    For i = 1 To maxBits" & vbCrLf
-  s = s & "        ht.offsets(i + 1) = ht.offsets(i) + ht.counts(i)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Build sorted symbol table" & vbCrLf
-  s = s & "    Dim totalSymbols As Long" & vbCrLf
-  s = s & "    totalSymbols = ht.offsets(maxBits + 1)" & vbCrLf
-  s = s & "    If totalSymbols = 0 Then totalSymbols = 1" & vbCrLf
-  s = s & "    ReDim ht.symbols(0 To totalSymbols - 1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Temporary copy of offsets for filling" & vbCrLf
-  s = s & "    Dim offs() As Long" & vbCrLf
-  s = s & "    ReDim offs(0 To maxBits)" & vbCrLf
-  s = s & "    For i = 1 To maxBits" & vbCrLf
-  s = s & "        offs(i) = ht.offsets(i)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    For i = 0 To numSymbols - 1" & vbCrLf
-  s = s & "        If codeLengths(i) > 0 Then" & vbCrLf
-  s = s & "            ht.symbols(offs(codeLengths(i))) = i" & vbCrLf
-  s = s & "            offs(codeLengths(i)) = offs(codeLengths(i)) + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    BuildHuffmanTable = ht" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Decode one symbol from the bit stream using a Huffman table" & vbCrLf
-  s = s & "Private Function DecodeSymbol(ht As HuffmanTable) As Long" & vbCrLf
-  s = s & "    Dim code As Long" & vbCrLf
-  s = s & "    Dim bitLen As Long" & vbCrLf
-  s = s & "    Dim count As Long" & vbCrLf
-  s = s & "    Dim first As Long" & vbCrLf
-  s = s & "    Dim idx As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    code = 0" & vbCrLf
-  s = s & "    first = 0" & vbCrLf
-  s = s & "    idx = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    For bitLen = 1 To ht.maxBits" & vbCrLf
-  s = s & "        ' Read one bit (LSB first, but codes are MSB-first in deflate)" & vbCrLf
-  s = s & "        Dim byteIdx As Long, bitIdx As Long" & vbCrLf
-  s = s & "        byteIdx = mBitPos \ 8" & vbCrLf
-  s = s & "        bitIdx = mBitPos Mod 8" & vbCrLf
-  s = s & "        code = code * 2" & vbCrLf
-  s = s & "        If byteIdx < mDataLen Then" & vbCrLf
-  s = s & "            If (mData(LBound(mData) + byteIdx) And mPow2(bitIdx)) <> 0 Then" & vbCrLf
-  s = s & "                code = code Or 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        mBitPos = mBitPos + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        count = ht.counts(bitLen)" & vbCrLf
-  s = s & "        If (code - first) < count Then" & vbCrLf
-  s = s & "            DecodeSymbol = ht.symbols(ht.offsets(bitLen) + (code - first))" & vbCrLf
-  s = s & "            Exit Function" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        idx = idx + count" & vbCrLf
-  s = s & "        first = (first + count) * 2" & vbCrLf
-  s = s & "    Next bitLen" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Should not reach here" & vbCrLf
-  s = s & "    DecodeSymbol = -1" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Fixed Huffman tables ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub BuildFixedTables()" & vbCrLf
-  s = s & "    If mFixedBuilt Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Literal/length: 0-143 = 8 bits, 144-255 = 9 bits, 256-279 = 7 bits, 280-287 = 8 bits" & vbCrLf
-  s = s & "    ReDim mFixedLitLenLengths(0 To 287)" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To 143: mFixedLitLenLengths(i) = 8: Next i" & vbCrLf
-  s = s & "    For i = 144 To 255: mFixedLitLenLengths(i) = 9: Next i" & vbCrLf
-  s = s & "    For i = 256 To 279: mFixedLitLenLengths(i) = 7: Next i" & vbCrLf
-  s = s & "    For i = 280 To 287: mFixedLitLenLengths(i) = 8: Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Distance: all 5 bits" & vbCrLf
-  s = s & "    ReDim mFixedDistLengths(0 To 31)" & vbCrLf
-  s = s & "    For i = 0 To 31: mFixedDistLengths(i) = 5: Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    mFixedBuilt = True" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Length and distance lookup tables (module-level, built once) ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private mLengthBase(0 To 28) As Long" & vbCrLf
-  s = s & "Private mLengthExtra(0 To 28) As Long" & vbCrLf
-  s = s & "Private mDistBase(0 To 29) As Long" & vbCrLf
-  s = s & "Private mDistExtra(0 To 29) As Long" & vbCrLf
-  s = s & "Private mTablesBuilt As Boolean" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub BuildLookupTables()" & vbCrLf
-  s = s & "    If mTablesBuilt Then Exit Sub" & vbCrLf
-  s = s & "    Dim lb As Variant, le As Variant, db As Variant, de As Variant" & vbCrLf
-  s = s & "    lb = Array(3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, _" & vbCrLf
-  s = s & "               35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258)" & vbCrLf
-  s = s & "    le = Array(0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, _" & vbCrLf
-  s = s & "               3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0)" & vbCrLf
-  s = s & "    db = Array(1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, _" & vbCrLf
-  s = s & "               257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577)" & vbCrLf
-  s = s & "    de = Array(0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, _" & vbCrLf
-  s = s & "               7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13)" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To 28: mLengthBase(i) = CLng(lb(i)): mLengthExtra(i) = CLng(le(i)): Next i" & vbCrLf
-  s = s & "    For i = 0 To 29: mDistBase(i) = CLng(db(i)): mDistExtra(i) = CLng(de(i)): Next i" & vbCrLf
-  s = s & "    mTablesBuilt = True" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Block decompression ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Decompress a non-compressed (stored) block" & vbCrLf
-  s = s & "Private Sub DecompressStored(output() As Byte, ByRef outPos As Long)" & vbCrLf
-  s = s & "    Dim blockLen As Long" & vbCrLf
-  s = s & "    Dim nLen As Long" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    AlignToByte" & vbCrLf
-  s = s & "    blockLen = ReadUInt16()" & vbCrLf
-  s = s & "    nLen = ReadUInt16()  ' One's complement (ignored for validation)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Ensure output capacity" & vbCrLf
-  s = s & "    EnsureCapacity output, outPos + blockLen" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    For i = 0 To blockLen - 1" & vbCrLf
-  s = s & "        output(outPos) = ReadByte_()" & vbCrLf
-  s = s & "        outPos = outPos + 1" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Decompress a Huffman-coded block (fixed or dynamic)" & vbCrLf
-  s = s & "Private Sub DecompressHuffman(litLenTable As HuffmanTable, distTable As HuffmanTable, _" & vbCrLf
-  s = s & "                               output() As Byte, ByRef outPos As Long)" & vbCrLf
-  s = s & "    Dim sym As Long" & vbCrLf
-  s = s & "    Dim length As Long" & vbCrLf
-  s = s & "    Dim dist As Long" & vbCrLf
-  s = s & "    Dim extraBits As Long" & vbCrLf
-  s = s & "    Dim copyFrom As Long" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Do" & vbCrLf
-  s = s & "        sym = DecodeSymbol(litLenTable)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If sym < 256 Then" & vbCrLf
-  s = s & "            ' Literal byte" & vbCrLf
-  s = s & "            EnsureCapacity output, outPos + 1" & vbCrLf
-  s = s & "            output(outPos) = CByte(sym)" & vbCrLf
-  s = s & "            outPos = outPos + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ElseIf sym = 256 Then" & vbCrLf
-  s = s & "            ' End of block" & vbCrLf
-  s = s & "            Exit Do" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            ' Length/distance pair" & vbCrLf
-  s = s & "            length = mLengthBase(sym - 257)" & vbCrLf
-  s = s & "            extraBits = mLengthExtra(sym - 257)" & vbCrLf
-  s = s & "            If extraBits > 0 Then" & vbCrLf
-  s = s & "                length = length + ReadBits(extraBits)" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Decode distance" & vbCrLf
-  s = s & "            sym = DecodeSymbol(distTable)" & vbCrLf
-  s = s & "            dist = mDistBase(sym)" & vbCrLf
-  s = s & "            extraBits = mDistExtra(sym)" & vbCrLf
-  s = s & "            If extraBits > 0 Then" & vbCrLf
-  s = s & "                dist = dist + ReadBits(extraBits)" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Copy from output buffer (LZ77 back-reference)" & vbCrLf
-  s = s & "            EnsureCapacity output, outPos + length" & vbCrLf
-  s = s & "            copyFrom = outPos - dist" & vbCrLf
-  s = s & "            For i = 0 To length - 1" & vbCrLf
-  s = s & "                output(outPos) = output(copyFrom + i)" & vbCrLf
-  s = s & "                outPos = outPos + 1" & vbCrLf
-  s = s & "            Next i" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Read dynamic Huffman tables from the stream" & vbCrLf
-  s = s & "Private Sub ReadDynamicTables(ByRef litLenTable As HuffmanTable, ByRef distTable As HuffmanTable)" & vbCrLf
-  s = s & "    Dim hlit As Long   ' Number of literal/length codes - 257" & vbCrLf
-  s = s & "    Dim hdist As Long  ' Number of distance codes - 1" & vbCrLf
-  s = s & "    Dim hclen As Long  ' Number of code length codes - 4" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    hlit = ReadBits(5) + 257" & vbCrLf
-  s = s & "    hdist = ReadBits(5) + 1" & vbCrLf
-  s = s & "    hclen = ReadBits(4) + 4" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Code length code order" & vbCrLf
-  s = s & "    Dim clOrder As Variant" & vbCrLf
-  s = s & "    clOrder = Array(16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Read code length code lengths" & vbCrLf
-  s = s & "    Dim clLengths() As Long" & vbCrLf
-  s = s & "    ReDim clLengths(0 To 18)" & vbCrLf
-  s = s & "    For i = 0 To hclen - 1" & vbCrLf
-  s = s & "        clLengths(CLng(clOrder(i))) = ReadBits(3)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Build code length Huffman table" & vbCrLf
-  s = s & "    Dim clTable As HuffmanTable" & vbCrLf
-  s = s & "    clTable = BuildHuffmanTable(clLengths, 19)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Read literal/length + distance code lengths" & vbCrLf
-  s = s & "    Dim allLengths() As Long" & vbCrLf
-  s = s & "    Dim totalCodes As Long" & vbCrLf
-  s = s & "    totalCodes = hlit + hdist" & vbCrLf
-  s = s & "    ReDim allLengths(0 To totalCodes - 1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim pos As Long" & vbCrLf
-  s = s & "    pos = 0" & vbCrLf
-  s = s & "    Do While pos < totalCodes" & vbCrLf
-  s = s & "        Dim sym As Long" & vbCrLf
-  s = s & "        sym = DecodeSymbol(clTable)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If sym < 16 Then" & vbCrLf
-  s = s & "            ' Literal code length" & vbCrLf
-  s = s & "            allLengths(pos) = sym" & vbCrLf
-  s = s & "            pos = pos + 1" & vbCrLf
-  s = s & "        ElseIf sym = 16 Then" & vbCrLf
-  s = s & "            ' Repeat previous length 3-6 times" & vbCrLf
-  s = s & "            Dim repeatCount As Long" & vbCrLf
-  s = s & "            repeatCount = ReadBits(2) + 3" & vbCrLf
-  s = s & "            Dim prevLen As Long" & vbCrLf
-  s = s & "            prevLen = allLengths(pos - 1)" & vbCrLf
-  s = s & "            For i = 0 To repeatCount - 1" & vbCrLf
-  s = s & "                allLengths(pos) = prevLen" & vbCrLf
-  s = s & "                pos = pos + 1" & vbCrLf
-  s = s & "            Next i" & vbCrLf
-  s = s & "        ElseIf sym = 17 Then" & vbCrLf
-  s = s & "            ' Repeat 0 for 3-10 times" & vbCrLf
-  s = s & "            repeatCount = ReadBits(3) + 3" & vbCrLf
-  s = s & "            For i = 0 To repeatCount - 1" & vbCrLf
-  s = s & "                allLengths(pos) = 0" & vbCrLf
-  s = s & "                pos = pos + 1" & vbCrLf
-  s = s & "            Next i" & vbCrLf
-  s = s & "        ElseIf sym = 18 Then" & vbCrLf
-  s = s & "            ' Repeat 0 for 11-138 times" & vbCrLf
-  s = s & "            repeatCount = ReadBits(7) + 11" & vbCrLf
-  s = s & "            For i = 0 To repeatCount - 1" & vbCrLf
-  s = s & "                allLengths(pos) = 0" & vbCrLf
-  s = s & "                pos = pos + 1" & vbCrLf
-  s = s & "            Next i" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Split into literal/length and distance code lengths" & vbCrLf
-  s = s & "    Dim litLenLengths() As Long" & vbCrLf
-  s = s & "    Dim distLengths() As Long" & vbCrLf
-  s = s & "    ReDim litLenLengths(0 To hlit - 1)" & vbCrLf
-  s = s & "    ReDim distLengths(0 To hdist - 1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    For i = 0 To hlit - 1" & vbCrLf
-  s = s & "        litLenLengths(i) = allLengths(i)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    For i = 0 To hdist - 1" & vbCrLf
-  s = s & "        distLengths(i) = allLengths(hlit + i)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    litLenTable = BuildHuffmanTable(litLenLengths, hlit)" & vbCrLf
-  s = s & "    distTable = BuildHuffmanTable(distLengths, hdist)" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Ensure output buffer has at least 'needed' bytes capacity" & vbCrLf
-  s = s & "Private Sub EnsureCapacity(buffer() As Byte, needed As Long)" & vbCrLf
-  s = s & "    Dim currentSize As Long" & vbCrLf
-  s = s & "    On Error Resume Next" & vbCrLf
-  s = s & "    currentSize = UBound(buffer) + 1" & vbCrLf
-  s = s & "    If Err.Number <> 0 Then currentSize = 0" & vbCrLf
-  s = s & "    On Error GoTo 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If needed > currentSize Then" & vbCrLf
-  s = s & "        Dim newSize As Long" & vbCrLf
-  s = s & "        newSize = currentSize" & vbCrLf
-  s = s & "        If newSize < 4096 Then newSize = 4096" & vbCrLf
-  s = s & "        Do While newSize < needed" & vbCrLf
-  s = s & "            newSize = newSize * 2" & vbCrLf
-  s = s & "        Loop" & vbCrLf
-  s = s & "        ReDim Preserve buffer(0 To newSize - 1)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Public API ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Inflate (decompress) zlib-formatted data" & vbCrLf
-  s = s & "' Strips 2-byte zlib header and 4-byte Adler32 checksum" & vbCrLf
-  s = s & "Public Function InflateZlib(zlibData() As Byte) As Byte()" & vbCrLf
-  s = s & "    Dim dataLen As Long" & vbCrLf
-  s = s & "    dataLen = UBound(zlibData) - LBound(zlibData) + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If dataLen < 7 Then" & vbCrLf
-  s = s & "        Err.Raise vbObjectError + 2, ""PDFDeflate"", ""Zlib data too short ("" & dataLen & "" bytes)""" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Strip zlib header (2 bytes) and checksum (4 bytes)" & vbCrLf
-  s = s & "    Dim deflateData() As Byte" & vbCrLf
-  s = s & "    ReDim deflateData(0 To dataLen - 7)" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To dataLen - 7" & vbCrLf
-  s = s & "        deflateData(i) = zlibData(LBound(zlibData) + 2 + i)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    InflateZlib = InflateRaw(deflateData)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Inflate raw deflate data (no zlib header)" & vbCrLf
-  s = s & "Public Function InflateRaw(deflateData() As Byte) As Byte()" & vbCrLf
-  s = s & "    Dim output() As Byte" & vbCrLf
-  s = s & "    Dim outPos As Long" & vbCrLf
-  s = s & "    Dim bFinal As Long" & vbCrLf
-  s = s & "    Dim bType As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    InitBitReader deflateData" & vbCrLf
-  s = s & "    outPos = 0" & vbCrLf
-  s = s & "    ReDim output(0 To 4095)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    BuildPow2" & vbCrLf
-  s = s & "    BuildFixedTables" & vbCrLf
-  s = s & "    BuildLookupTables" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Do" & vbCrLf
-  s = s & "        bFinal = ReadBits(1)" & vbCrLf
-  s = s & "        bType = ReadBits(2)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Select Case bType" & vbCrLf
-  s = s & "            Case 0" & vbCrLf
-  s = s & "                ' No compression (stored)" & vbCrLf
-  s = s & "                DecompressStored output, outPos" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            Case 1" & vbCrLf
-  s = s & "                ' Fixed Huffman codes" & vbCrLf
-  s = s & "                Dim fixedLitLen As HuffmanTable" & vbCrLf
-  s = s & "                Dim fixedDist As HuffmanTable" & vbCrLf
-  s = s & "                fixedLitLen = BuildHuffmanTable(mFixedLitLenLengths, 288)" & vbCrLf
-  s = s & "                fixedDist = BuildHuffmanTable(mFixedDistLengths, 32)" & vbCrLf
-  s = s & "                DecompressHuffman fixedLitLen, fixedDist, output, outPos" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            Case 2" & vbCrLf
-  s = s & "                ' Dynamic Huffman codes" & vbCrLf
-  s = s & "                Dim dynLitLen As HuffmanTable" & vbCrLf
-  s = s & "                Dim dynDist As HuffmanTable" & vbCrLf
-  s = s & "                ReadDynamicTables dynLitLen, dynDist" & vbCrLf
-  s = s & "                DecompressHuffman dynLitLen, dynDist, output, outPos" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            Case 3" & vbCrLf
-  s = s & "                ' Reserved (error)" & vbCrLf
-  s = s & "                Err.Raise vbObjectError + 1, ""PDFDeflate"", ""Invalid deflate block type 3""" & vbCrLf
-  s = s & "        End Select" & vbCrLf
-  s = s & "    Loop Until bFinal = 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Trim output to actual size" & vbCrLf
-  s = s & "    If outPos > 0 Then" & vbCrLf
-  s = s & "        ReDim Preserve output(0 To outPos - 1)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        ReDim output(0 To 0)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    InflateRaw = output" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  GetModule_PDFDeflate = s
-End Function
+Sub WriteModule_PDFDeflate(ts)
+  ts.WriteLine "Attribute VB_Name = ""PDFDeflate"""
+  ts.WriteLine "Option Explicit"
+  ts.WriteLine ""
+  ts.WriteLine "' Pure VBA implementation of RFC 1951 DEFLATE decompression"
+  ts.WriteLine "' Used to decompress PDF FlateDecode streams (zlib format)"
+  ts.WriteLine "'"
+  ts.WriteLine "' Zlib format: 2-byte header + deflate data + 4-byte Adler32 checksum"
+  ts.WriteLine "' We strip the header/checksum and inflate the raw deflate data."
+  ts.WriteLine ""
+  ts.WriteLine "' Bit reader state"
+  ts.WriteLine "Private mData() As Byte"
+  ts.WriteLine "Private mBitPos As Long      ' Current bit position in the data"
+  ts.WriteLine "Private mDataLen As Long"
+  ts.WriteLine ""
+  ts.WriteLine "' Fixed Huffman tables (built once, reused)"
+  ts.WriteLine "Private mFixedLitLenLengths() As Long"
+  ts.WriteLine "Private mFixedDistLengths() As Long"
+  ts.WriteLine "Private mFixedBuilt As Boolean"
+  ts.WriteLine ""
+  ts.WriteLine "' Power-of-2 lookup (avoids 2^n floating point in hot loops)"
+  ts.WriteLine "Private mPow2(0 To 15) As Long"
+  ts.WriteLine "Private mPow2Built As Boolean"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub BuildPow2()"
+  ts.WriteLine "    If mPow2Built Then Exit Sub"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    mPow2(0) = 1"
+  ts.WriteLine "    For i = 1 To 15"
+  ts.WriteLine "        mPow2(i) = mPow2(i - 1) * 2"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    mPow2Built = True"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Bit reader ---"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub InitBitReader(data() As Byte)"
+  ts.WriteLine "    mData = data"
+  ts.WriteLine "    mBitPos = 0"
+  ts.WriteLine "    mDataLen = UBound(data) - LBound(data) + 1"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ReadBits(numBits As Long) As Long"
+  ts.WriteLine "    Dim result As Long"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    Dim byteIdx As Long"
+  ts.WriteLine "    Dim bitIdx As Long"
+  ts.WriteLine ""
+  ts.WriteLine "    result = 0"
+  ts.WriteLine "    For i = 0 To numBits - 1"
+  ts.WriteLine "        byteIdx = mBitPos \ 8"
+  ts.WriteLine "        bitIdx = mBitPos Mod 8"
+  ts.WriteLine "        If byteIdx < mDataLen Then"
+  ts.WriteLine "            If (mData(LBound(mData) + byteIdx) And mPow2(bitIdx)) <> 0 Then"
+  ts.WriteLine "                result = result Or mPow2(i)"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        mBitPos = mBitPos + 1"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    ReadBits = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub AlignToByte()"
+  ts.WriteLine "    If (mBitPos Mod 8) <> 0 Then"
+  ts.WriteLine "        mBitPos = mBitPos + (8 - (mBitPos Mod 8))"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ReadByte_() As Byte"
+  ts.WriteLine "    Dim byteIdx As Long"
+  ts.WriteLine "    byteIdx = mBitPos \ 8"
+  ts.WriteLine "    ReadByte_ = mData(LBound(mData) + byteIdx)"
+  ts.WriteLine "    mBitPos = mBitPos + 8"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ReadUInt16() As Long"
+  ts.WriteLine "    Dim lo As Long, hi As Long"
+  ts.WriteLine "    lo = CLng(ReadByte_())"
+  ts.WriteLine "    hi = CLng(ReadByte_())"
+  ts.WriteLine "    ReadUInt16 = lo Or (hi * 256)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Huffman decoding ---"
+  ts.WriteLine ""
+  ts.WriteLine "' Build a Huffman decode table from code lengths"
+  ts.WriteLine "' Returns an array where index = code value, value = symbol"
+  ts.WriteLine "' Uses canonical Huffman code construction"
+  ts.WriteLine "Private Type HuffmanTable"
+  ts.WriteLine "    maxBits As Long"
+  ts.WriteLine "    counts() As Long     ' count of codes at each bit length"
+  ts.WriteLine "    symbols() As Long    ' symbols sorted by code"
+  ts.WriteLine "    offsets() As Long    ' first index in symbols[] for each bit length"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function BuildHuffmanTable(codeLengths() As Long, numSymbols As Long) As HuffmanTable"
+  ts.WriteLine "    Dim ht As HuffmanTable"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    Dim maxBits As Long"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find max bit length"
+  ts.WriteLine "    maxBits = 0"
+  ts.WriteLine "    For i = 0 To numSymbols - 1"
+  ts.WriteLine "        If codeLengths(i) > maxBits Then maxBits = codeLengths(i)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    If maxBits = 0 Then maxBits = 1"
+  ts.WriteLine "    ht.maxBits = maxBits"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Count codes at each bit length"
+  ts.WriteLine "    ReDim ht.counts(0 To maxBits)"
+  ts.WriteLine "    For i = 0 To numSymbols - 1"
+  ts.WriteLine "        If codeLengths(i) > 0 Then"
+  ts.WriteLine "            ht.counts(codeLengths(i)) = ht.counts(codeLengths(i)) + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Compute offsets (where symbols for each length start)"
+  ts.WriteLine "    ReDim ht.offsets(0 To maxBits + 1)"
+  ts.WriteLine "    ht.offsets(1) = 0"
+  ts.WriteLine "    For i = 1 To maxBits"
+  ts.WriteLine "        ht.offsets(i + 1) = ht.offsets(i) + ht.counts(i)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Build sorted symbol table"
+  ts.WriteLine "    Dim totalSymbols As Long"
+  ts.WriteLine "    totalSymbols = ht.offsets(maxBits + 1)"
+  ts.WriteLine "    If totalSymbols = 0 Then totalSymbols = 1"
+  ts.WriteLine "    ReDim ht.symbols(0 To totalSymbols - 1)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Temporary copy of offsets for filling"
+  ts.WriteLine "    Dim offs() As Long"
+  ts.WriteLine "    ReDim offs(0 To maxBits)"
+  ts.WriteLine "    For i = 1 To maxBits"
+  ts.WriteLine "        offs(i) = ht.offsets(i)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    For i = 0 To numSymbols - 1"
+  ts.WriteLine "        If codeLengths(i) > 0 Then"
+  ts.WriteLine "            ht.symbols(offs(codeLengths(i))) = i"
+  ts.WriteLine "            offs(codeLengths(i)) = offs(codeLengths(i)) + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    BuildHuffmanTable = ht"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Decode one symbol from the bit stream using a Huffman table"
+  ts.WriteLine "Private Function DecodeSymbol(ht As HuffmanTable) As Long"
+  ts.WriteLine "    Dim code As Long"
+  ts.WriteLine "    Dim bitLen As Long"
+  ts.WriteLine "    Dim count As Long"
+  ts.WriteLine "    Dim first As Long"
+  ts.WriteLine "    Dim idx As Long"
+  ts.WriteLine ""
+  ts.WriteLine "    code = 0"
+  ts.WriteLine "    first = 0"
+  ts.WriteLine "    idx = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    For bitLen = 1 To ht.maxBits"
+  ts.WriteLine "        ' Read one bit (LSB first, but codes are MSB-first in deflate)"
+  ts.WriteLine "        Dim byteIdx As Long, bitIdx As Long"
+  ts.WriteLine "        byteIdx = mBitPos \ 8"
+  ts.WriteLine "        bitIdx = mBitPos Mod 8"
+  ts.WriteLine "        code = code * 2"
+  ts.WriteLine "        If byteIdx < mDataLen Then"
+  ts.WriteLine "            If (mData(LBound(mData) + byteIdx) And mPow2(bitIdx)) <> 0 Then"
+  ts.WriteLine "                code = code Or 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        mBitPos = mBitPos + 1"
+  ts.WriteLine ""
+  ts.WriteLine "        count = ht.counts(bitLen)"
+  ts.WriteLine "        If (code - first) < count Then"
+  ts.WriteLine "            DecodeSymbol = ht.symbols(ht.offsets(bitLen) + (code - first))"
+  ts.WriteLine "            Exit Function"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        idx = idx + count"
+  ts.WriteLine "        first = (first + count) * 2"
+  ts.WriteLine "    Next bitLen"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Should not reach here"
+  ts.WriteLine "    DecodeSymbol = -1"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Fixed Huffman tables ---"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub BuildFixedTables()"
+  ts.WriteLine "    If mFixedBuilt Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Literal/length: 0-143 = 8 bits, 144-255 = 9 bits, 256-279 = 7 bits, 280-287 = 8 bits"
+  ts.WriteLine "    ReDim mFixedLitLenLengths(0 To 287)"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To 143: mFixedLitLenLengths(i) = 8: Next i"
+  ts.WriteLine "    For i = 144 To 255: mFixedLitLenLengths(i) = 9: Next i"
+  ts.WriteLine "    For i = 256 To 279: mFixedLitLenLengths(i) = 7: Next i"
+  ts.WriteLine "    For i = 280 To 287: mFixedLitLenLengths(i) = 8: Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Distance: all 5 bits"
+  ts.WriteLine "    ReDim mFixedDistLengths(0 To 31)"
+  ts.WriteLine "    For i = 0 To 31: mFixedDistLengths(i) = 5: Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    mFixedBuilt = True"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Length and distance lookup tables (module-level, built once) ---"
+  ts.WriteLine ""
+  ts.WriteLine "Private mLengthBase(0 To 28) As Long"
+  ts.WriteLine "Private mLengthExtra(0 To 28) As Long"
+  ts.WriteLine "Private mDistBase(0 To 29) As Long"
+  ts.WriteLine "Private mDistExtra(0 To 29) As Long"
+  ts.WriteLine "Private mTablesBuilt As Boolean"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub BuildLookupTables()"
+  ts.WriteLine "    If mTablesBuilt Then Exit Sub"
+  ts.WriteLine "    Dim lb As Variant, le As Variant, db As Variant, de As Variant"
+  ts.WriteLine "    lb = Array(3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, _"
+  ts.WriteLine "               35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258)"
+  ts.WriteLine "    le = Array(0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, _"
+  ts.WriteLine "               3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0)"
+  ts.WriteLine "    db = Array(1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, _"
+  ts.WriteLine "               257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577)"
+  ts.WriteLine "    de = Array(0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, _"
+  ts.WriteLine "               7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13)"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To 28: mLengthBase(i) = CLng(lb(i)): mLengthExtra(i) = CLng(le(i)): Next i"
+  ts.WriteLine "    For i = 0 To 29: mDistBase(i) = CLng(db(i)): mDistExtra(i) = CLng(de(i)): Next i"
+  ts.WriteLine "    mTablesBuilt = True"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Block decompression ---"
+  ts.WriteLine ""
+  ts.WriteLine "' Decompress a non-compressed (stored) block"
+  ts.WriteLine "Private Sub DecompressStored(output() As Byte, ByRef outPos As Long)"
+  ts.WriteLine "    Dim blockLen As Long"
+  ts.WriteLine "    Dim nLen As Long"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine ""
+  ts.WriteLine "    AlignToByte"
+  ts.WriteLine "    blockLen = ReadUInt16()"
+  ts.WriteLine "    nLen = ReadUInt16()  ' One's complement (ignored for validation)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Ensure output capacity"
+  ts.WriteLine "    EnsureCapacity output, outPos + blockLen"
+  ts.WriteLine ""
+  ts.WriteLine "    For i = 0 To blockLen - 1"
+  ts.WriteLine "        output(outPos) = ReadByte_()"
+  ts.WriteLine "        outPos = outPos + 1"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' Decompress a Huffman-coded block (fixed or dynamic)"
+  ts.WriteLine "Private Sub DecompressHuffman(litLenTable As HuffmanTable, distTable As HuffmanTable, _"
+  ts.WriteLine "                               output() As Byte, ByRef outPos As Long)"
+  ts.WriteLine "    Dim sym As Long"
+  ts.WriteLine "    Dim length As Long"
+  ts.WriteLine "    Dim dist As Long"
+  ts.WriteLine "    Dim extraBits As Long"
+  ts.WriteLine "    Dim copyFrom As Long"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine ""
+  ts.WriteLine "    Do"
+  ts.WriteLine "        sym = DecodeSymbol(litLenTable)"
+  ts.WriteLine ""
+  ts.WriteLine "        If sym < 256 Then"
+  ts.WriteLine "            ' Literal byte"
+  ts.WriteLine "            EnsureCapacity output, outPos + 1"
+  ts.WriteLine "            output(outPos) = CByte(sym)"
+  ts.WriteLine "            outPos = outPos + 1"
+  ts.WriteLine ""
+  ts.WriteLine "        ElseIf sym = 256 Then"
+  ts.WriteLine "            ' End of block"
+  ts.WriteLine "            Exit Do"
+  ts.WriteLine ""
+  ts.WriteLine "        Else"
+  ts.WriteLine "            ' Length/distance pair"
+  ts.WriteLine "            length = mLengthBase(sym - 257)"
+  ts.WriteLine "            extraBits = mLengthExtra(sym - 257)"
+  ts.WriteLine "            If extraBits > 0 Then"
+  ts.WriteLine "                length = length + ReadBits(extraBits)"
+  ts.WriteLine "            End If"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Decode distance"
+  ts.WriteLine "            sym = DecodeSymbol(distTable)"
+  ts.WriteLine "            dist = mDistBase(sym)"
+  ts.WriteLine "            extraBits = mDistExtra(sym)"
+  ts.WriteLine "            If extraBits > 0 Then"
+  ts.WriteLine "                dist = dist + ReadBits(extraBits)"
+  ts.WriteLine "            End If"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Copy from output buffer (LZ77 back-reference)"
+  ts.WriteLine "            EnsureCapacity output, outPos + length"
+  ts.WriteLine "            copyFrom = outPos - dist"
+  ts.WriteLine "            For i = 0 To length - 1"
+  ts.WriteLine "                output(outPos) = output(copyFrom + i)"
+  ts.WriteLine "                outPos = outPos + 1"
+  ts.WriteLine "            Next i"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Loop"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' Read dynamic Huffman tables from the stream"
+  ts.WriteLine "Private Sub ReadDynamicTables(ByRef litLenTable As HuffmanTable, ByRef distTable As HuffmanTable)"
+  ts.WriteLine "    Dim hlit As Long   ' Number of literal/length codes - 257"
+  ts.WriteLine "    Dim hdist As Long  ' Number of distance codes - 1"
+  ts.WriteLine "    Dim hclen As Long  ' Number of code length codes - 4"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine ""
+  ts.WriteLine "    hlit = ReadBits(5) + 257"
+  ts.WriteLine "    hdist = ReadBits(5) + 1"
+  ts.WriteLine "    hclen = ReadBits(4) + 4"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Code length code order"
+  ts.WriteLine "    Dim clOrder As Variant"
+  ts.WriteLine "    clOrder = Array(16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Read code length code lengths"
+  ts.WriteLine "    Dim clLengths() As Long"
+  ts.WriteLine "    ReDim clLengths(0 To 18)"
+  ts.WriteLine "    For i = 0 To hclen - 1"
+  ts.WriteLine "        clLengths(CLng(clOrder(i))) = ReadBits(3)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Build code length Huffman table"
+  ts.WriteLine "    Dim clTable As HuffmanTable"
+  ts.WriteLine "    clTable = BuildHuffmanTable(clLengths, 19)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Read literal/length + distance code lengths"
+  ts.WriteLine "    Dim allLengths() As Long"
+  ts.WriteLine "    Dim totalCodes As Long"
+  ts.WriteLine "    totalCodes = hlit + hdist"
+  ts.WriteLine "    ReDim allLengths(0 To totalCodes - 1)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim pos As Long"
+  ts.WriteLine "    pos = 0"
+  ts.WriteLine "    Do While pos < totalCodes"
+  ts.WriteLine "        Dim sym As Long"
+  ts.WriteLine "        sym = DecodeSymbol(clTable)"
+  ts.WriteLine ""
+  ts.WriteLine "        If sym < 16 Then"
+  ts.WriteLine "            ' Literal code length"
+  ts.WriteLine "            allLengths(pos) = sym"
+  ts.WriteLine "            pos = pos + 1"
+  ts.WriteLine "        ElseIf sym = 16 Then"
+  ts.WriteLine "            ' Repeat previous length 3-6 times"
+  ts.WriteLine "            Dim repeatCount As Long"
+  ts.WriteLine "            repeatCount = ReadBits(2) + 3"
+  ts.WriteLine "            Dim prevLen As Long"
+  ts.WriteLine "            prevLen = allLengths(pos - 1)"
+  ts.WriteLine "            For i = 0 To repeatCount - 1"
+  ts.WriteLine "                allLengths(pos) = prevLen"
+  ts.WriteLine "                pos = pos + 1"
+  ts.WriteLine "            Next i"
+  ts.WriteLine "        ElseIf sym = 17 Then"
+  ts.WriteLine "            ' Repeat 0 for 3-10 times"
+  ts.WriteLine "            repeatCount = ReadBits(3) + 3"
+  ts.WriteLine "            For i = 0 To repeatCount - 1"
+  ts.WriteLine "                allLengths(pos) = 0"
+  ts.WriteLine "                pos = pos + 1"
+  ts.WriteLine "            Next i"
+  ts.WriteLine "        ElseIf sym = 18 Then"
+  ts.WriteLine "            ' Repeat 0 for 11-138 times"
+  ts.WriteLine "            repeatCount = ReadBits(7) + 11"
+  ts.WriteLine "            For i = 0 To repeatCount - 1"
+  ts.WriteLine "                allLengths(pos) = 0"
+  ts.WriteLine "                pos = pos + 1"
+  ts.WriteLine "            Next i"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Loop"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Split into literal/length and distance code lengths"
+  ts.WriteLine "    Dim litLenLengths() As Long"
+  ts.WriteLine "    Dim distLengths() As Long"
+  ts.WriteLine "    ReDim litLenLengths(0 To hlit - 1)"
+  ts.WriteLine "    ReDim distLengths(0 To hdist - 1)"
+  ts.WriteLine ""
+  ts.WriteLine "    For i = 0 To hlit - 1"
+  ts.WriteLine "        litLenLengths(i) = allLengths(i)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    For i = 0 To hdist - 1"
+  ts.WriteLine "        distLengths(i) = allLengths(hlit + i)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    litLenTable = BuildHuffmanTable(litLenLengths, hlit)"
+  ts.WriteLine "    distTable = BuildHuffmanTable(distLengths, hdist)"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' Ensure output buffer has at least 'needed' bytes capacity"
+  ts.WriteLine "Private Sub EnsureCapacity(buffer() As Byte, needed As Long)"
+  ts.WriteLine "    Dim currentSize As Long"
+  ts.WriteLine "    On Error Resume Next"
+  ts.WriteLine "    currentSize = UBound(buffer) + 1"
+  ts.WriteLine "    If Err.Number <> 0 Then currentSize = 0"
+  ts.WriteLine "    On Error GoTo 0"
+  ts.WriteLine ""
+  ts.WriteLine "    If needed > currentSize Then"
+  ts.WriteLine "        Dim newSize As Long"
+  ts.WriteLine "        newSize = currentSize"
+  ts.WriteLine "        If newSize < 4096 Then newSize = 4096"
+  ts.WriteLine "        Do While newSize < needed"
+  ts.WriteLine "            newSize = newSize * 2"
+  ts.WriteLine "        Loop"
+  ts.WriteLine "        ReDim Preserve buffer(0 To newSize - 1)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Public API ---"
+  ts.WriteLine ""
+  ts.WriteLine "' Inflate (decompress) zlib-formatted data"
+  ts.WriteLine "' Strips 2-byte zlib header and 4-byte Adler32 checksum"
+  ts.WriteLine "Public Function InflateZlib(zlibData() As Byte) As Byte()"
+  ts.WriteLine "    Dim dataLen As Long"
+  ts.WriteLine "    dataLen = UBound(zlibData) - LBound(zlibData) + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    If dataLen < 7 Then"
+  ts.WriteLine "        Err.Raise vbObjectError + 2, ""PDFDeflate"", ""Zlib data too short ("" & dataLen & "" bytes)"""
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Strip zlib header (2 bytes) and checksum (4 bytes)"
+  ts.WriteLine "    Dim deflateData() As Byte"
+  ts.WriteLine "    ReDim deflateData(0 To dataLen - 7)"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To dataLen - 7"
+  ts.WriteLine "        deflateData(i) = zlibData(LBound(zlibData) + 2 + i)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    InflateZlib = InflateRaw(deflateData)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Inflate raw deflate data (no zlib header)"
+  ts.WriteLine "Public Function InflateRaw(deflateData() As Byte) As Byte()"
+  ts.WriteLine "    Dim output() As Byte"
+  ts.WriteLine "    Dim outPos As Long"
+  ts.WriteLine "    Dim bFinal As Long"
+  ts.WriteLine "    Dim bType As Long"
+  ts.WriteLine ""
+  ts.WriteLine "    InitBitReader deflateData"
+  ts.WriteLine "    outPos = 0"
+  ts.WriteLine "    ReDim output(0 To 4095)"
+  ts.WriteLine ""
+  ts.WriteLine "    BuildPow2"
+  ts.WriteLine "    BuildFixedTables"
+  ts.WriteLine "    BuildLookupTables"
+  ts.WriteLine ""
+  ts.WriteLine "    Do"
+  ts.WriteLine "        bFinal = ReadBits(1)"
+  ts.WriteLine "        bType = ReadBits(2)"
+  ts.WriteLine ""
+  ts.WriteLine "        Select Case bType"
+  ts.WriteLine "            Case 0"
+  ts.WriteLine "                ' No compression (stored)"
+  ts.WriteLine "                DecompressStored output, outPos"
+  ts.WriteLine ""
+  ts.WriteLine "            Case 1"
+  ts.WriteLine "                ' Fixed Huffman codes"
+  ts.WriteLine "                Dim fixedLitLen As HuffmanTable"
+  ts.WriteLine "                Dim fixedDist As HuffmanTable"
+  ts.WriteLine "                fixedLitLen = BuildHuffmanTable(mFixedLitLenLengths, 288)"
+  ts.WriteLine "                fixedDist = BuildHuffmanTable(mFixedDistLengths, 32)"
+  ts.WriteLine "                DecompressHuffman fixedLitLen, fixedDist, output, outPos"
+  ts.WriteLine ""
+  ts.WriteLine "            Case 2"
+  ts.WriteLine "                ' Dynamic Huffman codes"
+  ts.WriteLine "                Dim dynLitLen As HuffmanTable"
+  ts.WriteLine "                Dim dynDist As HuffmanTable"
+  ts.WriteLine "                ReadDynamicTables dynLitLen, dynDist"
+  ts.WriteLine "                DecompressHuffman dynLitLen, dynDist, output, outPos"
+  ts.WriteLine ""
+  ts.WriteLine "            Case 3"
+  ts.WriteLine "                ' Reserved (error)"
+  ts.WriteLine "                Err.Raise vbObjectError + 1, ""PDFDeflate"", ""Invalid deflate block type 3"""
+  ts.WriteLine "        End Select"
+  ts.WriteLine "    Loop Until bFinal = 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Trim output to actual size"
+  ts.WriteLine "    If outPos > 0 Then"
+  ts.WriteLine "        ReDim Preserve output(0 To outPos - 1)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        ReDim output(0 To 0)"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    InflateRaw = output"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+End Sub
 
-Function GetModule_PDFReader()
-  Dim s
-  s = ""
-  s = s & "Attribute VB_Name = ""PDFReader""" & vbCrLf
-  s = s & "Option Explicit" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' PDF binary file parser" & vbCrLf
-  s = s & "' Reads xref table, object dictionaries, decrypts and decompresses streams" & vbCrLf
-  s = s & "' Supports standard V1/R2 encryption (UBS financial statements)" & vbCrLf
-  s = s & "' Handles XObject expansion and font width tables" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Types ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type PDFXRefEntry" & vbCrLf
-  s = s & "    offset As Long" & vbCrLf
-  s = s & "    generation As Long" & vbCrLf
-  s = s & "    inUse As Boolean" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type PDFEncryptInfo" & vbCrLf
-  s = s & "    V As Long" & vbCrLf
-  s = s & "    R As Long" & vbCrLf
-  s = s & "    keyLength As Long   ' in bytes" & vbCrLf
-  s = s & "    P As Long" & vbCrLf
-  s = s & "    oValue() As Byte    ' 32 bytes" & vbCrLf
-  s = s & "    uValue() As Byte    ' 32 bytes" & vbCrLf
-  s = s & "    fileID() As Byte    ' typically 16 bytes" & vbCrLf
-  s = s & "    encKey() As Byte    ' computed base encryption key" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type PDFDocument" & vbCrLf
-  s = s & "    data() As Byte" & vbCrLf
-  s = s & "    dataLen As Long" & vbCrLf
-  s = s & "    xref() As PDFXRefEntry" & vbCrLf
-  s = s & "    xrefCount As Long" & vbCrLf
-  s = s & "    encrypt As PDFEncryptInfo" & vbCrLf
-  s = s & "    isEncrypted As Boolean" & vbCrLf
-  s = s & "    rootObjNum As Long" & vbCrLf
-  s = s & "    pagesObjNum As Long" & vbCrLf
-  s = s & "    pageObjNums() As Long" & vbCrLf
-  s = s & "    pageCount As Long" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- File I/O ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Read entire PDF file into byte array" & vbCrLf
-  s = s & "Public Function ReadPDFFile(filePath As String) As PDFDocument" & vbCrLf
-  s = s & "    Dim doc As PDFDocument" & vbCrLf
-  s = s & "    Dim fileNum As Long" & vbCrLf
-  s = s & "    Dim fileLen As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    fileNum = FreeFile" & vbCrLf
-  s = s & "    On Error GoTo ReadError" & vbCrLf
-  s = s & "    Open filePath For Binary As #fileNum" & vbCrLf
-  s = s & "    fileLen = LOF(fileNum)" & vbCrLf
-  s = s & "    ReDim doc.data(0 To fileLen - 1)" & vbCrLf
-  s = s & "    Get #fileNum, , doc.data" & vbCrLf
-  s = s & "    Close #fileNum" & vbCrLf
-  s = s & "    On Error GoTo 0" & vbCrLf
-  s = s & "    doc.dataLen = fileLen" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Verify PDF header" & vbCrLf
-  s = s & "    If doc.data(0) <> &H25 Or doc.data(1) <> &H50 Then  ' %P" & vbCrLf
-  s = s & "        Err.Raise vbObjectError + 100, ""PDFReader"", ""Not a valid PDF file""" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ReadPDFFile = doc" & vbCrLf
-  s = s & "    Exit Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "ReadError:" & vbCrLf
-  s = s & "    Close #fileNum" & vbCrLf
-  s = s & "    Err.Raise Err.Number, Err.Source, Err.Description" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- String search helpers ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Find a byte sequence in the PDF data, searching backwards from endPos" & vbCrLf
-  s = s & "Private Function FindLast(doc As PDFDocument, searchBytes() As Byte, Optional startFrom As Long = -1) As Long" & vbCrLf
-  s = s & "    Dim i As Long, j As Long" & vbCrLf
-  s = s & "    Dim searchLen As Long" & vbCrLf
-  s = s & "    searchLen = UBound(searchBytes) - LBound(searchBytes) + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If startFrom < 0 Then startFrom = doc.dataLen - searchLen" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    For i = startFrom To 0 Step -1" & vbCrLf
-  s = s & "        Dim found As Boolean" & vbCrLf
-  s = s & "        found = True" & vbCrLf
-  s = s & "        For j = 0 To searchLen - 1" & vbCrLf
-  s = s & "            If doc.data(i + j) <> searchBytes(LBound(searchBytes) + j) Then" & vbCrLf
-  s = s & "                found = False" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next j" & vbCrLf
-  s = s & "        If found Then" & vbCrLf
-  s = s & "            FindLast = i" & vbCrLf
-  s = s & "            Exit Function" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    FindLast = -1" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Find a byte sequence forward from startPos" & vbCrLf
-  s = s & "Private Function FindForward(doc As PDFDocument, searchBytes() As Byte, startPos As Long) As Long" & vbCrLf
-  s = s & "    Dim i As Long, j As Long" & vbCrLf
-  s = s & "    Dim searchLen As Long" & vbCrLf
-  s = s & "    searchLen = UBound(searchBytes) - LBound(searchBytes) + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    For i = startPos To doc.dataLen - searchLen" & vbCrLf
-  s = s & "        Dim found As Boolean" & vbCrLf
-  s = s & "        found = True" & vbCrLf
-  s = s & "        For j = 0 To searchLen - 1" & vbCrLf
-  s = s & "            If doc.data(i + j) <> searchBytes(LBound(searchBytes) + j) Then" & vbCrLf
-  s = s & "                found = False" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next j" & vbCrLf
-  s = s & "        If found Then" & vbCrLf
-  s = s & "            FindForward = i" & vbCrLf
-  s = s & "            Exit Function" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    FindForward = -1" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Convert string to byte array" & vbCrLf
-  s = s & "Private Function StrToBytes(s As String) As Byte()" & vbCrLf
-  s = s & "    Dim b() As Byte" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    ReDim b(0 To Len(s) - 1)" & vbCrLf
-  s = s & "    For i = 1 To Len(s)" & vbCrLf
-  s = s & "        b(i - 1) = Asc(Mid$(s, i, 1))" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    StrToBytes = b" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Convert a range of bytes to a VBA string (O(n) via Space$ + Mid$)" & vbCrLf
-  s = s & "Private Function BytesToStr(data() As Byte, startPos As Long, length As Long) As String" & vbCrLf
-  s = s & "    If length <= 0 Then" & vbCrLf
-  s = s & "        BytesToStr = """"" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    Dim result As String" & vbCrLf
-  s = s & "    result = Space$(length)" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To length - 1" & vbCrLf
-  s = s & "        Mid$(result, i + 1, 1) = Chr$(data(startPos + i))" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    BytesToStr = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Read a line of ASCII text starting at pos, advance pos past the line ending" & vbCrLf
-  s = s & "Private Function ReadLine(doc As PDFDocument, ByRef pos As Long) As String" & vbCrLf
-  s = s & "    Dim startPos As Long" & vbCrLf
-  s = s & "    startPos = pos" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Do While pos < doc.dataLen" & vbCrLf
-  s = s & "        If doc.data(pos) = 10 Or doc.data(pos) = 13 Then Exit Do" & vbCrLf
-  s = s & "        pos = pos + 1" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ReadLine = BytesToStr(doc.data, startPos, pos - startPos)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Skip line ending" & vbCrLf
-  s = s & "    If pos < doc.dataLen Then" & vbCrLf
-  s = s & "        If doc.data(pos) = 13 Then pos = pos + 1  ' CR" & vbCrLf
-  s = s & "        If pos < doc.dataLen And doc.data(pos) = 10 Then pos = pos + 1  ' LF" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Read an integer from the data at pos" & vbCrLf
-  s = s & "Private Function ReadInt(doc As PDFDocument, ByRef pos As Long) As Long" & vbCrLf
-  s = s & "    Dim result As Long" & vbCrLf
-  s = s & "    Dim negative As Boolean" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Skip whitespace" & vbCrLf
-  s = s & "    Do While pos < doc.dataLen" & vbCrLf
-  s = s & "        Dim c As Byte" & vbCrLf
-  s = s & "        c = doc.data(pos)" & vbCrLf
-  s = s & "        If c <> 32 And c <> 9 And c <> 10 And c <> 13 Then Exit Do" & vbCrLf
-  s = s & "        pos = pos + 1" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If pos < doc.dataLen And doc.data(pos) = Asc(""-"") Then" & vbCrLf
-  s = s & "        negative = True" & vbCrLf
-  s = s & "        pos = pos + 1" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    result = 0" & vbCrLf
-  s = s & "    Do While pos < doc.dataLen" & vbCrLf
-  s = s & "        c = doc.data(pos)" & vbCrLf
-  s = s & "        If c < 48 Or c > 57 Then Exit Do" & vbCrLf
-  s = s & "        result = result * 10 + (c - 48)" & vbCrLf
-  s = s & "        pos = pos + 1" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If negative Then result = -result" & vbCrLf
-  s = s & "    ReadInt = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- XRef table parsing ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub ParseXRef(ByRef doc As PDFDocument)" & vbCrLf
-  s = s & "    ' Find startxref" & vbCrLf
-  s = s & "    Dim searchBytes() As Byte" & vbCrLf
-  s = s & "    searchBytes = StrToBytes(""startxref"")" & vbCrLf
-  s = s & "    Dim startxrefPos As Long" & vbCrLf
-  s = s & "    startxrefPos = FindLast(doc, searchBytes)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If startxrefPos < 0 Then" & vbCrLf
-  s = s & "        Err.Raise vbObjectError + 101, ""PDFReader"", ""Cannot find startxref""" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Read xref offset" & vbCrLf
-  s = s & "    Dim pos As Long" & vbCrLf
-  s = s & "    pos = startxrefPos + 10" & vbCrLf
-  s = s & "    Do While pos < doc.dataLen And (doc.data(pos) = 10 Or doc.data(pos) = 13 Or doc.data(pos) = 32)" & vbCrLf
-  s = s & "        pos = pos + 1" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "    Dim xrefOffset As Long" & vbCrLf
-  s = s & "    xrefOffset = ReadInt(doc, pos)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Parse xref table" & vbCrLf
-  s = s & "    pos = xrefOffset" & vbCrLf
-  s = s & "    Dim line As String" & vbCrLf
-  s = s & "    line = ReadLine(doc, pos)  ' ""xref""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Read subsections" & vbCrLf
-  s = s & "    Dim maxObj As Long" & vbCrLf
-  s = s & "    maxObj = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' First pass: determine total object count" & vbCrLf
-  s = s & "    Dim savedPos As Long" & vbCrLf
-  s = s & "    savedPos = pos" & vbCrLf
-  s = s & "    Do" & vbCrLf
-  s = s & "        line = ReadLine(doc, pos)" & vbCrLf
-  s = s & "        If Left$(line, 7) = ""trailer"" Then Exit Do" & vbCrLf
-  s = s & "        Dim parts() As String" & vbCrLf
-  s = s & "        parts = Split(line, "" "")" & vbCrLf
-  s = s & "        If UBound(parts) >= 1 Then" & vbCrLf
-  s = s & "            Dim startObj As Long, countObj As Long" & vbCrLf
-  s = s & "            startObj = CLng(parts(0))" & vbCrLf
-  s = s & "            countObj = CLng(parts(1))" & vbCrLf
-  s = s & "            If startObj + countObj > maxObj Then maxObj = startObj + countObj" & vbCrLf
-  s = s & "            Dim k As Long" & vbCrLf
-  s = s & "            For k = 0 To countObj - 1" & vbCrLf
-  s = s & "                line = ReadLine(doc, pos)" & vbCrLf
-  s = s & "            Next k" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Allocate xref array" & vbCrLf
-  s = s & "    doc.xrefCount = maxObj" & vbCrLf
-  s = s & "    ReDim doc.xref(0 To maxObj - 1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Second pass: fill entries" & vbCrLf
-  s = s & "    pos = savedPos" & vbCrLf
-  s = s & "    Do" & vbCrLf
-  s = s & "        line = ReadLine(doc, pos)" & vbCrLf
-  s = s & "        If Left$(line, 7) = ""trailer"" Then Exit Do" & vbCrLf
-  s = s & "        parts = Split(line, "" "")" & vbCrLf
-  s = s & "        If UBound(parts) >= 1 Then" & vbCrLf
-  s = s & "            startObj = CLng(parts(0))" & vbCrLf
-  s = s & "            countObj = CLng(parts(1))" & vbCrLf
-  s = s & "            For k = 0 To countObj - 1" & vbCrLf
-  s = s & "                line = ReadLine(doc, pos)" & vbCrLf
-  s = s & "                Dim entryParts() As String" & vbCrLf
-  s = s & "                entryParts = Split(Trim$(line), "" "")" & vbCrLf
-  s = s & "                doc.xref(startObj + k).offset = CLng(entryParts(0))" & vbCrLf
-  s = s & "                doc.xref(startObj + k).generation = CLng(entryParts(1))" & vbCrLf
-  s = s & "                doc.xref(startObj + k).inUse = (entryParts(2) = ""n"")" & vbCrLf
-  s = s & "            Next k" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Parse trailer dictionary" & vbCrLf
-  s = s & "    ParseTrailer doc, pos" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Parse trailer to find /Root, /Encrypt, /ID" & vbCrLf
-  s = s & "Private Sub ParseTrailer(ByRef doc As PDFDocument, pos As Long)" & vbCrLf
-  s = s & "    Dim trailerText As String" & vbCrLf
-  s = s & "    Dim endPos As Long" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    Dim searchBytes() As Byte" & vbCrLf
-  s = s & "    searchBytes = StrToBytes("">>"")" & vbCrLf
-  s = s & "    endPos = FindForward(doc, searchBytes, pos)" & vbCrLf
-  s = s & "    If endPos < 0 Then endPos = pos + 500" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    trailerText = BytesToStr(doc.data, pos, endPos + 2 - pos)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find /Root N 0 R" & vbCrLf
-  s = s & "    Dim rootMatch As Long" & vbCrLf
-  s = s & "    rootMatch = InStr(trailerText, ""/Root "")" & vbCrLf
-  s = s & "    If rootMatch > 0 Then" & vbCrLf
-  s = s & "        Dim rootStr As String" & vbCrLf
-  s = s & "        rootStr = Mid$(trailerText, rootMatch + 6)" & vbCrLf
-  s = s & "        doc.rootObjNum = CLng(Split(Trim$(rootStr), "" "")(0))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find /Encrypt N 0 R" & vbCrLf
-  s = s & "    Dim encMatch As Long" & vbCrLf
-  s = s & "    encMatch = InStr(trailerText, ""/Encrypt "")" & vbCrLf
-  s = s & "    doc.isEncrypted = (encMatch > 0)" & vbCrLf
-  s = s & "    If doc.isEncrypted Then" & vbCrLf
-  s = s & "        Dim encStr As String" & vbCrLf
-  s = s & "        encStr = Mid$(trailerText, encMatch + 9)" & vbCrLf
-  s = s & "        Dim encObjNum As Long" & vbCrLf
-  s = s & "        encObjNum = CLng(Split(Trim$(encStr), "" "")(0))" & vbCrLf
-  s = s & "        ParseEncryptDict doc, encObjNum" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find /ID [<hex>" & vbCrLf
-  s = s & "    Dim idMatch As Long" & vbCrLf
-  s = s & "    idMatch = InStr(trailerText, ""/ID "")" & vbCrLf
-  s = s & "    If idMatch > 0 Then" & vbCrLf
-  s = s & "        Dim idStr As String" & vbCrLf
-  s = s & "        idStr = Mid$(trailerText, idMatch + 4)" & vbCrLf
-  s = s & "        Dim hexStart As Long, hexEnd As Long" & vbCrLf
-  s = s & "        hexStart = InStr(idStr, ""<"")" & vbCrLf
-  s = s & "        hexEnd = InStr(idStr, "">"")" & vbCrLf
-  s = s & "        If hexStart > 0 And hexEnd > hexStart Then" & vbCrLf
-  s = s & "            Dim hexStr As String" & vbCrLf
-  s = s & "            hexStr = Mid$(idStr, hexStart + 1, hexEnd - hexStart - 1)" & vbCrLf
-  s = s & "            ReDim doc.encrypt.fileID(0 To Len(hexStr) \ 2 - 1)" & vbCrLf
-  s = s & "            For i = 0 To Len(hexStr) \ 2 - 1" & vbCrLf
-  s = s & "                doc.encrypt.fileID(i) = CByte(""&H"" & Mid$(hexStr, i * 2 + 1, 2))" & vbCrLf
-  s = s & "            Next i" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Parse the encryption dictionary object" & vbCrLf
-  s = s & "Private Sub ParseEncryptDict(ByRef doc As PDFDocument, encObjNum As Long)" & vbCrLf
-  s = s & "    Dim pos As Long" & vbCrLf
-  s = s & "    pos = doc.xref(encObjNum).offset" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim objText As String" & vbCrLf
-  s = s & "    Dim searchBytes() As Byte" & vbCrLf
-  s = s & "    searchBytes = StrToBytes(""endobj"")" & vbCrLf
-  s = s & "    Dim endPos As Long" & vbCrLf
-  s = s & "    endPos = FindForward(doc, searchBytes, pos)" & vbCrLf
-  s = s & "    If endPos < 0 Then endPos = pos + 500" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    objText = BytesToStr(doc.data, pos, endPos - pos)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    doc.encrypt.V = ExtractIntValue(objText, ""/V "")" & vbCrLf
-  s = s & "    doc.encrypt.R = ExtractIntValue(objText, ""/R "")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim lenBits As Long" & vbCrLf
-  s = s & "    lenBits = ExtractIntValue(objText, ""/Length "")" & vbCrLf
-  s = s & "    If lenBits = 0 Then lenBits = 40" & vbCrLf
-  s = s & "    doc.encrypt.keyLength = lenBits \ 8" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    doc.encrypt.P = ExtractLongValue(objText, ""/P "")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' oStart is 1-based position of ""/O ("" in objText." & vbCrLf
-  s = s & "    ' objText starts at file offset = doc.xref(encObjNum).offset." & vbCrLf
-  s = s & "    ' File position of ""("" = offset + (oStart - 1) + 3 = offset + oStart + 2." & vbCrLf
-  s = s & "    ' We want the byte AFTER ""("", so: offset + oStart + 3." & vbCrLf
-  s = s & "    Dim oStart As Long" & vbCrLf
-  s = s & "    oStart = InStr(objText, ""/O ("")" & vbCrLf
-  s = s & "    If oStart > 0 Then" & vbCrLf
-  s = s & "        doc.encrypt.oValue = ParsePDFStringLiteral(doc, doc.xref(encObjNum).offset + oStart + 3, 32)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim uStart As Long" & vbCrLf
-  s = s & "    uStart = InStr(objText, ""/U ("")" & vbCrLf
-  s = s & "    If uStart > 0 Then" & vbCrLf
-  s = s & "        doc.encrypt.uValue = ParsePDFStringLiteral(doc, doc.xref(encObjNum).offset + uStart + 3, 32)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Parse a PDF string literal starting at pos" & vbCrLf
-  s = s & "Private Function ParsePDFStringLiteral(doc As PDFDocument, pos As Long, maxLen As Long) As Byte()" & vbCrLf
-  s = s & "    Dim result() As Byte" & vbCrLf
-  s = s & "    ReDim result(0 To maxLen - 1)" & vbCrLf
-  s = s & "    Dim outIdx As Long" & vbCrLf
-  s = s & "    Dim depth As Long" & vbCrLf
-  s = s & "    Dim c As Byte" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    depth = 1" & vbCrLf
-  s = s & "    outIdx = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Do While depth > 0 And pos < doc.dataLen And outIdx < maxLen" & vbCrLf
-  s = s & "        c = doc.data(pos)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If c = &H5C Then  ' Backslash" & vbCrLf
-  s = s & "            pos = pos + 1" & vbCrLf
-  s = s & "            If pos >= doc.dataLen Then Exit Do" & vbCrLf
-  s = s & "            c = doc.data(pos)" & vbCrLf
-  s = s & "            Select Case c" & vbCrLf
-  s = s & "                Case Asc(""n""): result(outIdx) = 10" & vbCrLf
-  s = s & "                Case Asc(""r""): result(outIdx) = 13" & vbCrLf
-  s = s & "                Case Asc(""t""): result(outIdx) = 9" & vbCrLf
-  s = s & "                Case Asc(""b""): result(outIdx) = 8" & vbCrLf
-  s = s & "                Case Asc(""f""): result(outIdx) = 12" & vbCrLf
-  s = s & "                Case 40: result(outIdx) = 40" & vbCrLf
-  s = s & "                Case 41: result(outIdx) = 41" & vbCrLf
-  s = s & "                Case &H5C: result(outIdx) = &H5C" & vbCrLf
-  s = s & "                Case 48 To 55" & vbCrLf
-  s = s & "                    Dim octal As String" & vbCrLf
-  s = s & "                    octal = Chr$(c)" & vbCrLf
-  s = s & "                    If pos + 1 < doc.dataLen And doc.data(pos + 1) >= 48 And doc.data(pos + 1) <= 55 Then" & vbCrLf
-  s = s & "                        pos = pos + 1" & vbCrLf
-  s = s & "                        octal = octal & Chr$(doc.data(pos))" & vbCrLf
-  s = s & "                        If pos + 1 < doc.dataLen And doc.data(pos + 1) >= 48 And doc.data(pos + 1) <= 55 Then" & vbCrLf
-  s = s & "                            pos = pos + 1" & vbCrLf
-  s = s & "                            octal = octal & Chr$(doc.data(pos))" & vbCrLf
-  s = s & "                        End If" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                    result(outIdx) = CByte(Val(""&O"" & octal))" & vbCrLf
-  s = s & "                Case Else: result(outIdx) = c" & vbCrLf
-  s = s & "            End Select" & vbCrLf
-  s = s & "            outIdx = outIdx + 1" & vbCrLf
-  s = s & "        ElseIf c = 40 Then" & vbCrLf
-  s = s & "            depth = depth + 1" & vbCrLf
-  s = s & "            result(outIdx) = c" & vbCrLf
-  s = s & "            outIdx = outIdx + 1" & vbCrLf
-  s = s & "        ElseIf c = 41 Then" & vbCrLf
-  s = s & "            depth = depth - 1" & vbCrLf
-  s = s & "            If depth > 0 Then" & vbCrLf
-  s = s & "                result(outIdx) = c" & vbCrLf
-  s = s & "                outIdx = outIdx + 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            result(outIdx) = c" & vbCrLf
-  s = s & "            outIdx = outIdx + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        pos = pos + 1" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ParsePDFStringLiteral = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Extract an integer value after a key in text" & vbCrLf
-  s = s & "Private Function ExtractIntValue(text As String, key As String) As Long" & vbCrLf
-  s = s & "    Dim pos As Long" & vbCrLf
-  s = s & "    pos = InStr(text, key)" & vbCrLf
-  s = s & "    If pos = 0 Then" & vbCrLf
-  s = s & "        ExtractIntValue = 0" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    Dim valStr As String" & vbCrLf
-  s = s & "    valStr = Mid$(text, pos + Len(key))" & vbCrLf
-  s = s & "    ExtractIntValue = CLng(Split(Trim$(valStr), "" "")(0))" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Extract a long value (handles negative P values)" & vbCrLf
-  s = s & "' PDF P value is a signed 32-bit int. VBA Long has the same bit layout." & vbCrLf
-  s = s & "' We just parse as-is — the byte extraction in ComputeEncryptionKey handles" & vbCrLf
-  s = s & "' the unsigned interpretation via masking." & vbCrLf
-  s = s & "Private Function ExtractLongValue(text As String, key As String) As Long" & vbCrLf
-  s = s & "    Dim pos As Long" & vbCrLf
-  s = s & "    pos = InStr(text, key)" & vbCrLf
-  s = s & "    If pos = 0 Then" & vbCrLf
-  s = s & "        ExtractLongValue = 0" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    Dim valStr As String" & vbCrLf
-  s = s & "    valStr = Trim$(Mid$(text, pos + Len(key)))" & vbCrLf
-  s = s & "    Dim numStr As String" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 1 To Len(valStr)" & vbCrLf
-  s = s & "        Dim ch As String" & vbCrLf
-  s = s & "        ch = Mid$(valStr, i, 1)" & vbCrLf
-  s = s & "        If ch = ""-"" Or (ch >= ""0"" And ch <= ""9"") Then" & vbCrLf
-  s = s & "            numStr = numStr & ch" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            Exit For" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractLongValue = CLng(numStr)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Object parsing ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Read the text of an object (between ""N G obj"" and ""endobj"")" & vbCrLf
-  s = s & "Public Function ReadObjectText(doc As PDFDocument, objNum As Long) As String" & vbCrLf
-  s = s & "    Dim pos As Long" & vbCrLf
-  s = s & "    If objNum >= doc.xrefCount Or Not doc.xref(objNum).inUse Then" & vbCrLf
-  s = s & "        ReadObjectText = """"" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    pos = doc.xref(objNum).offset" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim searchBytes() As Byte" & vbCrLf
-  s = s & "    searchBytes = StrToBytes(""endobj"")" & vbCrLf
-  s = s & "    Dim endPos As Long" & vbCrLf
-  s = s & "    endPos = FindForward(doc, searchBytes, pos)" & vbCrLf
-  s = s & "    If endPos < 0 Then endPos = pos + 10000" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ReadObjectText = BytesToStr(doc.data, pos, endPos - pos)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Read and decrypt/decompress a stream from an object" & vbCrLf
-  s = s & "Public Function ReadStream(doc As PDFDocument, objNum As Long) As Byte()" & vbCrLf
-  s = s & "    Dim pos As Long" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    pos = doc.xref(objNum).offset" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim searchBytes() As Byte" & vbCrLf
-  s = s & "    searchBytes = StrToBytes(""stream"")" & vbCrLf
-  s = s & "    Dim streamPos As Long" & vbCrLf
-  s = s & "    streamPos = FindForward(doc, searchBytes, pos)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If streamPos < 0 Then" & vbCrLf
-  s = s & "        Err.Raise vbObjectError + 102, ""PDFReader"", ""No stream found in object "" & objNum" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Get stream length from object header" & vbCrLf
-  s = s & "    Dim headerText As String" & vbCrLf
-  s = s & "    headerText = BytesToStr(doc.data, pos, streamPos - pos)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim streamLength As Long" & vbCrLf
-  s = s & "    streamLength = ExtractIntValue(headerText, ""/Length "")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Handle /Length as indirect reference (e.g. ""/Length 42 0 R"")" & vbCrLf
-  s = s & "    Dim lengthPos As Long" & vbCrLf
-  s = s & "    lengthPos = InStr(headerText, ""/Length "")" & vbCrLf
-  s = s & "    If lengthPos > 0 Then" & vbCrLf
-  s = s & "        Dim afterLength As String" & vbCrLf
-  s = s & "        afterLength = Trim$(Mid$(headerText, lengthPos + 8))" & vbCrLf
-  s = s & "        Dim lengthParts() As String" & vbCrLf
-  s = s & "        lengthParts = Split(afterLength, "" "")" & vbCrLf
-  s = s & "        If UBound(lengthParts) >= 2 Then" & vbCrLf
-  s = s & "            If lengthParts(2) = ""R"" Then" & vbCrLf
-  s = s & "                ' It's an indirect reference — resolve it" & vbCrLf
-  s = s & "                Dim lengthObjNum As Long" & vbCrLf
-  s = s & "                lengthObjNum = CLng(lengthParts(0))" & vbCrLf
-  s = s & "                If lengthObjNum > 0 And lengthObjNum < doc.xrefCount Then" & vbCrLf
-  s = s & "                    Dim lengthObjText As String" & vbCrLf
-  s = s & "                    lengthObjText = ReadObjectText(doc, lengthObjNum)" & vbCrLf
-  s = s & "                    ' Extract the bare integer from the object (e.g. ""42 0 obj\n1234\nendobj"")" & vbCrLf
-  s = s & "                    Dim lmPos As Long" & vbCrLf
-  s = s & "                    lmPos = InStr(lengthObjText, ""obj"")" & vbCrLf
-  s = s & "                    If lmPos > 0 Then" & vbCrLf
-  s = s & "                        Dim lmRest As String" & vbCrLf
-  s = s & "                        lmRest = Trim$(Mid$(lengthObjText, lmPos + 3))" & vbCrLf
-  s = s & "                        Dim lmEnd As Long" & vbCrLf
-  s = s & "                        For lmEnd = 1 To Len(lmRest)" & vbCrLf
-  s = s & "                            Dim lmCh As String" & vbCrLf
-  s = s & "                            lmCh = Mid$(lmRest, lmEnd, 1)" & vbCrLf
-  s = s & "                            If lmCh < ""0"" Or lmCh > ""9"" Then Exit For" & vbCrLf
-  s = s & "                        Next lmEnd" & vbCrLf
-  s = s & "                        If lmEnd > 1 Then" & vbCrLf
-  s = s & "                            streamLength = CLng(Left$(lmRest, lmEnd - 1))" & vbCrLf
-  s = s & "                        End If" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Skip past ""stream"" + line ending" & vbCrLf
-  s = s & "    Dim dataStart As Long" & vbCrLf
-  s = s & "    dataStart = streamPos + 6" & vbCrLf
-  s = s & "    If doc.data(dataStart) = 13 Then dataStart = dataStart + 1" & vbCrLf
-  s = s & "    If doc.data(dataStart) = 10 Then dataStart = dataStart + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Extract raw stream bytes" & vbCrLf
-  s = s & "    Dim rawStream() As Byte" & vbCrLf
-  s = s & "    ReDim rawStream(0 To streamLength - 1)" & vbCrLf
-  s = s & "    For i = 0 To streamLength - 1" & vbCrLf
-  s = s & "        rawStream(i) = doc.data(dataStart + i)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Decrypt if needed" & vbCrLf
-  s = s & "    If doc.isEncrypted Then" & vbCrLf
-  s = s & "        rawStream = PDFCrypto.DecryptStream(doc.encrypt.encKey, objNum, _" & vbCrLf
-  s = s & "                                             doc.xref(objNum).generation, rawStream)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Decompress if FlateDecode" & vbCrLf
-  s = s & "    If InStr(headerText, ""/FlateDecode"") > 0 Then" & vbCrLf
-  s = s & "        rawStream = PDFDeflate.InflateZlib(rawStream)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ReadStream = rawStream" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Page enumeration ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub EnumeratePages(ByRef doc As PDFDocument)" & vbCrLf
-  s = s & "    Dim rootText As String" & vbCrLf
-  s = s & "    rootText = ReadObjectText(doc, doc.rootObjNum)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If InStr(rootText, ""/Type /Catalog"") > 0 Then" & vbCrLf
-  s = s & "        Dim pagesRef As Long" & vbCrLf
-  s = s & "        pagesRef = ExtractObjRef(rootText, ""/Pages "")" & vbCrLf
-  s = s & "        CollectPages doc, pagesRef" & vbCrLf
-  s = s & "    ElseIf InStr(rootText, ""/Type /Page"") > 0 Then" & vbCrLf
-  s = s & "        Dim parentRef As Long" & vbCrLf
-  s = s & "        parentRef = ExtractObjRef(rootText, ""/Parent "")" & vbCrLf
-  s = s & "        Do" & vbCrLf
-  s = s & "            Dim parentText As String" & vbCrLf
-  s = s & "            parentText = ReadObjectText(doc, parentRef)" & vbCrLf
-  s = s & "            Dim grandParentRef As Long" & vbCrLf
-  s = s & "            grandParentRef = ExtractObjRef(parentText, ""/Parent "")" & vbCrLf
-  s = s & "            If grandParentRef > 0 Then" & vbCrLf
-  s = s & "                parentRef = grandParentRef" & vbCrLf
-  s = s & "            Else" & vbCrLf
-  s = s & "                Exit Do" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Loop" & vbCrLf
-  s = s & "        CollectPages doc, parentRef" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub CollectPages(ByRef doc As PDFDocument, pagesObjNum As Long)" & vbCrLf
-  s = s & "    Dim pagesText As String" & vbCrLf
-  s = s & "    pagesText = ReadObjectText(doc, pagesObjNum)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim pageCount As Long" & vbCrLf
-  s = s & "    pageCount = ExtractIntValue(pagesText, ""/Count "")" & vbCrLf
-  s = s & "    If doc.pageCount = 0 Then" & vbCrLf
-  s = s & "        ReDim doc.pageObjNums(0 To pageCount - 1)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim kidsStart As Long, kidsEnd As Long" & vbCrLf
-  s = s & "    kidsStart = InStr(pagesText, ""/Kids ["")" & vbCrLf
-  s = s & "    If kidsStart = 0 Then Exit Sub" & vbCrLf
-  s = s & "    kidsStart = kidsStart + 7" & vbCrLf
-  s = s & "    kidsEnd = InStr(kidsStart, pagesText, ""]"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim kidsStr As String" & vbCrLf
-  s = s & "    kidsStr = Trim$(Mid$(pagesText, kidsStart, kidsEnd - kidsStart))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim tokens() As String" & vbCrLf
-  s = s & "    tokens = Split(kidsStr, "" "")" & vbCrLf
-  s = s & "    Dim idx As Long" & vbCrLf
-  s = s & "    idx = 0" & vbCrLf
-  s = s & "    Do While idx <= UBound(tokens)" & vbCrLf
-  s = s & "        If tokens(idx) = """" Then" & vbCrLf
-  s = s & "            idx = idx + 1" & vbCrLf
-  s = s & "        ElseIf idx + 2 <= UBound(tokens) And tokens(idx + 2) = ""R"" Then" & vbCrLf
-  s = s & "            Dim childObjNum As Long" & vbCrLf
-  s = s & "            childObjNum = CLng(tokens(idx))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            Dim childText As String" & vbCrLf
-  s = s & "            childText = ReadObjectText(doc, childObjNum)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            If InStr(childText, ""/Type /Pages"") > 0 Then" & vbCrLf
-  s = s & "                CollectPages doc, childObjNum" & vbCrLf
-  s = s & "            Else" & vbCrLf
-  s = s & "                doc.pageObjNums(doc.pageCount) = childObjNum" & vbCrLf
-  s = s & "                doc.pageCount = doc.pageCount + 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            idx = idx + 3" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            idx = idx + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ExtractObjRef(text As String, key As String) As Long" & vbCrLf
-  s = s & "    Dim pos As Long" & vbCrLf
-  s = s & "    pos = InStr(text, key)" & vbCrLf
-  s = s & "    If pos = 0 Then" & vbCrLf
-  s = s & "        ExtractObjRef = 0" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    Dim valStr As String" & vbCrLf
-  s = s & "    valStr = Trim$(Mid$(text, pos + Len(key)))" & vbCrLf
-  s = s & "    ExtractObjRef = CLng(Split(valStr, "" "")(0))" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- High-level API ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function OpenPDF(filePath As String) As PDFDocument" & vbCrLf
-  s = s & "    Dim doc As PDFDocument" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    doc = ReadPDFFile(filePath)" & vbCrLf
-  s = s & "    ParseXRef doc" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If doc.isEncrypted Then" & vbCrLf
-  s = s & "        doc.encrypt.encKey = PDFCrypto.ComputeEncryptionKey( _" & vbCrLf
-  s = s & "            doc.encrypt.oValue, doc.encrypt.P, doc.encrypt.fileID)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    EnumeratePages doc" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    OpenPDF = doc" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Get the content stream text for a page (decrypted + decompressed)" & vbCrLf
-  s = s & "' Does NOT expand XObjects - use GetPageContentStreamExpanded for that" & vbCrLf
-  s = s & "Public Function GetPageContentStream(doc As PDFDocument, pageIndex As Long) As String" & vbCrLf
-  s = s & "    Dim pageObjNum As Long" & vbCrLf
-  s = s & "    pageObjNum = doc.pageObjNums(pageIndex)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim pageText As String" & vbCrLf
-  s = s & "    pageText = ReadObjectText(doc, pageObjNum)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim contentsRef As Long" & vbCrLf
-  s = s & "    contentsRef = ExtractObjRef(pageText, ""/Contents "")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If contentsRef = 0 Then" & vbCrLf
-  s = s & "        GetPageContentStream = """"" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim streamData() As Byte" & vbCrLf
-  s = s & "    streamData = ReadStream(doc, contentsRef)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    GetPageContentStream = BytesToStr(streamData, LBound(streamData), UBound(streamData) - LBound(streamData) + 1)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Get the content stream with XObject form references expanded inline" & vbCrLf
-  s = s & "Public Function GetPageContentStreamExpanded(doc As PDFDocument, pageIndex As Long) As String" & vbCrLf
-  s = s & "    Dim pageObjNum As Long" & vbCrLf
-  s = s & "    pageObjNum = doc.pageObjNums(pageIndex)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim pageText As String" & vbCrLf
-  s = s & "    pageText = ReadObjectText(doc, pageObjNum)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Get base content stream" & vbCrLf
-  s = s & "    Dim contentsRef As Long" & vbCrLf
-  s = s & "    contentsRef = ExtractObjRef(pageText, ""/Contents "")" & vbCrLf
-  s = s & "    If contentsRef = 0 Then" & vbCrLf
-  s = s & "        GetPageContentStreamExpanded = """"" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim streamData() As Byte" & vbCrLf
-  s = s & "    streamData = ReadStream(doc, contentsRef)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim contentStream As String" & vbCrLf
-  s = s & "    contentStream = BytesToStr(streamData, LBound(streamData), UBound(streamData) - LBound(streamData) + 1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Expand XObject Do references" & vbCrLf
-  s = s & "    If InStr(contentStream, "" Do"") > 0 Then" & vbCrLf
-  s = s & "        contentStream = ExpandXObjectDo(doc, pageText, contentStream, 0)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    GetPageContentStreamExpanded = contentStream" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Recursively expand /Name Do references in a content stream" & vbCrLf
-  s = s & "Private Function ExpandXObjectDo(doc As PDFDocument, resourcesText As String, _" & vbCrLf
-  s = s & "                                  contentStream As String, depth As Long) As String" & vbCrLf
-  s = s & "    If depth > 5 Then" & vbCrLf
-  s = s & "        ExpandXObjectDo = contentStream" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find all /Name Do patterns" & vbCrLf
-  s = s & "    Dim result As String" & vbCrLf
-  s = s & "    Dim pos As Long" & vbCrLf
-  s = s & "    pos = 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Do While pos <= Len(contentStream)" & vbCrLf
-  s = s & "        ' Look for /Name Do pattern" & vbCrLf
-  s = s & "        Dim doPos As Long" & vbCrLf
-  s = s & "        doPos = InStr(pos, contentStream, "" Do"")" & vbCrLf
-  s = s & "        If doPos = 0 Then" & vbCrLf
-  s = s & "            result = result & Mid$(contentStream, pos)" & vbCrLf
-  s = s & "            Exit Do" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Find the XObject name (e.g., ""/X1"")" & vbCrLf
-  s = s & "        Dim nameStart As Long" & vbCrLf
-  s = s & "        nameStart = doPos - 1" & vbCrLf
-  s = s & "        Do While nameStart > pos And Mid$(contentStream, nameStart, 1) <> ""/""" & vbCrLf
-  s = s & "            nameStart = nameStart - 1" & vbCrLf
-  s = s & "        Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If Mid$(contentStream, nameStart, 1) = ""/"" Then" & vbCrLf
-  s = s & "            Dim xobjName As String" & vbCrLf
-  s = s & "            xobjName = Mid$(contentStream, nameStart, doPos - nameStart)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Add everything before the name" & vbCrLf
-  s = s & "            result = result & Mid$(contentStream, pos, nameStart - pos)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Find the XObject reference in resources" & vbCrLf
-  s = s & "            Dim xobjRef As Long" & vbCrLf
-  s = s & "            xobjRef = FindXObjectRef(doc, resourcesText, xobjName)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            If xobjRef > 0 Then" & vbCrLf
-  s = s & "                ' Read and expand the XObject" & vbCrLf
-  s = s & "                Dim xobjText As String" & vbCrLf
-  s = s & "                xobjText = ReadObjectText(doc, xobjRef)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                If InStr(xobjText, ""/Subtype /Form"") > 0 Then" & vbCrLf
-  s = s & "                    On Error Resume Next" & vbCrLf
-  s = s & "                    Dim xobjStream() As Byte" & vbCrLf
-  s = s & "                    xobjStream = ReadStream(doc, xobjRef)" & vbCrLf
-  s = s & "                    Dim readStreamErr As Long" & vbCrLf
-  s = s & "                    readStreamErr = Err.Number" & vbCrLf
-  s = s & "                    On Error GoTo 0" & vbCrLf
-  s = s & "                    If readStreamErr = 0 Then" & vbCrLf
-  s = s & "                        Dim xobjContent As String" & vbCrLf
-  s = s & "                        xobjContent = BytesToStr(xobjStream, LBound(xobjStream), UBound(xobjStream) - LBound(xobjStream) + 1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                        ' Recursively expand nested Do references" & vbCrLf
-  s = s & "                        If InStr(xobjContent, "" Do"") > 0 Then" & vbCrLf
-  s = s & "                            xobjContent = ExpandXObjectDo(doc, xobjText, xobjContent, depth + 1)" & vbCrLf
-  s = s & "                        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                        result = result & vbLf & xobjContent & vbLf" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            pos = doPos + 3  ' Skip past "" Do""" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            ' Not an XObject reference, copy through" & vbCrLf
-  s = s & "            result = result & Mid$(contentStream, pos, doPos + 3 - pos)" & vbCrLf
-  s = s & "            pos = doPos + 3" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExpandXObjectDo = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Find the object number of an XObject by name" & vbCrLf
-  s = s & "Private Function FindXObjectRef(doc As PDFDocument, resourcesText As String, xobjName As String) As Long" & vbCrLf
-  s = s & "    ' Look for /XObject << ... /Name N 0 R ... >>" & vbCrLf
-  s = s & "    Dim xobjDictPos As Long" & vbCrLf
-  s = s & "    xobjDictPos = InStr(resourcesText, ""/XObject"")" & vbCrLf
-  s = s & "    If xobjDictPos = 0 Then" & vbCrLf
-  s = s & "        FindXObjectRef = 0" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Look for the name in the XObject dictionary" & vbCrLf
-  s = s & "    Dim namePos As Long" & vbCrLf
-  s = s & "    namePos = InStr(xobjDictPos, resourcesText, xobjName & "" "")" & vbCrLf
-  s = s & "    If namePos = 0 Then" & vbCrLf
-  s = s & "        FindXObjectRef = 0" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim refStr As String" & vbCrLf
-  s = s & "    refStr = Trim$(Mid$(resourcesText, namePos + Len(xobjName) + 1))" & vbCrLf
-  s = s & "    Dim refParts() As String" & vbCrLf
-  s = s & "    refParts = Split(refStr, "" "")" & vbCrLf
-  s = s & "    If UBound(refParts) >= 0 Then" & vbCrLf
-  s = s & "        FindXObjectRef = CLng(refParts(0))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Get page rotation (typically 90 for UBS PDFs)" & vbCrLf
-  s = s & "Public Function GetPageRotation(doc As PDFDocument, pageIndex As Long) As Long" & vbCrLf
-  s = s & "    Dim pageObjNum As Long" & vbCrLf
-  s = s & "    pageObjNum = doc.pageObjNums(pageIndex)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim pageText As String" & vbCrLf
-  s = s & "    pageText = ReadObjectText(doc, pageObjNum)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    GetPageRotation = ExtractIntValue(pageText, ""/Rotate "")" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Get font width tables for a page (including nested XObject fonts)" & vbCrLf
-  s = s & "' Returns a Dictionary: fontName -> Array(firstChar, lastChar, width0, width1, ...)" & vbCrLf
-  s = s & "Public Function GetPageFontWidths(doc As PDFDocument, pageIndex As Long) As Object" & vbCrLf
-  s = s & "    Dim fonts As Object" & vbCrLf
-  s = s & "    Set fonts = CreateObject(""Scripting.Dictionary"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim pageObjNum As Long" & vbCrLf
-  s = s & "    pageObjNum = doc.pageObjNums(pageIndex)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim pageText As String" & vbCrLf
-  s = s & "    pageText = ReadObjectText(doc, pageObjNum)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Collect fonts from page resources" & vbCrLf
-  s = s & "    CollectFontsFromResources doc, pageText, fonts" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Also collect from XObject resources (recursive)" & vbCrLf
-  s = s & "    CollectFontsFromXObjects doc, pageText, fonts, 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Set GetPageFontWidths = fonts" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Parse font dictionaries from a resource section and add to fonts dict" & vbCrLf
-  s = s & "Private Sub CollectFontsFromResources(doc As PDFDocument, objText As String, fonts As Object)" & vbCrLf
-  s = s & "    ' Find /Font dictionary" & vbCrLf
-  s = s & "    Dim fontDictPos As Long" & vbCrLf
-  s = s & "    fontDictPos = InStr(objText, ""/Font"")" & vbCrLf
-  s = s & "    If fontDictPos = 0 Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Extract font references: /F2 N 0 R" & vbCrLf
-  s = s & "    Dim searchStart As Long" & vbCrLf
-  s = s & "    searchStart = fontDictPos + 5" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find the << >> boundary" & vbCrLf
-  s = s & "    Dim dictStart As Long, dictEnd As Long" & vbCrLf
-  s = s & "    dictStart = InStr(searchStart, objText, ""<<"")" & vbCrLf
-  s = s & "    dictEnd = InStr(searchStart, objText, "">>"")" & vbCrLf
-  s = s & "    If dictStart = 0 Or dictEnd = 0 Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim fontDictStr As String" & vbCrLf
-  s = s & "    fontDictStr = Mid$(objText, dictStart + 2, dictEnd - dictStart - 2)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Parse /Fname N 0 R entries" & vbCrLf
-  s = s & "    Dim fPos As Long" & vbCrLf
-  s = s & "    fPos = 1" & vbCrLf
-  s = s & "    Do While fPos <= Len(fontDictStr)" & vbCrLf
-  s = s & "        Dim slashPos As Long" & vbCrLf
-  s = s & "        slashPos = InStr(fPos, fontDictStr, ""/F"")" & vbCrLf
-  s = s & "        If slashPos = 0 Then Exit Do" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Get font name" & vbCrLf
-  s = s & "        Dim nameEnd As Long" & vbCrLf
-  s = s & "        nameEnd = slashPos + 1" & vbCrLf
-  s = s & "        Do While nameEnd <= Len(fontDictStr) And Mid$(fontDictStr, nameEnd, 1) <> "" """ & vbCrLf
-  s = s & "            nameEnd = nameEnd + 1" & vbCrLf
-  s = s & "        Loop" & vbCrLf
-  s = s & "        Dim fontName As String" & vbCrLf
-  s = s & "        fontName = Mid$(fontDictStr, slashPos, nameEnd - slashPos)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Get object reference number" & vbCrLf
-  s = s & "        Dim refStr As String" & vbCrLf
-  s = s & "        refStr = Trim$(Mid$(fontDictStr, nameEnd))" & vbCrLf
-  s = s & "        Dim refParts() As String" & vbCrLf
-  s = s & "        refParts = Split(refStr, "" "")" & vbCrLf
-  s = s & "        If UBound(refParts) >= 0 Then" & vbCrLf
-  s = s & "            Dim fontObjNum As Long" & vbCrLf
-  s = s & "            fontObjNum = CLng(refParts(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            If Not fonts.Exists(fontName) Then" & vbCrLf
-  s = s & "                LoadFontWidths doc, fontObjNum, fontName, fonts" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        fPos = nameEnd + 1" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Load width table from a font object" & vbCrLf
-  s = s & "Private Sub LoadFontWidths(doc As PDFDocument, fontObjNum As Long, fontName As String, fonts As Object)" & vbCrLf
-  s = s & "    Dim fontText As String" & vbCrLf
-  s = s & "    fontText = ReadObjectText(doc, fontObjNum)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim firstChar As Long, lastChar As Long" & vbCrLf
-  s = s & "    firstChar = ExtractIntValue(fontText, ""/FirstChar "")" & vbCrLf
-  s = s & "    lastChar = ExtractIntValue(fontText, ""/LastChar "")" & vbCrLf
-  s = s & "    If lastChar = 0 Then lastChar = 255" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find /Widths array" & vbCrLf
-  s = s & "    Dim widthsPos As Long" & vbCrLf
-  s = s & "    widthsPos = InStr(fontText, ""/Widths"")" & vbCrLf
-  s = s & "    If widthsPos = 0 Then" & vbCrLf
-  s = s & "        ' No widths, use default" & vbCrLf
-  s = s & "        Dim numChars As Long" & vbCrLf
-  s = s & "        numChars = lastChar - firstChar + 1" & vbCrLf
-  s = s & "        Dim defaultWidths() As Variant" & vbCrLf
-  s = s & "        ReDim defaultWidths(0 To numChars + 1)" & vbCrLf
-  s = s & "        defaultWidths(0) = firstChar" & vbCrLf
-  s = s & "        defaultWidths(1) = lastChar" & vbCrLf
-  s = s & "        Dim d As Long" & vbCrLf
-  s = s & "        For d = 0 To numChars - 1" & vbCrLf
-  s = s & "            defaultWidths(d + 2) = 500" & vbCrLf
-  s = s & "        Next d" & vbCrLf
-  s = s & "        fonts.Add fontName, defaultWidths" & vbCrLf
-  s = s & "        Exit Sub" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Check if widths is an indirect reference" & vbCrLf
-  s = s & "    Dim afterWidths As String" & vbCrLf
-  s = s & "    afterWidths = Trim$(Mid$(fontText, widthsPos + 7))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim widthsArray As String" & vbCrLf
-  s = s & "    If Left$(afterWidths, 1) = ""["" Then" & vbCrLf
-  s = s & "        ' Inline array" & vbCrLf
-  s = s & "        Dim arrayEnd As Long" & vbCrLf
-  s = s & "        arrayEnd = InStr(afterWidths, ""]"")" & vbCrLf
-  s = s & "        widthsArray = Mid$(afterWidths, 2, arrayEnd - 2)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        ' Indirect reference: N 0 R" & vbCrLf
-  s = s & "        Dim widthsRef As Long" & vbCrLf
-  s = s & "        widthsRef = CLng(Split(afterWidths, "" "")(0))" & vbCrLf
-  s = s & "        Dim widthsText As String" & vbCrLf
-  s = s & "        widthsText = ReadObjectText(doc, widthsRef)" & vbCrLf
-  s = s & "        ' Extract array from object text" & vbCrLf
-  s = s & "        Dim arrStart As Long, arrEnd As Long" & vbCrLf
-  s = s & "        arrStart = InStr(widthsText, ""["")" & vbCrLf
-  s = s & "        arrEnd = InStr(widthsText, ""]"")" & vbCrLf
-  s = s & "        If arrStart > 0 And arrEnd > arrStart Then" & vbCrLf
-  s = s & "            widthsArray = Mid$(widthsText, arrStart + 1, arrEnd - arrStart - 1)" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Parse width values" & vbCrLf
-  s = s & "    Dim widthTokens() As String" & vbCrLf
-  s = s & "    widthTokens = Split(Trim$(widthsArray), "" "")" & vbCrLf
-  s = s & "    numChars = lastChar - firstChar + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim fw() As Variant" & vbCrLf
-  s = s & "    ReDim fw(0 To numChars + 1)" & vbCrLf
-  s = s & "    fw(0) = firstChar" & vbCrLf
-  s = s & "    fw(1) = lastChar" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim wi As Long" & vbCrLf
-  s = s & "    For wi = 0 To numChars - 1" & vbCrLf
-  s = s & "        If wi <= UBound(widthTokens) Then" & vbCrLf
-  s = s & "            fw(wi + 2) = CLng(widthTokens(wi))" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            fw(wi + 2) = 500" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next wi" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    fonts.Add fontName, fw" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Recursively collect fonts from XObject resources" & vbCrLf
-  s = s & "Private Sub CollectFontsFromXObjects(doc As PDFDocument, objText As String, fonts As Object, depth As Long)" & vbCrLf
-  s = s & "    If depth > 5 Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find XObject dictionary" & vbCrLf
-  s = s & "    Dim xobjDictPos As Long" & vbCrLf
-  s = s & "    xobjDictPos = InStr(objText, ""/XObject"")" & vbCrLf
-  s = s & "    If xobjDictPos = 0 Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim dictStart As Long, dictEnd As Long" & vbCrLf
-  s = s & "    dictStart = InStr(xobjDictPos, objText, ""<<"")" & vbCrLf
-  s = s & "    dictEnd = InStr(xobjDictPos, objText, "">>"")" & vbCrLf
-  s = s & "    If dictStart = 0 Or dictEnd = 0 Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim xobjDictStr As String" & vbCrLf
-  s = s & "    xobjDictStr = Mid$(objText, dictStart + 2, dictEnd - dictStart - 2)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Parse XObject references" & vbCrLf
-  s = s & "    Dim xPos As Long" & vbCrLf
-  s = s & "    xPos = 1" & vbCrLf
-  s = s & "    Do While xPos <= Len(xobjDictStr)" & vbCrLf
-  s = s & "        Dim slashPos As Long" & vbCrLf
-  s = s & "        slashPos = InStr(xPos, xobjDictStr, ""/"")" & vbCrLf
-  s = s & "        If slashPos = 0 Then Exit Do" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim nameEnd As Long" & vbCrLf
-  s = s & "        nameEnd = slashPos + 1" & vbCrLf
-  s = s & "        Do While nameEnd <= Len(xobjDictStr) And Mid$(xobjDictStr, nameEnd, 1) <> "" """ & vbCrLf
-  s = s & "            nameEnd = nameEnd + 1" & vbCrLf
-  s = s & "        Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim refStr As String" & vbCrLf
-  s = s & "        refStr = Trim$(Mid$(xobjDictStr, nameEnd))" & vbCrLf
-  s = s & "        Dim refParts() As String" & vbCrLf
-  s = s & "        refParts = Split(refStr, "" "")" & vbCrLf
-  s = s & "        If UBound(refParts) >= 0 Then" & vbCrLf
-  s = s & "            Dim xobjNum As Long" & vbCrLf
-  s = s & "            xobjNum = 0" & vbCrLf
-  s = s & "            On Error Resume Next" & vbCrLf
-  s = s & "            xobjNum = CLng(refParts(0))" & vbCrLf
-  s = s & "            On Error GoTo 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            If xobjNum > 0 And xobjNum < doc.xrefCount Then" & vbCrLf
-  s = s & "                Dim xobjText As String" & vbCrLf
-  s = s & "                xobjText = ReadObjectText(doc, xobjNum)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                If InStr(xobjText, ""/Subtype /Form"") > 0 Then" & vbCrLf
-  s = s & "                    ' Collect fonts from this XObject" & vbCrLf
-  s = s & "                    CollectFontsFromResources doc, xobjText, fonts" & vbCrLf
-  s = s & "                    ' Recurse into nested XObjects" & vbCrLf
-  s = s & "                    CollectFontsFromXObjects doc, xobjText, fonts, depth + 1" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        xPos = nameEnd + 1" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  GetModule_PDFReader = s
-End Function
+Sub WriteModule_PDFReader(ts)
+  ts.WriteLine "Attribute VB_Name = ""PDFReader"""
+  ts.WriteLine "Option Explicit"
+  ts.WriteLine ""
+  ts.WriteLine "' PDF binary file parser"
+  ts.WriteLine "' Reads xref table, object dictionaries, decrypts and decompresses streams"
+  ts.WriteLine "' Supports standard V1/R2 encryption (UBS financial statements)"
+  ts.WriteLine "' Handles XObject expansion and font width tables"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Types ---"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type PDFXRefEntry"
+  ts.WriteLine "    offset As Long"
+  ts.WriteLine "    generation As Long"
+  ts.WriteLine "    inUse As Boolean"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type PDFEncryptInfo"
+  ts.WriteLine "    V As Long"
+  ts.WriteLine "    R As Long"
+  ts.WriteLine "    keyLength As Long   ' in bytes"
+  ts.WriteLine "    P As Long"
+  ts.WriteLine "    oValue() As Byte    ' 32 bytes"
+  ts.WriteLine "    uValue() As Byte    ' 32 bytes"
+  ts.WriteLine "    fileID() As Byte    ' typically 16 bytes"
+  ts.WriteLine "    encKey() As Byte    ' computed base encryption key"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type PDFDocument"
+  ts.WriteLine "    data() As Byte"
+  ts.WriteLine "    dataLen As Long"
+  ts.WriteLine "    xref() As PDFXRefEntry"
+  ts.WriteLine "    xrefCount As Long"
+  ts.WriteLine "    encrypt As PDFEncryptInfo"
+  ts.WriteLine "    isEncrypted As Boolean"
+  ts.WriteLine "    rootObjNum As Long"
+  ts.WriteLine "    pagesObjNum As Long"
+  ts.WriteLine "    pageObjNums() As Long"
+  ts.WriteLine "    pageCount As Long"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "' --- File I/O ---"
+  ts.WriteLine ""
+  ts.WriteLine "' Read entire PDF file into byte array"
+  ts.WriteLine "Public Function ReadPDFFile(filePath As String) As PDFDocument"
+  ts.WriteLine "    Dim doc As PDFDocument"
+  ts.WriteLine "    Dim fileNum As Long"
+  ts.WriteLine "    Dim fileLen As Long"
+  ts.WriteLine ""
+  ts.WriteLine "    fileNum = FreeFile"
+  ts.WriteLine "    On Error GoTo ReadError"
+  ts.WriteLine "    Open filePath For Binary As #fileNum"
+  ts.WriteLine "    fileLen = LOF(fileNum)"
+  ts.WriteLine "    ReDim doc.data(0 To fileLen - 1)"
+  ts.WriteLine "    Get #fileNum, , doc.data"
+  ts.WriteLine "    Close #fileNum"
+  ts.WriteLine "    On Error GoTo 0"
+  ts.WriteLine "    doc.dataLen = fileLen"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Verify PDF header"
+  ts.WriteLine "    If doc.data(0) <> &H25 Or doc.data(1) <> &H50 Then  ' %P"
+  ts.WriteLine "        Err.Raise vbObjectError + 100, ""PDFReader"", ""Not a valid PDF file"""
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ReadPDFFile = doc"
+  ts.WriteLine "    Exit Function"
+  ts.WriteLine ""
+  ts.WriteLine "ReadError:"
+  ts.WriteLine "    Close #fileNum"
+  ts.WriteLine "    Err.Raise Err.Number, Err.Source, Err.Description"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' --- String search helpers ---"
+  ts.WriteLine ""
+  ts.WriteLine "' Find a byte sequence in the PDF data, searching backwards from endPos"
+  ts.WriteLine "Private Function FindLast(doc As PDFDocument, searchBytes() As Byte, Optional startFrom As Long = -1) As Long"
+  ts.WriteLine "    Dim i As Long, j As Long"
+  ts.WriteLine "    Dim searchLen As Long"
+  ts.WriteLine "    searchLen = UBound(searchBytes) - LBound(searchBytes) + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    If startFrom < 0 Then startFrom = doc.dataLen - searchLen"
+  ts.WriteLine ""
+  ts.WriteLine "    For i = startFrom To 0 Step -1"
+  ts.WriteLine "        Dim found As Boolean"
+  ts.WriteLine "        found = True"
+  ts.WriteLine "        For j = 0 To searchLen - 1"
+  ts.WriteLine "            If doc.data(i + j) <> searchBytes(LBound(searchBytes) + j) Then"
+  ts.WriteLine "                found = False"
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next j"
+  ts.WriteLine "        If found Then"
+  ts.WriteLine "            FindLast = i"
+  ts.WriteLine "            Exit Function"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    FindLast = -1"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Find a byte sequence forward from startPos"
+  ts.WriteLine "Private Function FindForward(doc As PDFDocument, searchBytes() As Byte, startPos As Long) As Long"
+  ts.WriteLine "    Dim i As Long, j As Long"
+  ts.WriteLine "    Dim searchLen As Long"
+  ts.WriteLine "    searchLen = UBound(searchBytes) - LBound(searchBytes) + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    For i = startPos To doc.dataLen - searchLen"
+  ts.WriteLine "        Dim found As Boolean"
+  ts.WriteLine "        found = True"
+  ts.WriteLine "        For j = 0 To searchLen - 1"
+  ts.WriteLine "            If doc.data(i + j) <> searchBytes(LBound(searchBytes) + j) Then"
+  ts.WriteLine "                found = False"
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next j"
+  ts.WriteLine "        If found Then"
+  ts.WriteLine "            FindForward = i"
+  ts.WriteLine "            Exit Function"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    FindForward = -1"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Convert string to byte array"
+  ts.WriteLine "Private Function StrToBytes(s As String) As Byte()"
+  ts.WriteLine "    Dim b() As Byte"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    ReDim b(0 To Len(s) - 1)"
+  ts.WriteLine "    For i = 1 To Len(s)"
+  ts.WriteLine "        b(i - 1) = Asc(Mid$(s, i, 1))"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    StrToBytes = b"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Convert a range of bytes to a VBA string (O(n) via Space$ + Mid$)"
+  ts.WriteLine "Private Function BytesToStr(data() As Byte, startPos As Long, length As Long) As String"
+  ts.WriteLine "    If length <= 0 Then"
+  ts.WriteLine "        BytesToStr = """""
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    Dim result As String"
+  ts.WriteLine "    result = Space$(length)"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To length - 1"
+  ts.WriteLine "        Mid$(result, i + 1, 1) = Chr$(data(startPos + i))"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    BytesToStr = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Read a line of ASCII text starting at pos, advance pos past the line ending"
+  ts.WriteLine "Private Function ReadLine(doc As PDFDocument, ByRef pos As Long) As String"
+  ts.WriteLine "    Dim startPos As Long"
+  ts.WriteLine "    startPos = pos"
+  ts.WriteLine ""
+  ts.WriteLine "    Do While pos < doc.dataLen"
+  ts.WriteLine "        If doc.data(pos) = 10 Or doc.data(pos) = 13 Then Exit Do"
+  ts.WriteLine "        pos = pos + 1"
+  ts.WriteLine "    Loop"
+  ts.WriteLine ""
+  ts.WriteLine "    ReadLine = BytesToStr(doc.data, startPos, pos - startPos)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Skip line ending"
+  ts.WriteLine "    If pos < doc.dataLen Then"
+  ts.WriteLine "        If doc.data(pos) = 13 Then pos = pos + 1  ' CR"
+  ts.WriteLine "        If pos < doc.dataLen And doc.data(pos) = 10 Then pos = pos + 1  ' LF"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Read an integer from the data at pos"
+  ts.WriteLine "Private Function ReadInt(doc As PDFDocument, ByRef pos As Long) As Long"
+  ts.WriteLine "    Dim result As Long"
+  ts.WriteLine "    Dim negative As Boolean"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Skip whitespace"
+  ts.WriteLine "    Do While pos < doc.dataLen"
+  ts.WriteLine "        Dim c As Byte"
+  ts.WriteLine "        c = doc.data(pos)"
+  ts.WriteLine "        If c <> 32 And c <> 9 And c <> 10 And c <> 13 Then Exit Do"
+  ts.WriteLine "        pos = pos + 1"
+  ts.WriteLine "    Loop"
+  ts.WriteLine ""
+  ts.WriteLine "    If pos < doc.dataLen And doc.data(pos) = Asc(""-"") Then"
+  ts.WriteLine "        negative = True"
+  ts.WriteLine "        pos = pos + 1"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    result = 0"
+  ts.WriteLine "    Do While pos < doc.dataLen"
+  ts.WriteLine "        c = doc.data(pos)"
+  ts.WriteLine "        If c < 48 Or c > 57 Then Exit Do"
+  ts.WriteLine "        result = result * 10 + (c - 48)"
+  ts.WriteLine "        pos = pos + 1"
+  ts.WriteLine "    Loop"
+  ts.WriteLine ""
+  ts.WriteLine "    If negative Then result = -result"
+  ts.WriteLine "    ReadInt = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' --- XRef table parsing ---"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub ParseXRef(ByRef doc As PDFDocument)"
+  ts.WriteLine "    ' Find startxref"
+  ts.WriteLine "    Dim searchBytes() As Byte"
+  ts.WriteLine "    searchBytes = StrToBytes(""startxref"")"
+  ts.WriteLine "    Dim startxrefPos As Long"
+  ts.WriteLine "    startxrefPos = FindLast(doc, searchBytes)"
+  ts.WriteLine ""
+  ts.WriteLine "    If startxrefPos < 0 Then"
+  ts.WriteLine "        Err.Raise vbObjectError + 101, ""PDFReader"", ""Cannot find startxref"""
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Read xref offset"
+  ts.WriteLine "    Dim pos As Long"
+  ts.WriteLine "    pos = startxrefPos + 10"
+  ts.WriteLine "    Do While pos < doc.dataLen And (doc.data(pos) = 10 Or doc.data(pos) = 13 Or doc.data(pos) = 32)"
+  ts.WriteLine "        pos = pos + 1"
+  ts.WriteLine "    Loop"
+  ts.WriteLine "    Dim xrefOffset As Long"
+  ts.WriteLine "    xrefOffset = ReadInt(doc, pos)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Parse xref table"
+  ts.WriteLine "    pos = xrefOffset"
+  ts.WriteLine "    Dim line As String"
+  ts.WriteLine "    line = ReadLine(doc, pos)  ' ""xref"""
+  ts.WriteLine ""
+  ts.WriteLine "    ' Read subsections"
+  ts.WriteLine "    Dim maxObj As Long"
+  ts.WriteLine "    maxObj = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    ' First pass: determine total object count"
+  ts.WriteLine "    Dim savedPos As Long"
+  ts.WriteLine "    savedPos = pos"
+  ts.WriteLine "    Do"
+  ts.WriteLine "        line = ReadLine(doc, pos)"
+  ts.WriteLine "        If Left$(line, 7) = ""trailer"" Then Exit Do"
+  ts.WriteLine "        Dim parts() As String"
+  ts.WriteLine "        parts = Split(line, "" "")"
+  ts.WriteLine "        If UBound(parts) >= 1 Then"
+  ts.WriteLine "            Dim startObj As Long, countObj As Long"
+  ts.WriteLine "            startObj = CLng(parts(0))"
+  ts.WriteLine "            countObj = CLng(parts(1))"
+  ts.WriteLine "            If startObj + countObj > maxObj Then maxObj = startObj + countObj"
+  ts.WriteLine "            Dim k As Long"
+  ts.WriteLine "            For k = 0 To countObj - 1"
+  ts.WriteLine "                line = ReadLine(doc, pos)"
+  ts.WriteLine "            Next k"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Loop"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Allocate xref array"
+  ts.WriteLine "    doc.xrefCount = maxObj"
+  ts.WriteLine "    ReDim doc.xref(0 To maxObj - 1)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Second pass: fill entries"
+  ts.WriteLine "    pos = savedPos"
+  ts.WriteLine "    Do"
+  ts.WriteLine "        line = ReadLine(doc, pos)"
+  ts.WriteLine "        If Left$(line, 7) = ""trailer"" Then Exit Do"
+  ts.WriteLine "        parts = Split(line, "" "")"
+  ts.WriteLine "        If UBound(parts) >= 1 Then"
+  ts.WriteLine "            startObj = CLng(parts(0))"
+  ts.WriteLine "            countObj = CLng(parts(1))"
+  ts.WriteLine "            For k = 0 To countObj - 1"
+  ts.WriteLine "                line = ReadLine(doc, pos)"
+  ts.WriteLine "                Dim entryParts() As String"
+  ts.WriteLine "                entryParts = Split(Trim$(line), "" "")"
+  ts.WriteLine "                doc.xref(startObj + k).offset = CLng(entryParts(0))"
+  ts.WriteLine "                doc.xref(startObj + k).generation = CLng(entryParts(1))"
+  ts.WriteLine "                doc.xref(startObj + k).inUse = (entryParts(2) = ""n"")"
+  ts.WriteLine "            Next k"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Loop"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Parse trailer dictionary"
+  ts.WriteLine "    ParseTrailer doc, pos"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' Parse trailer to find /Root, /Encrypt, /ID"
+  ts.WriteLine "Private Sub ParseTrailer(ByRef doc As PDFDocument, pos As Long)"
+  ts.WriteLine "    Dim trailerText As String"
+  ts.WriteLine "    Dim endPos As Long"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    Dim searchBytes() As Byte"
+  ts.WriteLine "    searchBytes = StrToBytes("">>"")"
+  ts.WriteLine "    endPos = FindForward(doc, searchBytes, pos)"
+  ts.WriteLine "    If endPos < 0 Then endPos = pos + 500"
+  ts.WriteLine ""
+  ts.WriteLine "    trailerText = BytesToStr(doc.data, pos, endPos + 2 - pos)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find /Root N 0 R"
+  ts.WriteLine "    Dim rootMatch As Long"
+  ts.WriteLine "    rootMatch = InStr(trailerText, ""/Root "")"
+  ts.WriteLine "    If rootMatch > 0 Then"
+  ts.WriteLine "        Dim rootStr As String"
+  ts.WriteLine "        rootStr = Mid$(trailerText, rootMatch + 6)"
+  ts.WriteLine "        doc.rootObjNum = CLng(Split(Trim$(rootStr), "" "")(0))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find /Encrypt N 0 R"
+  ts.WriteLine "    Dim encMatch As Long"
+  ts.WriteLine "    encMatch = InStr(trailerText, ""/Encrypt "")"
+  ts.WriteLine "    doc.isEncrypted = (encMatch > 0)"
+  ts.WriteLine "    If doc.isEncrypted Then"
+  ts.WriteLine "        Dim encStr As String"
+  ts.WriteLine "        encStr = Mid$(trailerText, encMatch + 9)"
+  ts.WriteLine "        Dim encObjNum As Long"
+  ts.WriteLine "        encObjNum = CLng(Split(Trim$(encStr), "" "")(0))"
+  ts.WriteLine "        ParseEncryptDict doc, encObjNum"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find /ID [<hex>"
+  ts.WriteLine "    Dim idMatch As Long"
+  ts.WriteLine "    idMatch = InStr(trailerText, ""/ID "")"
+  ts.WriteLine "    If idMatch > 0 Then"
+  ts.WriteLine "        Dim idStr As String"
+  ts.WriteLine "        idStr = Mid$(trailerText, idMatch + 4)"
+  ts.WriteLine "        Dim hexStart As Long, hexEnd As Long"
+  ts.WriteLine "        hexStart = InStr(idStr, ""<"")"
+  ts.WriteLine "        hexEnd = InStr(idStr, "">"")"
+  ts.WriteLine "        If hexStart > 0 And hexEnd > hexStart Then"
+  ts.WriteLine "            Dim hexStr As String"
+  ts.WriteLine "            hexStr = Mid$(idStr, hexStart + 1, hexEnd - hexStart - 1)"
+  ts.WriteLine "            ReDim doc.encrypt.fileID(0 To Len(hexStr) \ 2 - 1)"
+  ts.WriteLine "            For i = 0 To Len(hexStr) \ 2 - 1"
+  ts.WriteLine "                doc.encrypt.fileID(i) = CByte(""&H"" & Mid$(hexStr, i * 2 + 1, 2))"
+  ts.WriteLine "            Next i"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' Parse the encryption dictionary object"
+  ts.WriteLine "Private Sub ParseEncryptDict(ByRef doc As PDFDocument, encObjNum As Long)"
+  ts.WriteLine "    Dim pos As Long"
+  ts.WriteLine "    pos = doc.xref(encObjNum).offset"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim objText As String"
+  ts.WriteLine "    Dim searchBytes() As Byte"
+  ts.WriteLine "    searchBytes = StrToBytes(""endobj"")"
+  ts.WriteLine "    Dim endPos As Long"
+  ts.WriteLine "    endPos = FindForward(doc, searchBytes, pos)"
+  ts.WriteLine "    If endPos < 0 Then endPos = pos + 500"
+  ts.WriteLine ""
+  ts.WriteLine "    objText = BytesToStr(doc.data, pos, endPos - pos)"
+  ts.WriteLine ""
+  ts.WriteLine "    doc.encrypt.V = ExtractIntValue(objText, ""/V "")"
+  ts.WriteLine "    doc.encrypt.R = ExtractIntValue(objText, ""/R "")"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim lenBits As Long"
+  ts.WriteLine "    lenBits = ExtractIntValue(objText, ""/Length "")"
+  ts.WriteLine "    If lenBits = 0 Then lenBits = 40"
+  ts.WriteLine "    doc.encrypt.keyLength = lenBits \ 8"
+  ts.WriteLine ""
+  ts.WriteLine "    doc.encrypt.P = ExtractLongValue(objText, ""/P "")"
+  ts.WriteLine ""
+  ts.WriteLine "    ' oStart is 1-based position of ""/O ("" in objText."
+  ts.WriteLine "    ' objText starts at file offset = doc.xref(encObjNum).offset."
+  ts.WriteLine "    ' File position of ""("" = offset + (oStart - 1) + 3 = offset + oStart + 2."
+  ts.WriteLine "    ' We want the byte AFTER ""("", so: offset + oStart + 3."
+  ts.WriteLine "    Dim oStart As Long"
+  ts.WriteLine "    oStart = InStr(objText, ""/O ("")"
+  ts.WriteLine "    If oStart > 0 Then"
+  ts.WriteLine "        doc.encrypt.oValue = ParsePDFStringLiteral(doc, doc.xref(encObjNum).offset + oStart + 3, 32)"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim uStart As Long"
+  ts.WriteLine "    uStart = InStr(objText, ""/U ("")"
+  ts.WriteLine "    If uStart > 0 Then"
+  ts.WriteLine "        doc.encrypt.uValue = ParsePDFStringLiteral(doc, doc.xref(encObjNum).offset + uStart + 3, 32)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' Parse a PDF string literal starting at pos"
+  ts.WriteLine "Private Function ParsePDFStringLiteral(doc As PDFDocument, pos As Long, maxLen As Long) As Byte()"
+  ts.WriteLine "    Dim result() As Byte"
+  ts.WriteLine "    ReDim result(0 To maxLen - 1)"
+  ts.WriteLine "    Dim outIdx As Long"
+  ts.WriteLine "    Dim depth As Long"
+  ts.WriteLine "    Dim c As Byte"
+  ts.WriteLine ""
+  ts.WriteLine "    depth = 1"
+  ts.WriteLine "    outIdx = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    Do While depth > 0 And pos < doc.dataLen And outIdx < maxLen"
+  ts.WriteLine "        c = doc.data(pos)"
+  ts.WriteLine ""
+  ts.WriteLine "        If c = &H5C Then  ' Backslash"
+  ts.WriteLine "            pos = pos + 1"
+  ts.WriteLine "            If pos >= doc.dataLen Then Exit Do"
+  ts.WriteLine "            c = doc.data(pos)"
+  ts.WriteLine "            Select Case c"
+  ts.WriteLine "                Case Asc(""n""): result(outIdx) = 10"
+  ts.WriteLine "                Case Asc(""r""): result(outIdx) = 13"
+  ts.WriteLine "                Case Asc(""t""): result(outIdx) = 9"
+  ts.WriteLine "                Case Asc(""b""): result(outIdx) = 8"
+  ts.WriteLine "                Case Asc(""f""): result(outIdx) = 12"
+  ts.WriteLine "                Case 40: result(outIdx) = 40"
+  ts.WriteLine "                Case 41: result(outIdx) = 41"
+  ts.WriteLine "                Case &H5C: result(outIdx) = &H5C"
+  ts.WriteLine "                Case 48 To 55"
+  ts.WriteLine "                    Dim octal As String"
+  ts.WriteLine "                    octal = Chr$(c)"
+  ts.WriteLine "                    If pos + 1 < doc.dataLen And doc.data(pos + 1) >= 48 And doc.data(pos + 1) <= 55 Then"
+  ts.WriteLine "                        pos = pos + 1"
+  ts.WriteLine "                        octal = octal & Chr$(doc.data(pos))"
+  ts.WriteLine "                        If pos + 1 < doc.dataLen And doc.data(pos + 1) >= 48 And doc.data(pos + 1) <= 55 Then"
+  ts.WriteLine "                            pos = pos + 1"
+  ts.WriteLine "                            octal = octal & Chr$(doc.data(pos))"
+  ts.WriteLine "                        End If"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                    result(outIdx) = CByte(Val(""&O"" & octal))"
+  ts.WriteLine "                Case Else: result(outIdx) = c"
+  ts.WriteLine "            End Select"
+  ts.WriteLine "            outIdx = outIdx + 1"
+  ts.WriteLine "        ElseIf c = 40 Then"
+  ts.WriteLine "            depth = depth + 1"
+  ts.WriteLine "            result(outIdx) = c"
+  ts.WriteLine "            outIdx = outIdx + 1"
+  ts.WriteLine "        ElseIf c = 41 Then"
+  ts.WriteLine "            depth = depth - 1"
+  ts.WriteLine "            If depth > 0 Then"
+  ts.WriteLine "                result(outIdx) = c"
+  ts.WriteLine "                outIdx = outIdx + 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            result(outIdx) = c"
+  ts.WriteLine "            outIdx = outIdx + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        pos = pos + 1"
+  ts.WriteLine "    Loop"
+  ts.WriteLine ""
+  ts.WriteLine "    ParsePDFStringLiteral = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Extract an integer value after a key in text"
+  ts.WriteLine "Private Function ExtractIntValue(text As String, key As String) As Long"
+  ts.WriteLine "    Dim pos As Long"
+  ts.WriteLine "    pos = InStr(text, key)"
+  ts.WriteLine "    If pos = 0 Then"
+  ts.WriteLine "        ExtractIntValue = 0"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    Dim valStr As String"
+  ts.WriteLine "    valStr = Mid$(text, pos + Len(key))"
+  ts.WriteLine "    ExtractIntValue = CLng(Split(Trim$(valStr), "" "")(0))"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Extract a long value (handles negative P values)"
+  ts.WriteLine "' PDF P value is a signed 32-bit int. VBA Long has the same bit layout."
+  ts.WriteLine "' We just parse as-is — the byte extraction in ComputeEncryptionKey handles"
+  ts.WriteLine "' the unsigned interpretation via masking."
+  ts.WriteLine "Private Function ExtractLongValue(text As String, key As String) As Long"
+  ts.WriteLine "    Dim pos As Long"
+  ts.WriteLine "    pos = InStr(text, key)"
+  ts.WriteLine "    If pos = 0 Then"
+  ts.WriteLine "        ExtractLongValue = 0"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    Dim valStr As String"
+  ts.WriteLine "    valStr = Trim$(Mid$(text, pos + Len(key)))"
+  ts.WriteLine "    Dim numStr As String"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 1 To Len(valStr)"
+  ts.WriteLine "        Dim ch As String"
+  ts.WriteLine "        ch = Mid$(valStr, i, 1)"
+  ts.WriteLine "        If ch = ""-"" Or (ch >= ""0"" And ch <= ""9"") Then"
+  ts.WriteLine "            numStr = numStr & ch"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            Exit For"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractLongValue = CLng(numStr)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Object parsing ---"
+  ts.WriteLine ""
+  ts.WriteLine "' Read the text of an object (between ""N G obj"" and ""endobj"")"
+  ts.WriteLine "Public Function ReadObjectText(doc As PDFDocument, objNum As Long) As String"
+  ts.WriteLine "    Dim pos As Long"
+  ts.WriteLine "    If objNum >= doc.xrefCount Or Not doc.xref(objNum).inUse Then"
+  ts.WriteLine "        ReadObjectText = """""
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    pos = doc.xref(objNum).offset"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim searchBytes() As Byte"
+  ts.WriteLine "    searchBytes = StrToBytes(""endobj"")"
+  ts.WriteLine "    Dim endPos As Long"
+  ts.WriteLine "    endPos = FindForward(doc, searchBytes, pos)"
+  ts.WriteLine "    If endPos < 0 Then endPos = pos + 10000"
+  ts.WriteLine ""
+  ts.WriteLine "    ReadObjectText = BytesToStr(doc.data, pos, endPos - pos)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Read and decrypt/decompress a stream from an object"
+  ts.WriteLine "Public Function ReadStream(doc As PDFDocument, objNum As Long) As Byte()"
+  ts.WriteLine "    Dim pos As Long"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    pos = doc.xref(objNum).offset"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim searchBytes() As Byte"
+  ts.WriteLine "    searchBytes = StrToBytes(""stream"")"
+  ts.WriteLine "    Dim streamPos As Long"
+  ts.WriteLine "    streamPos = FindForward(doc, searchBytes, pos)"
+  ts.WriteLine ""
+  ts.WriteLine "    If streamPos < 0 Then"
+  ts.WriteLine "        Err.Raise vbObjectError + 102, ""PDFReader"", ""No stream found in object "" & objNum"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Get stream length from object header"
+  ts.WriteLine "    Dim headerText As String"
+  ts.WriteLine "    headerText = BytesToStr(doc.data, pos, streamPos - pos)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim streamLength As Long"
+  ts.WriteLine "    streamLength = ExtractIntValue(headerText, ""/Length "")"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Handle /Length as indirect reference (e.g. ""/Length 42 0 R"")"
+  ts.WriteLine "    Dim lengthPos As Long"
+  ts.WriteLine "    lengthPos = InStr(headerText, ""/Length "")"
+  ts.WriteLine "    If lengthPos > 0 Then"
+  ts.WriteLine "        Dim afterLength As String"
+  ts.WriteLine "        afterLength = Trim$(Mid$(headerText, lengthPos + 8))"
+  ts.WriteLine "        Dim lengthParts() As String"
+  ts.WriteLine "        lengthParts = Split(afterLength, "" "")"
+  ts.WriteLine "        If UBound(lengthParts) >= 2 Then"
+  ts.WriteLine "            If lengthParts(2) = ""R"" Then"
+  ts.WriteLine "                ' It's an indirect reference — resolve it"
+  ts.WriteLine "                Dim lengthObjNum As Long"
+  ts.WriteLine "                lengthObjNum = CLng(lengthParts(0))"
+  ts.WriteLine "                If lengthObjNum > 0 And lengthObjNum < doc.xrefCount Then"
+  ts.WriteLine "                    Dim lengthObjText As String"
+  ts.WriteLine "                    lengthObjText = ReadObjectText(doc, lengthObjNum)"
+  ts.WriteLine "                    ' Extract the bare integer from the object (e.g. ""42 0 obj\n1234\nendobj"")"
+  ts.WriteLine "                    Dim lmPos As Long"
+  ts.WriteLine "                    lmPos = InStr(lengthObjText, ""obj"")"
+  ts.WriteLine "                    If lmPos > 0 Then"
+  ts.WriteLine "                        Dim lmRest As String"
+  ts.WriteLine "                        lmRest = Trim$(Mid$(lengthObjText, lmPos + 3))"
+  ts.WriteLine "                        Dim lmEnd As Long"
+  ts.WriteLine "                        For lmEnd = 1 To Len(lmRest)"
+  ts.WriteLine "                            Dim lmCh As String"
+  ts.WriteLine "                            lmCh = Mid$(lmRest, lmEnd, 1)"
+  ts.WriteLine "                            If lmCh < ""0"" Or lmCh > ""9"" Then Exit For"
+  ts.WriteLine "                        Next lmEnd"
+  ts.WriteLine "                        If lmEnd > 1 Then"
+  ts.WriteLine "                            streamLength = CLng(Left$(lmRest, lmEnd - 1))"
+  ts.WriteLine "                        End If"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Skip past ""stream"" + line ending"
+  ts.WriteLine "    Dim dataStart As Long"
+  ts.WriteLine "    dataStart = streamPos + 6"
+  ts.WriteLine "    If doc.data(dataStart) = 13 Then dataStart = dataStart + 1"
+  ts.WriteLine "    If doc.data(dataStart) = 10 Then dataStart = dataStart + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Extract raw stream bytes"
+  ts.WriteLine "    Dim rawStream() As Byte"
+  ts.WriteLine "    ReDim rawStream(0 To streamLength - 1)"
+  ts.WriteLine "    For i = 0 To streamLength - 1"
+  ts.WriteLine "        rawStream(i) = doc.data(dataStart + i)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Decrypt if needed"
+  ts.WriteLine "    If doc.isEncrypted Then"
+  ts.WriteLine "        rawStream = PDFCrypto.DecryptStream(doc.encrypt.encKey, objNum, _"
+  ts.WriteLine "                                             doc.xref(objNum).generation, rawStream)"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Decompress if FlateDecode"
+  ts.WriteLine "    If InStr(headerText, ""/FlateDecode"") > 0 Then"
+  ts.WriteLine "        rawStream = PDFDeflate.InflateZlib(rawStream)"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ReadStream = rawStream"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Page enumeration ---"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub EnumeratePages(ByRef doc As PDFDocument)"
+  ts.WriteLine "    Dim rootText As String"
+  ts.WriteLine "    rootText = ReadObjectText(doc, doc.rootObjNum)"
+  ts.WriteLine ""
+  ts.WriteLine "    If InStr(rootText, ""/Type /Catalog"") > 0 Then"
+  ts.WriteLine "        Dim pagesRef As Long"
+  ts.WriteLine "        pagesRef = ExtractObjRef(rootText, ""/Pages "")"
+  ts.WriteLine "        CollectPages doc, pagesRef"
+  ts.WriteLine "    ElseIf InStr(rootText, ""/Type /Page"") > 0 Then"
+  ts.WriteLine "        Dim parentRef As Long"
+  ts.WriteLine "        parentRef = ExtractObjRef(rootText, ""/Parent "")"
+  ts.WriteLine "        Do"
+  ts.WriteLine "            Dim parentText As String"
+  ts.WriteLine "            parentText = ReadObjectText(doc, parentRef)"
+  ts.WriteLine "            Dim grandParentRef As Long"
+  ts.WriteLine "            grandParentRef = ExtractObjRef(parentText, ""/Parent "")"
+  ts.WriteLine "            If grandParentRef > 0 Then"
+  ts.WriteLine "                parentRef = grandParentRef"
+  ts.WriteLine "            Else"
+  ts.WriteLine "                Exit Do"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Loop"
+  ts.WriteLine "        CollectPages doc, parentRef"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub CollectPages(ByRef doc As PDFDocument, pagesObjNum As Long)"
+  ts.WriteLine "    Dim pagesText As String"
+  ts.WriteLine "    pagesText = ReadObjectText(doc, pagesObjNum)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim pageCount As Long"
+  ts.WriteLine "    pageCount = ExtractIntValue(pagesText, ""/Count "")"
+  ts.WriteLine "    If doc.pageCount = 0 Then"
+  ts.WriteLine "        ReDim doc.pageObjNums(0 To pageCount - 1)"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim kidsStart As Long, kidsEnd As Long"
+  ts.WriteLine "    kidsStart = InStr(pagesText, ""/Kids ["")"
+  ts.WriteLine "    If kidsStart = 0 Then Exit Sub"
+  ts.WriteLine "    kidsStart = kidsStart + 7"
+  ts.WriteLine "    kidsEnd = InStr(kidsStart, pagesText, ""]"")"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim kidsStr As String"
+  ts.WriteLine "    kidsStr = Trim$(Mid$(pagesText, kidsStart, kidsEnd - kidsStart))"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim tokens() As String"
+  ts.WriteLine "    tokens = Split(kidsStr, "" "")"
+  ts.WriteLine "    Dim idx As Long"
+  ts.WriteLine "    idx = 0"
+  ts.WriteLine "    Do While idx <= UBound(tokens)"
+  ts.WriteLine "        If tokens(idx) = """" Then"
+  ts.WriteLine "            idx = idx + 1"
+  ts.WriteLine "        ElseIf idx + 2 <= UBound(tokens) And tokens(idx + 2) = ""R"" Then"
+  ts.WriteLine "            Dim childObjNum As Long"
+  ts.WriteLine "            childObjNum = CLng(tokens(idx))"
+  ts.WriteLine ""
+  ts.WriteLine "            Dim childText As String"
+  ts.WriteLine "            childText = ReadObjectText(doc, childObjNum)"
+  ts.WriteLine ""
+  ts.WriteLine "            If InStr(childText, ""/Type /Pages"") > 0 Then"
+  ts.WriteLine "                CollectPages doc, childObjNum"
+  ts.WriteLine "            Else"
+  ts.WriteLine "                doc.pageObjNums(doc.pageCount) = childObjNum"
+  ts.WriteLine "                doc.pageCount = doc.pageCount + 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            idx = idx + 3"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            idx = idx + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Loop"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ExtractObjRef(text As String, key As String) As Long"
+  ts.WriteLine "    Dim pos As Long"
+  ts.WriteLine "    pos = InStr(text, key)"
+  ts.WriteLine "    If pos = 0 Then"
+  ts.WriteLine "        ExtractObjRef = 0"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    Dim valStr As String"
+  ts.WriteLine "    valStr = Trim$(Mid$(text, pos + Len(key)))"
+  ts.WriteLine "    ExtractObjRef = CLng(Split(valStr, "" "")(0))"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' --- High-level API ---"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function OpenPDF(filePath As String) As PDFDocument"
+  ts.WriteLine "    Dim doc As PDFDocument"
+  ts.WriteLine ""
+  ts.WriteLine "    doc = ReadPDFFile(filePath)"
+  ts.WriteLine "    ParseXRef doc"
+  ts.WriteLine ""
+  ts.WriteLine "    If doc.isEncrypted Then"
+  ts.WriteLine "        doc.encrypt.encKey = PDFCrypto.ComputeEncryptionKey( _"
+  ts.WriteLine "            doc.encrypt.oValue, doc.encrypt.P, doc.encrypt.fileID)"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    EnumeratePages doc"
+  ts.WriteLine ""
+  ts.WriteLine "    OpenPDF = doc"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Get the content stream text for a page (decrypted + decompressed)"
+  ts.WriteLine "' Does NOT expand XObjects - use GetPageContentStreamExpanded for that"
+  ts.WriteLine "Public Function GetPageContentStream(doc As PDFDocument, pageIndex As Long) As String"
+  ts.WriteLine "    Dim pageObjNum As Long"
+  ts.WriteLine "    pageObjNum = doc.pageObjNums(pageIndex)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim pageText As String"
+  ts.WriteLine "    pageText = ReadObjectText(doc, pageObjNum)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim contentsRef As Long"
+  ts.WriteLine "    contentsRef = ExtractObjRef(pageText, ""/Contents "")"
+  ts.WriteLine ""
+  ts.WriteLine "    If contentsRef = 0 Then"
+  ts.WriteLine "        GetPageContentStream = """""
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim streamData() As Byte"
+  ts.WriteLine "    streamData = ReadStream(doc, contentsRef)"
+  ts.WriteLine ""
+  ts.WriteLine "    GetPageContentStream = BytesToStr(streamData, LBound(streamData), UBound(streamData) - LBound(streamData) + 1)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Get the content stream with XObject form references expanded inline"
+  ts.WriteLine "Public Function GetPageContentStreamExpanded(doc As PDFDocument, pageIndex As Long) As String"
+  ts.WriteLine "    Dim pageObjNum As Long"
+  ts.WriteLine "    pageObjNum = doc.pageObjNums(pageIndex)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim pageText As String"
+  ts.WriteLine "    pageText = ReadObjectText(doc, pageObjNum)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Get base content stream"
+  ts.WriteLine "    Dim contentsRef As Long"
+  ts.WriteLine "    contentsRef = ExtractObjRef(pageText, ""/Contents "")"
+  ts.WriteLine "    If contentsRef = 0 Then"
+  ts.WriteLine "        GetPageContentStreamExpanded = """""
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim streamData() As Byte"
+  ts.WriteLine "    streamData = ReadStream(doc, contentsRef)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim contentStream As String"
+  ts.WriteLine "    contentStream = BytesToStr(streamData, LBound(streamData), UBound(streamData) - LBound(streamData) + 1)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Expand XObject Do references"
+  ts.WriteLine "    If InStr(contentStream, "" Do"") > 0 Then"
+  ts.WriteLine "        contentStream = ExpandXObjectDo(doc, pageText, contentStream, 0)"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    GetPageContentStreamExpanded = contentStream"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Recursively expand /Name Do references in a content stream"
+  ts.WriteLine "Private Function ExpandXObjectDo(doc As PDFDocument, resourcesText As String, _"
+  ts.WriteLine "                                  contentStream As String, depth As Long) As String"
+  ts.WriteLine "    If depth > 5 Then"
+  ts.WriteLine "        ExpandXObjectDo = contentStream"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find all /Name Do patterns"
+  ts.WriteLine "    Dim result As String"
+  ts.WriteLine "    Dim pos As Long"
+  ts.WriteLine "    pos = 1"
+  ts.WriteLine ""
+  ts.WriteLine "    Do While pos <= Len(contentStream)"
+  ts.WriteLine "        ' Look for /Name Do pattern"
+  ts.WriteLine "        Dim doPos As Long"
+  ts.WriteLine "        doPos = InStr(pos, contentStream, "" Do"")"
+  ts.WriteLine "        If doPos = 0 Then"
+  ts.WriteLine "            result = result & Mid$(contentStream, pos)"
+  ts.WriteLine "            Exit Do"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Find the XObject name (e.g., ""/X1"")"
+  ts.WriteLine "        Dim nameStart As Long"
+  ts.WriteLine "        nameStart = doPos - 1"
+  ts.WriteLine "        Do While nameStart > pos And Mid$(contentStream, nameStart, 1) <> ""/"""
+  ts.WriteLine "            nameStart = nameStart - 1"
+  ts.WriteLine "        Loop"
+  ts.WriteLine ""
+  ts.WriteLine "        If Mid$(contentStream, nameStart, 1) = ""/"" Then"
+  ts.WriteLine "            Dim xobjName As String"
+  ts.WriteLine "            xobjName = Mid$(contentStream, nameStart, doPos - nameStart)"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Add everything before the name"
+  ts.WriteLine "            result = result & Mid$(contentStream, pos, nameStart - pos)"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Find the XObject reference in resources"
+  ts.WriteLine "            Dim xobjRef As Long"
+  ts.WriteLine "            xobjRef = FindXObjectRef(doc, resourcesText, xobjName)"
+  ts.WriteLine ""
+  ts.WriteLine "            If xobjRef > 0 Then"
+  ts.WriteLine "                ' Read and expand the XObject"
+  ts.WriteLine "                Dim xobjText As String"
+  ts.WriteLine "                xobjText = ReadObjectText(doc, xobjRef)"
+  ts.WriteLine ""
+  ts.WriteLine "                If InStr(xobjText, ""/Subtype /Form"") > 0 Then"
+  ts.WriteLine "                    On Error Resume Next"
+  ts.WriteLine "                    Dim xobjStream() As Byte"
+  ts.WriteLine "                    xobjStream = ReadStream(doc, xobjRef)"
+  ts.WriteLine "                    Dim readStreamErr As Long"
+  ts.WriteLine "                    readStreamErr = Err.Number"
+  ts.WriteLine "                    On Error GoTo 0"
+  ts.WriteLine "                    If readStreamErr = 0 Then"
+  ts.WriteLine "                        Dim xobjContent As String"
+  ts.WriteLine "                        xobjContent = BytesToStr(xobjStream, LBound(xobjStream), UBound(xobjStream) - LBound(xobjStream) + 1)"
+  ts.WriteLine ""
+  ts.WriteLine "                        ' Recursively expand nested Do references"
+  ts.WriteLine "                        If InStr(xobjContent, "" Do"") > 0 Then"
+  ts.WriteLine "                            xobjContent = ExpandXObjectDo(doc, xobjText, xobjContent, depth + 1)"
+  ts.WriteLine "                        End If"
+  ts.WriteLine ""
+  ts.WriteLine "                        result = result & vbLf & xobjContent & vbLf"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine ""
+  ts.WriteLine "            pos = doPos + 3  ' Skip past "" Do"""
+  ts.WriteLine "        Else"
+  ts.WriteLine "            ' Not an XObject reference, copy through"
+  ts.WriteLine "            result = result & Mid$(contentStream, pos, doPos + 3 - pos)"
+  ts.WriteLine "            pos = doPos + 3"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Loop"
+  ts.WriteLine ""
+  ts.WriteLine "    ExpandXObjectDo = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Find the object number of an XObject by name"
+  ts.WriteLine "Private Function FindXObjectRef(doc As PDFDocument, resourcesText As String, xobjName As String) As Long"
+  ts.WriteLine "    ' Look for /XObject << ... /Name N 0 R ... >>"
+  ts.WriteLine "    Dim xobjDictPos As Long"
+  ts.WriteLine "    xobjDictPos = InStr(resourcesText, ""/XObject"")"
+  ts.WriteLine "    If xobjDictPos = 0 Then"
+  ts.WriteLine "        FindXObjectRef = 0"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Look for the name in the XObject dictionary"
+  ts.WriteLine "    Dim namePos As Long"
+  ts.WriteLine "    namePos = InStr(xobjDictPos, resourcesText, xobjName & "" "")"
+  ts.WriteLine "    If namePos = 0 Then"
+  ts.WriteLine "        FindXObjectRef = 0"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim refStr As String"
+  ts.WriteLine "    refStr = Trim$(Mid$(resourcesText, namePos + Len(xobjName) + 1))"
+  ts.WriteLine "    Dim refParts() As String"
+  ts.WriteLine "    refParts = Split(refStr, "" "")"
+  ts.WriteLine "    If UBound(refParts) >= 0 Then"
+  ts.WriteLine "        FindXObjectRef = CLng(refParts(0))"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Get page rotation (typically 90 for UBS PDFs)"
+  ts.WriteLine "Public Function GetPageRotation(doc As PDFDocument, pageIndex As Long) As Long"
+  ts.WriteLine "    Dim pageObjNum As Long"
+  ts.WriteLine "    pageObjNum = doc.pageObjNums(pageIndex)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim pageText As String"
+  ts.WriteLine "    pageText = ReadObjectText(doc, pageObjNum)"
+  ts.WriteLine ""
+  ts.WriteLine "    GetPageRotation = ExtractIntValue(pageText, ""/Rotate "")"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Get font width tables for a page (including nested XObject fonts)"
+  ts.WriteLine "' Returns a Dictionary: fontName -> Array(firstChar, lastChar, width0, width1, ...)"
+  ts.WriteLine "Public Function GetPageFontWidths(doc As PDFDocument, pageIndex As Long) As Object"
+  ts.WriteLine "    Dim fonts As Object"
+  ts.WriteLine "    Set fonts = CreateObject(""Scripting.Dictionary"")"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim pageObjNum As Long"
+  ts.WriteLine "    pageObjNum = doc.pageObjNums(pageIndex)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim pageText As String"
+  ts.WriteLine "    pageText = ReadObjectText(doc, pageObjNum)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Collect fonts from page resources"
+  ts.WriteLine "    CollectFontsFromResources doc, pageText, fonts"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Also collect from XObject resources (recursive)"
+  ts.WriteLine "    CollectFontsFromXObjects doc, pageText, fonts, 0"
+  ts.WriteLine ""
+  ts.WriteLine "    Set GetPageFontWidths = fonts"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Parse font dictionaries from a resource section and add to fonts dict"
+  ts.WriteLine "Private Sub CollectFontsFromResources(doc As PDFDocument, objText As String, fonts As Object)"
+  ts.WriteLine "    ' Find /Font dictionary"
+  ts.WriteLine "    Dim fontDictPos As Long"
+  ts.WriteLine "    fontDictPos = InStr(objText, ""/Font"")"
+  ts.WriteLine "    If fontDictPos = 0 Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Extract font references: /F2 N 0 R"
+  ts.WriteLine "    Dim searchStart As Long"
+  ts.WriteLine "    searchStart = fontDictPos + 5"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find the << >> boundary"
+  ts.WriteLine "    Dim dictStart As Long, dictEnd As Long"
+  ts.WriteLine "    dictStart = InStr(searchStart, objText, ""<<"")"
+  ts.WriteLine "    dictEnd = InStr(searchStart, objText, "">>"")"
+  ts.WriteLine "    If dictStart = 0 Or dictEnd = 0 Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim fontDictStr As String"
+  ts.WriteLine "    fontDictStr = Mid$(objText, dictStart + 2, dictEnd - dictStart - 2)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Parse /Fname N 0 R entries"
+  ts.WriteLine "    Dim fPos As Long"
+  ts.WriteLine "    fPos = 1"
+  ts.WriteLine "    Do While fPos <= Len(fontDictStr)"
+  ts.WriteLine "        Dim slashPos As Long"
+  ts.WriteLine "        slashPos = InStr(fPos, fontDictStr, ""/F"")"
+  ts.WriteLine "        If slashPos = 0 Then Exit Do"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Get font name"
+  ts.WriteLine "        Dim nameEnd As Long"
+  ts.WriteLine "        nameEnd = slashPos + 1"
+  ts.WriteLine "        Do While nameEnd <= Len(fontDictStr) And Mid$(fontDictStr, nameEnd, 1) <> "" """
+  ts.WriteLine "            nameEnd = nameEnd + 1"
+  ts.WriteLine "        Loop"
+  ts.WriteLine "        Dim fontName As String"
+  ts.WriteLine "        fontName = Mid$(fontDictStr, slashPos, nameEnd - slashPos)"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Get object reference number"
+  ts.WriteLine "        Dim refStr As String"
+  ts.WriteLine "        refStr = Trim$(Mid$(fontDictStr, nameEnd))"
+  ts.WriteLine "        Dim refParts() As String"
+  ts.WriteLine "        refParts = Split(refStr, "" "")"
+  ts.WriteLine "        If UBound(refParts) >= 0 Then"
+  ts.WriteLine "            Dim fontObjNum As Long"
+  ts.WriteLine "            fontObjNum = CLng(refParts(0))"
+  ts.WriteLine ""
+  ts.WriteLine "            If Not fonts.Exists(fontName) Then"
+  ts.WriteLine "                LoadFontWidths doc, fontObjNum, fontName, fonts"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        fPos = nameEnd + 1"
+  ts.WriteLine "    Loop"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' Load width table from a font object"
+  ts.WriteLine "Private Sub LoadFontWidths(doc As PDFDocument, fontObjNum As Long, fontName As String, fonts As Object)"
+  ts.WriteLine "    Dim fontText As String"
+  ts.WriteLine "    fontText = ReadObjectText(doc, fontObjNum)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim firstChar As Long, lastChar As Long"
+  ts.WriteLine "    firstChar = ExtractIntValue(fontText, ""/FirstChar "")"
+  ts.WriteLine "    lastChar = ExtractIntValue(fontText, ""/LastChar "")"
+  ts.WriteLine "    If lastChar = 0 Then lastChar = 255"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find /Widths array"
+  ts.WriteLine "    Dim widthsPos As Long"
+  ts.WriteLine "    widthsPos = InStr(fontText, ""/Widths"")"
+  ts.WriteLine "    If widthsPos = 0 Then"
+  ts.WriteLine "        ' No widths, use default"
+  ts.WriteLine "        Dim numChars As Long"
+  ts.WriteLine "        numChars = lastChar - firstChar + 1"
+  ts.WriteLine "        Dim defaultWidths() As Variant"
+  ts.WriteLine "        ReDim defaultWidths(0 To numChars + 1)"
+  ts.WriteLine "        defaultWidths(0) = firstChar"
+  ts.WriteLine "        defaultWidths(1) = lastChar"
+  ts.WriteLine "        Dim d As Long"
+  ts.WriteLine "        For d = 0 To numChars - 1"
+  ts.WriteLine "            defaultWidths(d + 2) = 500"
+  ts.WriteLine "        Next d"
+  ts.WriteLine "        fonts.Add fontName, defaultWidths"
+  ts.WriteLine "        Exit Sub"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Check if widths is an indirect reference"
+  ts.WriteLine "    Dim afterWidths As String"
+  ts.WriteLine "    afterWidths = Trim$(Mid$(fontText, widthsPos + 7))"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim widthsArray As String"
+  ts.WriteLine "    If Left$(afterWidths, 1) = ""["" Then"
+  ts.WriteLine "        ' Inline array"
+  ts.WriteLine "        Dim arrayEnd As Long"
+  ts.WriteLine "        arrayEnd = InStr(afterWidths, ""]"")"
+  ts.WriteLine "        widthsArray = Mid$(afterWidths, 2, arrayEnd - 2)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        ' Indirect reference: N 0 R"
+  ts.WriteLine "        Dim widthsRef As Long"
+  ts.WriteLine "        widthsRef = CLng(Split(afterWidths, "" "")(0))"
+  ts.WriteLine "        Dim widthsText As String"
+  ts.WriteLine "        widthsText = ReadObjectText(doc, widthsRef)"
+  ts.WriteLine "        ' Extract array from object text"
+  ts.WriteLine "        Dim arrStart As Long, arrEnd As Long"
+  ts.WriteLine "        arrStart = InStr(widthsText, ""["")"
+  ts.WriteLine "        arrEnd = InStr(widthsText, ""]"")"
+  ts.WriteLine "        If arrStart > 0 And arrEnd > arrStart Then"
+  ts.WriteLine "            widthsArray = Mid$(widthsText, arrStart + 1, arrEnd - arrStart - 1)"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Parse width values"
+  ts.WriteLine "    Dim widthTokens() As String"
+  ts.WriteLine "    widthTokens = Split(Trim$(widthsArray), "" "")"
+  ts.WriteLine "    numChars = lastChar - firstChar + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim fw() As Variant"
+  ts.WriteLine "    ReDim fw(0 To numChars + 1)"
+  ts.WriteLine "    fw(0) = firstChar"
+  ts.WriteLine "    fw(1) = lastChar"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim wi As Long"
+  ts.WriteLine "    For wi = 0 To numChars - 1"
+  ts.WriteLine "        If wi <= UBound(widthTokens) Then"
+  ts.WriteLine "            fw(wi + 2) = CLng(widthTokens(wi))"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            fw(wi + 2) = 500"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next wi"
+  ts.WriteLine ""
+  ts.WriteLine "    fonts.Add fontName, fw"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' Recursively collect fonts from XObject resources"
+  ts.WriteLine "Private Sub CollectFontsFromXObjects(doc As PDFDocument, objText As String, fonts As Object, depth As Long)"
+  ts.WriteLine "    If depth > 5 Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find XObject dictionary"
+  ts.WriteLine "    Dim xobjDictPos As Long"
+  ts.WriteLine "    xobjDictPos = InStr(objText, ""/XObject"")"
+  ts.WriteLine "    If xobjDictPos = 0 Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim dictStart As Long, dictEnd As Long"
+  ts.WriteLine "    dictStart = InStr(xobjDictPos, objText, ""<<"")"
+  ts.WriteLine "    dictEnd = InStr(xobjDictPos, objText, "">>"")"
+  ts.WriteLine "    If dictStart = 0 Or dictEnd = 0 Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim xobjDictStr As String"
+  ts.WriteLine "    xobjDictStr = Mid$(objText, dictStart + 2, dictEnd - dictStart - 2)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Parse XObject references"
+  ts.WriteLine "    Dim xPos As Long"
+  ts.WriteLine "    xPos = 1"
+  ts.WriteLine "    Do While xPos <= Len(xobjDictStr)"
+  ts.WriteLine "        Dim slashPos As Long"
+  ts.WriteLine "        slashPos = InStr(xPos, xobjDictStr, ""/"")"
+  ts.WriteLine "        If slashPos = 0 Then Exit Do"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim nameEnd As Long"
+  ts.WriteLine "        nameEnd = slashPos + 1"
+  ts.WriteLine "        Do While nameEnd <= Len(xobjDictStr) And Mid$(xobjDictStr, nameEnd, 1) <> "" """
+  ts.WriteLine "            nameEnd = nameEnd + 1"
+  ts.WriteLine "        Loop"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim refStr As String"
+  ts.WriteLine "        refStr = Trim$(Mid$(xobjDictStr, nameEnd))"
+  ts.WriteLine "        Dim refParts() As String"
+  ts.WriteLine "        refParts = Split(refStr, "" "")"
+  ts.WriteLine "        If UBound(refParts) >= 0 Then"
+  ts.WriteLine "            Dim xobjNum As Long"
+  ts.WriteLine "            xobjNum = 0"
+  ts.WriteLine "            On Error Resume Next"
+  ts.WriteLine "            xobjNum = CLng(refParts(0))"
+  ts.WriteLine "            On Error GoTo 0"
+  ts.WriteLine ""
+  ts.WriteLine "            If xobjNum > 0 And xobjNum < doc.xrefCount Then"
+  ts.WriteLine "                Dim xobjText As String"
+  ts.WriteLine "                xobjText = ReadObjectText(doc, xobjNum)"
+  ts.WriteLine ""
+  ts.WriteLine "                If InStr(xobjText, ""/Subtype /Form"") > 0 Then"
+  ts.WriteLine "                    ' Collect fonts from this XObject"
+  ts.WriteLine "                    CollectFontsFromResources doc, xobjText, fonts"
+  ts.WriteLine "                    ' Recurse into nested XObjects"
+  ts.WriteLine "                    CollectFontsFromXObjects doc, xobjText, fonts, depth + 1"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        xPos = nameEnd + 1"
+  ts.WriteLine "    Loop"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+End Sub
 
-Function GetModule_PDFTextExtract()
-  Dim s
-  s = ""
-  s = s & "Attribute VB_Name = ""PDFTextExtract""" & vbCrLf
-  s = s & "Option Explicit" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' PDF content stream text extraction" & vbCrLf
-  s = s & "' Parses BT/ET blocks, Tm/Td/Tf/Tj operators" & vbCrLf
-  s = s & "' Tracks CTM via cm/q/Q for XObject coordinate transforms" & vbCrLf
-  s = s & "' Applies viewport transform for 90-degree rotation" & vbCrLf
-  s = s & "' Reconstructs readable text lines (port of pdf-extract.ts)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Types ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type TextItem" & vbCrLf
-  s = s & "    str As String" & vbCrLf
-  s = s & "    x As Double" & vbCrLf
-  s = s & "    y As Double" & vbCrLf
-  s = s & "    width As Double" & vbCrLf
-  s = s & "    fontSize As Double" & vbCrLf
-  s = s & "    fontName As String" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Content stream parsing ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Extract all text items from a content stream" & vbCrLf
-  s = s & "' Handles cm, q, Q operators for XObject coordinate transforms" & vbCrLf
-  s = s & "Public Function ExtractTextItems(contentStream As String, pageRotation As Long, _" & vbCrLf
-  s = s & "                                  fonts As Object) As TextItem()" & vbCrLf
-  s = s & "    Dim items() As TextItem" & vbCrLf
-  s = s & "    Dim itemCount As Long" & vbCrLf
-  s = s & "    ReDim items(0 To 999)" & vbCrLf
-  s = s & "    itemCount = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Viewport transform for rotation" & vbCrLf
-  s = s & "    ' For 90-degree rotation: [0, 1, 1, 0, 0, 0] (confirmed correct)" & vbCrLf
-  s = s & "    Dim vt(0 To 5) As Double" & vbCrLf
-  s = s & "    Select Case pageRotation" & vbCrLf
-  s = s & "        Case 90" & vbCrLf
-  s = s & "            vt(0) = 0: vt(1) = 1: vt(2) = 1: vt(3) = 0: vt(4) = 0: vt(5) = 0" & vbCrLf
-  s = s & "        Case 180" & vbCrLf
-  s = s & "            vt(0) = -1: vt(1) = 0: vt(2) = 0: vt(3) = -1: vt(4) = 612: vt(5) = 792" & vbCrLf
-  s = s & "        Case 270" & vbCrLf
-  s = s & "            vt(0) = 0: vt(1) = -1: vt(2) = -1: vt(3) = 0: vt(4) = 612: vt(5) = 792" & vbCrLf
-  s = s & "        Case Else  ' 0" & vbCrLf
-  s = s & "            vt(0) = 1: vt(1) = 0: vt(2) = 0: vt(3) = 1: vt(4) = 0: vt(5) = 0" & vbCrLf
-  s = s & "    End Select" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' CTM (current transformation matrix) for XObject coordinate transforms" & vbCrLf
-  s = s & "    Dim ctm(0 To 5) As Double" & vbCrLf
-  s = s & "    ctm(0) = 1: ctm(1) = 0: ctm(2) = 0: ctm(3) = 1: ctm(4) = 0: ctm(5) = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' CTM stack for q/Q save/restore" & vbCrLf
-  s = s & "    Dim ctmStack() As Double" & vbCrLf
-  s = s & "    Dim stackDepth As Long" & vbCrLf
-  s = s & "    ReDim ctmStack(0 To 59)  ' 10 levels * 6 values" & vbCrLf
-  s = s & "    stackDepth = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Current text state" & vbCrLf
-  s = s & "    Dim tmA As Double, tmB As Double, tmC As Double, tmD As Double" & vbCrLf
-  s = s & "    Dim tmE As Double, tmF As Double" & vbCrLf
-  s = s & "    Dim currentFontSize As Double" & vbCrLf
-  s = s & "    Dim currentFontName As String" & vbCrLf
-  s = s & "    Dim inTextBlock As Boolean" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    currentFontSize = 12  ' default" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Parse content stream line by line" & vbCrLf
-  s = s & "    Dim lines() As String" & vbCrLf
-  s = s & "    lines = Split(contentStream, vbLf)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To UBound(lines)" & vbCrLf
-  s = s & "        Dim line As String" & vbCrLf
-  s = s & "        line = Trim$(lines(i))" & vbCrLf
-  s = s & "        If Len(line) = 0 Then GoTo NextLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Graphics state: q (save)" & vbCrLf
-  s = s & "        If line = ""q"" Then" & vbCrLf
-  s = s & "            If stackDepth < 10 Then" & vbCrLf
-  s = s & "                Dim base As Long" & vbCrLf
-  s = s & "                base = stackDepth * 6" & vbCrLf
-  s = s & "                ctmStack(base) = ctm(0): ctmStack(base + 1) = ctm(1)" & vbCrLf
-  s = s & "                ctmStack(base + 2) = ctm(2): ctmStack(base + 3) = ctm(3)" & vbCrLf
-  s = s & "                ctmStack(base + 4) = ctm(4): ctmStack(base + 5) = ctm(5)" & vbCrLf
-  s = s & "                stackDepth = stackDepth + 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            GoTo NextLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Graphics state: Q (restore)" & vbCrLf
-  s = s & "        If line = ""Q"" Then" & vbCrLf
-  s = s & "            If stackDepth > 0 Then" & vbCrLf
-  s = s & "                stackDepth = stackDepth - 1" & vbCrLf
-  s = s & "                base = stackDepth * 6" & vbCrLf
-  s = s & "                ctm(0) = ctmStack(base): ctm(1) = ctmStack(base + 1)" & vbCrLf
-  s = s & "                ctm(2) = ctmStack(base + 2): ctm(3) = ctmStack(base + 3)" & vbCrLf
-  s = s & "                ctm(4) = ctmStack(base + 4): ctm(5) = ctmStack(base + 5)" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            GoTo NextLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' cm: concat matrix to CTM" & vbCrLf
-  s = s & "        If Right$(line, 3) = "" cm"" Then" & vbCrLf
-  s = s & "            Dim cmParts() As String" & vbCrLf
-  s = s & "            cmParts = Split(Left$(line, Len(line) - 3), "" "")" & vbCrLf
-  s = s & "            If UBound(cmParts) >= 5 Then" & vbCrLf
-  s = s & "                ' Multiply: CTM = cm_matrix * CTM" & vbCrLf
-  s = s & "                Dim cmA As Double, cmB As Double, cmC As Double" & vbCrLf
-  s = s & "                Dim cmD As Double, cmE As Double, cmF As Double" & vbCrLf
-  s = s & "                cmA = CDbl(cmParts(0)): cmB = CDbl(cmParts(1))" & vbCrLf
-  s = s & "                cmC = CDbl(cmParts(2)): cmD = CDbl(cmParts(3))" & vbCrLf
-  s = s & "                cmE = CDbl(cmParts(4)): cmF = CDbl(cmParts(5))" & vbCrLf
-  s = s & "                Dim newCtm(0 To 5) As Double" & vbCrLf
-  s = s & "                newCtm(0) = cmA * ctm(0) + cmB * ctm(2)" & vbCrLf
-  s = s & "                newCtm(1) = cmA * ctm(1) + cmB * ctm(3)" & vbCrLf
-  s = s & "                newCtm(2) = cmC * ctm(0) + cmD * ctm(2)" & vbCrLf
-  s = s & "                newCtm(3) = cmC * ctm(1) + cmD * ctm(3)" & vbCrLf
-  s = s & "                newCtm(4) = cmE * ctm(0) + cmF * ctm(2) + ctm(4)" & vbCrLf
-  s = s & "                newCtm(5) = cmE * ctm(1) + cmF * ctm(3) + ctm(5)" & vbCrLf
-  s = s & "                ctm(0) = newCtm(0): ctm(1) = newCtm(1)" & vbCrLf
-  s = s & "                ctm(2) = newCtm(2): ctm(3) = newCtm(3)" & vbCrLf
-  s = s & "                ctm(4) = newCtm(4): ctm(5) = newCtm(5)" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            GoTo NextLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Check for BT/ET" & vbCrLf
-  s = s & "        If line = ""BT"" Then" & vbCrLf
-  s = s & "            inTextBlock = True" & vbCrLf
-  s = s & "            tmA = 1: tmB = 0: tmC = 0: tmD = 1: tmE = 0: tmF = 0" & vbCrLf
-  s = s & "            GoTo NextLine" & vbCrLf
-  s = s & "        ElseIf line = ""ET"" Then" & vbCrLf
-  s = s & "            inTextBlock = False" & vbCrLf
-  s = s & "            GoTo NextLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If Not inTextBlock Then GoTo NextLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Parse text operators" & vbCrLf
-  s = s & "        ' Tm: ""a b c d e f Tm"" - set text matrix" & vbCrLf
-  s = s & "        If Right$(line, 3) = "" Tm"" Then" & vbCrLf
-  s = s & "            Dim tmParts() As String" & vbCrLf
-  s = s & "            tmParts = Split(Left$(line, Len(line) - 3), "" "")" & vbCrLf
-  s = s & "            If UBound(tmParts) >= 5 Then" & vbCrLf
-  s = s & "                tmA = CDbl(tmParts(0))" & vbCrLf
-  s = s & "                tmB = CDbl(tmParts(1))" & vbCrLf
-  s = s & "                tmC = CDbl(tmParts(2))" & vbCrLf
-  s = s & "                tmD = CDbl(tmParts(3))" & vbCrLf
-  s = s & "                tmE = CDbl(tmParts(4))" & vbCrLf
-  s = s & "                tmF = CDbl(tmParts(5))" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            GoTo NextLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Td: ""tx ty Td"" - move text position" & vbCrLf
-  s = s & "        If Right$(line, 3) = "" Td"" Or Right$(line, 3) = "" TD"" Then" & vbCrLf
-  s = s & "            Dim tdParts() As String" & vbCrLf
-  s = s & "            tdParts = Split(Left$(line, Len(line) - 3), "" "")" & vbCrLf
-  s = s & "            If UBound(tdParts) >= 1 Then" & vbCrLf
-  s = s & "                Dim tx As Double, ty As Double" & vbCrLf
-  s = s & "                tx = CDbl(tdParts(0))" & vbCrLf
-  s = s & "                ty = CDbl(tdParts(1))" & vbCrLf
-  s = s & "                tmE = tmE + tx * tmA + ty * tmC" & vbCrLf
-  s = s & "                tmF = tmF + tx * tmB + ty * tmD" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            GoTo NextLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Tf: ""/Fname size Tf"" - set font" & vbCrLf
-  s = s & "        If Right$(line, 3) = "" Tf"" Then" & vbCrLf
-  s = s & "            Dim tfParts() As String" & vbCrLf
-  s = s & "            tfParts = Split(Left$(line, Len(line) - 3), "" "")" & vbCrLf
-  s = s & "            If UBound(tfParts) >= 1 Then" & vbCrLf
-  s = s & "                currentFontName = tfParts(0)" & vbCrLf
-  s = s & "                currentFontSize = CDbl(tfParts(UBound(tfParts)))" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            GoTo NextLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Tj: ""(text)Tj"" - show text" & vbCrLf
-  s = s & "        If InStr(line, ""Tj"") > 0 Then" & vbCrLf
-  s = s & "            Dim tjPos As Long" & vbCrLf
-  s = s & "            tjPos = 1" & vbCrLf
-  s = s & "            Do While tjPos <= Len(line)" & vbCrLf
-  s = s & "                ' Find next opening paren" & vbCrLf
-  s = s & "                Dim parenStart As Long" & vbCrLf
-  s = s & "                parenStart = InStr(tjPos, line, ""("")" & vbCrLf
-  s = s & "                If parenStart = 0 Then Exit Do" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                ' Parse the string (raw bytes as chars)" & vbCrLf
-  s = s & "                Dim textStr As String" & vbCrLf
-  s = s & "                textStr = ParseContentString(line, parenStart + 1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                ' Find closing paren position" & vbCrLf
-  s = s & "                Dim afterParen As Long" & vbCrLf
-  s = s & "                afterParen = FindClosingParen(line, parenStart + 1) + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                ' Apply CTM to text position" & vbCrLf
-  s = s & "                Dim textX As Double, textY As Double" & vbCrLf
-  s = s & "                textX = tmE: textY = tmF" & vbCrLf
-  s = s & "                Dim px As Double, py As Double" & vbCrLf
-  s = s & "                px = ctm(0) * textX + ctm(2) * textY + ctm(4)" & vbCrLf
-  s = s & "                py = ctm(1) * textX + ctm(3) * textY + ctm(5)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                ' Apply viewport transform" & vbCrLf
-  s = s & "                Dim dispX As Double, dispY As Double" & vbCrLf
-  s = s & "                dispX = vt(0) * px + vt(2) * py + vt(4)" & vbCrLf
-  s = s & "                dispY = vt(1) * px + vt(3) * py + vt(5)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                ' Compute text width using font widths" & vbCrLf
-  s = s & "                Dim textWidth As Double" & vbCrLf
-  s = s & "                Dim tmScale As Double, ctmScale As Double" & vbCrLf
-  s = s & "                tmScale = Sqr(tmA * tmA + tmB * tmB)" & vbCrLf
-  s = s & "                ctmScale = Sqr(ctm(0) * ctm(0) + ctm(1) * ctm(1))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                If Not fonts Is Nothing Then" & vbCrLf
-  s = s & "                    If fonts.Exists(currentFontName) Then" & vbCrLf
-  s = s & "                        Dim fw As Variant" & vbCrLf
-  s = s & "                        fw = fonts(currentFontName)" & vbCrLf
-  s = s & "                        textWidth = ComputeStringWidth(textStr, fw, currentFontSize) * ctmScale" & vbCrLf
-  s = s & "                    Else" & vbCrLf
-  s = s & "                        textWidth = Len(textStr) * currentFontSize * 0.5 * ctmScale" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                Else" & vbCrLf
-  s = s & "                    textWidth = Len(textStr) * currentFontSize * 0.5 * ctmScale" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                Dim actualFontSize As Double" & vbCrLf
-  s = s & "                actualFontSize = tmScale * ctmScale * currentFontSize" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                ' Only add non-empty strings" & vbCrLf
-  s = s & "                If Len(textStr) > 0 Then" & vbCrLf
-  s = s & "                    If itemCount > UBound(items) Then" & vbCrLf
-  s = s & "                        ReDim Preserve items(0 To UBound(items) * 2)" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                    items(itemCount).str = textStr" & vbCrLf
-  s = s & "                    items(itemCount).x = dispX" & vbCrLf
-  s = s & "                    items(itemCount).y = dispY" & vbCrLf
-  s = s & "                    items(itemCount).width = textWidth" & vbCrLf
-  s = s & "                    items(itemCount).fontSize = actualFontSize" & vbCrLf
-  s = s & "                    items(itemCount).fontName = currentFontName" & vbCrLf
-  s = s & "                    itemCount = itemCount + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                    ' Advance text position" & vbCrLf
-  s = s & "                    If Not fonts Is Nothing Then" & vbCrLf
-  s = s & "                        If fonts.Exists(currentFontName) Then" & vbCrLf
-  s = s & "                            Dim advance As Double" & vbCrLf
-  s = s & "                            advance = ComputeStringWidth(textStr, fw, currentFontSize)" & vbCrLf
-  s = s & "                            tmE = tmE + advance * tmA / currentFontSize" & vbCrLf
-  s = s & "                            tmF = tmF + advance * tmB / currentFontSize" & vbCrLf
-  s = s & "                        End If" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                ' Move past this Tj" & vbCrLf
-  s = s & "                tjPos = afterParen + 2" & vbCrLf
-  s = s & "                Do While tjPos <= Len(line) And Mid$(line, tjPos, 1) = "" """ & vbCrLf
-  s = s & "                    tjPos = tjPos + 1" & vbCrLf
-  s = s & "                Loop" & vbCrLf
-  s = s & "            Loop" & vbCrLf
-  s = s & "            GoTo NextLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "NextLine:" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Trim to actual count" & vbCrLf
-  s = s & "    If itemCount > 0 Then" & vbCrLf
-  s = s & "        ReDim Preserve items(0 To itemCount - 1)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        ReDim items(0 To 0)" & vbCrLf
-  s = s & "        items(0).str = """"" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractTextItems = items" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Compute string width using font width table" & vbCrLf
-  s = s & "' fw is a Variant array: (0)=firstChar, (1)=lastChar, (2..N)=widths" & vbCrLf
-  s = s & "Private Function ComputeStringWidth(text As String, fw As Variant, fontSize As Double) As Double" & vbCrLf
-  s = s & "    Dim total As Long" & vbCrLf
-  s = s & "    Dim firstChar As Long, lastChar As Long" & vbCrLf
-  s = s & "    firstChar = fw(0)" & vbCrLf
-  s = s & "    lastChar = fw(1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long, charCode As Long, idx As Long" & vbCrLf
-  s = s & "    For i = 1 To Len(text)" & vbCrLf
-  s = s & "        charCode = Asc(Mid$(text, i, 1))" & vbCrLf
-  s = s & "        If charCode >= firstChar And charCode <= lastChar Then" & vbCrLf
-  s = s & "            idx = charCode - firstChar + 2  ' +2 because widths start at index 2" & vbCrLf
-  s = s & "            If idx <= UBound(fw) Then" & vbCrLf
-  s = s & "                total = total + CLng(fw(idx))" & vbCrLf
-  s = s & "            Else" & vbCrLf
-  s = s & "                total = total + 500" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            total = total + 500" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ComputeStringWidth = total / 1000# * fontSize" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Parse a PDF content string (text between parentheses, handling escapes)" & vbCrLf
-  s = s & "Private Function ParseContentString(line As String, startPos As Long) As String" & vbCrLf
-  s = s & "    Dim result As String" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    Dim depth As Long" & vbCrLf
-  s = s & "    Dim c As String" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    depth = 1" & vbCrLf
-  s = s & "    i = startPos" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Do While i <= Len(line) And depth > 0" & vbCrLf
-  s = s & "        c = Mid$(line, i, 1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If c = ""\"" Then" & vbCrLf
-  s = s & "            i = i + 1" & vbCrLf
-  s = s & "            If i > Len(line) Then Exit Do" & vbCrLf
-  s = s & "            c = Mid$(line, i, 1)" & vbCrLf
-  s = s & "            Select Case c" & vbCrLf
-  s = s & "                Case ""n"": result = result & vbLf" & vbCrLf
-  s = s & "                Case ""r"": result = result & vbCr" & vbCrLf
-  s = s & "                Case ""t"": result = result & vbTab" & vbCrLf
-  s = s & "                Case ""b"": result = result & Chr$(8)" & vbCrLf
-  s = s & "                Case ""f"": result = result & Chr$(12)" & vbCrLf
-  s = s & "                Case ""("": result = result & ""(""" & vbCrLf
-  s = s & "                Case "")"": result = result & "")""" & vbCrLf
-  s = s & "                Case ""\"": result = result & ""\""" & vbCrLf
-  s = s & "                Case ""0"" To ""7""" & vbCrLf
-  s = s & "                    Dim octal As String" & vbCrLf
-  s = s & "                    octal = c" & vbCrLf
-  s = s & "                    If i + 1 <= Len(line) And Mid$(line, i + 1, 1) >= ""0"" And Mid$(line, i + 1, 1) <= ""7"" Then" & vbCrLf
-  s = s & "                        i = i + 1" & vbCrLf
-  s = s & "                        octal = octal & Mid$(line, i, 1)" & vbCrLf
-  s = s & "                        If i + 1 <= Len(line) And Mid$(line, i + 1, 1) >= ""0"" And Mid$(line, i + 1, 1) <= ""7"" Then" & vbCrLf
-  s = s & "                            i = i + 1" & vbCrLf
-  s = s & "                            octal = octal & Mid$(line, i, 1)" & vbCrLf
-  s = s & "                        End If" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                    result = result & Chr$(Val(""&O"" & octal))" & vbCrLf
-  s = s & "                Case Else: result = result & c" & vbCrLf
-  s = s & "            End Select" & vbCrLf
-  s = s & "        ElseIf c = ""("" Then" & vbCrLf
-  s = s & "            depth = depth + 1" & vbCrLf
-  s = s & "            result = result & c" & vbCrLf
-  s = s & "        ElseIf c = "")"" Then" & vbCrLf
-  s = s & "            depth = depth - 1" & vbCrLf
-  s = s & "            If depth > 0 Then result = result & c" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            result = result & c" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        i = i + 1" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ParseContentString = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Find the position of the closing parenthesis matching the one at startPos-1" & vbCrLf
-  s = s & "Private Function FindClosingParen(line As String, startPos As Long) As Long" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    Dim depth As Long" & vbCrLf
-  s = s & "    Dim c As String" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    depth = 1" & vbCrLf
-  s = s & "    i = startPos" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Do While i <= Len(line) And depth > 0" & vbCrLf
-  s = s & "        c = Mid$(line, i, 1)" & vbCrLf
-  s = s & "        If c = ""\"" Then" & vbCrLf
-  s = s & "            i = i + 1  ' Skip escaped char" & vbCrLf
-  s = s & "        ElseIf c = ""("" Then" & vbCrLf
-  s = s & "            depth = depth + 1" & vbCrLf
-  s = s & "        ElseIf c = "")"" Then" & vbCrLf
-  s = s & "            depth = depth - 1" & vbCrLf
-  s = s & "            If depth = 0 Then" & vbCrLf
-  s = s & "                FindClosingParen = i" & vbCrLf
-  s = s & "                Exit Function" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        i = i + 1" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    FindClosingParen = i" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Text reconstruction ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Reconstruct readable text from text items" & vbCrLf
-  s = s & "Public Function ReconstructText(items() As TextItem) As String" & vbCrLf
-  s = s & "    Dim itemCount As Long" & vbCrLf
-  s = s & "    itemCount = UBound(items) - LBound(items) + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Filter empty items" & vbCrLf
-  s = s & "    Dim filtered() As TextItem" & vbCrLf
-  s = s & "    Dim filteredCount As Long" & vbCrLf
-  s = s & "    ReDim filtered(0 To itemCount - 1)" & vbCrLf
-  s = s & "    filteredCount = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = LBound(items) To UBound(items)" & vbCrLf
-  s = s & "        If Len(items(i).str) > 0 Then" & vbCrLf
-  s = s & "            filtered(filteredCount) = items(i)" & vbCrLf
-  s = s & "            filteredCount = filteredCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If filteredCount = 0 Then" & vbCrLf
-  s = s & "        ReconstructText = """"" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ReDim Preserve filtered(0 To filteredCount - 1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Sort by Y position" & vbCrLf
-  s = s & "    SortItemsByY filtered, filteredCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Cluster into lines by Y tolerance (running average)" & vbCrLf
-  s = s & "    Const Y_TOLERANCE As Double = 3" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim lineStarts() As Long" & vbCrLf
-  s = s & "    Dim lineEnds() As Long" & vbCrLf
-  s = s & "    Dim lineCount As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ReDim lineStarts(0 To filteredCount - 1)" & vbCrLf
-  s = s & "    ReDim lineEnds(0 To filteredCount - 1)" & vbCrLf
-  s = s & "    lineCount = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    lineStarts(0) = 0" & vbCrLf
-  s = s & "    Dim currentYSum As Double, currentYCount As Long" & vbCrLf
-  s = s & "    currentYSum = filtered(0).y" & vbCrLf
-  s = s & "    currentYCount = 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    For i = 1 To filteredCount - 1" & vbCrLf
-  s = s & "        Dim avgY As Double" & vbCrLf
-  s = s & "        avgY = currentYSum / currentYCount" & vbCrLf
-  s = s & "        If Abs(filtered(i).y - avgY) > Y_TOLERANCE Then" & vbCrLf
-  s = s & "            lineEnds(lineCount) = i" & vbCrLf
-  s = s & "            lineCount = lineCount + 1" & vbCrLf
-  s = s & "            lineStarts(lineCount) = i" & vbCrLf
-  s = s & "            currentYSum = filtered(i).y" & vbCrLf
-  s = s & "            currentYCount = 1" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            currentYSum = currentYSum + filtered(i).y" & vbCrLf
-  s = s & "            currentYCount = currentYCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    lineEnds(lineCount) = filteredCount" & vbCrLf
-  s = s & "    lineCount = lineCount + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Build output: sort each line by X, merge spaces, join with spacing" & vbCrLf
-  s = s & "    Dim result As String" & vbCrLf
-  s = s & "    Dim lineIdx As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    For lineIdx = 0 To lineCount - 1" & vbCrLf
-  s = s & "        Dim lineStart As Long, lineEnd As Long" & vbCrLf
-  s = s & "        lineStart = lineStarts(lineIdx)" & vbCrLf
-  s = s & "        lineEnd = lineEnds(lineIdx) - 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Sort items within this line by X" & vbCrLf
-  s = s & "        SortItemsByX filtered, lineStart, lineEnd" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Merge explicit space items into adjacent text" & vbCrLf
-  s = s & "        MergeSpaceItems filtered, lineStart, lineEnd" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Join items with pdfplumber-style spacing" & vbCrLf
-  s = s & "        Dim lineText As String" & vbCrLf
-  s = s & "        lineText = JoinLineItems(filtered, lineStart, lineEnd)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If lineIdx > 0 Then result = result & vbLf" & vbCrLf
-  s = s & "        result = result & lineText" & vbCrLf
-  s = s & "    Next lineIdx" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ReconstructText = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Sort items by Y position (insertion sort)" & vbCrLf
-  s = s & "Private Sub SortItemsByY(items() As TextItem, count As Long)" & vbCrLf
-  s = s & "    Dim i As Long, j As Long" & vbCrLf
-  s = s & "    Dim temp As TextItem" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    For i = 1 To count - 1" & vbCrLf
-  s = s & "        temp = items(i)" & vbCrLf
-  s = s & "        j = i - 1" & vbCrLf
-  s = s & "        Do While j >= 0 And items(j).y > temp.y" & vbCrLf
-  s = s & "            items(j + 1) = items(j)" & vbCrLf
-  s = s & "            j = j - 1" & vbCrLf
-  s = s & "        Loop" & vbCrLf
-  s = s & "        items(j + 1) = temp" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Sort items by X position within a range (insertion sort)" & vbCrLf
-  s = s & "Private Sub SortItemsByX(items() As TextItem, startIdx As Long, endIdx As Long)" & vbCrLf
-  s = s & "    Dim i As Long, j As Long" & vbCrLf
-  s = s & "    Dim temp As TextItem" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    For i = startIdx + 1 To endIdx" & vbCrLf
-  s = s & "        temp = items(i)" & vbCrLf
-  s = s & "        j = i - 1" & vbCrLf
-  s = s & "        Do While j >= startIdx And items(j).x > temp.x" & vbCrLf
-  s = s & "            items(j + 1) = items(j)" & vbCrLf
-  s = s & "            j = j - 1" & vbCrLf
-  s = s & "        Loop" & vbCrLf
-  s = s & "        items(j + 1) = temp" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Merge explicit space items into the preceding text item" & vbCrLf
-  s = s & "' Extends the previous item's text and width to include the space" & vbCrLf
-  s = s & "Private Sub MergeSpaceItems(items() As TextItem, startIdx As Long, ByRef endIdx As Long)" & vbCrLf
-  s = s & "    Dim readIdx As Long, writeIdx As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    writeIdx = startIdx" & vbCrLf
-  s = s & "    For readIdx = startIdx To endIdx" & vbCrLf
-  s = s & "        If Len(Trim$(items(readIdx).str)) = 0 And writeIdx > startIdx Then" & vbCrLf
-  s = s & "            ' Space-only item: merge into previous" & vbCrLf
-  s = s & "            items(writeIdx - 1).str = items(writeIdx - 1).str & items(readIdx).str" & vbCrLf
-  s = s & "            items(writeIdx - 1).width = (items(readIdx).x + items(readIdx).width) - items(writeIdx - 1).x" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            If writeIdx <> readIdx Then" & vbCrLf
-  s = s & "                items(writeIdx) = items(readIdx)" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            writeIdx = writeIdx + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next readIdx" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    endIdx = writeIdx - 1" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Join items within a line using pdfplumber-style spacing" & vbCrLf
-  s = s & "' Items within X_TOLERANCE are concatenated; larger gaps get a single space" & vbCrLf
-  s = s & "Private Function JoinLineItems(items() As TextItem, startIdx As Long, endIdx As Long) As String" & vbCrLf
-  s = s & "    If startIdx > endIdx Then" & vbCrLf
-  s = s & "        JoinLineItems = """"" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If startIdx = endIdx Then" & vbCrLf
-  s = s & "        JoinLineItems = items(startIdx).str" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Fix up zero/tiny widths by inferring from position gaps" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = startIdx To endIdx - 1" & vbCrLf
-  s = s & "        Dim minWidth As Double" & vbCrLf
-  s = s & "        minWidth = Len(items(i).str) * 0.5" & vbCrLf
-  s = s & "        If items(i).width < minWidth And Len(Trim$(items(i).str)) > 0 Then" & vbCrLf
-  s = s & "            items(i).width = items(i + 1).x - items(i).x" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Compute average character width across all items in this line" & vbCrLf
-  s = s & "    Dim totalChars As Long" & vbCrLf
-  s = s & "    Dim totalWidth As Double" & vbCrLf
-  s = s & "    totalChars = 0" & vbCrLf
-  s = s & "    totalWidth = 0" & vbCrLf
-  s = s & "    For i = startIdx To endIdx" & vbCrLf
-  s = s & "        If Len(items(i).str) > 0 And items(i).width > 0 Then" & vbCrLf
-  s = s & "            totalChars = totalChars + Len(items(i).str)" & vbCrLf
-  s = s & "            totalWidth = totalWidth + items(i).width" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    Dim avgCharWidth As Double" & vbCrLf
-  s = s & "    If totalChars > 0 Then" & vbCrLf
-  s = s & "        avgCharWidth = totalWidth / totalChars" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        avgCharWidth = 5" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim result As String" & vbCrLf
-  s = s & "    result = items(startIdx).str" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    For i = startIdx + 1 To endIdx" & vbCrLf
-  s = s & "        Dim prevEnd As Double" & vbCrLf
-  s = s & "        prevEnd = items(i - 1).x + items(i - 1).width" & vbCrLf
-  s = s & "        Dim gap As Double" & vbCrLf
-  s = s & "        gap = items(i).x - prevEnd" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If gap <= 0 Then" & vbCrLf
-  s = s & "            result = result & items(i).str" & vbCrLf
-  s = s & "        ElseIf gap < avgCharWidth * 0.3 Then" & vbCrLf
-  s = s & "            result = result & items(i).str" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            Dim numSpaces As Long" & vbCrLf
-  s = s & "            numSpaces = Int(gap / avgCharWidth + 0.5)" & vbCrLf
-  s = s & "            If numSpaces < 1 Then numSpaces = 1" & vbCrLf
-  s = s & "            result = result & String$(numSpaces, "" "") & items(i).str" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    JoinLineItems = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- High-level API ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Extract text from a single page" & vbCrLf
-  s = s & "Public Function ExtractPageText(doc As PDFReader.PDFDocument, pageIndex As Long) As String" & vbCrLf
-  s = s & "    ' Get content stream (with XObjects expanded)" & vbCrLf
-  s = s & "    Dim contentStream As String" & vbCrLf
-  s = s & "    contentStream = PDFReader.GetPageContentStreamExpanded(doc, pageIndex)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Get page rotation" & vbCrLf
-  s = s & "    Dim rotation As Long" & vbCrLf
-  s = s & "    rotation = PDFReader.GetPageRotation(doc, pageIndex)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Get font width tables" & vbCrLf
-  s = s & "    Dim fonts As Object" & vbCrLf
-  s = s & "    Set fonts = PDFReader.GetPageFontWidths(doc, pageIndex)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Extract text items" & vbCrLf
-  s = s & "    Dim items() As TextItem" & vbCrLf
-  s = s & "    items = ExtractTextItems(contentStream, rotation, fonts)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Reconstruct text" & vbCrLf
-  s = s & "    ExtractPageText = ReconstructText(items)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Extract text from all pages, returning array of page texts" & vbCrLf
-  s = s & "Public Function ExtractAllPagesText(doc As PDFReader.PDFDocument) As String()" & vbCrLf
-  s = s & "    Dim pages() As String" & vbCrLf
-  s = s & "    ReDim pages(0 To doc.pageCount - 1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To doc.pageCount - 1" & vbCrLf
-  s = s & "        pages(i) = ExtractPageText(doc, i)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractAllPagesText = pages" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  GetModule_PDFTextExtract = s
-End Function
+Sub WriteModule_PDFTextExtract(ts)
+  ts.WriteLine "Attribute VB_Name = ""PDFTextExtract"""
+  ts.WriteLine "Option Explicit"
+  ts.WriteLine ""
+  ts.WriteLine "' PDF content stream text extraction"
+  ts.WriteLine "' Parses BT/ET blocks, Tm/Td/Tf/Tj operators"
+  ts.WriteLine "' Tracks CTM via cm/q/Q for XObject coordinate transforms"
+  ts.WriteLine "' Applies viewport transform for 90-degree rotation"
+  ts.WriteLine "' Reconstructs readable text lines (port of pdf-extract.ts)"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Types ---"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type TextItem"
+  ts.WriteLine "    str As String"
+  ts.WriteLine "    x As Double"
+  ts.WriteLine "    y As Double"
+  ts.WriteLine "    width As Double"
+  ts.WriteLine "    fontSize As Double"
+  ts.WriteLine "    fontName As String"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Content stream parsing ---"
+  ts.WriteLine ""
+  ts.WriteLine "' Extract all text items from a content stream"
+  ts.WriteLine "' Handles cm, q, Q operators for XObject coordinate transforms"
+  ts.WriteLine "Public Function ExtractTextItems(contentStream As String, pageRotation As Long, _"
+  ts.WriteLine "                                  fonts As Object) As TextItem()"
+  ts.WriteLine "    Dim items() As TextItem"
+  ts.WriteLine "    Dim itemCount As Long"
+  ts.WriteLine "    ReDim items(0 To 999)"
+  ts.WriteLine "    itemCount = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Viewport transform for rotation"
+  ts.WriteLine "    ' For 90-degree rotation: [0, 1, 1, 0, 0, 0] (confirmed correct)"
+  ts.WriteLine "    Dim vt(0 To 5) As Double"
+  ts.WriteLine "    Select Case pageRotation"
+  ts.WriteLine "        Case 90"
+  ts.WriteLine "            vt(0) = 0: vt(1) = 1: vt(2) = 1: vt(3) = 0: vt(4) = 0: vt(5) = 0"
+  ts.WriteLine "        Case 180"
+  ts.WriteLine "            vt(0) = -1: vt(1) = 0: vt(2) = 0: vt(3) = -1: vt(4) = 612: vt(5) = 792"
+  ts.WriteLine "        Case 270"
+  ts.WriteLine "            vt(0) = 0: vt(1) = -1: vt(2) = -1: vt(3) = 0: vt(4) = 612: vt(5) = 792"
+  ts.WriteLine "        Case Else  ' 0"
+  ts.WriteLine "            vt(0) = 1: vt(1) = 0: vt(2) = 0: vt(3) = 1: vt(4) = 0: vt(5) = 0"
+  ts.WriteLine "    End Select"
+  ts.WriteLine ""
+  ts.WriteLine "    ' CTM (current transformation matrix) for XObject coordinate transforms"
+  ts.WriteLine "    Dim ctm(0 To 5) As Double"
+  ts.WriteLine "    ctm(0) = 1: ctm(1) = 0: ctm(2) = 0: ctm(3) = 1: ctm(4) = 0: ctm(5) = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    ' CTM stack for q/Q save/restore"
+  ts.WriteLine "    Dim ctmStack() As Double"
+  ts.WriteLine "    Dim stackDepth As Long"
+  ts.WriteLine "    ReDim ctmStack(0 To 59)  ' 10 levels * 6 values"
+  ts.WriteLine "    stackDepth = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Current text state"
+  ts.WriteLine "    Dim tmA As Double, tmB As Double, tmC As Double, tmD As Double"
+  ts.WriteLine "    Dim tmE As Double, tmF As Double"
+  ts.WriteLine "    Dim currentFontSize As Double"
+  ts.WriteLine "    Dim currentFontName As String"
+  ts.WriteLine "    Dim inTextBlock As Boolean"
+  ts.WriteLine ""
+  ts.WriteLine "    currentFontSize = 12  ' default"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Parse content stream line by line"
+  ts.WriteLine "    Dim lines() As String"
+  ts.WriteLine "    lines = Split(contentStream, vbLf)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To UBound(lines)"
+  ts.WriteLine "        Dim line As String"
+  ts.WriteLine "        line = Trim$(lines(i))"
+  ts.WriteLine "        If Len(line) = 0 Then GoTo NextLine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Graphics state: q (save)"
+  ts.WriteLine "        If line = ""q"" Then"
+  ts.WriteLine "            If stackDepth < 10 Then"
+  ts.WriteLine "                Dim base As Long"
+  ts.WriteLine "                base = stackDepth * 6"
+  ts.WriteLine "                ctmStack(base) = ctm(0): ctmStack(base + 1) = ctm(1)"
+  ts.WriteLine "                ctmStack(base + 2) = ctm(2): ctmStack(base + 3) = ctm(3)"
+  ts.WriteLine "                ctmStack(base + 4) = ctm(4): ctmStack(base + 5) = ctm(5)"
+  ts.WriteLine "                stackDepth = stackDepth + 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            GoTo NextLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Graphics state: Q (restore)"
+  ts.WriteLine "        If line = ""Q"" Then"
+  ts.WriteLine "            If stackDepth > 0 Then"
+  ts.WriteLine "                stackDepth = stackDepth - 1"
+  ts.WriteLine "                base = stackDepth * 6"
+  ts.WriteLine "                ctm(0) = ctmStack(base): ctm(1) = ctmStack(base + 1)"
+  ts.WriteLine "                ctm(2) = ctmStack(base + 2): ctm(3) = ctmStack(base + 3)"
+  ts.WriteLine "                ctm(4) = ctmStack(base + 4): ctm(5) = ctmStack(base + 5)"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            GoTo NextLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' cm: concat matrix to CTM"
+  ts.WriteLine "        If Right$(line, 3) = "" cm"" Then"
+  ts.WriteLine "            Dim cmParts() As String"
+  ts.WriteLine "            cmParts = Split(Left$(line, Len(line) - 3), "" "")"
+  ts.WriteLine "            If UBound(cmParts) >= 5 Then"
+  ts.WriteLine "                ' Multiply: CTM = cm_matrix * CTM"
+  ts.WriteLine "                Dim cmA As Double, cmB As Double, cmC As Double"
+  ts.WriteLine "                Dim cmD As Double, cmE As Double, cmF As Double"
+  ts.WriteLine "                cmA = CDbl(cmParts(0)): cmB = CDbl(cmParts(1))"
+  ts.WriteLine "                cmC = CDbl(cmParts(2)): cmD = CDbl(cmParts(3))"
+  ts.WriteLine "                cmE = CDbl(cmParts(4)): cmF = CDbl(cmParts(5))"
+  ts.WriteLine "                Dim newCtm(0 To 5) As Double"
+  ts.WriteLine "                newCtm(0) = cmA * ctm(0) + cmB * ctm(2)"
+  ts.WriteLine "                newCtm(1) = cmA * ctm(1) + cmB * ctm(3)"
+  ts.WriteLine "                newCtm(2) = cmC * ctm(0) + cmD * ctm(2)"
+  ts.WriteLine "                newCtm(3) = cmC * ctm(1) + cmD * ctm(3)"
+  ts.WriteLine "                newCtm(4) = cmE * ctm(0) + cmF * ctm(2) + ctm(4)"
+  ts.WriteLine "                newCtm(5) = cmE * ctm(1) + cmF * ctm(3) + ctm(5)"
+  ts.WriteLine "                ctm(0) = newCtm(0): ctm(1) = newCtm(1)"
+  ts.WriteLine "                ctm(2) = newCtm(2): ctm(3) = newCtm(3)"
+  ts.WriteLine "                ctm(4) = newCtm(4): ctm(5) = newCtm(5)"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            GoTo NextLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Check for BT/ET"
+  ts.WriteLine "        If line = ""BT"" Then"
+  ts.WriteLine "            inTextBlock = True"
+  ts.WriteLine "            tmA = 1: tmB = 0: tmC = 0: tmD = 1: tmE = 0: tmF = 0"
+  ts.WriteLine "            GoTo NextLine"
+  ts.WriteLine "        ElseIf line = ""ET"" Then"
+  ts.WriteLine "            inTextBlock = False"
+  ts.WriteLine "            GoTo NextLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        If Not inTextBlock Then GoTo NextLine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Parse text operators"
+  ts.WriteLine "        ' Tm: ""a b c d e f Tm"" - set text matrix"
+  ts.WriteLine "        If Right$(line, 3) = "" Tm"" Then"
+  ts.WriteLine "            Dim tmParts() As String"
+  ts.WriteLine "            tmParts = Split(Left$(line, Len(line) - 3), "" "")"
+  ts.WriteLine "            If UBound(tmParts) >= 5 Then"
+  ts.WriteLine "                tmA = CDbl(tmParts(0))"
+  ts.WriteLine "                tmB = CDbl(tmParts(1))"
+  ts.WriteLine "                tmC = CDbl(tmParts(2))"
+  ts.WriteLine "                tmD = CDbl(tmParts(3))"
+  ts.WriteLine "                tmE = CDbl(tmParts(4))"
+  ts.WriteLine "                tmF = CDbl(tmParts(5))"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            GoTo NextLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Td: ""tx ty Td"" - move text position"
+  ts.WriteLine "        If Right$(line, 3) = "" Td"" Or Right$(line, 3) = "" TD"" Then"
+  ts.WriteLine "            Dim tdParts() As String"
+  ts.WriteLine "            tdParts = Split(Left$(line, Len(line) - 3), "" "")"
+  ts.WriteLine "            If UBound(tdParts) >= 1 Then"
+  ts.WriteLine "                Dim tx As Double, ty As Double"
+  ts.WriteLine "                tx = CDbl(tdParts(0))"
+  ts.WriteLine "                ty = CDbl(tdParts(1))"
+  ts.WriteLine "                tmE = tmE + tx * tmA + ty * tmC"
+  ts.WriteLine "                tmF = tmF + tx * tmB + ty * tmD"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            GoTo NextLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Tf: ""/Fname size Tf"" - set font"
+  ts.WriteLine "        If Right$(line, 3) = "" Tf"" Then"
+  ts.WriteLine "            Dim tfParts() As String"
+  ts.WriteLine "            tfParts = Split(Left$(line, Len(line) - 3), "" "")"
+  ts.WriteLine "            If UBound(tfParts) >= 1 Then"
+  ts.WriteLine "                currentFontName = tfParts(0)"
+  ts.WriteLine "                currentFontSize = CDbl(tfParts(UBound(tfParts)))"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            GoTo NextLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Tj: ""(text)Tj"" - show text"
+  ts.WriteLine "        If InStr(line, ""Tj"") > 0 Then"
+  ts.WriteLine "            Dim tjPos As Long"
+  ts.WriteLine "            tjPos = 1"
+  ts.WriteLine "            Do While tjPos <= Len(line)"
+  ts.WriteLine "                ' Find next opening paren"
+  ts.WriteLine "                Dim parenStart As Long"
+  ts.WriteLine "                parenStart = InStr(tjPos, line, ""("")"
+  ts.WriteLine "                If parenStart = 0 Then Exit Do"
+  ts.WriteLine ""
+  ts.WriteLine "                ' Parse the string (raw bytes as chars)"
+  ts.WriteLine "                Dim textStr As String"
+  ts.WriteLine "                textStr = ParseContentString(line, parenStart + 1)"
+  ts.WriteLine ""
+  ts.WriteLine "                ' Find closing paren position"
+  ts.WriteLine "                Dim afterParen As Long"
+  ts.WriteLine "                afterParen = FindClosingParen(line, parenStart + 1) + 1"
+  ts.WriteLine ""
+  ts.WriteLine "                ' Apply CTM to text position"
+  ts.WriteLine "                Dim textX As Double, textY As Double"
+  ts.WriteLine "                textX = tmE: textY = tmF"
+  ts.WriteLine "                Dim px As Double, py As Double"
+  ts.WriteLine "                px = ctm(0) * textX + ctm(2) * textY + ctm(4)"
+  ts.WriteLine "                py = ctm(1) * textX + ctm(3) * textY + ctm(5)"
+  ts.WriteLine ""
+  ts.WriteLine "                ' Apply viewport transform"
+  ts.WriteLine "                Dim dispX As Double, dispY As Double"
+  ts.WriteLine "                dispX = vt(0) * px + vt(2) * py + vt(4)"
+  ts.WriteLine "                dispY = vt(1) * px + vt(3) * py + vt(5)"
+  ts.WriteLine ""
+  ts.WriteLine "                ' Compute text width using font widths"
+  ts.WriteLine "                Dim textWidth As Double"
+  ts.WriteLine "                Dim tmScale As Double, ctmScale As Double"
+  ts.WriteLine "                tmScale = Sqr(tmA * tmA + tmB * tmB)"
+  ts.WriteLine "                ctmScale = Sqr(ctm(0) * ctm(0) + ctm(1) * ctm(1))"
+  ts.WriteLine ""
+  ts.WriteLine "                If Not fonts Is Nothing Then"
+  ts.WriteLine "                    If fonts.Exists(currentFontName) Then"
+  ts.WriteLine "                        Dim fw As Variant"
+  ts.WriteLine "                        fw = fonts(currentFontName)"
+  ts.WriteLine "                        textWidth = ComputeStringWidth(textStr, fw, currentFontSize) * ctmScale"
+  ts.WriteLine "                    Else"
+  ts.WriteLine "                        textWidth = Len(textStr) * currentFontSize * 0.5 * ctmScale"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                Else"
+  ts.WriteLine "                    textWidth = Len(textStr) * currentFontSize * 0.5 * ctmScale"
+  ts.WriteLine "                End If"
+  ts.WriteLine ""
+  ts.WriteLine "                Dim actualFontSize As Double"
+  ts.WriteLine "                actualFontSize = tmScale * ctmScale * currentFontSize"
+  ts.WriteLine ""
+  ts.WriteLine "                ' Only add non-empty strings"
+  ts.WriteLine "                If Len(textStr) > 0 Then"
+  ts.WriteLine "                    If itemCount > UBound(items) Then"
+  ts.WriteLine "                        ReDim Preserve items(0 To UBound(items) * 2)"
+  ts.WriteLine "                    End If"
+  ts.WriteLine ""
+  ts.WriteLine "                    items(itemCount).str = textStr"
+  ts.WriteLine "                    items(itemCount).x = dispX"
+  ts.WriteLine "                    items(itemCount).y = dispY"
+  ts.WriteLine "                    items(itemCount).width = textWidth"
+  ts.WriteLine "                    items(itemCount).fontSize = actualFontSize"
+  ts.WriteLine "                    items(itemCount).fontName = currentFontName"
+  ts.WriteLine "                    itemCount = itemCount + 1"
+  ts.WriteLine ""
+  ts.WriteLine "                    ' Advance text position"
+  ts.WriteLine "                    If Not fonts Is Nothing Then"
+  ts.WriteLine "                        If fonts.Exists(currentFontName) Then"
+  ts.WriteLine "                            Dim advance As Double"
+  ts.WriteLine "                            advance = ComputeStringWidth(textStr, fw, currentFontSize)"
+  ts.WriteLine "                            tmE = tmE + advance * tmA / currentFontSize"
+  ts.WriteLine "                            tmF = tmF + advance * tmB / currentFontSize"
+  ts.WriteLine "                        End If"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                End If"
+  ts.WriteLine ""
+  ts.WriteLine "                ' Move past this Tj"
+  ts.WriteLine "                tjPos = afterParen + 2"
+  ts.WriteLine "                Do While tjPos <= Len(line) And Mid$(line, tjPos, 1) = "" """
+  ts.WriteLine "                    tjPos = tjPos + 1"
+  ts.WriteLine "                Loop"
+  ts.WriteLine "            Loop"
+  ts.WriteLine "            GoTo NextLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "NextLine:"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Trim to actual count"
+  ts.WriteLine "    If itemCount > 0 Then"
+  ts.WriteLine "        ReDim Preserve items(0 To itemCount - 1)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        ReDim items(0 To 0)"
+  ts.WriteLine "        items(0).str = """""
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractTextItems = items"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Compute string width using font width table"
+  ts.WriteLine "' fw is a Variant array: (0)=firstChar, (1)=lastChar, (2..N)=widths"
+  ts.WriteLine "Private Function ComputeStringWidth(text As String, fw As Variant, fontSize As Double) As Double"
+  ts.WriteLine "    Dim total As Long"
+  ts.WriteLine "    Dim firstChar As Long, lastChar As Long"
+  ts.WriteLine "    firstChar = fw(0)"
+  ts.WriteLine "    lastChar = fw(1)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long, charCode As Long, idx As Long"
+  ts.WriteLine "    For i = 1 To Len(text)"
+  ts.WriteLine "        charCode = Asc(Mid$(text, i, 1))"
+  ts.WriteLine "        If charCode >= firstChar And charCode <= lastChar Then"
+  ts.WriteLine "            idx = charCode - firstChar + 2  ' +2 because widths start at index 2"
+  ts.WriteLine "            If idx <= UBound(fw) Then"
+  ts.WriteLine "                total = total + CLng(fw(idx))"
+  ts.WriteLine "            Else"
+  ts.WriteLine "                total = total + 500"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            total = total + 500"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ComputeStringWidth = total / 1000# * fontSize"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Parse a PDF content string (text between parentheses, handling escapes)"
+  ts.WriteLine "Private Function ParseContentString(line As String, startPos As Long) As String"
+  ts.WriteLine "    Dim result As String"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    Dim depth As Long"
+  ts.WriteLine "    Dim c As String"
+  ts.WriteLine ""
+  ts.WriteLine "    depth = 1"
+  ts.WriteLine "    i = startPos"
+  ts.WriteLine ""
+  ts.WriteLine "    Do While i <= Len(line) And depth > 0"
+  ts.WriteLine "        c = Mid$(line, i, 1)"
+  ts.WriteLine ""
+  ts.WriteLine "        If c = ""\"" Then"
+  ts.WriteLine "            i = i + 1"
+  ts.WriteLine "            If i > Len(line) Then Exit Do"
+  ts.WriteLine "            c = Mid$(line, i, 1)"
+  ts.WriteLine "            Select Case c"
+  ts.WriteLine "                Case ""n"": result = result & vbLf"
+  ts.WriteLine "                Case ""r"": result = result & vbCr"
+  ts.WriteLine "                Case ""t"": result = result & vbTab"
+  ts.WriteLine "                Case ""b"": result = result & Chr$(8)"
+  ts.WriteLine "                Case ""f"": result = result & Chr$(12)"
+  ts.WriteLine "                Case ""("": result = result & ""("""
+  ts.WriteLine "                Case "")"": result = result & "")"""
+  ts.WriteLine "                Case ""\"": result = result & ""\"""
+  ts.WriteLine "                Case ""0"" To ""7"""
+  ts.WriteLine "                    Dim octal As String"
+  ts.WriteLine "                    octal = c"
+  ts.WriteLine "                    If i + 1 <= Len(line) And Mid$(line, i + 1, 1) >= ""0"" And Mid$(line, i + 1, 1) <= ""7"" Then"
+  ts.WriteLine "                        i = i + 1"
+  ts.WriteLine "                        octal = octal & Mid$(line, i, 1)"
+  ts.WriteLine "                        If i + 1 <= Len(line) And Mid$(line, i + 1, 1) >= ""0"" And Mid$(line, i + 1, 1) <= ""7"" Then"
+  ts.WriteLine "                            i = i + 1"
+  ts.WriteLine "                            octal = octal & Mid$(line, i, 1)"
+  ts.WriteLine "                        End If"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                    result = result & Chr$(Val(""&O"" & octal))"
+  ts.WriteLine "                Case Else: result = result & c"
+  ts.WriteLine "            End Select"
+  ts.WriteLine "        ElseIf c = ""("" Then"
+  ts.WriteLine "            depth = depth + 1"
+  ts.WriteLine "            result = result & c"
+  ts.WriteLine "        ElseIf c = "")"" Then"
+  ts.WriteLine "            depth = depth - 1"
+  ts.WriteLine "            If depth > 0 Then result = result & c"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            result = result & c"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        i = i + 1"
+  ts.WriteLine "    Loop"
+  ts.WriteLine ""
+  ts.WriteLine "    ParseContentString = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Find the position of the closing parenthesis matching the one at startPos-1"
+  ts.WriteLine "Private Function FindClosingParen(line As String, startPos As Long) As Long"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    Dim depth As Long"
+  ts.WriteLine "    Dim c As String"
+  ts.WriteLine ""
+  ts.WriteLine "    depth = 1"
+  ts.WriteLine "    i = startPos"
+  ts.WriteLine ""
+  ts.WriteLine "    Do While i <= Len(line) And depth > 0"
+  ts.WriteLine "        c = Mid$(line, i, 1)"
+  ts.WriteLine "        If c = ""\"" Then"
+  ts.WriteLine "            i = i + 1  ' Skip escaped char"
+  ts.WriteLine "        ElseIf c = ""("" Then"
+  ts.WriteLine "            depth = depth + 1"
+  ts.WriteLine "        ElseIf c = "")"" Then"
+  ts.WriteLine "            depth = depth - 1"
+  ts.WriteLine "            If depth = 0 Then"
+  ts.WriteLine "                FindClosingParen = i"
+  ts.WriteLine "                Exit Function"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        i = i + 1"
+  ts.WriteLine "    Loop"
+  ts.WriteLine ""
+  ts.WriteLine "    FindClosingParen = i"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Text reconstruction ---"
+  ts.WriteLine ""
+  ts.WriteLine "' Reconstruct readable text from text items"
+  ts.WriteLine "Public Function ReconstructText(items() As TextItem) As String"
+  ts.WriteLine "    Dim itemCount As Long"
+  ts.WriteLine "    itemCount = UBound(items) - LBound(items) + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Filter empty items"
+  ts.WriteLine "    Dim filtered() As TextItem"
+  ts.WriteLine "    Dim filteredCount As Long"
+  ts.WriteLine "    ReDim filtered(0 To itemCount - 1)"
+  ts.WriteLine "    filteredCount = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = LBound(items) To UBound(items)"
+  ts.WriteLine "        If Len(items(i).str) > 0 Then"
+  ts.WriteLine "            filtered(filteredCount) = items(i)"
+  ts.WriteLine "            filteredCount = filteredCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    If filteredCount = 0 Then"
+  ts.WriteLine "        ReconstructText = """""
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ReDim Preserve filtered(0 To filteredCount - 1)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Sort by Y position"
+  ts.WriteLine "    SortItemsByY filtered, filteredCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Cluster into lines by Y tolerance (running average)"
+  ts.WriteLine "    Const Y_TOLERANCE As Double = 3"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim lineStarts() As Long"
+  ts.WriteLine "    Dim lineEnds() As Long"
+  ts.WriteLine "    Dim lineCount As Long"
+  ts.WriteLine ""
+  ts.WriteLine "    ReDim lineStarts(0 To filteredCount - 1)"
+  ts.WriteLine "    ReDim lineEnds(0 To filteredCount - 1)"
+  ts.WriteLine "    lineCount = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    lineStarts(0) = 0"
+  ts.WriteLine "    Dim currentYSum As Double, currentYCount As Long"
+  ts.WriteLine "    currentYSum = filtered(0).y"
+  ts.WriteLine "    currentYCount = 1"
+  ts.WriteLine ""
+  ts.WriteLine "    For i = 1 To filteredCount - 1"
+  ts.WriteLine "        Dim avgY As Double"
+  ts.WriteLine "        avgY = currentYSum / currentYCount"
+  ts.WriteLine "        If Abs(filtered(i).y - avgY) > Y_TOLERANCE Then"
+  ts.WriteLine "            lineEnds(lineCount) = i"
+  ts.WriteLine "            lineCount = lineCount + 1"
+  ts.WriteLine "            lineStarts(lineCount) = i"
+  ts.WriteLine "            currentYSum = filtered(i).y"
+  ts.WriteLine "            currentYCount = 1"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            currentYSum = currentYSum + filtered(i).y"
+  ts.WriteLine "            currentYCount = currentYCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    lineEnds(lineCount) = filteredCount"
+  ts.WriteLine "    lineCount = lineCount + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Build output: sort each line by X, merge spaces, join with spacing"
+  ts.WriteLine "    Dim result As String"
+  ts.WriteLine "    Dim lineIdx As Long"
+  ts.WriteLine ""
+  ts.WriteLine "    For lineIdx = 0 To lineCount - 1"
+  ts.WriteLine "        Dim lineStart As Long, lineEnd As Long"
+  ts.WriteLine "        lineStart = lineStarts(lineIdx)"
+  ts.WriteLine "        lineEnd = lineEnds(lineIdx) - 1"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Sort items within this line by X"
+  ts.WriteLine "        SortItemsByX filtered, lineStart, lineEnd"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Merge explicit space items into adjacent text"
+  ts.WriteLine "        MergeSpaceItems filtered, lineStart, lineEnd"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Join items with pdfplumber-style spacing"
+  ts.WriteLine "        Dim lineText As String"
+  ts.WriteLine "        lineText = JoinLineItems(filtered, lineStart, lineEnd)"
+  ts.WriteLine ""
+  ts.WriteLine "        If lineIdx > 0 Then result = result & vbLf"
+  ts.WriteLine "        result = result & lineText"
+  ts.WriteLine "    Next lineIdx"
+  ts.WriteLine ""
+  ts.WriteLine "    ReconstructText = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Sort items by Y position (insertion sort)"
+  ts.WriteLine "Private Sub SortItemsByY(items() As TextItem, count As Long)"
+  ts.WriteLine "    Dim i As Long, j As Long"
+  ts.WriteLine "    Dim temp As TextItem"
+  ts.WriteLine ""
+  ts.WriteLine "    For i = 1 To count - 1"
+  ts.WriteLine "        temp = items(i)"
+  ts.WriteLine "        j = i - 1"
+  ts.WriteLine "        Do While j >= 0 And items(j).y > temp.y"
+  ts.WriteLine "            items(j + 1) = items(j)"
+  ts.WriteLine "            j = j - 1"
+  ts.WriteLine "        Loop"
+  ts.WriteLine "        items(j + 1) = temp"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' Sort items by X position within a range (insertion sort)"
+  ts.WriteLine "Private Sub SortItemsByX(items() As TextItem, startIdx As Long, endIdx As Long)"
+  ts.WriteLine "    Dim i As Long, j As Long"
+  ts.WriteLine "    Dim temp As TextItem"
+  ts.WriteLine ""
+  ts.WriteLine "    For i = startIdx + 1 To endIdx"
+  ts.WriteLine "        temp = items(i)"
+  ts.WriteLine "        j = i - 1"
+  ts.WriteLine "        Do While j >= startIdx And items(j).x > temp.x"
+  ts.WriteLine "            items(j + 1) = items(j)"
+  ts.WriteLine "            j = j - 1"
+  ts.WriteLine "        Loop"
+  ts.WriteLine "        items(j + 1) = temp"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' Merge explicit space items into the preceding text item"
+  ts.WriteLine "' Extends the previous item's text and width to include the space"
+  ts.WriteLine "Private Sub MergeSpaceItems(items() As TextItem, startIdx As Long, ByRef endIdx As Long)"
+  ts.WriteLine "    Dim readIdx As Long, writeIdx As Long"
+  ts.WriteLine ""
+  ts.WriteLine "    writeIdx = startIdx"
+  ts.WriteLine "    For readIdx = startIdx To endIdx"
+  ts.WriteLine "        If Len(Trim$(items(readIdx).str)) = 0 And writeIdx > startIdx Then"
+  ts.WriteLine "            ' Space-only item: merge into previous"
+  ts.WriteLine "            items(writeIdx - 1).str = items(writeIdx - 1).str & items(readIdx).str"
+  ts.WriteLine "            items(writeIdx - 1).width = (items(readIdx).x + items(readIdx).width) - items(writeIdx - 1).x"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            If writeIdx <> readIdx Then"
+  ts.WriteLine "                items(writeIdx) = items(readIdx)"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            writeIdx = writeIdx + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next readIdx"
+  ts.WriteLine ""
+  ts.WriteLine "    endIdx = writeIdx - 1"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' Join items within a line using pdfplumber-style spacing"
+  ts.WriteLine "' Items within X_TOLERANCE are concatenated; larger gaps get a single space"
+  ts.WriteLine "Private Function JoinLineItems(items() As TextItem, startIdx As Long, endIdx As Long) As String"
+  ts.WriteLine "    If startIdx > endIdx Then"
+  ts.WriteLine "        JoinLineItems = """""
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If startIdx = endIdx Then"
+  ts.WriteLine "        JoinLineItems = items(startIdx).str"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Fix up zero/tiny widths by inferring from position gaps"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = startIdx To endIdx - 1"
+  ts.WriteLine "        Dim minWidth As Double"
+  ts.WriteLine "        minWidth = Len(items(i).str) * 0.5"
+  ts.WriteLine "        If items(i).width < minWidth And Len(Trim$(items(i).str)) > 0 Then"
+  ts.WriteLine "            items(i).width = items(i + 1).x - items(i).x"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Compute average character width across all items in this line"
+  ts.WriteLine "    Dim totalChars As Long"
+  ts.WriteLine "    Dim totalWidth As Double"
+  ts.WriteLine "    totalChars = 0"
+  ts.WriteLine "    totalWidth = 0"
+  ts.WriteLine "    For i = startIdx To endIdx"
+  ts.WriteLine "        If Len(items(i).str) > 0 And items(i).width > 0 Then"
+  ts.WriteLine "            totalChars = totalChars + Len(items(i).str)"
+  ts.WriteLine "            totalWidth = totalWidth + items(i).width"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    Dim avgCharWidth As Double"
+  ts.WriteLine "    If totalChars > 0 Then"
+  ts.WriteLine "        avgCharWidth = totalWidth / totalChars"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        avgCharWidth = 5"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim result As String"
+  ts.WriteLine "    result = items(startIdx).str"
+  ts.WriteLine ""
+  ts.WriteLine "    For i = startIdx + 1 To endIdx"
+  ts.WriteLine "        Dim prevEnd As Double"
+  ts.WriteLine "        prevEnd = items(i - 1).x + items(i - 1).width"
+  ts.WriteLine "        Dim gap As Double"
+  ts.WriteLine "        gap = items(i).x - prevEnd"
+  ts.WriteLine ""
+  ts.WriteLine "        If gap <= 0 Then"
+  ts.WriteLine "            result = result & items(i).str"
+  ts.WriteLine "        ElseIf gap < avgCharWidth * 0.3 Then"
+  ts.WriteLine "            result = result & items(i).str"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            Dim numSpaces As Long"
+  ts.WriteLine "            numSpaces = Int(gap / avgCharWidth + 0.5)"
+  ts.WriteLine "            If numSpaces < 1 Then numSpaces = 1"
+  ts.WriteLine "            result = result & String$(numSpaces, "" "") & items(i).str"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    JoinLineItems = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' --- High-level API ---"
+  ts.WriteLine ""
+  ts.WriteLine "' Extract text from a single page"
+  ts.WriteLine "Public Function ExtractPageText(doc As PDFReader.PDFDocument, pageIndex As Long) As String"
+  ts.WriteLine "    ' Get content stream (with XObjects expanded)"
+  ts.WriteLine "    Dim contentStream As String"
+  ts.WriteLine "    contentStream = PDFReader.GetPageContentStreamExpanded(doc, pageIndex)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Get page rotation"
+  ts.WriteLine "    Dim rotation As Long"
+  ts.WriteLine "    rotation = PDFReader.GetPageRotation(doc, pageIndex)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Get font width tables"
+  ts.WriteLine "    Dim fonts As Object"
+  ts.WriteLine "    Set fonts = PDFReader.GetPageFontWidths(doc, pageIndex)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Extract text items"
+  ts.WriteLine "    Dim items() As TextItem"
+  ts.WriteLine "    items = ExtractTextItems(contentStream, rotation, fonts)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Reconstruct text"
+  ts.WriteLine "    ExtractPageText = ReconstructText(items)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Extract text from all pages, returning array of page texts"
+  ts.WriteLine "Public Function ExtractAllPagesText(doc As PDFReader.PDFDocument) As String()"
+  ts.WriteLine "    Dim pages() As String"
+  ts.WriteLine "    ReDim pages(0 To doc.pageCount - 1)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To doc.pageCount - 1"
+  ts.WriteLine "        pages(i) = ExtractPageText(doc, i)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractAllPagesText = pages"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+End Sub
 
-Function GetModule_UBSExtract()
-  Dim s
-  s = ""
-  s = s & "Attribute VB_Name = ""UBSExtract""" & vbCrLf
-  s = s & "Option Explicit" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' UBSExtract.bas — Core extraction logic for UBS statement text." & vbCrLf
-  s = s & "' Port of web/src/extract.ts to VBA using VBScript.RegExp." & vbCrLf
-  s = s & "'" & vbCrLf
-  s = s & "' Provides:" & vbCrLf
-  s = s & "'   Helper functions (ParseNum, SafeFloat, CleanAccountName, ExtractSection)" & vbCrLf
-  s = s & "'   Extractors: AccountSummary, AssetAllocation, Holdings, Transactions, Income, GainsLosses" & vbCrLf
-  s = s & "'   Reconciliation check" & vbCrLf
-  s = s & "'   Main entry point: ExtractFromText()" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Types" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type AccountSummary" & vbCrLf
-  s = s & "    AccountName As String" & vbCrLf
-  s = s & "    FriendlyName As String" & vbCrLf
-  s = s & "    AccountNumber As String" & vbCrLf
-  s = s & "    FinancialAdvisor As String" & vbCrLf
-  s = s & "    StatementPeriod As String" & vbCrLf
-  s = s & "    OpeningValue As Double" & vbCrLf
-  s = s & "    ClosingValue As Double" & vbCrLf
-  s = s & "    NetDepositsWithdrawals As Double" & vbCrLf
-  s = s & "    DepositsTransferredIn As Double" & vbCrLf
-  s = s & "    DividendInterestIncome As Double" & vbCrLf
-  s = s & "    ChangeInMarketValue As Double" & vbCrLf
-  s = s & "    ChangeInAccruedInterest As Double" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type AssetAllocation" & vbCrLf
-  s = s & "    Category As String" & vbCrLf
-  s = s & "    Value As Double" & vbCrLf
-  s = s & "    Percentage As Double" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type SecurityDetail" & vbCrLf
-  s = s & "    Name As String" & vbCrLf
-  s = s & "    Symbol As String" & vbCrLf
-  s = s & "    Units As Variant          ' Double or Null" & vbCrLf
-  s = s & "    Value As Double" & vbCrLf
-  s = s & "    CostBasis As Variant      ' Double or Null" & vbCrLf
-  s = s & "    UnrealizedGL As Variant   ' Double or Null" & vbCrLf
-  s = s & "    IsEscrow As Boolean" & vbCrLf
-  s = s & "    CategoryKey As String     ' composite ""AssetClass::Category"" or plain ""Category""" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type Holding" & vbCrLf
-  s = s & "    Name As String" & vbCrLf
-  s = s & "    AssetType As String" & vbCrLf
-  s = s & "    Value As Double" & vbCrLf
-  s = s & "    CostBasis As Variant  ' Double or Null" & vbCrLf
-  s = s & "    UnrealizedGL As Variant  ' Double or Null" & vbCrLf
-  s = s & "    Securities() As SecurityDetail" & vbCrLf
-  s = s & "    SecurityCount As Long" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type Transaction" & vbCrLf
-  s = s & "    TxDate As String" & vbCrLf
-  s = s & "    Activity As String" & vbCrLf
-  s = s & "    Description As String" & vbCrLf
-  s = s & "    Amount As Double" & vbCrLf
-  s = s & "    Quantity As Variant  ' Double or Null" & vbCrLf
-  s = s & "    Price As Variant  ' Double or Null" & vbCrLf
-  s = s & "    Cusip As String" & vbCrLf
-  s = s & "    Symbol As String" & vbCrLf
-  s = s & "    RefNumber As String" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type IncomeDetail" & vbCrLf
-  s = s & "    TaxableDividendsMonth As Double" & vbCrLf
-  s = s & "    TaxExemptDividendsMonth As Double" & vbCrLf
-  s = s & "    TaxableInterestMonth As Double" & vbCrLf
-  s = s & "    TaxExemptInterestMonth As Double" & vbCrLf
-  s = s & "    MiscellaneousMonth As Double" & vbCrLf
-  s = s & "    AccruedInterestReceived As Double" & vbCrLf
-  s = s & "    TotalMonth As Double" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type GainsAndLosses" & vbCrLf
-  s = s & "    ShortTermRealizedMonth As Double" & vbCrLf
-  s = s & "    ShortTermRealizedYtd As Double" & vbCrLf
-  s = s & "    ShortTermUnrealized As Double" & vbCrLf
-  s = s & "    LongTermRealizedMonth As Double" & vbCrLf
-  s = s & "    LongTermRealizedYtd As Double" & vbCrLf
-  s = s & "    LongTermUnrealized As Double" & vbCrLf
-  s = s & "    TotalRealizedMonth As Double" & vbCrLf
-  s = s & "    TotalRealizedYtd As Double" & vbCrLf
-  s = s & "    TotalUnrealized As Double" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type TickAndTieCheck" & vbCrLf
-  s = s & "    name As String" & vbCrLf
-  s = s & "    Expected As Double" & vbCrLf
-  s = s & "    Actual As Double" & vbCrLf
-  s = s & "    Diff As Double" & vbCrLf
-  s = s & "    Pass As Boolean" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type StatementExtraction" & vbCrLf
-  s = s & "    Summary As AccountSummary" & vbCrLf
-  s = s & "    Allocations() As AssetAllocation" & vbCrLf
-  s = s & "    AllocationCount As Long" & vbCrLf
-  s = s & "    Holdings() As Holding" & vbCrLf
-  s = s & "    HoldingCount As Long" & vbCrLf
-  s = s & "    Transactions() As Transaction" & vbCrLf
-  s = s & "    TransactionCount As Long" & vbCrLf
-  s = s & "    Income As IncomeDetail" & vbCrLf
-  s = s & "    Gains As GainsAndLosses" & vbCrLf
-  s = s & "    Checks() As TickAndTieCheck" & vbCrLf
-  s = s & "    CheckCount As Long" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Constants" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Const NUM_PAT As String = ""-?[\d,]+\.\d{2}""" & vbCrLf
-  s = s & "Private Const MONTH_ALT As String = ""(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)""" & vbCrLf
-  s = s & "Private Const DATE_PAT As String = ""(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}""" & vbCrLf
-  s = s & "Private Const SECTION_LOOKAHEAD As Long = 2000" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Regex helper — cached RegExp object" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private mCachedRe As Object" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function CreateRegex(pattern As String, Optional isGlobal As Boolean = False, Optional isMultiline As Boolean = False, Optional ignoreCase As Boolean = False) As Object" & vbCrLf
-  s = s & "    If mCachedRe Is Nothing Then" & vbCrLf
-  s = s & "        Set mCachedRe = CreateObject(""VBScript.RegExp"")" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    mCachedRe.pattern = pattern" & vbCrLf
-  s = s & "    mCachedRe.Global = isGlobal" & vbCrLf
-  s = s & "    mCachedRe.MultiLine = isMultiline" & vbCrLf
-  s = s & "    mCachedRe.ignoreCase = ignoreCase" & vbCrLf
-  s = s & "    Set CreateRegex = mCachedRe" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function RegexMatch(text As String, pattern As String, Optional ignoreCase As Boolean = False, Optional isMultiline As Boolean = False) As Object" & vbCrLf
-  s = s & "    ' Returns first match or Nothing" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateRegex(pattern, False, isMultiline, ignoreCase)" & vbCrLf
-  s = s & "    Dim matches As Object" & vbCrLf
-  s = s & "    Set matches = re.Execute(text)" & vbCrLf
-  s = s & "    If matches.Count > 0 Then" & vbCrLf
-  s = s & "        Set RegexMatch = matches(0)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        Set RegexMatch = Nothing" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function RegexMatchAll(text As String, pattern As String, Optional ignoreCase As Boolean = False) As Object" & vbCrLf
-  s = s & "    ' Returns all matches" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateRegex(pattern, True, False, ignoreCase)" & vbCrLf
-  s = s & "    Set RegexMatchAll = re.Execute(text)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function RegexTest(text As String, pattern As String, Optional ignoreCase As Boolean = False) As Boolean" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateRegex(pattern, False, False, ignoreCase)" & vbCrLf
-  s = s & "    RegexTest = re.Test(text)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Number parsing" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ParseNum(value As Variant) As Variant" & vbCrLf
-  s = s & "    ' Parse a value to Double, returning Null if unparseable" & vbCrLf
-  s = s & "    If IsNull(value) Or IsEmpty(value) Then" & vbCrLf
-  s = s & "        ParseNum = Null" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    Dim s As String" & vbCrLf
-  s = s & "    s = CStr(value)" & vbCrLf
-  s = s & "    s = Replace(s, "","", """")" & vbCrLf
-  s = s & "    s = Replace(s, ""$"", """")" & vbCrLf
-  s = s & "    s = Replace(s, ""%"", """")" & vbCrLf
-  s = s & "    s = Trim(s)" & vbCrLf
-  s = s & "    If s = """" Or s = ""N/A"" Or s = ""None"" Then" & vbCrLf
-  s = s & "        ParseNum = Null" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If IsNumeric(s) Then" & vbCrLf
-  s = s & "        ParseNum = CDbl(s)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        ParseNum = Null" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function SafeFloat(value As Variant) As Double" & vbCrLf
-  s = s & "    ' Parse a value to Double, returning 0.0 if unparseable" & vbCrLf
-  s = s & "    Dim result As Variant" & vbCrLf
-  s = s & "    result = ParseNum(value)" & vbCrLf
-  s = s & "    If IsNull(result) Then" & vbCrLf
-  s = s & "        SafeFloat = 0#" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        SafeFloat = CDbl(result)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' String helpers" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function InStrLower(text As String, search As String, Optional startPos As Long = 1) As Long" & vbCrLf
-  s = s & "    ' Case-insensitive InStr" & vbCrLf
-  s = s & "    InStrLower = InStr(startPos, LCase$(text), LCase$(search))" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function MidLine(text As String, startPos As Long) As String" & vbCrLf
-  s = s & "    ' Get text from startPos to end of line" & vbCrLf
-  s = s & "    Dim eol As Long" & vbCrLf
-  s = s & "    eol = InStr(startPos, text, vbLf)" & vbCrLf
-  s = s & "    If eol = 0 Then" & vbCrLf
-  s = s & "        MidLine = Mid$(text, startPos)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        MidLine = Mid$(text, startPos, eol - startPos)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function LineEnd(text As String, pos As Long) As Long" & vbCrLf
-  s = s & "    ' Find end of line containing pos" & vbCrLf
-  s = s & "    LineEnd = InStr(pos, text, vbLf)" & vbCrLf
-  s = s & "    If LineEnd = 0 Then LineEnd = Len(text) + 1" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Section extraction" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ExtractSection(text As String, startMarkers() As String, endMarkers() As String) As String" & vbCrLf
-  s = s & "    Dim tl As String" & vbCrLf
-  s = s & "    tl = LCase$(text)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim startPos As Long" & vbCrLf
-  s = s & "    startPos = 1" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = LBound(startMarkers) To UBound(startMarkers)" & vbCrLf
-  s = s & "        Dim pos As Long" & vbCrLf
-  s = s & "        pos = InStr(1, tl, LCase$(startMarkers(i)))" & vbCrLf
-  s = s & "        If pos > 0 Then" & vbCrLf
-  s = s & "            startPos = pos" & vbCrLf
-  s = s & "            Exit For" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim endPos As Long" & vbCrLf
-  s = s & "    endPos = Len(text) + 1" & vbCrLf
-  s = s & "    Dim found As Boolean" & vbCrLf
-  s = s & "    For i = LBound(endMarkers) To UBound(endMarkers)" & vbCrLf
-  s = s & "        Dim ml As String" & vbCrLf
-  s = s & "        ml = LCase$(endMarkers(i))" & vbCrLf
-  s = s & "        Dim searchFrom As Long" & vbCrLf
-  s = s & "        searchFrom = startPos + 1" & vbCrLf
-  s = s & "        Do" & vbCrLf
-  s = s & "            pos = InStr(searchFrom, tl, ml)" & vbCrLf
-  s = s & "            If pos = 0 Or pos >= endPos Then Exit Do" & vbCrLf
-  s = s & "            ' Skip ""(continued)"" page headers" & vbCrLf
-  s = s & "            Dim afterMarker As String" & vbCrLf
-  s = s & "            afterMarker = LTrim$(Mid$(tl, pos + Len(ml), 20))" & vbCrLf
-  s = s & "            If Left$(afterMarker, 11) = ""(continued)"" Then" & vbCrLf
-  s = s & "                searchFrom = pos + Len(ml)" & vbCrLf
-  s = s & "            Else" & vbCrLf
-  s = s & "                endPos = pos" & vbCrLf
-  s = s & "                found = True" & vbCrLf
-  s = s & "                Exit Do" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Loop" & vbCrLf
-  s = s & "        If found Then Exit For" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractSection = Mid$(text, startPos, endPos - startPos)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Account name cleaning" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function CleanAccountName(nameBlockText As String) As String" & vbCrLf
-  s = s & "    Dim nameParts() As String" & vbCrLf
-  s = s & "    Dim partCount As Long" & vbCrLf
-  s = s & "    partCount = 0" & vbCrLf
-  s = s & "    ReDim nameParts(0 To 20)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim lines() As String" & vbCrLf
-  s = s & "    lines = Split(nameBlockText, vbLf)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = LBound(lines) To UBound(lines)" & vbCrLf
-  s = s & "        Dim line As String" & vbCrLf
-  s = s & "        line = Trim$(lines(i))" & vbCrLf
-  s = s & "        If line = """" Then GoTo NextNameLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Skip city/state/zip" & vbCrLf
-  s = s & "        If RegexTest(line, ""^[A-Z]+(?:\s+[A-Z]+){0,2}\s+[A-Z]{2}\s+\d{5}"") Then GoTo NextNameLine" & vbCrLf
-  s = s & "        ' Skip street address" & vbCrLf
-  s = s & "        If RegexTest(line, ""^\d+\s+.*\b(AVE|ST|RD|DR|BLVD|LN|CT|WAY|PL|CIR|TER|PKWY)\b"", True) Then GoTo NextNameLine" & vbCrLf
-  s = s & "        ' Skip PO Box" & vbCrLf
-  s = s & "        If RegexTest(line, ""^P\.?O\.?\s*BOX\s+\d+"", True) Then GoTo NextNameLine" & vbCrLf
-  s = s & "        ' Skip account type (IRA etc)" & vbCrLf
-  s = s & "        If RegexTest(line, ""^(?:TRADITIONAL|ROTH|SEP|ROLLOVER|INHERITED|SIMPLE)[\s-]*(?:IRA|I\.R\.A\.)$"", True) Then GoTo NextNameLine" & vbCrLf
-  s = s & "        ' Skip trustee lines without trust words" & vbCrLf
-  s = s & "        If RegexTest(line, ""^[A-Z][A-Z.\s]+(?:TRUSTEE|TTEE)$"") Then" & vbCrLf
-  s = s & "            If Not RegexTest(line, ""\b(?:TRUST|TR|REV|FAM|IRREV)\b"") Then GoTo NextNameLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        ' Skip boilerplate" & vbCrLf
-  s = s & "        If RegexTest(line, ""^(?:Questions about your statement|Call your Financial|=)"") Then GoTo NextNameLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Strip trailing address" & vbCrLf
-  s = s & "        Dim re As Object" & vbCrLf
-  s = s & "        Set re = CreateRegex(""\s+\d+\s+[\w\s]+\b(AVE|ST|RD|DR|BLVD|LN|CT|WAY|PL|CIR|TER|PKWY)\b.*"", False, False, True)" & vbCrLf
-  s = s & "        line = re.Replace(line, """")" & vbCrLf
-  s = s & "        ' Strip trailing city/state/zip" & vbCrLf
-  s = s & "        Set re = CreateRegex(""\s{2,}[A-Z]+(?:\s+[A-Z]+){0,2}\s+[A-Z]{2}\s+\d{5}(?:-\d{4})?.*"")" & vbCrLf
-  s = s & "        line = re.Replace(line, """")" & vbCrLf
-  s = s & "        line = Trim$(line)" & vbCrLf
-  s = s & "        If line = """" Then GoTo NextNameLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Skip duplicates" & vbCrLf
-  s = s & "        Dim accumulated As String" & vbCrLf
-  s = s & "        accumulated = JoinArray(nameParts, "" "", partCount)" & vbCrLf
-  s = s & "        If accumulated <> """" And InStr(1, accumulated, line) > 0 Then GoTo NextNameLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        nameParts(partCount) = line" & vbCrLf
-  s = s & "        partCount = partCount + 1" & vbCrLf
-  s = s & "        If partCount > UBound(nameParts) Then ReDim Preserve nameParts(0 To partCount + 10)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "NextNameLine:" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim result As String" & vbCrLf
-  s = s & "    result = JoinArray(nameParts, "" "", partCount)" & vbCrLf
-  s = s & "    ' Collapse multiple spaces" & vbCrLf
-  s = s & "    Set re = CreateRegex(""\s{2,}"", True)" & vbCrLf
-  s = s & "    result = re.Replace(result, "" "")" & vbCrLf
-  s = s & "    ' Strip pledge text" & vbCrLf
-  s = s & "    Set re = CreateRegex(""\s*Pleg'd Coll Acct-FBO UBS Bank USA"", False, False, True)" & vbCrLf
-  s = s & "    result = re.Replace(result, """")" & vbCrLf
-  s = s & "    CleanAccountName = Trim$(result)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function JoinArray(arr() As String, delimiter As String, count As Long) As String" & vbCrLf
-  s = s & "    If count = 0 Then" & vbCrLf
-  s = s & "        JoinArray = """"" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    Dim result As String" & vbCrLf
-  s = s & "    result = arr(0)" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 1 To count - 1" & vbCrLf
-  s = s & "        result = result & delimiter & arr(i)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    JoinArray = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Holding number parser" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub ParseHoldingNumbers(textAfterName As String, ByRef Value As Double, ByRef CostBasis As Variant, ByRef UnrealizedGL As Variant)" & vbCrLf
-  s = s & "    Value = 0#" & vbCrLf
-  s = s & "    CostBasis = Null" & vbCrLf
-  s = s & "    UnrealizedGL = Null" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim matches As Object" & vbCrLf
-  s = s & "    Set matches = RegexMatchAll(textAfterName, NUM_PAT)" & vbCrLf
-  s = s & "    If matches.Count = 0 Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Collect non-percentage numbers" & vbCrLf
-  s = s & "    Dim numericVals() As Double" & vbCrLf
-  s = s & "    Dim numCount As Long" & vbCrLf
-  s = s & "    numCount = 0" & vbCrLf
-  s = s & "    ReDim numericVals(0 To matches.Count - 1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim remaining As String" & vbCrLf
-  s = s & "    remaining = textAfterName" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To matches.Count - 1" & vbCrLf
-  s = s & "        Dim numStr As String" & vbCrLf
-  s = s & "        numStr = matches(i).Value" & vbCrLf
-  s = s & "        Dim pos As Long" & vbCrLf
-  s = s & "        pos = InStr(1, remaining, numStr)" & vbCrLf
-  s = s & "        If pos = 0 Then GoTo NextNum" & vbCrLf
-  s = s & "        Dim afterNum As String" & vbCrLf
-  s = s & "        afterNum = LTrim$(Mid$(remaining, pos + Len(numStr)))" & vbCrLf
-  s = s & "        If Left$(afterNum, 1) = ""%"" Then" & vbCrLf
-  s = s & "            remaining = Mid$(afterNum, 2)" & vbCrLf
-  s = s & "            GoTo NextNum" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        numericVals(numCount) = SafeFloat(numStr)" & vbCrLf
-  s = s & "        numCount = numCount + 1" & vbCrLf
-  s = s & "        remaining = afterNum" & vbCrLf
-  s = s & "NextNum:" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If numCount > 0 Then Value = numericVals(0)" & vbCrLf
-  s = s & "    If numCount = 2 Then" & vbCrLf
-  s = s & "        CostBasis = numericVals(1)" & vbCrLf
-  s = s & "    ElseIf numCount = 3 Then" & vbCrLf
-  s = s & "        CostBasis = numericVals(1)" & vbCrLf
-  s = s & "        UnrealizedGL = numericVals(2)" & vbCrLf
-  s = s & "    ElseIf numCount >= 4 Then" & vbCrLf
-  s = s & "        CostBasis = numericVals(1)" & vbCrLf
-  s = s & "        UnrealizedGL = numericVals(3)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Account Summary extraction" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ExtractAccountSummary(text As String) As AccountSummary" & vbCrLf
-  s = s & "    Dim summary As AccountSummary" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim startM() As String: startM = SArr(""Account name:"")" & vbCrLf
-  s = s & "    Dim endM() As String: endM = SArr2(""Your account balance sheet"", ""Summary of your assets"")" & vbCrLf
-  s = s & "    Dim section As String" & vbCrLf
-  s = s & "    section = ExtractSection(text, startM, endM)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Account name" & vbCrLf
-  s = s & "    Dim m As Object" & vbCrLf
-  s = s & "    Set m = RegexMatch(section, ""Account name:\s*([\s\S]*?)(?=Friendly account name:|Account number:)"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.AccountName = CleanAccountName(m.SubMatches(0))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Friendly name" & vbCrLf
-  s = s & "    Set m = RegexMatch(section, ""Friendly account name:\s*(.+?)(?:\n|$)"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        Dim fn As String" & vbCrLf
-  s = s & "        fn = Trim$(m.SubMatches(0))" & vbCrLf
-  s = s & "        ' Strip side-by-side text" & vbCrLf
-  s = s & "        Dim re As Object" & vbCrLf
-  s = s & "        Set re = CreateRegex(""\s{2,}.*"")" & vbCrLf
-  s = s & "        summary.FriendlyName = re.Replace(fn, """")" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Account number" & vbCrLf
-  s = s & "    Set m = RegexMatch(section, ""Account number:\s*(.+?)(?:\n|$)"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.AccountNumber = Trim$(Replace(m.SubMatches(0), "" WM"", """"))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Financial advisor" & vbCrLf
-  s = s & "    Set m = RegexMatch(section, ""Your Financial Advisor:\s*\n\s*(.+?)(?:\n|$)"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.FinancialAdvisor = Trim$(m.SubMatches(0))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Statement period" & vbCrLf
-  s = s & "    Set m = RegexMatch(section, ""((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.StatementPeriod = Trim$(m.SubMatches(0))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Your assets (opening/closing)" & vbCrLf
-  s = s & "    Set m = RegexMatch(section, ""Your assets\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.OpeningValue = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "        summary.ClosingValue = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Subtract liabilities if present" & vbCrLf
-  s = s & "    Set m = RegexMatch(section, ""Your liabilities\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.OpeningValue = summary.OpeningValue + SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "        summary.ClosingValue = summary.ClosingValue + SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Loan accounts fallback" & vbCrLf
-  s = s & "    If summary.OpeningValue = 0# And summary.ClosingValue = 0# Then" & vbCrLf
-  s = s & "        Set m = RegexMatch(section, ""Total loan balance\s+\$?("" & NUM_PAT & "")\s+\$?("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            summary.OpeningValue = -SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "            summary.ClosingValue = -SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Change in value section" & vbCrLf
-  s = s & "    Dim tl As String" & vbCrLf
-  s = s & "    tl = LCase$(text)" & vbCrLf
-  s = s & "    Dim changeStart As Long" & vbCrLf
-  s = s & "    changeStart = InStr(1, tl, ""change in the value of your account"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim changeSection As String" & vbCrLf
-  s = s & "    If changeStart > 0 Then" & vbCrLf
-  s = s & "        Dim closePos As Long" & vbCrLf
-  s = s & "        closePos = InStr(changeStart, tl, ""closing account value"")" & vbCrLf
-  s = s & "        If closePos > 0 Then" & vbCrLf
-  s = s & "            Dim le As Long" & vbCrLf
-  s = s & "            le = LineEnd(text, closePos)" & vbCrLf
-  s = s & "            changeSection = Mid$(text, changeStart, le - changeStart)" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            changeSection = Mid$(text, changeStart, SECTION_LOOKAHEAD)" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Deposits transferred in" & vbCrLf
-  s = s & "    Dim deposits As Double" & vbCrLf
-  s = s & "    Set m = RegexMatch(changeSection, ""transferred in\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then deposits = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Withdrawals/out" & vbCrLf
-  s = s & "    Dim withdrawals As Double" & vbCrLf
-  s = s & "    Set re = CreateRegex(""^out\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"", False, True)" & vbCrLf
-  s = s & "    Dim matches As Object" & vbCrLf
-  s = s & "    Set matches = re.Execute(changeSection)" & vbCrLf
-  s = s & "    If matches.Count > 0 Then" & vbCrLf
-  s = s & "        withdrawals = SafeFloat(matches(0).SubMatches(0))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If deposits = 0# And withdrawals = 0# Then" & vbCrLf
-  s = s & "        Set m = RegexMatch(changeSection, ""out\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then withdrawals = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    summary.DepositsTransferredIn = deposits" & vbCrLf
-  s = s & "    summary.NetDepositsWithdrawals = deposits + withdrawals" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Dividend & interest income" & vbCrLf
-  s = s & "    Set m = RegexMatch(changeSection, ""Dividend and interest income\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then summary.DividendInterestIncome = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Change in market value" & vbCrLf
-  s = s & "    Set m = RegexMatch(changeSection, ""Change in market value\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then summary.ChangeInMarketValue = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Change in accrued interest" & vbCrLf
-  s = s & "    Set m = RegexMatch(changeSection, ""Change in value of accrued[\s\S]+?interest\s+(-?"" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then summary.ChangeInAccruedInterest = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractAccountSummary = summary" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Asset Allocation extraction" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ExtractAssetAllocation(text As String) As AssetAllocation()" & vbCrLf
-  s = s & "    Dim allocations() As AssetAllocation" & vbCrLf
-  s = s & "    ReDim allocations(0 To 6)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim tl As String" & vbCrLf
-  s = s & "    tl = LCase$(text)" & vbCrLf
-  s = s & "    Dim summaryPos As Long" & vbCrLf
-  s = s & "    summaryPos = InStr(1, tl, ""summary of your assets"")" & vbCrLf
-  s = s & "    If summaryPos = 0 Then" & vbCrLf
-  s = s & "        ExtractAssetAllocation = allocations" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim totalPos As Long" & vbCrLf
-  s = s & "    totalPos = InStr(summaryPos, tl, ""total assets"")" & vbCrLf
-  s = s & "    Dim section As String" & vbCrLf
-  s = s & "    If totalPos > 0 Then" & vbCrLf
-  s = s & "        Dim le As Long" & vbCrLf
-  s = s & "        le = LineEnd(text, totalPos)" & vbCrLf
-  s = s & "        section = Mid$(text, summaryPos, le - summaryPos)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        Dim startM() As String: startM = SArr(""Summary of your assets"")" & vbCrLf
-  s = s & "        Dim endM() As String: endM = SArr(""Total assets"")" & vbCrLf
-  s = s & "        section = ExtractSection(text, startM, endM)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim categories(0 To 6) As String" & vbCrLf
-  s = s & "    categories(0) = ""Cash and money balances""" & vbCrLf
-  s = s & "    categories(1) = ""Cash alternatives""" & vbCrLf
-  s = s & "    categories(2) = ""Equities""" & vbCrLf
-  s = s & "    categories(3) = ""Fixed income""" & vbCrLf
-  s = s & "    categories(4) = ""Non-traditional""" & vbCrLf
-  s = s & "    categories(5) = ""Commodities""" & vbCrLf
-  s = s & "    categories(6) = ""Other""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To 6" & vbCrLf
-  s = s & "        allocations(i).Category = categories(i)" & vbCrLf
-  s = s & "        ' Escape special regex chars in category name" & vbCrLf
-  s = s & "        Dim escaped As String" & vbCrLf
-  s = s & "        escaped = RegexEscape(categories(i))" & vbCrLf
-  s = s & "        Dim m As Object" & vbCrLf
-  s = s & "        Set m = RegexMatch(section, escaped & ""\s+("" & NUM_PAT & "")\s+(\d+\.\d{2})%"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            allocations(i).Value = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "            allocations(i).Percentage = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractAssetAllocation = allocations" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function RegexEscape(s As String) As String" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateRegex(""[.*+?^${}()|[\]\\]"", True)" & vbCrLf
-  s = s & "    RegexEscape = re.Replace(s, ""\$&"")" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Holdings extraction" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ExtractHoldings(text As String) As Holding()" & vbCrLf
-  s = s & "    Dim startM() As String: startM = SArr2(""Your total assets"", ""Summary of your assets"")" & vbCrLf
-  s = s & "    Dim endM() As String: endM = SArr(""Account activity this month"")" & vbCrLf
-  s = s & "    Dim section As String" & vbCrLf
-  s = s & "    section = ExtractSection(text, startM, endM)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim holdings() As Holding" & vbCrLf
-  s = s & "    Dim holdCount As Long" & vbCrLf
-  s = s & "    holdCount = 0" & vbCrLf
-  s = s & "    ReDim holdings(0 To 30)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim currentAssetClass As String" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Asset type map: holding name -> asset class" & vbCrLf
-  s = s & "    Dim holdingNames(0 To 12) As String" & vbCrLf
-  s = s & "    Dim assetTypes(0 To 12) As String" & vbCrLf
-  s = s & "    holdingNames(0) = ""Cash and money balances"": assetTypes(0) = ""Cash and money balances""" & vbCrLf
-  s = s & "    holdingNames(1) = ""Money market funds"": assetTypes(1) = ""Cash alternatives""" & vbCrLf
-  s = s & "    holdingNames(2) = ""Common stock"": assetTypes(2) = ""Equities""" & vbCrLf
-  s = s & "    holdingNames(3) = ""Municipal securities"": assetTypes(3) = ""Fixed income""" & vbCrLf
-  s = s & "    holdingNames(4) = ""Fixed income"": assetTypes(4) = ""Fixed income""" & vbCrLf
-  s = s & "    holdingNames(5) = ""Private equity funds"": assetTypes(5) = ""Non-traditional""" & vbCrLf
-  s = s & "    holdingNames(6) = ""Hedge funds"": assetTypes(6) = ""Non-traditional""" & vbCrLf
-  s = s & "    holdingNames(7) = ""Other investments"": assetTypes(7) = ""Non-traditional""" & vbCrLf
-  s = s & "    holdingNames(8) = ""Other equity investments"": assetTypes(8) = ""Equities""" & vbCrLf
-  s = s & "    holdingNames(9) = ""Mutual funds"": assetTypes(9) = ""Other""" & vbCrLf
-  s = s & "    holdingNames(10) = ""Life insurance"": assetTypes(10) = ""Other""" & vbCrLf
-  s = s & "    holdingNames(11) = ""Closed end funds & Exchange traded"": assetTypes(11) = ""Equities""" & vbCrLf
-  s = s & "    holdingNames(12) = ""Total accrued interest"": assetTypes(12) = ""Fixed income""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Asset class prefixes" & vbCrLf
-  s = s & "    Dim classPrefixes(0 To 6) As String" & vbCrLf
-  s = s & "    Dim classNames(0 To 6) As String" & vbCrLf
-  s = s & "    classPrefixes(0) = ""Cash alternatives "": classNames(0) = ""Cash alternatives""" & vbCrLf
-  s = s & "    classPrefixes(1) = ""Fixed income "": classNames(1) = ""Fixed income""" & vbCrLf
-  s = s & "    classPrefixes(2) = ""Commodities "": classNames(2) = ""Commodities""" & vbCrLf
-  s = s & "    classPrefixes(3) = ""Cash "": classNames(3) = ""Cash and money balances""" & vbCrLf
-  s = s & "    classPrefixes(4) = ""Equities "": classNames(4) = ""Equities""" & vbCrLf
-  s = s & "    classPrefixes(5) = ""Non-traditional "": classNames(5) = ""Non-traditional""" & vbCrLf
-  s = s & "    classPrefixes(6) = ""Other "": classNames(6) = ""Other""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim lines() As String" & vbCrLf
-  s = s & "    lines = Split(section, vbLf)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim li As Long" & vbCrLf
-  s = s & "    For li = LBound(lines) To UBound(lines)" & vbCrLf
-  s = s & "        Dim line As String" & vbCrLf
-  s = s & "        line = Trim$(lines(li))" & vbCrLf
-  s = s & "        If line = """" Then GoTo NextHoldingLine" & vbCrLf
-  s = s & "        If RegexTest(line, ""^=== PAGE \d+ ==="") Then GoTo NextHoldingLine" & vbCrLf
-  s = s & "        If Left$(line, 13) = ""Percentage of"" Or Left$(line, 8) = ""Value on"" Or Left$(line, 16) = ""Your total assets"" Then GoTo NextHoldingLine" & vbCrLf
-  s = s & "        If (Left$(line, 5) = ""Total"" And Left$(line, 22) <> ""Total accrued interest"") Or Left$(line, 9) = ""* Missing"" Then GoTo NextHoldingLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Check asset class prefixes" & vbCrLf
-  s = s & "        Dim rest As String" & vbCrLf
-  s = s & "        rest = line" & vbCrLf
-  s = s & "        Dim pi As Long" & vbCrLf
-  s = s & "        For pi = 0 To 6" & vbCrLf
-  s = s & "            If Left$(line, Len(classPrefixes(pi))) = classPrefixes(pi) Then" & vbCrLf
-  s = s & "                currentAssetClass = classNames(pi)" & vbCrLf
-  s = s & "                Dim after As String" & vbCrLf
-  s = s & "                after = LTrim$(Mid$(line, Len(classPrefixes(pi)) + 1))" & vbCrLf
-  s = s & "                If Left$(after, 1) = ""*"" Then after = LTrim$(Mid$(after, 2))" & vbCrLf
-  s = s & "                ' Check if a holding name follows on same line" & vbCrLf
-  s = s & "                Dim hi As Long" & vbCrLf
-  s = s & "                For hi = 0 To 12" & vbCrLf
-  s = s & "                    If Left$(after, Len(holdingNames(hi))) = holdingNames(hi) Then" & vbCrLf
-  s = s & "                        rest = after" & vbCrLf
-  s = s & "                        Exit For" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                Next hi" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next pi" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Strip single-letter prefix (A-G)" & vbCrLf
-  s = s & "        If Len(rest) >= 2 And Mid$(rest, 2, 1) = "" "" Then" & vbCrLf
-  s = s & "            Dim fc As String" & vbCrLf
-  s = s & "            fc = Left$(rest, 1)" & vbCrLf
-  s = s & "            If fc >= ""A"" And fc <= ""G"" Then" & vbCrLf
-  s = s & "                rest = Mid$(rest, 3)" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Strip leading asterisks" & vbCrLf
-  s = s & "        Dim re As Object" & vbCrLf
-  s = s & "        Set re = CreateRegex(""^\*+\s*"")" & vbCrLf
-  s = s & "        Dim restClean As String" & vbCrLf
-  s = s & "        restClean = re.Replace(rest, """")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Match against holding names" & vbCrLf
-  s = s & "        For hi = 0 To 12" & vbCrLf
-  s = s & "            If Left$(restClean, Len(holdingNames(hi))) <> holdingNames(hi) Then GoTo NextHolding" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            Dim afterName As String" & vbCrLf
-  s = s & "            afterName = Trim$(Mid$(restClean, Len(holdingNames(hi)) + 1))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Special case: ""Closed end funds & Exchange traded"" needs numbers to follow" & vbCrLf
-  s = s & "            If holdingNames(hi) = ""Closed end funds & Exchange traded"" Then" & vbCrLf
-  s = s & "                If Not RegexTest(afterName, ""^("" & NUM_PAT & "")"") Then GoTo NextHolding" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            Dim hValue As Double, hCost As Variant, hGL As Variant" & vbCrLf
-  s = s & "            ParseHoldingNumbers afterName, hValue, hCost, hGL" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Skip if no value and no numbers found" & vbCrLf
-  s = s & "            If hValue = 0# And Not RegexTest(afterName, NUM_PAT) Then GoTo NextHolding" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Add holding" & vbCrLf
-  s = s & "            If holdCount > UBound(holdings) Then ReDim Preserve holdings(0 To holdCount + 20)" & vbCrLf
-  s = s & "            holdings(holdCount).Name = holdingNames(hi)" & vbCrLf
-  s = s & "            If currentAssetClass <> """" Then" & vbCrLf
-  s = s & "                holdings(holdCount).AssetType = currentAssetClass" & vbCrLf
-  s = s & "            Else" & vbCrLf
-  s = s & "                holdings(holdCount).AssetType = assetTypes(hi)" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            holdings(holdCount).Value = hValue" & vbCrLf
-  s = s & "            holdings(holdCount).CostBasis = hCost" & vbCrLf
-  s = s & "            holdings(holdCount).UnrealizedGL = hGL" & vbCrLf
-  s = s & "            ReDim holdings(holdCount).Securities(0 To 0)" & vbCrLf
-  s = s & "            holdings(holdCount).SecurityCount = 0" & vbCrLf
-  s = s & "            holdCount = holdCount + 1" & vbCrLf
-  s = s & "            Exit For" & vbCrLf
-  s = s & "NextHolding:" & vbCrLf
-  s = s & "        Next hi" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "NextHoldingLine:" & vbCrLf
-  s = s & "    Next li" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Handle ""Closed end funds & Exchange traded products"" spanning two lines" & vbCrLf
-  s = s & "    Dim cefMatches As Object" & vbCrLf
-  s = s & "    Set cefMatches = RegexMatchAll(section, ""Closed end funds & Exchange traded\s*\n\s*products\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    Dim ci As Long" & vbCrLf
-  s = s & "    For ci = 0 To cefMatches.Count - 1" & vbCrLf
-  s = s & "        Dim cefValue As Double" & vbCrLf
-  s = s & "        cefValue = SafeFloat(cefMatches(ci).SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If holdCount > UBound(holdings) Then ReDim Preserve holdings(0 To holdCount + 5)" & vbCrLf
-  s = s & "        holdings(holdCount).Name = ""Closed end funds & Exchange traded products""" & vbCrLf
-  s = s & "        holdings(holdCount).AssetType = ""Equities""" & vbCrLf
-  s = s & "        holdings(holdCount).Value = cefValue" & vbCrLf
-  s = s & "        holdings(holdCount).CostBasis = Null" & vbCrLf
-  s = s & "        holdings(holdCount).UnrealizedGL = Null" & vbCrLf
-  s = s & "        ReDim holdings(holdCount).Securities(0 To 0)" & vbCrLf
-  s = s & "        holdings(holdCount).SecurityCount = 0" & vbCrLf
-  s = s & "        holdCount = holdCount + 1" & vbCrLf
-  s = s & "    Next ci" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Subtract liabilities from cash" & vbCrLf
-  s = s & "    Dim liabM As Object" & vbCrLf
-  s = s & "    Set liabM = RegexMatch(section, ""Total liabilities\s+-?\$?([\d,]+\.\d{2})"")" & vbCrLf
-  s = s & "    If Not liabM Is Nothing Then" & vbCrLf
-  s = s & "        Dim liabAmt As Double" & vbCrLf
-  s = s & "        liabAmt = SafeFloat(liabM.SubMatches(0))" & vbCrLf
-  s = s & "        Dim hIdx As Long" & vbCrLf
-  s = s & "        For hIdx = 0 To holdCount - 1" & vbCrLf
-  s = s & "            If holdings(hIdx).Name = ""Cash and money balances"" Then" & vbCrLf
-  s = s & "                holdings(hIdx).Value = holdings(hIdx).Value - liabAmt" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next hIdx" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ReDim Preserve holdings(0 To IIf(holdCount > 0, holdCount - 1, 0))" & vbCrLf
-  s = s & "    ExtractHoldings = holdings" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Transaction extraction" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ExtractTransactions(text As String) As Transaction()" & vbCrLf
-  s = s & "    Dim startM() As String: startM = SArr(""Account activity this month"" & vbLf)" & vbCrLf
-  s = s & "    Dim endM() As String: endM = SArr2(""Money balance activities"", ""Important information about your statement"")" & vbCrLf
-  s = s & "    Dim section As String" & vbCrLf
-  s = s & "    section = ExtractSection(text, startM, endM)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim txs() As Transaction" & vbCrLf
-  s = s & "    Dim txCount As Long" & vbCrLf
-  s = s & "    txCount = 0" & vbCrLf
-  s = s & "    ReDim txs(0 To 200)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Detect BSA" & vbCrLf
-  s = s & "    Dim isBSA As Boolean" & vbCrLf
-  s = s & "    isBSA = RegexTest(section, ""Cash and money balance"", True)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim lines() As String" & vbCrLf
-  s = s & "    lines = Split(section, vbLf)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Skip prefixes" & vbCrLf
-  s = s & "    Dim skipPrefixes() As String" & vbCrLf
-  s = s & "    skipPrefixes = GetSkipPrefixes()" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Whitespace-collapse regex (hoisted — reused every line)" & vbCrLf
-  s = s & "    Dim reWhitespace As Object" & vbCrLf
-  s = s & "    Set reWhitespace = CreateRegex(""\s{2,}"", True)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Activity aliases" & vbCrLf
-  s = s & "    ' ""Foreign Tax"" -> ""Foreign Tax Withheld""" & vbCrLf
-  s = s & "    ' ""Visa Payment"" -> ""Credit Card Payment""" & vbCrLf
-  s = s & "    ' ""Foreign"" -> ""Dividend""" & vbCrLf
-  s = s & "    ' ""ACH WITHDRAWAL"" -> ""Withdrawal""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    i = 0" & vbCrLf
-  s = s & "    Do While i <= UBound(lines)" & vbCrLf
-  s = s & "        Dim line As String" & vbCrLf
-  s = s & "        line = Trim$(lines(i))" & vbCrLf
-  s = s & "        If line = """" Then GoTo NextTxLine" & vbCrLf
-  s = s & "        If RegexTest(line, ""^=== PAGE \d+ ==="") Then GoTo NextTxLine" & vbCrLf
-  s = s & "        If RegexTest(line, ""^Total[\s(a-z]"") Or line = ""Total"" Then GoTo NextTxLine" & vbCrLf
-  s = s & "        If RegexTest(line, ""^(?:Closing )?[Cc]ash and money balance\s+\$"") Then GoTo NextTxLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim lineCompact As String" & vbCrLf
-  s = s & "        lineCompact = reWhitespace.Replace(line, "" "")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Check skip prefixes" & vbCrLf
-  s = s & "        Dim parsedLine As String" & vbCrLf
-  s = s & "        parsedLine = line" & vbCrLf
-  s = s & "        Dim skipped As Boolean" & vbCrLf
-  s = s & "        skipped = False" & vbCrLf
-  s = s & "        Dim si As Long" & vbCrLf
-  s = s & "        For si = LBound(skipPrefixes) To UBound(skipPrefixes)" & vbCrLf
-  s = s & "            If Left$(line, Len(skipPrefixes(si))) = skipPrefixes(si) Or _" & vbCrLf
-  s = s & "               Left$(lineCompact, Len(skipPrefixes(si))) = skipPrefixes(si) Then" & vbCrLf
-  s = s & "                ' Check if section header with date following" & vbCrLf
-  s = s & "                If IsSectionHeader(line, lineCompact, skipPrefixes(si)) Then" & vbCrLf
-  s = s & "                    Dim restStr As String" & vbCrLf
-  s = s & "                    If Left$(line, Len(skipPrefixes(si))) = skipPrefixes(si) Then" & vbCrLf
-  s = s & "                        restStr = Mid$(line, Len(skipPrefixes(si)) + 1)" & vbCrLf
-  s = s & "                    Else" & vbCrLf
-  s = s & "                        restStr = Mid$(lineCompact, Len(skipPrefixes(si)) + 1)" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                    Dim dateInRest As Object" & vbCrLf
-  s = s & "                    Set dateInRest = RegexMatch(restStr, ""("" & DATE_PAT & "")\s+"")" & vbCrLf
-  s = s & "                    If Not dateInRest Is Nothing Then" & vbCrLf
-  s = s & "                        parsedLine = Mid$(restStr, dateInRest.FirstIndex + 1)" & vbCrLf
-  s = s & "                        parsedLine = Trim$(parsedLine)" & vbCrLf
-  s = s & "                        Exit For" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "                skipped = True" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next si" & vbCrLf
-  s = s & "        If skipped Then GoTo NextTxLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Skip orphan metadata" & vbCrLf
-  s = s & "        If RegexTest(line, ""^(?:SYMBOL:|CUSIP:|REF#:)"") Then GoTo NextTxLine" & vbCrLf
-  s = s & "        ' Skip misc boilerplate" & vbCrLf
-  s = s & "        If line = ""ab"" Or Left$(line, 3) = ""ab "" Or line = ""Check"" Or line = ""Checks"" Then GoTo NextTxLine" & vbCrLf
-  s = s & "        If RegexTest(line, ""^for\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s"") Then GoTo NextTxLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim m As Object" & vbCrLf
-  s = s & "        Dim re As Object" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' --- ATM FEE REBATE ---" & vbCrLf
-  s = s & "        Set m = RegexMatch(line, ""^ATM FEE REBATE\s+\$?("" & NUM_PAT & "")$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            Dim rebateDate As String" & vbCrLf
-  s = s & "            If txCount > 0 Then rebateDate = txs(txCount - 1).TxDate Else rebateDate = """"" & vbCrLf
-  s = s & "            AddTx txs, txCount, rebateDate, ""Deposit"", ""ATM FEE REBATE"", SafeFloat(m.SubMatches(0)), Null, Null" & vbCrLf
-  s = s & "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' BSA: strip trailing running balance" & vbCrLf
-  s = s & "        If isBSA And RegexTest(parsedLine, ""[\d,]*\.\d{2,}\s+[\d,]+\.\d{2}$"") Then" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s+[\d,]+\.\d{2}$"")" & vbCrLf
-  s = s & "            parsedLine = re.Replace(parsedLine, """")" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Extract date" & vbCrLf
-  s = s & "        Dim dateM As Object" & vbCrLf
-  s = s & "        Set dateM = RegexMatch(parsedLine, ""("" & DATE_PAT & "")\s+"")" & vbCrLf
-  s = s & "        If dateM Is Nothing Then GoTo NextTxLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim txDate As String" & vbCrLf
-  s = s & "        txDate = dateM.SubMatches(0)" & vbCrLf
-  s = s & "        Dim afterDate As String" & vbCrLf
-  s = s & "        afterDate = Mid$(parsedLine, dateM.FirstIndex + Len(dateM.Value) + 1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Skip BSA balance lines after date" & vbCrLf
-  s = s & "        If RegexTest(afterDate, ""^(?:Closing )?[Cc]ash and money balance\b"") Then GoTo NextTxLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' --- Balance forward ---" & vbCrLf
-  s = s & "        Set m = RegexMatch(afterDate, ""^Balance forward\s+\$?("" & NUM_PAT & "")$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            AddTx txs, txCount, txDate, ""Deposit"", ""Balance forward"", SafeFloat(m.SubMatches(0)), Null, Null" & vbCrLf
-  s = s & "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' --- Simple single-keyword transactions ---" & vbCrLf
-  s = s & "        Set m = RegexMatch(afterDate, ""^(St Cap Gain|Lt Cap Gain|Cash In Lieu|Bill Payment|Bsa Check|Foreign Tax|Visa Payment|Correction|Transfer|Deposit|ACH WITHDRAWAL|Withdrawal|Dividend|Interest|Distribution|Refund|Closing|Foreign)\s+(.+?)\s+(-?\$?[\d,]*\.\d{2})$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            Dim activity As String" & vbCrLf
-  s = s & "            activity = m.SubMatches(0)" & vbCrLf
-  s = s & "            Dim desc As String" & vbCrLf
-  s = s & "            desc = Trim$(m.SubMatches(1))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Apply aliases" & vbCrLf
-  s = s & "            Select Case activity" & vbCrLf
-  s = s & "                Case ""Foreign Tax"": activity = ""Foreign Tax Withheld""" & vbCrLf
-  s = s & "                Case ""Visa Payment"": activity = ""Credit Card Payment""" & vbCrLf
-  s = s & "                Case ""Foreign"": activity = ""Dividend""" & vbCrLf
-  s = s & "                Case ""ACH WITHDRAWAL"": activity = ""Withdrawal""" & vbCrLf
-  s = s & "            End Select" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            If isBSA And activity = ""Withdrawal"" And Left$(desc, 7) = ""CHECK #"" Then activity = ""Bsa Check""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            AddTx txs, txCount, txDate, activity, desc, SafeFloat(m.SubMatches(2)), Null, Null" & vbCrLf
-  s = s & "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Fix-up: ""Correction Of Int. Charge""" & vbCrLf
-  s = s & "            If activity = ""Correction"" Then" & vbCrLf
-  s = s & "                If txs(txCount - 1).Description = ""Of"" And i + 1 <= UBound(lines) Then" & vbCrLf
-  s = s & "                    Dim nextLine As String" & vbCrLf
-  s = s & "                    nextLine = Trim$(lines(i + 1))" & vbCrLf
-  s = s & "                    If Left$(nextLine, 11) = ""Int. Charge"" Then" & vbCrLf
-  s = s & "                        txs(txCount - 1).Activity = ""Correction Of Int. Charge""" & vbCrLf
-  s = s & "                        txs(txCount - 1).Description = Trim$(Mid$(nextLine, 12))" & vbCrLf
-  s = s & "                        i = i + 1" & vbCrLf
-  s = s & "                        ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Fix-up: ""Interest Charge""" & vbCrLf
-  s = s & "            If activity = ""Interest"" Then" & vbCrLf
-  s = s & "                If Right$(txs(txCount - 1).Description, 7) = "" Charge"" Then" & vbCrLf
-  s = s & "                    txs(txCount - 1).Activity = ""Interest Charge""" & vbCrLf
-  s = s & "                    txs(txCount - 1).Description = Left$(txs(txCount - 1).Description, Len(txs(txCount - 1).Description) - 7)" & vbCrLf
-  s = s & "                    txs(txCount - 1).Description = Trim$(txs(txCount - 1).Description)" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' --- Fee Charged ---" & vbCrLf
-  s = s & "        Set m = RegexMatch(afterDate, ""^Fee(?:\s+Charged)?\s+(.+?)\s+(-?"" & NUM_PAT & "")$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            AddTx txs, txCount, txDate, ""Fee Charged"", Trim$(m.SubMatches(0)), SafeFloat(m.SubMatches(1)), Null, Null" & vbCrLf
-  s = s & "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' --- Credit Card Payment ---" & vbCrLf
-  s = s & "        Set m = RegexMatch(afterDate, ""^(CREDIT CARD PAYMENT)\s+(-?"" & NUM_PAT & "")$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            AddTx txs, txCount, txDate, ""Credit Card Payment"", m.SubMatches(0), SafeFloat(m.SubMatches(1)), Null, Null" & vbCrLf
-  s = s & "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' --- Two-date (CashConnect / Visa debit) ---" & vbCrLf
-  s = s & "        Set m = RegexMatch(afterDate, ""^("" & DATE_PAT & "")\s+(.+?)\s+(-?)\$?("" & NUM_PAT & "")$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            Dim ccDesc As String" & vbCrLf
-  s = s & "            ccDesc = Trim$(m.SubMatches(1))" & vbCrLf
-  s = s & "            Dim ccAmt As Double" & vbCrLf
-  s = s & "            ccAmt = SafeFloat(m.SubMatches(3))" & vbCrLf
-  s = s & "            Dim ccActivity As String" & vbCrLf
-  s = s & "            If ccDesc = ""CASHCONNECT"" Then ccActivity = ""CashConnect"" Else ccActivity = ""Card Purchase""" & vbCrLf
-  s = s & "            AddTx txs, txCount, txDate, ccActivity, ccDesc, -ccAmt, Null, Null" & vbCrLf
-  s = s & "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' --- Check ---" & vbCrLf
-  s = s & "        Set m = RegexMatch(parsedLine, ""^(?:Checks\s+)?\d{4,10}\s+("" & DATE_PAT & "")\s+(.+?)\s+(-?"" & NUM_PAT & "")$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            Dim chkActivity As String" & vbCrLf
-  s = s & "            If isBSA Then chkActivity = ""Bsa Check"" Else chkActivity = ""Withdrawal""" & vbCrLf
-  s = s & "            AddTx txs, txCount, m.SubMatches(0), chkActivity, Trim$(m.SubMatches(1)), SafeFloat(m.SubMatches(2)), Null, Null" & vbCrLf
-  s = s & "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' --- Sold/Bought with price ---" & vbCrLf
-  s = s & "        Set m = RegexMatch(afterDate, ""^(Sold|Bought)\s+(.+?)\s+(-?[\d,]+\.\d{3})\s+(-?[\d,]+\.\d{2,})\s+(-?"" & NUM_PAT & "")(?:\s+("" & NUM_PAT & ""))?$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            Dim sbActivity As String" & vbCrLf
-  s = s & "            If m.SubMatches(0) = ""Sold"" Then sbActivity = ""Sale"" Else sbActivity = ""Purchase""" & vbCrLf
-  s = s & "            AddTx txs, txCount, txDate, sbActivity, Trim$(m.SubMatches(1)), SafeFloat(m.SubMatches(4)), ParseNum(m.SubMatches(2)), ParseNum(m.SubMatches(3))" & vbCrLf
-  s = s & "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' --- Sold/Bought without price (money market) ---" & vbCrLf
-  s = s & "        Set m = RegexMatch(afterDate, ""^(Sold|Bought)\s+(.+?)\s+(-?[\d,]+\.\d{3})\s+("" & NUM_PAT & "")$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            If m.SubMatches(0) = ""Sold"" Then sbActivity = ""Sale"" Else sbActivity = ""Purchase""" & vbCrLf
-  s = s & "            AddTx txs, txCount, txDate, sbActivity, Trim$(m.SubMatches(1)), SafeFloat(m.SubMatches(3)), ParseNum(m.SubMatches(2)), Null" & vbCrLf
-  s = s & "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' --- Reinvestment 3-number ---" & vbCrLf
-  s = s & "        Set m = RegexMatch(afterDate, ""^Reinvestment\s+(.+?)\s+([\d,]+\.\d{2,6})\s+([\d,]+\.\d{2,3})\s+(-?"" & NUM_PAT & "")$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            Dim rDesc As String" & vbCrLf
-  s = s & "            rDesc = Trim$(m.SubMatches(0))" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s+AT$"")" & vbCrLf
-  s = s & "            rDesc = re.Replace(rDesc, """")" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s+DIVIDEND$"")" & vbCrLf
-  s = s & "            rDesc = re.Replace(rDesc, """")" & vbCrLf
-  s = s & "            AddTx txs, txCount, txDate, ""Reinvestment"", rDesc, SafeFloat(m.SubMatches(3)), ParseNum(m.SubMatches(1)), ParseNum(m.SubMatches(2))" & vbCrLf
-  s = s & "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' --- Reinvestment 2-number ---" & vbCrLf
-  s = s & "        Set m = RegexMatch(afterDate, ""^Reinvestment\s+(.+?)\s+([\d,]+\.\d{2,3})\s+(-?"" & NUM_PAT & "")$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            rDesc = Trim$(m.SubMatches(0))" & vbCrLf
-  s = s & "            Dim rPrice As Variant" & vbCrLf
-  s = s & "            rPrice = Null" & vbCrLf
-  s = s & "            Dim priceM As Object" & vbCrLf
-  s = s & "            Set priceM = RegexMatch(rDesc, ""REINVESTED AT\s+([\d.]+)\s+NAV"")" & vbCrLf
-  s = s & "            If Not priceM Is Nothing Then rPrice = ParseNum(priceM.SubMatches(0))" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s+AT$"")" & vbCrLf
-  s = s & "            rDesc = re.Replace(rDesc, """")" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s+DIVIDEND$"")" & vbCrLf
-  s = s & "            rDesc = re.Replace(rDesc, """")" & vbCrLf
-  s = s & "            AddTx txs, txCount, txDate, ""Reinvestment"", rDesc, SafeFloat(m.SubMatches(2)), ParseNum(m.SubMatches(1)), rPrice" & vbCrLf
-  s = s & "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' --- DTC transfer ---" & vbCrLf
-  s = s & "        Set m = RegexMatch(afterDate, ""^(Receive Dtc|Deliver Dtc)\s+(.+?)\s+(-?[\d,]+\.\d{3})\s*(-?"" & NUM_PAT & "")$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            AddTx txs, txCount, txDate, m.SubMatches(0), Trim$(m.SubMatches(1)), SafeFloat(m.SubMatches(3)), ParseNum(m.SubMatches(2)), Null" & vbCrLf
-  s = s & "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' --- Call Redemption ---" & vbCrLf
-  s = s & "        Set m = RegexMatch(afterDate, ""^Call\s+(.+?)\s+(-?[\d,]+\.\d{3})\s*(-?"" & NUM_PAT & "")(?:\s+("" & NUM_PAT & ""))?$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            AddTx txs, txCount, txDate, ""Call Redemption"", Trim$(m.SubMatches(0)), SafeFloat(m.SubMatches(2)), ParseNum(m.SubMatches(1)), Null" & vbCrLf
-  s = s & "            ' Consume ""Redemption"" continuation" & vbCrLf
-  s = s & "            If i + 1 <= UBound(lines) Then" & vbCrLf
-  s = s & "                If Left$(lines(i + 1), 10) = ""Redemption"" Then" & vbCrLf
-  s = s & "                    Dim redemptionRest As String" & vbCrLf
-  s = s & "                    redemptionRest = Trim$(Mid$(lines(i + 1), 11))" & vbCrLf
-  s = s & "                    If redemptionRest <> """" Then" & vbCrLf
-  s = s & "                        Dim cusipM As Object" & vbCrLf
-  s = s & "                        Set cusipM = RegexMatch(redemptionRest, ""^CUSIP:\s*(\S+)"")" & vbCrLf
-  s = s & "                        If Not cusipM Is Nothing Then" & vbCrLf
-  s = s & "                            txs(txCount - 1).Cusip = cusipM.SubMatches(0)" & vbCrLf
-  s = s & "                        Else" & vbCrLf
-  s = s & "                            txs(txCount - 1).Description = txs(txCount - 1).Description & "" "" & redemptionRest" & vbCrLf
-  s = s & "                        End If" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                    i = i + 1" & vbCrLf
-  s = s & "                    ConsumeContinuations lines, i, txs, txCount, skipPrefixes" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "NextTxLine:" & vbCrLf
-  s = s & "        i = i + 1" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Post-processing: clean descriptions" & vbCrLf
-  s = s & "    Dim ti As Long" & vbCrLf
-  s = s & "    For ti = 0 To txCount - 1" & vbCrLf
-  s = s & "        ' Strip UNSOLICITED" & vbCrLf
-  s = s & "        Set re = CreateRegex(""\s*UNSOLICITED\b"", True)" & vbCrLf
-  s = s & "        txs(ti).Description = re.Replace(txs(ti).Description, """")" & vbCrLf
-  s = s & "        txs(ti).Description = Trim$(txs(ti).Description)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Strip ""PAID ON NNNN"" references" & vbCrLf
-  s = s & "        Set re = CreateRegex(""\s*PAID ON \d+(?:\s*AS OF \d{2}/\d{2}/\d{2,4})?(?:\s+(?:St Cap Gain|Lt Cap Gain|Dividend|Interest|Distribution|Deposit|Withdrawal|Refund|Closing|Transfer|Correction|Foreign|Fee|Sold|Bought|Reinvestment))?"")" & vbCrLf
-  s = s & "        txs(ti).Description = Trim$(re.Replace(txs(ti).Description, """"))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Strip trailing 4-digit code from transfers" & vbCrLf
-  s = s & "        Set m = RegexMatch(txs(ti).Description, ""^((?:TO|FROM)\s+U\d\s+\d{5})\s+\d{4}$"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then txs(ti).Description = m.SubMatches(0)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Extract inline REF#" & vbCrLf
-  s = s & "        Set m = RegexMatch(txs(ti).Description, ""\s*REF#:(\S+)\s*"")" & vbCrLf
-  s = s & "        If Not m Is Nothing And txs(ti).RefNumber = """" Then" & vbCrLf
-  s = s & "            txs(ti).RefNumber = m.SubMatches(0)" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s*REF#:\S+"")" & vbCrLf
-  s = s & "            txs(ti).Description = Trim$(re.Replace(txs(ti).Description, """"))" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Extract inline CUSIP" & vbCrLf
-  s = s & "        Set m = RegexMatch(txs(ti).Description, ""\s*CUSIP:\s*(\S+)"")" & vbCrLf
-  s = s & "        If Not m Is Nothing And txs(ti).Cusip = """" Then" & vbCrLf
-  s = s & "            txs(ti).Cusip = m.SubMatches(0)" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s*CUSIP:\s*\S+"")" & vbCrLf
-  s = s & "            txs(ti).Description = Trim$(re.Replace(txs(ti).Description, """"))" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Extract inline SYMBOL" & vbCrLf
-  s = s & "        Set m = RegexMatch(txs(ti).Description, ""\s*(?:/\s*)?SYMBOL:\s*(\S+)"")" & vbCrLf
-  s = s & "        If Not m Is Nothing And txs(ti).Symbol = """" Then" & vbCrLf
-  s = s & "            txs(ti).Symbol = m.SubMatches(0)" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s*(?:/\s*)?SYMBOL:\s*\S+"")" & vbCrLf
-  s = s & "            txs(ti).Description = Trim$(re.Replace(txs(ti).Description, """"))" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next ti" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ReDim Preserve txs(0 To IIf(txCount > 0, txCount - 1, 0))" & vbCrLf
-  s = s & "    ExtractTransactions = txs" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub AddTx(txs() As Transaction, ByRef txCount As Long, txDate As String, activity As String, desc As String, amount As Double, quantity As Variant, price As Variant)" & vbCrLf
-  s = s & "    If txCount > UBound(txs) Then ReDim Preserve txs(0 To txCount + 100)" & vbCrLf
-  s = s & "    txs(txCount).TxDate = txDate" & vbCrLf
-  s = s & "    txs(txCount).Activity = activity" & vbCrLf
-  s = s & "    txs(txCount).Description = desc" & vbCrLf
-  s = s & "    txs(txCount).Amount = amount" & vbCrLf
-  s = s & "    txs(txCount).Quantity = quantity" & vbCrLf
-  s = s & "    txs(txCount).Price = price" & vbCrLf
-  s = s & "    txs(txCount).Cusip = """"" & vbCrLf
-  s = s & "    txs(txCount).Symbol = """"" & vbCrLf
-  s = s & "    txs(txCount).RefNumber = """"" & vbCrLf
-  s = s & "    txCount = txCount + 1" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub ConsumeContinuations(lines() As String, ByRef i As Long, txs() As Transaction, txCount As Long, skipPrefixes() As String)" & vbCrLf
-  s = s & "    If txCount = 0 Then Exit Sub" & vbCrLf
-  s = s & "    Dim lastIdx As Long" & vbCrLf
-  s = s & "    lastIdx = txCount - 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Do While i + 1 <= UBound(lines)" & vbCrLf
-  s = s & "        Dim nextLine As String" & vbCrLf
-  s = s & "        nextLine = Trim$(lines(i + 1))" & vbCrLf
-  s = s & "        If nextLine = """" Then Exit Do" & vbCrLf
-  s = s & "        If RegexTest(nextLine, ""^Total[\s(a-z]"") Or nextLine = ""Total"" Then Exit Do" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Check skip prefixes" & vbCrLf
-  s = s & "        Dim si As Long" & vbCrLf
-  s = s & "        Dim isSkip As Boolean" & vbCrLf
-  s = s & "        isSkip = False" & vbCrLf
-  s = s & "        For si = LBound(skipPrefixes) To UBound(skipPrefixes)" & vbCrLf
-  s = s & "            If Left$(nextLine, Len(skipPrefixes(si))) = skipPrefixes(si) Then" & vbCrLf
-  s = s & "                isSkip = True" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next si" & vbCrLf
-  s = s & "        If isSkip Then Exit Do" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Check if new transaction starts" & vbCrLf
-  s = s & "        If RegexTest(nextLine, ""("" & DATE_PAT & "")\s+"") Then Exit Do" & vbCrLf
-  s = s & "        If RegexTest(nextLine, ""^ATM FEE REBATE\s+"") Then Exit Do" & vbCrLf
-  s = s & "        If RegexTest(nextLine, ""^(?:Checks\s+)?\d{4,10}\s+("" & DATE_PAT & "")"") Then Exit Do" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        i = i + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' CUSIP line" & vbCrLf
-  s = s & "        Dim cm As Object" & vbCrLf
-  s = s & "        Set cm = RegexMatch(nextLine, ""^CUSIP:\s*(\S+)"")" & vbCrLf
-  s = s & "        If Not cm Is Nothing Then" & vbCrLf
-  s = s & "            txs(lastIdx).Cusip = cm.SubMatches(0)" & vbCrLf
-  s = s & "            Dim inlineSym As Object" & vbCrLf
-  s = s & "            Set inlineSym = RegexMatch(nextLine, ""SYMBOL:\s*(\S+)"")" & vbCrLf
-  s = s & "            If Not inlineSym Is Nothing Then txs(lastIdx).Symbol = inlineSym.SubMatches(0)" & vbCrLf
-  s = s & "            GoTo NextCont" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' SYMBOL line" & vbCrLf
-  s = s & "        Set cm = RegexMatch(nextLine, ""^SYMBOL:\s*(\S+)"")" & vbCrLf
-  s = s & "        If Not cm Is Nothing Then" & vbCrLf
-  s = s & "            txs(lastIdx).Symbol = cm.SubMatches(0)" & vbCrLf
-  s = s & "            GoTo NextCont" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' REF# line" & vbCrLf
-  s = s & "        Set cm = RegexMatch(nextLine, ""^REF#:(\S+)"")" & vbCrLf
-  s = s & "        If Not cm Is Nothing Then" & vbCrLf
-  s = s & "            txs(lastIdx).RefNumber = cm.SubMatches(0)" & vbCrLf
-  s = s & "            GoTo NextCont" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Plain continuation" & vbCrLf
-  s = s & "        txs(lastIdx).Description = txs(lastIdx).Description & "" "" & nextLine" & vbCrLf
-  s = s & "NextCont:" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function GetSkipPrefixes() As String()" & vbCrLf
-  s = s & "    Dim p(0 To 71) As String" & vbCrLf
-  s = s & "    p(0) = ""Date"": p(1) = ""(continued)"": p(2) = ""Account activity"": p(3) = ""Proceeds from""" & vbCrLf
-  s = s & "    p(4) = ""For more information"": p(5) = ""Minimum Payment"": p(6) = ""UBS Visa""" & vbCrLf
-  s = s & "    p(7) = ""payment information"": p(8) = ""This credit card"": p(9) = ""We provide""" & vbCrLf
-  s = s & "    p(10) = ""We do not"": p(11) = ""Card Items"": p(12) = ""The new UBS"": p(13) = ""stunningly""" & vbCrLf
-  s = s & "    p(14) = ""EXECUTION""" & vbCrLf
-  s = s & "    p(15) = ""Quantity"": p(16) = ""Percentage of"": p(17) = ""Value on""" & vbCrLf
-  s = s & "    p(18) = ""Dividend and interest income"": p(19) = ""Investment transactions""" & vbCrLf
-  s = s & "    p(20) = ""Account name:"": p(21) = ""Friendly account name:"": p(22) = ""Account number:""" & vbCrLf
-  s = s & "    p(23) = ""Account type:"": p(24) = ""Your notes"": p(25) = ""End of statement""" & vbCrLf
-  s = s & "    p(26) = ""=== PAGE"": p(27) = ""CNQ7"": p(28) = ""NQ7""" & vbCrLf
-  s = s & "    p(29) = ""Resource Management"": p(30) = ""Portfolio Management"": p(31) = ""Retirement Account""" & vbCrLf
-  s = s & "    p(32) = ""your statement at the end"": p(33) = ""investment withdrawn for""" & vbCrLf
-  s = s & "    p(34) = ""number Date Description"": p(35) = ""USA. UBS""" & vbCrLf
-  s = s & "    p(36) = ""January 20"": p(37) = ""February 20"": p(38) = ""March 20"": p(39) = ""April 20"": p(40) = ""May 20""" & vbCrLf
-  s = s & "    p(41) = ""June 20"": p(42) = ""July 20"": p(43) = ""August 20"": p(44) = ""September 20"": p(45) = ""October 20""" & vbCrLf
-  s = s & "    p(46) = ""November 20"": p(47) = ""December 20""" & vbCrLf
-  s = s & "    p(48) = ""Transaction"": p(49) = ""date "": p(50) = ""Cash/ATM transactions""" & vbCrLf
-  s = s & "    p(51) = ""Interest (continued)"": p(52) = ""These are transfers"": p(53) = ""did not incur""" & vbCrLf
-  s = s & "    p(54) = ""Bill payments"": p(55) = ""Deposits and other"": p(56) = ""Other funds debited"": p(57) = ""Fees """ & vbCrLf
-  s = s & "    p(58) = ""Card payments"": p(59) = ""My Choice"": p(60) = ""Rewards"": p(61) = ""Opening balance""" & vbCrLf
-  s = s & "    p(62) = ""Points earned"": p(63) = ""Closing balance"": p(64) = ""Totalother"": p(65) = ""Totalprofessional""" & vbCrLf
-  s = s & "    p(66) = ""Minimum Payment"": p(67) = ""Priority"": p(68) = ""UBS Insured Sweep Prgm"": p(69) = ""TOTAL""" & vbCrLf
-  s = s & "    p(70) = ""Funds used for"": p(71) = ""Your """ & vbCrLf
-  s = s & "    ' Note: additional prefixes from TS omitted for length; these cover the core set" & vbCrLf
-  s = s & "    GetSkipPrefixes = p" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function IsSectionHeader(line As String, lineCompact As String, prefix As String) As Boolean" & vbCrLf
-  s = s & "    Dim headers() As String" & vbCrLf
-  s = s & "    headers = Split(""Deposits and other|Other funds debited|Bill payments|Fees |Card payments|Dividend and interest income|Taxable dividends|Taxable interest|Tax-exempt|Investment transactions|Checks "", ""|"")" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = LBound(headers) To UBound(headers)" & vbCrLf
-  s = s & "        If Left$(line, Len(headers(i))) = headers(i) Or Left$(lineCompact, Len(headers(i))) = headers(i) Then" & vbCrLf
-  s = s & "            IsSectionHeader = True" & vbCrLf
-  s = s & "            Exit Function" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    IsSectionHeader = False" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Income extraction" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ExtractIncome(text As String) As IncomeDetail" & vbCrLf
-  s = s & "    Dim income As IncomeDetail" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim startM() As String: startM = SArr(""Dividend and interest income"")" & vbCrLf
-  s = s & "    Dim endM() As String: endM = SArr3(""Summary of gains and losses"", ""Your assets"", ""Account activity this month"")" & vbCrLf
-  s = s & "    Dim section As String" & vbCrLf
-  s = s & "    section = ExtractSection(text, startM, endM)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim lines() As String" & vbCrLf
-  s = s & "    lines = Split(section, vbLf)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = LBound(lines) To UBound(lines)" & vbCrLf
-  s = s & "        Dim line As String" & vbCrLf
-  s = s & "        line = Trim$(lines(i))" & vbCrLf
-  s = s & "        If line = """" Then GoTo NextIncomeLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim m As Object" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Taxable dividends (or plain ""Dividends"" for IRA)" & vbCrLf
-  s = s & "        Set m = RegexMatch(line, ""^(?:Taxable d|D)ividends\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then income.TaxableDividendsMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Tax-exempt dividends" & vbCrLf
-  s = s & "        Set m = RegexMatch(line, ""^Tax-exempt dividends\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then income.TaxExemptDividendsMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Taxable interest" & vbCrLf
-  s = s & "        Set m = RegexMatch(line, ""^(?:Taxable i|I)nterest\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then income.TaxableInterestMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Tax-exempt interest" & vbCrLf
-  s = s & "        Set m = RegexMatch(line, ""^Tax-exempt interest\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then income.TaxExemptInterestMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Miscellaneous" & vbCrLf
-  s = s & "        Set m = RegexMatch(line, ""^Miscellaneous\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then income.MiscellaneousMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Prior year adjustment" & vbCrLf
-  s = s & "        Set m = RegexMatch(line, ""^Prior year adjustment\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then income.MiscellaneousMonth = income.MiscellaneousMonth + SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Accrued interest received" & vbCrLf
-  s = s & "        Set m = RegexMatch(line, ""^Total accrued interest received\s+\$?("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then income.AccruedInterestReceived = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Total" & vbCrLf
-  s = s & "        Set m = RegexMatch(line, ""^Total dividend & interest\s+\$?("" & NUM_PAT & "")\s+\$?("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then income.TotalMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "NextIncomeLine:" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Fallback: compute total from categories" & vbCrLf
-  s = s & "    If income.TotalMonth = 0# Then" & vbCrLf
-  s = s & "        income.TotalMonth = income.TaxableDividendsMonth + income.TaxExemptDividendsMonth + _" & vbCrLf
-  s = s & "            income.TaxableInterestMonth + income.TaxExemptInterestMonth + income.MiscellaneousMonth" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractIncome = income" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Gains and Losses extraction" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ExtractGainsLosses(text As String) As GainsAndLosses" & vbCrLf
-  s = s & "    Dim gains As GainsAndLosses" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim tl As String" & vbCrLf
-  s = s & "    tl = LCase$(text)" & vbCrLf
-  s = s & "    Dim gainsStart As Long" & vbCrLf
-  s = s & "    gainsStart = InStr(1, tl, ""summary of gains and losses"")" & vbCrLf
-  s = s & "    If gainsStart = 0 Then" & vbCrLf
-  s = s & "        ExtractGainsLosses = gains" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim closePos As Long" & vbCrLf
-  s = s & "    closePos = InStr(gainsStart, tl, ""closing account value"")" & vbCrLf
-  s = s & "    If closePos = 0 Then closePos = gainsStart + SECTION_LOOKAHEAD" & vbCrLf
-  s = s & "    Dim le As Long" & vbCrLf
-  s = s & "    le = LineEnd(text, closePos)" & vbCrLf
-  s = s & "    Dim section As String" & vbCrLf
-  s = s & "    section = Mid$(text, gainsStart, le - gainsStart)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim m As Object" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Set m = RegexMatch(section, ""Short term\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        gains.ShortTermRealizedMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "        gains.ShortTermRealizedYtd = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "        gains.ShortTermUnrealized = SafeFloat(m.SubMatches(2))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Set m = RegexMatch(section, ""Long term\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        gains.LongTermRealizedMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "        gains.LongTermRealizedYtd = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "        gains.LongTermUnrealized = SafeFloat(m.SubMatches(2))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Set m = RegexMatch(section, ""Total\s+(-?\$?[\d,]+\.\d{2})\s+(-?\$?[\d,]+\.\d{2})\s+(-?\$?[\d,]+\.\d{2})"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        gains.TotalRealizedMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "        gains.TotalRealizedYtd = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "        gains.TotalUnrealized = SafeFloat(m.SubMatches(2))" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        gains.TotalRealizedMonth = gains.ShortTermRealizedMonth + gains.LongTermRealizedMonth" & vbCrLf
-  s = s & "        gains.TotalRealizedYtd = gains.ShortTermRealizedYtd + gains.LongTermRealizedYtd" & vbCrLf
-  s = s & "        gains.TotalUnrealized = gains.ShortTermUnrealized + gains.LongTermUnrealized" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractGainsLosses = gains" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Reconciliation" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub RunReconciliation(ext As StatementExtraction)" & vbCrLf
-  s = s & "    ' Check 1: reconciliation" & vbCrLf
-  s = s & "    ' opening + cashActivity + market_change + accrued = closing" & vbCrLf
-  s = s & "    Dim cashActivity As Double" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To ext.TransactionCount - 1" & vbCrLf
-  s = s & "        Dim act As String" & vbCrLf
-  s = s & "        act = ext.Transactions(i).Activity" & vbCrLf
-  s = s & "        ' Skip investment activities" & vbCrLf
-  s = s & "        If act = ""Sale"" Or act = ""Purchase"" Or act = ""Reinvestment"" Or act = ""Call Redemption"" Or act = ""Cash In Lieu"" Then" & vbCrLf
-  s = s & "            ' Investment activity — skip" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            cashActivity = cashActivity + ext.Transactions(i).Amount" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim expectedClosing As Double" & vbCrLf
-  s = s & "    expectedClosing = ext.Summary.OpeningValue + cashActivity + _" & vbCrLf
-  s = s & "        ext.Summary.ChangeInMarketValue + ext.Summary.ChangeInAccruedInterest + _" & vbCrLf
-  s = s & "        ext.Income.AccruedInterestReceived" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    AddCheck ext, ""reconciliation"", ext.Summary.ClosingValue, expectedClosing" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Check 2: holdings_sum" & vbCrLf
-  s = s & "    Dim holdingsSum As Double" & vbCrLf
-  s = s & "    For i = 0 To ext.HoldingCount - 1" & vbCrLf
-  s = s & "        holdingsSum = holdingsSum + ext.Holdings(i).Value" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    AddCheck ext, ""holdings_sum"", ext.Summary.ClosingValue, holdingsSum" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Check 5: income_transactions" & vbCrLf
-  s = s & "    Dim incomeTxSum As Double" & vbCrLf
-  s = s & "    For i = 0 To ext.TransactionCount - 1" & vbCrLf
-  s = s & "        act = ext.Transactions(i).Activity" & vbCrLf
-  s = s & "        If (act = ""Dividend"" Or act = ""Interest"" Or act = ""Distribution"" Or act = ""St Cap Gain"" Or act = ""Lt Cap Gain"") Then" & vbCrLf
-  s = s & "            If ext.Transactions(i).Amount > 0 Then" & vbCrLf
-  s = s & "                incomeTxSum = incomeTxSum + ext.Transactions(i).Amount" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    AddCheck ext, ""income_transactions"", ext.Income.TotalMonth, incomeTxSum + ext.Income.AccruedInterestReceived" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub AddCheck(ext As StatementExtraction, checkName As String, expected As Double, actual As Double)" & vbCrLf
-  s = s & "    If ext.CheckCount > UBound(ext.Checks) Then ReDim Preserve ext.Checks(0 To ext.CheckCount + 10)" & vbCrLf
-  s = s & "    ext.Checks(ext.CheckCount).name = checkName" & vbCrLf
-  s = s & "    ext.Checks(ext.CheckCount).Expected = expected" & vbCrLf
-  s = s & "    ext.Checks(ext.CheckCount).Actual = actual" & vbCrLf
-  s = s & "    ext.Checks(ext.CheckCount).Diff = Round(expected - actual, 2)" & vbCrLf
-  s = s & "    ext.Checks(ext.CheckCount).Pass = (Abs(Round((expected - actual) * 100, 0)) = 0)" & vbCrLf
-  s = s & "    ext.CheckCount = ext.CheckCount + 1" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Detailed Securities Extraction" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Module-level state for securities extraction ---" & vbCrLf
-  s = s & "Private mSecEntries() As SecurityDetail" & vbCrLf
-  s = s & "Private mSecCount As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Lazy-init constants ---" & vbCrLf
-  s = s & "Private mSecConstsInit As Boolean" & vbCrLf
-  s = s & "Private mCatKeys() As String" & vbCrLf
-  s = s & "Private mCatVals() As String" & vbCrLf
-  s = s & "Private mCatCount As Long" & vbCrLf
-  s = s & "Private mACKeys() As String" & vbCrLf
-  s = s & "Private mACVals() As String" & vbCrLf
-  s = s & "Private mACCount As Long" & vbCrLf
-  s = s & "Private mNameReject() As String" & vbCrLf
-  s = s & "Private mNameRejectCount As Long" & vbCrLf
-  s = s & "Private mNormPatterns() As String" & vbCrLf
-  s = s & "Private mNormPatCount As Long" & vbCrLf
-  s = s & "Private mBoilerplatePat As String" & vbCrLf
-  s = s & "Private mHFSkipPrefixes() As String" & vbCrLf
-  s = s & "Private mHFSkipCount As Long" & vbCrLf
-  s = s & "Private mPESkipPrefixes() As String" & vbCrLf
-  s = s & "Private mPESkipCount As Long" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub InitSecurityConstants()" & vbCrLf
-  s = s & "    If mSecConstsInit Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Category keywords" & vbCrLf
-  s = s & "    mCatCount = 10" & vbCrLf
-  s = s & "    ReDim mCatKeys(0 To mCatCount - 1)" & vbCrLf
-  s = s & "    ReDim mCatVals(0 To mCatCount - 1)" & vbCrLf
-  s = s & "    mCatKeys(0) = ""Cash and money balances"": mCatVals(0) = ""Cash and money balances""" & vbCrLf
-  s = s & "    mCatKeys(1) = ""Money market funds"": mCatVals(1) = ""Money market funds""" & vbCrLf
-  s = s & "    mCatKeys(2) = ""Common stock"": mCatVals(2) = ""Common stock""" & vbCrLf
-  s = s & "    mCatKeys(3) = ""Municipal securities"": mCatVals(3) = ""Municipal securities""" & vbCrLf
-  s = s & "    mCatKeys(4) = ""Private equity funds"": mCatVals(4) = ""Private equity funds""" & vbCrLf
-  s = s & "    mCatKeys(5) = ""Hedge funds"": mCatVals(5) = ""Hedge funds""" & vbCrLf
-  s = s & "    mCatKeys(6) = ""Other investments"": mCatVals(6) = ""Other investments""" & vbCrLf
-  s = s & "    mCatKeys(7) = ""Other equity investments"": mCatVals(7) = ""Other equity investments""" & vbCrLf
-  s = s & "    mCatKeys(8) = ""Mutual funds"": mCatVals(8) = ""Mutual funds""" & vbCrLf
-  s = s & "    mCatKeys(9) = ""Closed end funds"": mCatVals(9) = ""Closed end funds & Exchange traded products""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Asset class keywords" & vbCrLf
-  s = s & "    mACCount = 6" & vbCrLf
-  s = s & "    ReDim mACKeys(0 To mACCount - 1)" & vbCrLf
-  s = s & "    ReDim mACVals(0 To mACCount - 1)" & vbCrLf
-  s = s & "    mACKeys(0) = ""Cash and money balances"": mACVals(0) = ""Cash and money balances""" & vbCrLf
-  s = s & "    mACKeys(1) = ""Cash alternatives"": mACVals(1) = ""Cash alternatives""" & vbCrLf
-  s = s & "    mACKeys(2) = ""Non-traditional"": mACVals(2) = ""Non-traditional""" & vbCrLf
-  s = s & "    mACKeys(3) = ""Fixed income"": mACVals(3) = ""Fixed income""" & vbCrLf
-  s = s & "    mACKeys(4) = ""Equities"": mACVals(4) = ""Equities""" & vbCrLf
-  s = s & "    mACKeys(5) = ""Commodities"": mACVals(5) = ""Commodities""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Name reject keywords (must match TS _NAME_REJECT_KEYWORDS)" & vbCrLf
-  s = s & "    mNameRejectCount = 18" & vbCrLf
-  s = s & "    ReDim mNameReject(0 To mNameRejectCount - 1)" & vbCrLf
-  s = s & "    mNameReject(0) = ""FDIC"": mNameReject(1) = ""CNQ7"": mNameReject(2) = ""NQ7""" & vbCrLf
-  s = s & "    mNameReject(3) = ""ENQ7"": mNameReject(4) = ""SIPC"": mNameReject(5) = ""Your assets""" & vbCrLf
-  s = s & "    mNameReject(6) = ""Your total assets"": mNameReject(7) = ""=== PAGE""" & vbCrLf
-  s = s & "    mNameReject(8) = ""UMB BANK"": mNameReject(9) = ""UBS Bank""" & vbCrLf
-  s = s & "    mNameReject(10) = ""Citibank"": mNameReject(11) = ""Wells Fargo""" & vbCrLf
-  s = s & "    mNameReject(12) = ""HSBC Bank"": mNameReject(13) = ""Customers Bank""" & vbCrLf
-  s = s & "    mNameReject(14) = ""East West"": mNameReject(15) = ""Tristate""" & vbCrLf
-  s = s & "    mNameReject(16) = ""Centennial"": mNameReject(17) = ""State Street""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Boilerplate pattern" & vbCrLf
-  s = s & "    mBoilerplatePat = ""(Trade date:|Total reinvested|EAI:|continued|Purchase price|Number of shares|"" & _" & vbCrLf
-  s = s & "        ""Holding|Cost basis|Total reinvested is|reporting purposes|include cash dividends|"" & _" & vbCrLf
-  s = s & "        ""reinvest dividends|need to be adjusted|Investment return|purposes\.|"" & _" & vbCrLf
-  s = s & "        ""reflected on your|ab |ab$|Portfolio Management|Resource Management|"" & _" & vbCrLf
-  s = s & "        ""Account name:|Friendly account|Account number:|Page \d|Member SIPC|"" & _" & vbCrLf
-  s = s & "        ""Your assets|Money market funds are|Institutional prime|per share|"" & _" & vbCrLf
-  s = s & "        ""=== PAGE|Some prices|more information|4 4)""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Norm fund patterns (regex strings)" & vbCrLf
-  s = s & "    mNormPatCount = 10" & vbCrLf
-  s = s & "    ReDim mNormPatterns(0 To mNormPatCount - 1)" & vbCrLf
-  s = s & "    mNormPatterns(0) = ""\s+A/O\s+.*$""" & vbCrLf
-  s = s & "    mNormPatterns(1) = ""\s+ADJ\s+.*$""" & vbCrLf
-  s = s & "    mNormPatterns(2) = ""\s+CALL\s+S/DIST\s*$""" & vbCrLf
-  s = s & "    mNormPatterns(3) = ""\s+ADJ\s+RECENT\s+CALLS/DISTS\s*$""" & vbCrLf
-  s = s & "    mNormPatterns(4) = ""\s+INVESTED\s*$""" & vbCrLf
-  s = s & "    mNormPatterns(5) = ""\s+FUNDS?\s+IN\s*$""" & vbCrLf
-  s = s & "    mNormPatterns(6) = ""\s+ESCROW\s*$""" & vbCrLf
-  s = s & "    mNormPatterns(7) = ""\s+FUNDS?\s*$""" & vbCrLf
-  s = s & "    mNormPatterns(8) = ""\s+NAV\s*$""" & vbCrLf
-  s = s & "    mNormPatterns(9) = ""\s*,?\s*(?:LP|L\.P\.)\s*$""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' HF skip prefixes" & vbCrLf
-  s = s & "    mHFSkipCount = 12" & vbCrLf
-  s = s & "    ReDim mHFSkipPrefixes(0 To mHFSkipCount - 1)" & vbCrLf
-  s = s & "    mHFSkipPrefixes(0) = ""Hedge funds"": mHFSkipPrefixes(1) = ""Est.""" & vbCrLf
-  s = s & "    mHFSkipPrefixes(2) = ""Holding"": mHFSkipPrefixes(3) = ""Estimates""" & vbCrLf
-  s = s & "    mHFSkipPrefixes(4) = ""value updated"": mHFSkipPrefixes(5) = ""adjusted by""" & vbCrLf
-  s = s & "    mHFSkipPrefixes(6) = ""Purchase price"": mHFSkipPrefixes(7) = ""Number""" & vbCrLf
-  s = s & "    mHFSkipPrefixes(8) = ""Cost basis"": mHFSkipPrefixes(9) = ""reporting purposes""" & vbCrLf
-  s = s & "    mHFSkipPrefixes(10) = ""Tax lot"": mHFSkipPrefixes(11) = ""tax lot""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' PE skip prefixes" & vbCrLf
-  s = s & "    mPESkipCount = 6" & vbCrLf
-  s = s & "    ReDim mPESkipPrefixes(0 To mPESkipCount - 1)" & vbCrLf
-  s = s & "    mPESkipPrefixes(0) = ""Est."": mPESkipPrefixes(1) = ""Holding""" & vbCrLf
-  s = s & "    mPESkipPrefixes(2) = ""Private equity"": mPESkipPrefixes(3) = ""Estimates""" & vbCrLf
-  s = s & "    mPESkipPrefixes(4) = ""value updated"": mPESkipPrefixes(5) = ""adjusted by""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    mSecConstsInit = True" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Helper: add a security entry to module-level array ---" & vbCrLf
-  s = s & "Private Sub AddSecEntry(sec As SecurityDetail)" & vbCrLf
-  s = s & "    If mSecCount > UBound(mSecEntries) Then" & vbCrLf
-  s = s & "        ReDim Preserve mSecEntries(0 To mSecCount + 49)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    mSecEntries(mSecCount) = sec" & vbCrLf
-  s = s & "    mSecCount = mSecCount + 1" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Helper functions ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function IsSecBoilerplate(line As String) As Boolean" & vbCrLf
-  s = s & "    IsSecBoilerplate = RegexTest(line, mBoilerplatePat)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function IsAllcapsName(line As String) As Boolean" & vbCrLf
-  s = s & "    Dim alphaCount As Long" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 1 To Len(line)" & vbCrLf
-  s = s & "        Dim c As Long" & vbCrLf
-  s = s & "        c = Asc(Mid$(line, i, 1))" & vbCrLf
-  s = s & "        If c >= 65 And c <= 90 Then" & vbCrLf
-  s = s & "            alphaCount = alphaCount + 1" & vbCrLf
-  s = s & "        ElseIf c >= 97 And c <= 122 Then" & vbCrLf
-  s = s & "            IsAllcapsName = False" & vbCrLf
-  s = s & "            Exit Function" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    If alphaCount < 2 Then" & vbCrLf
-  s = s & "        IsAllcapsName = False" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If line = ""ACCESS"" Then" & vbCrLf
-  s = s & "        IsAllcapsName = False" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    ' Check reject keywords" & vbCrLf
-  s = s & "    Dim ki As Long" & vbCrLf
-  s = s & "    For ki = 0 To mNameRejectCount - 1" & vbCrLf
-  s = s & "        If InStr(1, line, mNameReject(ki)) > 0 Then" & vbCrLf
-  s = s & "            IsAllcapsName = False" & vbCrLf
-  s = s & "            Exit Function" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next ki" & vbCrLf
-  s = s & "    ' Check percentage pattern" & vbCrLf
-  s = s & "    If RegexTest(line, ""\d+\.\d+%"") Then" & vbCrLf
-  s = s & "        IsAllcapsName = False" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    IsAllcapsName = True" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function StripAccessPrefix(Name As String) As String" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateRegex(""^(?:ACCESS\s+)+|^ACCESS$"")" & vbCrLf
-  s = s & "    StripAccessPrefix = Trim$(re.Replace(Name, """"))" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function StripBondSuffix(Name As String) As String" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateRegex(""\s+(?:(?:SR\s+[A-Z]\s+)?RV\s+)?BE/R/\s*$"")" & vbCrLf
-  s = s & "    StripBondSuffix = Trim$(re.Replace(Name, """"))" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function CleanSecurityName(Name As String) As String" & vbCrLf
-  s = s & "    Dim s As String" & vbCrLf
-  s = s & "    s = Name" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateRegex(""\s*continued next page\s*"", True)" & vbCrLf
-  s = s & "    s = re.Replace(s, """")" & vbCrLf
-  s = s & "    Set re = CreateRegex(""\s*\(continued\)\s*"", True)" & vbCrLf
-  s = s & "    s = Trim$(re.Replace(s, "" ""))" & vbCrLf
-  s = s & "    Set re = CreateRegex(""\s*UNSOLICITED\s*"", True)" & vbCrLf
-  s = s & "    s = Trim$(re.Replace(s, """"))" & vbCrLf
-  s = s & "    s = StripAccessPrefix(s)" & vbCrLf
-  s = s & "    s = StripBondSuffix(s)" & vbCrLf
-  s = s & "    CleanSecurityName = s" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function UpdateSecCategory(lines() As String, fromIdx As Long, toIdx As Long, cur As String) As String" & vbCrLf
-  s = s & "    Dim j As Long" & vbCrLf
-  s = s & "    UpdateSecCategory = cur" & vbCrLf
-  s = s & "    For j = fromIdx To toIdx" & vbCrLf
-  s = s & "        Dim ki As Long" & vbCrLf
-  s = s & "        For ki = 0 To mCatCount - 1" & vbCrLf
-  s = s & "            If InStr(1, lines(j), mCatKeys(ki)) > 0 Then" & vbCrLf
-  s = s & "                UpdateSecCategory = mCatVals(ki)" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next ki" & vbCrLf
-  s = s & "    Next j" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function UpdateSecAssetClass(lines() As String, fromIdx As Long, toIdx As Long, cur As String) As String" & vbCrLf
-  s = s & "    Dim j As Long" & vbCrLf
-  s = s & "    UpdateSecAssetClass = cur" & vbCrLf
-  s = s & "    For j = fromIdx To toIdx" & vbCrLf
-  s = s & "        Dim trimmed As String" & vbCrLf
-  s = s & "        trimmed = Trim$(lines(j))" & vbCrLf
-  s = s & "        If trimmed = ""Other"" Then" & vbCrLf
-  s = s & "            UpdateSecAssetClass = ""Other""" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            Dim ki As Long" & vbCrLf
-  s = s & "            For ki = 0 To mACCount - 1" & vbCrLf
-  s = s & "                If InStr(1, trimmed, mACKeys(ki)) > 0 Then" & vbCrLf
-  s = s & "                    UpdateSecAssetClass = mACVals(ki)" & vbCrLf
-  s = s & "                    Exit For" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            Next ki" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next j" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function NormFundName(Name As String) As String" & vbCrLf
-  s = s & "    Dim base As String" & vbCrLf
-  s = s & "    base = Name" & vbCrLf
-  s = s & "    Dim pass As Long" & vbCrLf
-  s = s & "    For pass = 0 To 2" & vbCrLf
-  s = s & "        Dim pi As Long" & vbCrLf
-  s = s & "        For pi = 0 To mNormPatCount - 1" & vbCrLf
-  s = s & "            Dim re As Object" & vbCrLf
-  s = s & "            Set re = CreateRegex(mNormPatterns(pi))" & vbCrLf
-  s = s & "            base = re.Replace(base, """")" & vbCrLf
-  s = s & "        Next pi" & vbCrLf
-  s = s & "    Next pass" & vbCrLf
-  s = s & "    ' Also strip trailing comma" & vbCrLf
-  s = s & "    Dim reComma As Object" & vbCrLf
-  s = s & "    Set reComma = CreateRegex(""\s*,\s*$"")" & vbCrLf
-  s = s & "    base = reComma.Replace(base, """")" & vbCrLf
-  s = s & "    NormFundName = Trim$(base)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function IsSecTradeLine(line As String) As Boolean" & vbCrLf
-  s = s & "    ' Check for LT/ST marker" & vbCrLf
-  s = s & "    If RegexTest(line, ""\d\s+[LS]T(?:\s|$)"") Then" & vbCrLf
-  s = s & "        IsSecTradeLine = True" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    ' Fallback: Trade date: with 6+ numbers" & vbCrLf
-  s = s & "    If Not RegexTest(line, ""Trade date:\s*"" & MONTH_ALT & ""\s"") Then" & vbCrLf
-  s = s & "        IsSecTradeLine = False" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    Dim matches As Object" & vbCrLf
-  s = s & "    Set matches = RegexMatchAll(line, ""-?[\d,]+\.\d{2,3}"")" & vbCrLf
-  s = s & "    IsSecTradeLine = (matches.Count >= 6)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function CleanTradeLine(line As String) As String" & vbCrLf
-  s = s & "    Dim m As Object" & vbCrLf
-  s = s & "    Set m = RegexMatch(line, ""(\d\s+[LS]T)(?:\s|$)"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        CleanTradeLine = Left$(line, m.FirstIndex + Len(m.SubMatches(0)))" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        CleanTradeLine = line" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ExtractAllcapsPrefix(line As String) As String" & vbCrLf
-  s = s & "    Dim pat As String" & vbCrLf
-  s = s & "    pat = ""^([A-Z0-9\s/,.()&-]+?)\s+(?:EAI:|Moody:|S&P:|Original cost|Current yield|ACCRUED|Trade date:|"" & MONTH_ALT & ""\s)""" & vbCrLf
-  s = s & "    Dim m As Object" & vbCrLf
-  s = s & "    Set m = RegexMatch(line, pat)" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        Dim prefix As String" & vbCrLf
-  s = s & "        prefix = Trim$(m.SubMatches(0))" & vbCrLf
-  s = s & "        If Len(prefix) >= 3 Then" & vbCrLf
-  s = s & "            If IsAllcapsName(prefix) Then" & vbCrLf
-  s = s & "                ExtractAllcapsPrefix = prefix" & vbCrLf
-  s = s & "                Exit Function" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    ExtractAllcapsPrefix = """"" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function FindSecSectionEnd(text As String, skipLen As Long, keywords() As String) As Long" & vbCrLf
-  s = s & "    FindSecSectionEnd = Len(text) + 1  ' +1 so Left$(text, result-1) includes entire string" & vbCrLf
-  s = s & "    Dim ki As Long" & vbCrLf
-  s = s & "    For ki = LBound(keywords) To UBound(keywords)" & vbCrLf
-  s = s & "        Dim pos As Long" & vbCrLf
-  s = s & "        pos = InStr(skipLen + 2, text, keywords(ki))" & vbCrLf
-  s = s & "        If pos > 0 And pos < FindSecSectionEnd Then" & vbCrLf
-  s = s & "            FindSecSectionEnd = pos" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next ki" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function IsCategoryBoundary(line As String) As Boolean" & vbCrLf
-  s = s & "    Dim ki As Long" & vbCrLf
-  s = s & "    For ki = 0 To mCatCount - 1" & vbCrLf
-  s = s & "        If InStr(1, line, mCatKeys(ki)) > 0 Then" & vbCrLf
-  s = s & "            IsCategoryBoundary = True" & vbCrLf
-  s = s & "            Exit Function" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next ki" & vbCrLf
-  s = s & "    For ki = 0 To mACCount - 1" & vbCrLf
-  s = s & "        If InStr(1, line, mACKeys(ki)) > 0 Then" & vbCrLf
-  s = s & "            IsCategoryBoundary = True" & vbCrLf
-  s = s & "            Exit Function" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next ki" & vbCrLf
-  s = s & "    IsCategoryBoundary = False" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Trade Group types and scanning ---" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Type TradeGroup" & vbCrLf
-  s = s & "    NameParts() As String" & vbCrLf
-  s = s & "    NameCount As Long" & vbCrLf
-  s = s & "    TradeIndices() As Long" & vbCrLf
-  s = s & "    TradeCount As Long" & vbCrLf
-  s = s & "    Symbol As String" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub InitTradeGroup(grp As TradeGroup)" & vbCrLf
-  s = s & "    ReDim grp.NameParts(0 To 9)" & vbCrLf
-  s = s & "    grp.NameCount = 0" & vbCrLf
-  s = s & "    ReDim grp.TradeIndices(0 To 9)" & vbCrLf
-  s = s & "    grp.TradeCount = 0" & vbCrLf
-  s = s & "    grp.Symbol = """"" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub TGAddName(grp As TradeGroup, n As String)" & vbCrLf
-  s = s & "    If grp.NameCount > UBound(grp.NameParts) Then" & vbCrLf
-  s = s & "        ReDim Preserve grp.NameParts(0 To grp.NameCount + 9)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    grp.NameParts(grp.NameCount) = n" & vbCrLf
-  s = s & "    grp.NameCount = grp.NameCount + 1" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub TGAddTrade(grp As TradeGroup, idx As Long)" & vbCrLf
-  s = s & "    If grp.TradeCount > UBound(grp.TradeIndices) Then" & vbCrLf
-  s = s & "        ReDim Preserve grp.TradeIndices(0 To grp.TradeCount + 9)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    grp.TradeIndices(grp.TradeCount) = idx" & vbCrLf
-  s = s & "    grp.TradeCount = grp.TradeCount + 1" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function TGJoinNames(grp As TradeGroup) As String" & vbCrLf
-  s = s & "    If grp.NameCount = 0 Then" & vbCrLf
-  s = s & "        TGJoinNames = """"" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    Dim s As String" & vbCrLf
-  s = s & "    s = grp.NameParts(0)" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 1 To grp.NameCount - 1" & vbCrLf
-  s = s & "        s = s & "" "" & grp.NameParts(i)" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    TGJoinNames = s" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub ScanTradeGroups(lines() As String, startIdx As Long, endIdx As Long, _" & vbCrLf
-  s = s & "    ByRef groups() As TradeGroup, ByRef groupCount As Long)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ReDim groups(0 To 19)" & vbCrLf
-  s = s & "    groupCount = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim curNames() As String" & vbCrLf
-  s = s & "    ReDim curNames(0 To 9)" & vbCrLf
-  s = s & "    Dim curNameCount As Long: curNameCount = 0" & vbCrLf
-  s = s & "    Dim curTrades() As Long" & vbCrLf
-  s = s & "    ReDim curTrades(0 To 9)" & vbCrLf
-  s = s & "    Dim curTradeCount As Long: curTradeCount = 0" & vbCrLf
-  s = s & "    Dim curSymbol As String: curSymbol = """"" & vbCrLf
-  s = s & "    Dim sawTrade As Boolean: sawTrade = False" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim j As Long" & vbCrLf
-  s = s & "    For j = startIdx To endIdx - 1" & vbCrLf
-  s = s & "        Dim prev As String" & vbCrLf
-  s = s & "        prev = Trim$(lines(j))" & vbCrLf
-  s = s & "        If prev = """" Then GoTo NextScanLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Category boundary → discard orphan names" & vbCrLf
-  s = s & "        If curNameCount > 0 And Not sawTrade And curTradeCount = 0 Then" & vbCrLf
-  s = s & "            If InStr(1, prev, ""(continued)"") = 0 Then" & vbCrLf
-  s = s & "                If IsCategoryBoundary(prev) Then" & vbCrLf
-  s = s & "                    curNameCount = 0" & vbCrLf
-  s = s & "                    curSymbol = """"" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Check Symbol:" & vbCrLf
-  s = s & "        Dim symM As Object" & vbCrLf
-  s = s & "        Set symM = RegexMatch(prev, ""^Symbol:\s*(\S+)"")" & vbCrLf
-  s = s & "        If Not symM Is Nothing Then curSymbol = symM.SubMatches(0)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Trade line detection" & vbCrLf
-  s = s & "        If IsSecTradeLine(prev) Then" & vbCrLf
-  s = s & "            If curTradeCount > UBound(curTrades) Then ReDim Preserve curTrades(0 To curTradeCount + 9)" & vbCrLf
-  s = s & "            curTrades(curTradeCount) = j" & vbCrLf
-  s = s & "            curTradeCount = curTradeCount + 1" & vbCrLf
-  s = s & "            If InStr(1, prev, ""INVESTED"") > 0 And InStr(1, prev, ""REINVESTED"") = 0 Then" & vbCrLf
-  s = s & "                curNameCount = 0" & vbCrLf
-  s = s & "                curSymbol = """"" & vbCrLf
-  s = s & "            Else" & vbCrLf
-  s = s & "                sawTrade = True" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            GoTo NextScanLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' ""information was unavailable""" & vbCrLf
-  s = s & "        If RegexTest(prev, ""information was unavailable"", True) Then" & vbCrLf
-  s = s & "            If curTradeCount > UBound(curTrades) Then ReDim Preserve curTrades(0 To curTradeCount + 9)" & vbCrLf
-  s = s & "            curTrades(curTradeCount) = j" & vbCrLf
-  s = s & "            curTradeCount = curTradeCount + 1" & vbCrLf
-  s = s & "            sawTrade = True" & vbCrLf
-  s = s & "            GoTo NextScanLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If IsSecBoilerplate(prev) Then GoTo NextScanLine" & vbCrLf
-  s = s & "        If Not symM Is Nothing Then GoTo NextScanLine  ' standalone Symbol: line" & vbCrLf
-  s = s & "        If RegexTest(prev, ""^(Trade date:|EAI:)"") Then GoTo NextScanLine" & vbCrLf
-  s = s & "        If RegexTest(prev, ""^(?:BE/|R/|RV\s|SR\s|RATE\s|ACCRUED INTEREST|CUSIP\s|DATED DATE|Moody:|S&P:|Original cost)"") Then GoTo NextScanLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Name detection" & vbCrLf
-  s = s & "        Dim nameText As String" & vbCrLf
-  s = s & "        nameText = """"" & vbCrLf
-  s = s & "        If IsAllcapsName(prev) Then" & vbCrLf
-  s = s & "            nameText = prev" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            nameText = ExtractAllcapsPrefix(prev)" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If nameText <> """" Then" & vbCrLf
-  s = s & "            ' Name after trade → flush previous group" & vbCrLf
-  s = s & "            If sawTrade And curNameCount > 0 Then" & vbCrLf
-  s = s & "                If groupCount > UBound(groups) Then ReDim Preserve groups(0 To groupCount + 9)" & vbCrLf
-  s = s & "                InitTradeGroup groups(groupCount)" & vbCrLf
-  s = s & "                Dim ni As Long" & vbCrLf
-  s = s & "                For ni = 0 To curNameCount - 1" & vbCrLf
-  s = s & "                    TGAddName groups(groupCount), curNames(ni)" & vbCrLf
-  s = s & "                Next ni" & vbCrLf
-  s = s & "                Dim ti As Long" & vbCrLf
-  s = s & "                For ti = 0 To curTradeCount - 1" & vbCrLf
-  s = s & "                    TGAddTrade groups(groupCount), curTrades(ti)" & vbCrLf
-  s = s & "                Next ti" & vbCrLf
-  s = s & "                groups(groupCount).Symbol = curSymbol" & vbCrLf
-  s = s & "                groupCount = groupCount + 1" & vbCrLf
-  s = s & "                curNameCount = 0" & vbCrLf
-  s = s & "                ReDim curTrades(0 To 9)" & vbCrLf
-  s = s & "                curTradeCount = 0" & vbCrLf
-  s = s & "                curSymbol = """"" & vbCrLf
-  s = s & "                sawTrade = False" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            If curNameCount > UBound(curNames) Then ReDim Preserve curNames(0 To curNameCount + 9)" & vbCrLf
-  s = s & "            curNames(curNameCount) = nameText" & vbCrLf
-  s = s & "            curNameCount = curNameCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextScanLine:" & vbCrLf
-  s = s & "    Next j" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Push final group" & vbCrLf
-  s = s & "    If curNameCount > 0 Or curTradeCount > 0 Then" & vbCrLf
-  s = s & "        If groupCount > UBound(groups) Then ReDim Preserve groups(0 To groupCount + 9)" & vbCrLf
-  s = s & "        InitTradeGroup groups(groupCount)" & vbCrLf
-  s = s & "        For ni = 0 To curNameCount - 1" & vbCrLf
-  s = s & "            TGAddName groups(groupCount), curNames(ni)" & vbCrLf
-  s = s & "        Next ni" & vbCrLf
-  s = s & "        For ti = 0 To curTradeCount - 1" & vbCrLf
-  s = s & "            TGAddTrade groups(groupCount), curTrades(ti)" & vbCrLf
-  s = s & "        Next ti" & vbCrLf
-  s = s & "        groups(groupCount).Symbol = curSymbol" & vbCrLf
-  s = s & "        groupCount = groupCount + 1" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function GroupHasCusipOrSymbol(grp As TradeGroup, lines() As String, rangeStart As Long) As Boolean" & vbCrLf
-  s = s & "    If grp.TradeCount = 0 Then" & vbCrLf
-  s = s & "        GroupHasCusipOrSymbol = False" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    Dim tradeStart As Long" & vbCrLf
-  s = s & "    tradeStart = grp.TradeIndices(0)" & vbCrLf
-  s = s & "    Dim firstTrade As String" & vbCrLf
-  s = s & "    firstTrade = Trim$(lines(tradeStart))" & vbCrLf
-  s = s & "    If RegexTest(firstTrade, ""^CUSIP\s+\S+"") Or RegexTest(firstTrade, ""^Symbol:\s*\S+"") Then" & vbCrLf
-  s = s & "        GroupHasCusipOrSymbol = True" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    Dim j As Long" & vbCrLf
-  s = s & "    Dim lb As Long" & vbCrLf
-  s = s & "    lb = rangeStart" & vbCrLf
-  s = s & "    If tradeStart - 15 > lb Then lb = tradeStart - 15" & vbCrLf
-  s = s & "    For j = tradeStart - 1 To lb Step -1" & vbCrLf
-  s = s & "        Dim trimmed As String" & vbCrLf
-  s = s & "        trimmed = Trim$(lines(j))" & vbCrLf
-  s = s & "        If RegexTest(trimmed, ""^CUSIP\s+\S+"") Or RegexTest(trimmed, ""^Symbol:\s*\S+"") Then" & vbCrLf
-  s = s & "            GroupHasCusipOrSymbol = True" & vbCrLf
-  s = s & "            Exit Function" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next j" & vbCrLf
-  s = s & "    GroupHasCusipOrSymbol = False" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function GroupKey(grp As TradeGroup, lines() As String, rangeStart As Long, _" & vbCrLf
-  s = s & "    fallbackCat As String, fallbackAC As String) As String" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim groupLine As Long" & vbCrLf
-  s = s & "    If grp.TradeCount > 0 Then" & vbCrLf
-  s = s & "        groupLine = grp.TradeIndices(0)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        groupLine = -1" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If groupLine < 0 Then" & vbCrLf
-  s = s & "        If fallbackAC <> """" Then" & vbCrLf
-  s = s & "            GroupKey = fallbackAC & ""::"" & fallbackCat" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            GroupKey = fallbackCat" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    Dim ac As String" & vbCrLf
-  s = s & "    ac = UpdateSecAssetClass(lines, rangeStart, groupLine, fallbackAC)" & vbCrLf
-  s = s & "    Dim cat As String" & vbCrLf
-  s = s & "    cat = UpdateSecCategory(lines, rangeStart, groupLine, fallbackCat)" & vbCrLf
-  s = s & "    If ac <> """" Then" & vbCrLf
-  s = s & "        GroupKey = ac & ""::"" & cat" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        GroupKey = cat" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub EmitSingleLotSecurity(grp As TradeGroup, lines() As String, catKey As String)" & vbCrLf
-  s = s & "    If grp.NameCount = 0 Or grp.TradeCount = 0 Then Exit Sub" & vbCrLf
-  s = s & "    Dim secName As String" & vbCrLf
-  s = s & "    secName = CleanSecurityName(TGJoinNames(grp))" & vbCrLf
-  s = s & "    If secName = """" Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim tUnits As Double, tCost As Double, tValue As Double, tUnrealized As Double" & vbCrLf
-  s = s & "    Dim infoUnavailable As Boolean" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim ti As Long" & vbCrLf
-  s = s & "    For ti = 0 To grp.TradeCount - 1" & vbCrLf
-  s = s & "        Dim tIdx As Long" & vbCrLf
-  s = s & "        tIdx = grp.TradeIndices(ti)" & vbCrLf
-  s = s & "        Dim tline As String" & vbCrLf
-  s = s & "        tline = CleanTradeLine(Trim$(lines(tIdx)))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' ""information was unavailable""" & vbCrLf
-  s = s & "        If RegexTest(tline, ""information was unavailable"", True) Then" & vbCrLf
-  s = s & "            infoUnavailable = True" & vbCrLf
-  s = s & "            Dim splitIdx As Long" & vbCrLf
-  s = s & "            splitIdx = 0" & vbCrLf
-  s = s & "            Dim re As Object" & vbCrLf
-  s = s & "            Set re = CreateRegex(""---.*unavailable.*---"", False, False, True)" & vbCrLf
-  s = s & "            Dim sMatches As Object" & vbCrLf
-  s = s & "            Set sMatches = re.Execute(tline)" & vbCrLf
-  s = s & "            If sMatches.Count = 0 Then GoTo NextEmitTrade" & vbCrLf
-  s = s & "            splitIdx = sMatches(0).FirstIndex + 1" & vbCrLf
-  s = s & "            Dim beforeText As String" & vbCrLf
-  s = s & "            beforeText = Left$(tline, splitIdx - 1)" & vbCrLf
-  s = s & "            Dim dashEnd As Long" & vbCrLf
-  s = s & "            dashEnd = InStr(splitIdx + 3, tline, ""---"")" & vbCrLf
-  s = s & "            Dim afterText As String" & vbCrLf
-  s = s & "            If dashEnd > 0 Then afterText = Mid$(tline, dashEnd + 3) Else afterText = """"" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            Dim beforeNums As Object" & vbCrLf
-  s = s & "            Set beforeNums = RegexMatchAll(beforeText, ""-?[\d,]+\.\d{3}"")" & vbCrLf
-  s = s & "            Dim afterNums As Object" & vbCrLf
-  s = s & "            Set afterNums = RegexMatchAll(afterText, ""-?[\d,]+\.\d{2,3}"")" & vbCrLf
-  s = s & "            If beforeNums.Count >= 1 Then tUnits = tUnits + SafeFloat(beforeNums(beforeNums.Count - 1).Value)" & vbCrLf
-  s = s & "            If afterNums.Count >= 2 Then" & vbCrLf
-  s = s & "                tValue = tValue + SafeFloat(afterNums(1).Value)" & vbCrLf
-  s = s & "            ElseIf afterNums.Count >= 1 Then" & vbCrLf
-  s = s & "                tValue = tValue + SafeFloat(afterNums(0).Value)" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            GoTo NextEmitTrade" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim tnums As Object" & vbCrLf
-  s = s & "        Set tnums = RegexMatchAll(tline, ""-?[\d,]+\.\d{2,3}"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If InStr(1, tline, ""INVESTED"") > 0 And InStr(1, tline, ""REINVESTED"") = 0 Then" & vbCrLf
-  s = s & "            ' INVESTED placeholder: add cost and value, skip units" & vbCrLf
-  s = s & "            If tnums.Count >= 5 Then" & vbCrLf
-  s = s & "                tCost = tCost + SafeFloat(tnums(2).Value)" & vbCrLf
-  s = s & "                tValue = tValue + SafeFloat(tnums(4).Value)" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        ElseIf tnums.Count >= 6 Then" & vbCrLf
-  s = s & "            Dim nLen As Long" & vbCrLf
-  s = s & "            nLen = tnums.Count" & vbCrLf
-  s = s & "            tUnits = tUnits + SafeFloat(tnums(nLen - 6).Value)" & vbCrLf
-  s = s & "            tCost = tCost + SafeFloat(tnums(nLen - 4).Value)" & vbCrLf
-  s = s & "            tValue = tValue + SafeFloat(tnums(nLen - 2).Value)" & vbCrLf
-  s = s & "            tUnrealized = tUnrealized + SafeFloat(tnums(nLen - 1).Value)" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextEmitTrade:" & vbCrLf
-  s = s & "    Next ti" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim sec As SecurityDetail" & vbCrLf
-  s = s & "    sec.Name = secName" & vbCrLf
-  s = s & "    sec.Symbol = grp.Symbol" & vbCrLf
-  s = s & "    sec.Units = tUnits" & vbCrLf
-  s = s & "    sec.Value = tValue" & vbCrLf
-  s = s & "    If infoUnavailable Then" & vbCrLf
-  s = s & "        sec.CostBasis = Null" & vbCrLf
-  s = s & "        sec.UnrealizedGL = Null" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        sec.CostBasis = tCost" & vbCrLf
-  s = s & "        sec.UnrealizedGL = tUnrealized" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    sec.IsEscrow = False" & vbCrLf
-  s = s & "    sec.CategoryKey = catKey" & vbCrLf
-  s = s & "    AddSecEntry sec" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Pass 1: Collect Security total line indices ---" & vbCrLf
-  s = s & "Private Sub CollectSecTotalIndices(lines() As String, ByRef indices() As Long, ByRef idxCount As Long)" & vbCrLf
-  s = s & "    ReDim indices(0 To 49)" & vbCrLf
-  s = s & "    idxCount = 0" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = LBound(lines) To UBound(lines)" & vbCrLf
-  s = s & "        If RegexTest(lines(i), ""^\s*Security [Tt]otal\s"") Then" & vbCrLf
-  s = s & "            If idxCount > UBound(indices) Then ReDim Preserve indices(0 To idxCount + 49)" & vbCrLf
-  s = s & "            indices(idxCount) = i" & vbCrLf
-  s = s & "            idxCount = idxCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Pass 2: Extract securities from Security total lines ---" & vbCrLf
-  s = s & "Private Sub ExtractFromSecTotals(lines() As String, indices() As Long, idxCount As Long, _" & vbCrLf
-  s = s & "    ByRef curCat As String, ByRef curAC As String, ByRef catScanned As Long)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    curCat = """"" & vbCrLf
-  s = s & "    curAC = """"" & vbCrLf
-  s = s & "    catScanned = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim idx As Long" & vbCrLf
-  s = s & "    For idx = 0 To idxCount - 1" & vbCrLf
-  s = s & "        Dim stLineIdx As Long" & vbCrLf
-  s = s & "        stLineIdx = indices(idx)" & vbCrLf
-  s = s & "        Dim stripped As String" & vbCrLf
-  s = s & "        stripped = Trim$(lines(stLineIdx))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim preScanAC As String: preScanAC = curAC" & vbCrLf
-  s = s & "        Dim preScanCat As String: preScanCat = curCat" & vbCrLf
-  s = s & "        Dim preScanFrom As Long: preScanFrom = catScanned" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        curAC = UpdateSecAssetClass(lines, catScanned, stLineIdx, curAC)" & vbCrLf
-  s = s & "        curCat = UpdateSecCategory(lines, catScanned, stLineIdx, curCat)" & vbCrLf
-  s = s & "        catScanned = stLineIdx + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Parse numbers from Security total line" & vbCrLf
-  s = s & "        Dim numbers As Object" & vbCrLf
-  s = s & "        Set numbers = RegexMatchAll(stripped, ""-?[\d,]+\.\d{2,3}"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim units As Variant: units = Null" & vbCrLf
-  s = s & "        Dim secValue As Double: secValue = 0" & vbCrLf
-  s = s & "        Dim costBasis As Variant: costBasis = Null" & vbCrLf
-  s = s & "        Dim unrealizedGl As Variant: unrealizedGl = Null" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Check for price/info unavailable" & vbCrLf
-  s = s & "        Dim prevEnd As Long" & vbCrLf
-  s = s & "        If idx > 0 Then prevEnd = indices(idx - 1) + 1 Else prevEnd = 0" & vbCrLf
-  s = s & "        Dim priceUnavailable As Boolean: priceUnavailable = False" & vbCrLf
-  s = s & "        Dim infoUnavailable As Boolean: infoUnavailable = False" & vbCrLf
-  s = s & "        Dim j As Long" & vbCrLf
-  s = s & "        For j = prevEnd To stLineIdx - 1" & vbCrLf
-  s = s & "            If InStr(1, lines(j), ""Price was unavailable"") > 0 Then priceUnavailable = True" & vbCrLf
-  s = s & "            If RegexTest(lines(j), ""information was unavailable"", True) Then infoUnavailable = True" & vbCrLf
-  s = s & "            If priceUnavailable Or infoUnavailable Then Exit For" & vbCrLf
-  s = s & "        Next j" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim nc As Long" & vbCrLf
-  s = s & "        nc = numbers.Count" & vbCrLf
-  s = s & "        If nc >= 7 Then" & vbCrLf
-  s = s & "            units = ParseNum(numbers(0).Value)" & vbCrLf
-  s = s & "            costBasis = ParseNum(numbers(3).Value)" & vbCrLf
-  s = s & "            secValue = SafeFloat(numbers(4).Value)" & vbCrLf
-  s = s & "            unrealizedGl = ParseNum(numbers(5).Value)" & vbCrLf
-  s = s & "        ElseIf nc = 6 And priceUnavailable Then" & vbCrLf
-  s = s & "            units = ParseNum(numbers(0).Value)" & vbCrLf
-  s = s & "            costBasis = ParseNum(numbers(3).Value)" & vbCrLf
-  s = s & "            secValue = 0" & vbCrLf
-  s = s & "            unrealizedGl = ParseNum(numbers(4).Value)" & vbCrLf
-  s = s & "        ElseIf nc >= 5 Then" & vbCrLf
-  s = s & "            units = ParseNum(numbers(0).Value)" & vbCrLf
-  s = s & "            costBasis = ParseNum(numbers(2).Value)" & vbCrLf
-  s = s & "            secValue = SafeFloat(numbers(3).Value)" & vbCrLf
-  s = s & "            unrealizedGl = ParseNum(numbers(4).Value)" & vbCrLf
-  s = s & "        ElseIf nc >= 4 Then" & vbCrLf
-  s = s & "            units = ParseNum(numbers(0).Value)" & vbCrLf
-  s = s & "            costBasis = ParseNum(numbers(1).Value)" & vbCrLf
-  s = s & "            secValue = SafeFloat(numbers(2).Value)" & vbCrLf
-  s = s & "            unrealizedGl = ParseNum(numbers(3).Value)" & vbCrLf
-  s = s & "        ElseIf infoUnavailable And nc >= 2 Then" & vbCrLf
-  s = s & "            If nc >= 3 Then units = ParseNum(numbers(0).Value) Else units = Null" & vbCrLf
-  s = s & "            secValue = SafeFloat(numbers(nc - 1).Value)" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Find name/symbol via trade group scanning" & vbCrLf
-  s = s & "        Dim scanStart As Long" & vbCrLf
-  s = s & "        If idx > 0 Then" & vbCrLf
-  s = s & "            scanStart = indices(idx - 1) + 1" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            scanStart = 0" & vbCrLf
-  s = s & "            For j = stLineIdx - 1 To 0 Step -1" & vbCrLf
-  s = s & "                If InStr(1, lines(j), ""(continued)"") > 0 Then GoTo NextScanBack" & vbCrLf
-  s = s & "                Dim ki As Long" & vbCrLf
-  s = s & "                For ki = 0 To mCatCount - 1" & vbCrLf
-  s = s & "                    If InStr(1, lines(j), mCatKeys(ki)) > 0 Then" & vbCrLf
-  s = s & "                        scanStart = j" & vbCrLf
-  s = s & "                        GoTo DoneScanBack" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                Next ki" & vbCrLf
-  s = s & "NextScanBack:" & vbCrLf
-  s = s & "            Next j" & vbCrLf
-  s = s & "DoneScanBack:" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim groups() As TradeGroup" & vbCrLf
-  s = s & "        Dim groupCount As Long" & vbCrLf
-  s = s & "        ScanTradeGroups lines, scanStart, stLineIdx, groups, groupCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim key As String" & vbCrLf
-  s = s & "        If curAC <> """" Then key = curAC & ""::"" & curCat Else key = curCat" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' All groups except last → emit as single-lot" & vbCrLf
-  s = s & "        Dim g As Long" & vbCrLf
-  s = s & "        For g = 0 To groupCount - 2" & vbCrLf
-  s = s & "            If Not GroupHasCusipOrSymbol(groups(g), lines, scanStart) Then" & vbCrLf
-  s = s & "                Dim gKey As String" & vbCrLf
-  s = s & "                gKey = GroupKey(groups(g), lines, preScanFrom, preScanCat, preScanAC)" & vbCrLf
-  s = s & "                EmitSingleLotSecurity groups(g), lines, gKey" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next g" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Last group → names for Security Total" & vbCrLf
-  s = s & "        Dim nameParts() As String" & vbCrLf
-  s = s & "        ReDim nameParts(0 To 9)" & vbCrLf
-  s = s & "        Dim namePartCount As Long: namePartCount = 0" & vbCrLf
-  s = s & "        Dim symbol As String: symbol = """"" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If groupCount > 0 Then" & vbCrLf
-  s = s & "            Dim lastGrp As TradeGroup" & vbCrLf
-  s = s & "            lastGrp = groups(groupCount - 1)" & vbCrLf
-  s = s & "            Dim ni As Long" & vbCrLf
-  s = s & "            For ni = 0 To lastGrp.NameCount - 1" & vbCrLf
-  s = s & "                If namePartCount > UBound(nameParts) Then ReDim Preserve nameParts(0 To namePartCount + 9)" & vbCrLf
-  s = s & "                nameParts(namePartCount) = lastGrp.NameParts(ni)" & vbCrLf
-  s = s & "                namePartCount = namePartCount + 1" & vbCrLf
-  s = s & "            Next ni" & vbCrLf
-  s = s & "            symbol = lastGrp.Symbol" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim secName As String" & vbCrLf
-  s = s & "        If namePartCount > 0 Then" & vbCrLf
-  s = s & "            secName = nameParts(0)" & vbCrLf
-  s = s & "            Dim pi As Long" & vbCrLf
-  s = s & "            For pi = 1 To namePartCount - 1" & vbCrLf
-  s = s & "                secName = secName & "" "" & nameParts(pi)" & vbCrLf
-  s = s & "            Next pi" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            secName = """"" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        secName = CleanSecurityName(Trim$(secName))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If secName <> """" Or symbol <> """" Then" & vbCrLf
-  s = s & "            Dim sec As SecurityDetail" & vbCrLf
-  s = s & "            sec.Name = secName" & vbCrLf
-  s = s & "            sec.Symbol = symbol" & vbCrLf
-  s = s & "            sec.Units = units" & vbCrLf
-  s = s & "            sec.Value = secValue" & vbCrLf
-  s = s & "            sec.CostBasis = costBasis" & vbCrLf
-  s = s & "            sec.UnrealizedGL = unrealizedGl" & vbCrLf
-  s = s & "            sec.IsEscrow = priceUnavailable" & vbCrLf
-  s = s & "            sec.CategoryKey = key" & vbCrLf
-  s = s & "            AddSecEntry sec" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next idx" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Post-sweep: trade groups after last Security Total" & vbCrLf
-  s = s & "    Dim postStart As Long" & vbCrLf
-  s = s & "    If idxCount > 0 Then postStart = indices(idxCount - 1) + 1 Else postStart = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim hasPostTrades As Boolean: hasPostTrades = False" & vbCrLf
-  s = s & "    For j = postStart To UBound(lines)" & vbCrLf
-  s = s & "        If IsSecTradeLine(Trim$(lines(j))) Then hasPostTrades = True: Exit For" & vbCrLf
-  s = s & "    Next j" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If hasPostTrades Then" & vbCrLf
-  s = s & "        Dim postPreAC As String: postPreAC = curAC" & vbCrLf
-  s = s & "        Dim postPreCat As String: postPreCat = curCat" & vbCrLf
-  s = s & "        Dim postPreFrom As Long: postPreFrom = catScanned" & vbCrLf
-  s = s & "        curAC = UpdateSecAssetClass(lines, catScanned, UBound(lines), curAC)" & vbCrLf
-  s = s & "        curCat = UpdateSecCategory(lines, catScanned, UBound(lines), curCat)" & vbCrLf
-  s = s & "        catScanned = UBound(lines) + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim postGroups() As TradeGroup" & vbCrLf
-  s = s & "        Dim postGroupCount As Long" & vbCrLf
-  s = s & "        ScanTradeGroups lines, postStart, UBound(lines) + 1, postGroups, postGroupCount" & vbCrLf
-  s = s & "        For g = 0 To postGroupCount - 1" & vbCrLf
-  s = s & "            If Not GroupHasCusipOrSymbol(postGroups(g), lines, postStart) Then" & vbCrLf
-  s = s & "                gKey = GroupKey(postGroups(g), lines, postPreFrom, postPreCat, postPreAC)" & vbCrLf
-  s = s & "                EmitSingleLotSecurity postGroups(g), lines, gKey" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next g" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Pass 2b: Single-lot securities (bonds without Security total) ---" & vbCrLf
-  s = s & "Private Sub ExtractSingleLotSecs(lines() As String, indices() As Long, idxCount As Long)" & vbCrLf
-  s = s & "    ' Build a set of Security total line indices for quick lookup" & vbCrLf
-  s = s & "    Dim secTotalSet() As Boolean" & vbCrLf
-  s = s & "    ReDim secTotalSet(LBound(lines) To UBound(lines))" & vbCrLf
-  s = s & "    Dim si As Long" & vbCrLf
-  s = s & "    For si = 0 To idxCount - 1" & vbCrLf
-  s = s & "        secTotalSet(indices(si)) = True" & vbCrLf
-  s = s & "    Next si" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim curCat As String: curCat = """"" & vbCrLf
-  s = s & "    Dim curAC As String: curAC = """"" & vbCrLf
-  s = s & "    Dim catScanned As Long: catScanned = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find all Symbol:/Exchange:/CUSIP markers" & vbCrLf
-  s = s & "    Dim markerLines() As Long" & vbCrLf
-  s = s & "    Dim markerSymbols() As String" & vbCrLf
-  s = s & "    Dim markerCusips() As String" & vbCrLf
-  s = s & "    Dim markerCount As Long: markerCount = 0" & vbCrLf
-  s = s & "    ReDim markerLines(0 To 49)" & vbCrLf
-  s = s & "    ReDim markerSymbols(0 To 49)" & vbCrLf
-  s = s & "    ReDim markerCusips(0 To 49)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = LBound(lines) To UBound(lines)" & vbCrLf
-  s = s & "        Dim trimmed As String" & vbCrLf
-  s = s & "        trimmed = Trim$(lines(i))" & vbCrLf
-  s = s & "        Dim m As Object" & vbCrLf
-  s = s & "        Set m = RegexMatch(trimmed, ""^Symbol:\s*(\S+)"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            If markerCount > UBound(markerLines) Then" & vbCrLf
-  s = s & "                ReDim Preserve markerLines(0 To markerCount + 49)" & vbCrLf
-  s = s & "                ReDim Preserve markerSymbols(0 To markerCount + 49)" & vbCrLf
-  s = s & "                ReDim Preserve markerCusips(0 To markerCount + 49)" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            markerLines(markerCount) = i" & vbCrLf
-  s = s & "            markerSymbols(markerCount) = m.SubMatches(0)" & vbCrLf
-  s = s & "            markerCusips(markerCount) = """"" & vbCrLf
-  s = s & "            markerCount = markerCount + 1" & vbCrLf
-  s = s & "        ElseIf RegexTest(trimmed, ""^Exchange:\s"") Then" & vbCrLf
-  s = s & "            If markerCount > UBound(markerLines) Then" & vbCrLf
-  s = s & "                ReDim Preserve markerLines(0 To markerCount + 49)" & vbCrLf
-  s = s & "                ReDim Preserve markerSymbols(0 To markerCount + 49)" & vbCrLf
-  s = s & "                ReDim Preserve markerCusips(0 To markerCount + 49)" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            markerLines(markerCount) = i" & vbCrLf
-  s = s & "            markerSymbols(markerCount) = """"" & vbCrLf
-  s = s & "            markerCusips(markerCount) = """"" & vbCrLf
-  s = s & "            markerCount = markerCount + 1" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            Set m = RegexMatch(trimmed, ""^CUSIP\s+(\S+)"")" & vbCrLf
-  s = s & "            If Not m Is Nothing Then" & vbCrLf
-  s = s & "                If markerCount > UBound(markerLines) Then" & vbCrLf
-  s = s & "                    ReDim Preserve markerLines(0 To markerCount + 49)" & vbCrLf
-  s = s & "                    ReDim Preserve markerSymbols(0 To markerCount + 49)" & vbCrLf
-  s = s & "                    ReDim Preserve markerCusips(0 To markerCount + 49)" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "                markerLines(markerCount) = i" & vbCrLf
-  s = s & "                markerSymbols(markerCount) = """"" & vbCrLf
-  s = s & "                markerCusips(markerCount) = m.SubMatches(0)" & vbCrLf
-  s = s & "                markerCount = markerCount + 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim mi As Long" & vbCrLf
-  s = s & "    For mi = 0 To markerCount - 1" & vbCrLf
-  s = s & "        Dim markerIdx As Long" & vbCrLf
-  s = s & "        markerIdx = markerLines(mi)" & vbCrLf
-  s = s & "        Dim rangeEnd As Long" & vbCrLf
-  s = s & "        If mi + 1 < markerCount Then rangeEnd = markerLines(mi + 1) Else rangeEnd = UBound(lines) + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        curAC = UpdateSecAssetClass(lines, catScanned, markerIdx, curAC)" & vbCrLf
-  s = s & "        curCat = UpdateSecCategory(lines, catScanned, markerIdx, curCat)" & vbCrLf
-  s = s & "        catScanned = markerIdx + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Collect trade lines" & vbCrLf
-  s = s & "        Dim tUnits As Double, tCost As Double, tValue As Double, tUnrealized As Double" & vbCrLf
-  s = s & "        tUnits = 0: tCost = 0: tValue = 0: tUnrealized = 0" & vbCrLf
-  s = s & "        Dim tradeLineCount As Long: tradeLineCount = 0" & vbCrLf
-  s = s & "        Dim infoUnavailable As Boolean: infoUnavailable = False" & vbCrLf
-  s = s & "        Dim sawTrade As Boolean: sawTrade = False" & vbCrLf
-  s = s & "        Dim actualLastTradeIdx As Long: actualLastTradeIdx = markerIdx" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim j As Long" & vbCrLf
-  s = s & "        For j = markerIdx To rangeEnd - 1" & vbCrLf
-  s = s & "            Dim rawLine As String" & vbCrLf
-  s = s & "            rawLine = Trim$(lines(j))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' ""information was unavailable""" & vbCrLf
-  s = s & "            If RegexTest(rawLine, ""information was unavailable"", True) Then" & vbCrLf
-  s = s & "                Dim re As Object" & vbCrLf
-  s = s & "                Set re = CreateRegex(""---.*unavailable.*---"", False, False, True)" & vbCrLf
-  s = s & "                Dim sMatches As Object" & vbCrLf
-  s = s & "                Set sMatches = re.Execute(rawLine)" & vbCrLf
-  s = s & "                If sMatches.Count > 0 Then" & vbCrLf
-  s = s & "                    Dim splitIdx As Long" & vbCrLf
-  s = s & "                    splitIdx = sMatches(0).FirstIndex + 1" & vbCrLf
-  s = s & "                    Dim beforeText As String" & vbCrLf
-  s = s & "                    beforeText = Left$(rawLine, splitIdx - 1)" & vbCrLf
-  s = s & "                    Dim dashEnd As Long" & vbCrLf
-  s = s & "                    dashEnd = InStr(splitIdx + 3, rawLine, ""---"")" & vbCrLf
-  s = s & "                    Dim afterText As String" & vbCrLf
-  s = s & "                    If dashEnd > 0 Then afterText = Mid$(rawLine, dashEnd + 3) Else afterText = """"" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                    Dim beforeNums As Object" & vbCrLf
-  s = s & "                    Set beforeNums = RegexMatchAll(beforeText, ""-?[\d,]+\.\d{3}"")" & vbCrLf
-  s = s & "                    Dim afterNums As Object" & vbCrLf
-  s = s & "                    Set afterNums = RegexMatchAll(afterText, ""-?[\d,]+\.\d{2,3}"")" & vbCrLf
-  s = s & "                    If beforeNums.Count >= 1 And afterNums.Count >= 1 Then" & vbCrLf
-  s = s & "                        Dim valueIdx As Long" & vbCrLf
-  s = s & "                        If afterNums.Count >= 2 Then valueIdx = 1 Else valueIdx = 0" & vbCrLf
-  s = s & "                        tUnits = tUnits + SafeFloat(beforeNums(beforeNums.Count - 1).Value)" & vbCrLf
-  s = s & "                        tValue = tValue + SafeFloat(afterNums(valueIdx).Value)" & vbCrLf
-  s = s & "                        infoUnavailable = True" & vbCrLf
-  s = s & "                        sawTrade = True" & vbCrLf
-  s = s & "                        actualLastTradeIdx = j" & vbCrLf
-  s = s & "                        tradeLineCount = tradeLineCount + 1" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "                GoTo NextSLLine" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Trade line" & vbCrLf
-  s = s & "            If IsSecTradeLine(rawLine) Then" & vbCrLf
-  s = s & "                sawTrade = True" & vbCrLf
-  s = s & "                actualLastTradeIdx = j" & vbCrLf
-  s = s & "                Dim tline As String" & vbCrLf
-  s = s & "                tline = CleanTradeLine(rawLine)" & vbCrLf
-  s = s & "                Dim tnums As Object" & vbCrLf
-  s = s & "                Set tnums = RegexMatchAll(tline, ""-?[\d,]+\.\d{2,3}"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                If tnums.Count >= 8 Then" & vbCrLf
-  s = s & "                    tUnits = tUnits + SafeFloat(tnums(0).Value)" & vbCrLf
-  s = s & "                    tCost = tCost + SafeFloat(tnums(3).Value)" & vbCrLf
-  s = s & "                    tValue = tValue + SafeFloat(tnums(5).Value)" & vbCrLf
-  s = s & "                    tUnrealized = tUnrealized + SafeFloat(tnums(6).Value)" & vbCrLf
-  s = s & "                    tradeLineCount = tradeLineCount + 1" & vbCrLf
-  s = s & "                ElseIf tnums.Count >= 6 Then" & vbCrLf
-  s = s & "                    Dim nLen As Long" & vbCrLf
-  s = s & "                    nLen = tnums.Count" & vbCrLf
-  s = s & "                    tUnits = tUnits + SafeFloat(tnums(nLen - 6).Value)" & vbCrLf
-  s = s & "                    tCost = tCost + SafeFloat(tnums(nLen - 4).Value)" & vbCrLf
-  s = s & "                    tValue = tValue + SafeFloat(tnums(nLen - 2).Value)" & vbCrLf
-  s = s & "                    tUnrealized = tUnrealized + SafeFloat(tnums(nLen - 1).Value)" & vbCrLf
-  s = s & "                    tradeLineCount = tradeLineCount + 1" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "                GoTo NextSLLine" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' After trade, check boundaries" & vbCrLf
-  s = s & "            If sawTrade Then" & vbCrLf
-  s = s & "                If rawLine = """" Then GoTo NextSLLine" & vbCrLf
-  s = s & "                If IsSecBoilerplate(rawLine) Then GoTo NextSLLine" & vbCrLf
-  s = s & "                If InStr(1, rawLine, ""(continued)"") > 0 Or InStr(1, rawLine, ""continued next page"") > 0 Then GoTo NextSLLine" & vbCrLf
-  s = s & "                If j <= UBound(lines) And secTotalSet(j) Then Exit For" & vbCrLf
-  s = s & "                If IsAllcapsName(rawLine) Then Exit For" & vbCrLf
-  s = s & "                If IsCategoryBoundary(rawLine) Then Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "NextSLLine:" & vbCrLf
-  s = s & "        Next j" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If tradeLineCount = 0 Then GoTo NextMarker" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Check if this security has a Security total (skip if so)" & vbCrLf
-  s = s & "        Dim hasSecTotal As Boolean: hasSecTotal = False" & vbCrLf
-  s = s & "        For j = markerIdx To rangeEnd - 1" & vbCrLf
-  s = s & "            If j <= UBound(lines) And secTotalSet(j) Then hasSecTotal = True: Exit For" & vbCrLf
-  s = s & "            If j > actualLastTradeIdx Then" & vbCrLf
-  s = s & "                Dim rl As String" & vbCrLf
-  s = s & "                rl = Trim$(lines(j))" & vbCrLf
-  s = s & "                If rl = """" Then GoTo NextSTCheck" & vbCrLf
-  s = s & "                If IsSecBoilerplate(rl) Then GoTo NextSTCheck" & vbCrLf
-  s = s & "                If InStr(1, rl, ""(continued)"") > 0 Or InStr(1, rl, ""continued next page"") > 0 Then GoTo NextSTCheck" & vbCrLf
-  s = s & "                If IsSecTradeLine(rl) Then Exit For" & vbCrLf
-  s = s & "                If IsAllcapsName(rl) Then Exit For" & vbCrLf
-  s = s & "                If IsCategoryBoundary(rl) Then Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "NextSTCheck:" & vbCrLf
-  s = s & "        Next j" & vbCrLf
-  s = s & "        If hasSecTotal Then GoTo NextMarker" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Find name: scan backward" & vbCrLf
-  s = s & "        Dim nameParts() As String" & vbCrLf
-  s = s & "        ReDim nameParts(0 To 9)" & vbCrLf
-  s = s & "        Dim namePartCount As Long: namePartCount = 0" & vbCrLf
-  s = s & "        Dim prevBound As Long" & vbCrLf
-  s = s & "        If mi > 0 Then prevBound = markerLines(mi - 1) + 1 Else prevBound = LBound(lines)" & vbCrLf
-  s = s & "        Dim nameStart As Long" & vbCrLf
-  s = s & "        nameStart = prevBound" & vbCrLf
-  s = s & "        For j = markerIdx - 1 To prevBound Step -1" & vbCrLf
-  s = s & "            Dim bline As String" & vbCrLf
-  s = s & "            bline = Trim$(lines(j))" & vbCrLf
-  s = s & "            If j <= UBound(lines) And secTotalSet(j) Then nameStart = j + 1: Exit For" & vbCrLf
-  s = s & "            If IsSecTradeLine(bline) Then nameStart = j + 1: Exit For" & vbCrLf
-  s = s & "            If IsSecBoilerplate(bline) Then nameStart = j + 1: Exit For" & vbCrLf
-  s = s & "            If IsCategoryBoundary(bline) Then nameStart = j + 1: Exit For" & vbCrLf
-  s = s & "        Next j" & vbCrLf
-  s = s & "        For j = nameStart To markerIdx - 1" & vbCrLf
-  s = s & "            Dim nl As String" & vbCrLf
-  s = s & "            nl = Trim$(lines(j))" & vbCrLf
-  s = s & "            If nl = """" Then GoTo NextNameSL" & vbCrLf
-  s = s & "            If IsSecBoilerplate(nl) Then GoTo NextNameSL" & vbCrLf
-  s = s & "            If InStr(1, nl, ""(continued)"") > 0 Then GoTo NextNameSL" & vbCrLf
-  s = s & "            If RegexTest(nl, ""^(?:BE/|R/|RV\s|SR\s|RATE\s|ACCRUED INTEREST|CUSIP\s|DATED DATE|Moody:|S&P:|Original cost)"") Then GoTo NextNameSL" & vbCrLf
-  s = s & "            If IsCategoryBoundary(nl) Then GoTo NextNameSL" & vbCrLf
-  s = s & "            If IsAllcapsName(nl) Then" & vbCrLf
-  s = s & "                If namePartCount > UBound(nameParts) Then ReDim Preserve nameParts(0 To namePartCount + 9)" & vbCrLf
-  s = s & "                nameParts(namePartCount) = nl" & vbCrLf
-  s = s & "                namePartCount = namePartCount + 1" & vbCrLf
-  s = s & "            Else" & vbCrLf
-  s = s & "                Dim prefix As String" & vbCrLf
-  s = s & "                prefix = ExtractAllcapsPrefix(nl)" & vbCrLf
-  s = s & "                If prefix <> """" Then" & vbCrLf
-  s = s & "                    If namePartCount > UBound(nameParts) Then ReDim Preserve nameParts(0 To namePartCount + 9)" & vbCrLf
-  s = s & "                    nameParts(namePartCount) = prefix" & vbCrLf
-  s = s & "                    namePartCount = namePartCount + 1" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "NextNameSL:" & vbCrLf
-  s = s & "        Next j" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim secName As String" & vbCrLf
-  s = s & "        If namePartCount > 0 Then" & vbCrLf
-  s = s & "            secName = nameParts(0)" & vbCrLf
-  s = s & "            Dim pi As Long" & vbCrLf
-  s = s & "            For pi = 1 To namePartCount - 1" & vbCrLf
-  s = s & "                secName = secName & "" "" & nameParts(pi)" & vbCrLf
-  s = s & "            Next pi" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            secName = """"" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        secName = CleanSecurityName(Trim$(secName))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If Left$(secName, 6) = ""ESCROW"" Then GoTo NextMarker" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim symOrCusip As String" & vbCrLf
-  s = s & "        If markerSymbols(mi) <> """" Then symOrCusip = markerSymbols(mi) Else symOrCusip = markerCusips(mi)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If secName <> """" Or symOrCusip <> """" Then" & vbCrLf
-  s = s & "            Dim sec As SecurityDetail" & vbCrLf
-  s = s & "            sec.Name = secName" & vbCrLf
-  s = s & "            sec.Symbol = symOrCusip" & vbCrLf
-  s = s & "            sec.Units = tUnits" & vbCrLf
-  s = s & "            sec.Value = tValue" & vbCrLf
-  s = s & "            If infoUnavailable Then" & vbCrLf
-  s = s & "                sec.CostBasis = Null" & vbCrLf
-  s = s & "                sec.UnrealizedGL = Null" & vbCrLf
-  s = s & "            Else" & vbCrLf
-  s = s & "                sec.CostBasis = tCost" & vbCrLf
-  s = s & "                sec.UnrealizedGL = tUnrealized" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            sec.IsEscrow = False" & vbCrLf
-  s = s & "            Dim key As String" & vbCrLf
-  s = s & "            If curAC <> """" Then key = curAC & ""::"" & curCat Else key = curCat" & vbCrLf
-  s = s & "            sec.CategoryKey = key" & vbCrLf
-  s = s & "            AddSecEntry sec" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextMarker:" & vbCrLf
-  s = s & "    Next mi" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Pass 3: Private equity funds ---" & vbCrLf
-  s = s & "Private Sub ExtractPEFundSecs(section As String)" & vbCrLf
-  s = s & "    ' Find ""Private equity funds"" header" & vbCrLf
-  s = s & "    Dim peMatch As Object" & vbCrLf
-  s = s & "    Set peMatch = RegexMatch(section, ""^Private equity funds\s*$"", False, True)" & vbCrLf
-  s = s & "    If peMatch Is Nothing Then" & vbCrLf
-  s = s & "        Set peMatch = RegexMatch(section, ""^Private equity funds[^,A-Za-z]*$"", False, True)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If peMatch Is Nothing Then" & vbCrLf
-  s = s & "        Set peMatch = RegexMatch(section, ""Private equity funds\s*$"", False, True)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If peMatch Is Nothing Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim peStart As Long" & vbCrLf
-  s = s & "    peStart = peMatch.FirstIndex + 1  ' 1-based for Mid$" & vbCrLf
-  s = s & "    Dim peSection As String" & vbCrLf
-  s = s & "    peSection = Mid$(section, peStart)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim endKw() As String" & vbCrLf
-  s = s & "    endKw = Split(""Other investments|Mutual funds|Closed end funds|Money market funds|Cash and money balances"", ""|"")" & vbCrLf
-  s = s & "    Dim peEnd As Long" & vbCrLf
-  s = s & "    peEnd = FindSecSectionEnd(peSection, Len(""Private equity funds""), endKw)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim peText As String" & vbCrLf
-  s = s & "    peText = Left$(peSection, peEnd - 1)" & vbCrLf
-  s = s & "    Dim peLines() As String" & vbCrLf
-  s = s & "    peLines = Split(peText, vbLf)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Collect PE entries" & vbCrLf
-  s = s & "    Dim peNames() As String" & vbCrLf
-  s = s & "    ReDim peNames(0 To 49)" & vbCrLf
-  s = s & "    Dim peValues() As Double" & vbCrLf
-  s = s & "    ReDim peValues(0 To 49)" & vbCrLf
-  s = s & "    Dim peEntryCount As Long: peEntryCount = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim nameAccum() As String" & vbCrLf
-  s = s & "    ReDim nameAccum(0 To 9)" & vbCrLf
-  s = s & "    Dim nameAccumCount As Long: nameAccumCount = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim li As Long" & vbCrLf
-  s = s & "    For li = LBound(peLines) To UBound(peLines)" & vbCrLf
-  s = s & "        Dim strippedPE As String" & vbCrLf
-  s = s & "        strippedPE = Trim$(peLines(li))" & vbCrLf
-  s = s & "        If strippedPE = """" Then GoTo NextPELine" & vbCrLf
-  s = s & "        If Left$(strippedPE, 5) = ""Total"" Then GoTo NextPELine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Skip known prefixes" & vbCrLf
-  s = s & "        Dim skipPE As Boolean: skipPE = False" & vbCrLf
-  s = s & "        Dim spi As Long" & vbCrLf
-  s = s & "        For spi = 0 To mPESkipCount - 1" & vbCrLf
-  s = s & "            If Left$(strippedPE, Len(mPESkipPrefixes(spi))) = mPESkipPrefixes(spi) Then skipPE = True: Exit For" & vbCrLf
-  s = s & "        Next spi" & vbCrLf
-  s = s & "        If skipPE Then GoTo NextPELine" & vbCrLf
-  s = s & "        If IsSecBoilerplate(strippedPE) Then nameAccumCount = 0: GoTo NextPELine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' COMMITMENT / Not Priced" & vbCrLf
-  s = s & "        If InStr(1, strippedPE, ""Not Priced"") > 0 Or InStr(1, strippedPE, ""COMMITMENT"") > 0 Then" & vbCrLf
-  s = s & "            Dim re As Object" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s+[\d,]+\.\d{3}\s+.*$"")" & vbCrLf
-  s = s & "            Dim namePart As String" & vbCrLf
-  s = s & "            namePart = re.Replace(strippedPE, """")" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s*COMMITMENT\s*(?:AMOUNT?|AMT?)?\s*$"")" & vbCrLf
-  s = s & "            namePart = Trim$(re.Replace(namePart, """"))" & vbCrLf
-  s = s & "            If namePart <> """" Then" & vbCrLf
-  s = s & "                If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)" & vbCrLf
-  s = s & "                nameAccum(nameAccumCount) = namePart" & vbCrLf
-  s = s & "                nameAccumCount = nameAccumCount + 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            ' Flush as null-value entry (commitment, skip later)" & vbCrLf
-  s = s & "            nameAccumCount = 0" & vbCrLf
-  s = s & "            GoTo NextPELine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Value line: ""units(3dp) 1.000 value(2dp)""" & vbCrLf
-  s = s & "        Dim valM As Object" & vbCrLf
-  s = s & "        Set valM = RegexMatch(strippedPE, ""([\d,]+\.\d{3})\s+1\.000\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "        If Not valM Is Nothing Then" & vbCrLf
-  s = s & "            Dim val As Double" & vbCrLf
-  s = s & "            val = SafeFloat(valM.SubMatches(1))" & vbCrLf
-  s = s & "            Dim before As String" & vbCrLf
-  s = s & "            Dim valIdx As Long" & vbCrLf
-  s = s & "            valIdx = InStr(1, strippedPE, valM.SubMatches(0))" & vbCrLf
-  s = s & "            If valIdx > 1 Then before = Trim$(Left$(strippedPE, valIdx - 1)) Else before = """"" & vbCrLf
-  s = s & "            ' Strip trailing trade dates" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s*"" & MONTH_ALT & ""\s+\d{1,2},?\s+\d{2,4}\s*$"")" & vbCrLf
-  s = s & "            before = Trim$(re.Replace(before, """"))" & vbCrLf
-  s = s & "            If before <> """" Then" & vbCrLf
-  s = s & "                If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)" & vbCrLf
-  s = s & "                nameAccum(nameAccumCount) = before" & vbCrLf
-  s = s & "                nameAccumCount = nameAccumCount + 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            If nameAccumCount > 0 Then" & vbCrLf
-  s = s & "                ' Join name parts" & vbCrLf
-  s = s & "                Dim fullName As String" & vbCrLf
-  s = s & "                fullName = nameAccum(0)" & vbCrLf
-  s = s & "                Dim ni As Long" & vbCrLf
-  s = s & "                For ni = 1 To nameAccumCount - 1" & vbCrLf
-  s = s & "                    fullName = fullName & "" "" & nameAccum(ni)" & vbCrLf
-  s = s & "                Next ni" & vbCrLf
-  s = s & "                ' Add to entries" & vbCrLf
-  s = s & "                If peEntryCount > UBound(peNames) Then" & vbCrLf
-  s = s & "                    ReDim Preserve peNames(0 To peEntryCount + 49)" & vbCrLf
-  s = s & "                    ReDim Preserve peValues(0 To peEntryCount + 49)" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "                peNames(peEntryCount) = fullName" & vbCrLf
-  s = s & "                peValues(peEntryCount) = val" & vbCrLf
-  s = s & "                peEntryCount = peEntryCount + 1" & vbCrLf
-  s = s & "                nameAccumCount = 0" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            GoTo NextPELine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' ALL CAPS name" & vbCrLf
-  s = s & "        Dim alphaCount As Long: alphaCount = 0" & vbCrLf
-  s = s & "        Dim hasLower As Boolean: hasLower = False" & vbCrLf
-  s = s & "        Dim ci As Long" & vbCrLf
-  s = s & "        For ci = 1 To Len(strippedPE)" & vbCrLf
-  s = s & "            Dim ch As Long" & vbCrLf
-  s = s & "            ch = Asc(Mid$(strippedPE, ci, 1))" & vbCrLf
-  s = s & "            If ch >= 65 And ch <= 90 Then alphaCount = alphaCount + 1" & vbCrLf
-  s = s & "            If ch >= 97 And ch <= 122 Then hasLower = True" & vbCrLf
-  s = s & "        Next ci" & vbCrLf
-  s = s & "        If alphaCount >= 2 And Not hasLower Then" & vbCrLf
-  s = s & "            Dim rejectPE As Boolean: rejectPE = False" & vbCrLf
-  s = s & "            If InStr(1, strippedPE, ""FDIC"") > 0 Or InStr(1, strippedPE, ""CNQ7"") > 0 Or _" & vbCrLf
-  s = s & "               InStr(1, strippedPE, ""NQ7"") > 0 Or InStr(1, strippedPE, ""SIPC"") > 0 Then rejectPE = True" & vbCrLf
-  s = s & "            If Not rejectPE Then" & vbCrLf
-  s = s & "                If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)" & vbCrLf
-  s = s & "                nameAccum(nameAccumCount) = strippedPE" & vbCrLf
-  s = s & "                nameAccumCount = nameAccumCount + 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextPELine:" & vbCrLf
-  s = s & "    Next li" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Consolidate by normalized name" & vbCrLf
-  s = s & "    Dim normNames() As String" & vbCrLf
-  s = s & "    Dim normValues() As Double" & vbCrLf
-  s = s & "    Dim normCount As Long: normCount = 0" & vbCrLf
-  s = s & "    ReDim normNames(0 To peEntryCount)" & vbCrLf
-  s = s & "    ReDim normValues(0 To peEntryCount)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim ei As Long" & vbCrLf
-  s = s & "    For ei = 0 To peEntryCount - 1" & vbCrLf
-  s = s & "        If peValues(ei) <= 0 Then GoTo NextPEEntry" & vbCrLf
-  s = s & "        Dim base As String" & vbCrLf
-  s = s & "        base = NormFundName(peNames(ei))" & vbCrLf
-  s = s & "        Dim found As Boolean: found = False" & vbCrLf
-  s = s & "        Dim fi As Long" & vbCrLf
-  s = s & "        For fi = 0 To normCount - 1" & vbCrLf
-  s = s & "            If normNames(fi) = base Then" & vbCrLf
-  s = s & "                normValues(fi) = normValues(fi) + peValues(ei)" & vbCrLf
-  s = s & "                found = True" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next fi" & vbCrLf
-  s = s & "        If Not found Then" & vbCrLf
-  s = s & "            normNames(normCount) = base" & vbCrLf
-  s = s & "            normValues(normCount) = peValues(ei)" & vbCrLf
-  s = s & "            normCount = normCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextPEEntry:" & vbCrLf
-  s = s & "    Next ei" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Add to mSecEntries" & vbCrLf
-  s = s & "    For fi = 0 To normCount - 1" & vbCrLf
-  s = s & "        Dim sec As SecurityDetail" & vbCrLf
-  s = s & "        sec.Name = normNames(fi)" & vbCrLf
-  s = s & "        sec.Symbol = """"" & vbCrLf
-  s = s & "        sec.Units = Null" & vbCrLf
-  s = s & "        sec.Value = normValues(fi)" & vbCrLf
-  s = s & "        sec.CostBasis = Null" & vbCrLf
-  s = s & "        sec.UnrealizedGL = Null" & vbCrLf
-  s = s & "        sec.IsEscrow = False" & vbCrLf
-  s = s & "        sec.CategoryKey = ""Private equity funds""" & vbCrLf
-  s = s & "        AddSecEntry sec" & vbCrLf
-  s = s & "    Next fi" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Pass 3b: Other investments PE-style entries ---" & vbCrLf
-  s = s & "Private Sub ExtractOtherInvestPE(section As String)" & vbCrLf
-  s = s & "    Dim oiMatch As Object" & vbCrLf
-  s = s & "    Set oiMatch = RegexMatch(section, ""^Other investments\s*$"", False, True)" & vbCrLf
-  s = s & "    If oiMatch Is Nothing Then" & vbCrLf
-  s = s & "        Set oiMatch = RegexMatch(section, ""^Other investments[^,A-Za-z]*$"", False, True)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If oiMatch Is Nothing Then" & vbCrLf
-  s = s & "        Set oiMatch = RegexMatch(section, ""Other investments\s*$"", False, True)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If oiMatch Is Nothing Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim oiStart As Long" & vbCrLf
-  s = s & "    oiStart = oiMatch.FirstIndex + 1" & vbCrLf
-  s = s & "    Dim oiSection As String" & vbCrLf
-  s = s & "    oiSection = Mid$(section, oiStart)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim endKw() As String" & vbCrLf
-  s = s & "    endKw = Split(""Private equity funds|Hedge funds|Mutual funds|Closed end funds|Money market funds|Cash and money balances|Common stock|Your total assets"", ""|"")" & vbCrLf
-  s = s & "    Dim oiEnd As Long" & vbCrLf
-  s = s & "    oiEnd = FindSecSectionEnd(oiSection, Len(""Other investments""), endKw)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim oiText As String" & vbCrLf
-  s = s & "    oiText = Left$(oiSection, oiEnd - 1)" & vbCrLf
-  s = s & "    Dim oiLines() As String" & vbCrLf
-  s = s & "    oiLines = Split(oiText, vbLf)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Collect entries" & vbCrLf
-  s = s & "    Dim oiNames() As String" & vbCrLf
-  s = s & "    Dim oiValues() As Double" & vbCrLf
-  s = s & "    Dim oiCosts() As Double" & vbCrLf
-  s = s & "    Dim oiEntryCount As Long: oiEntryCount = 0" & vbCrLf
-  s = s & "    ReDim oiNames(0 To 49)" & vbCrLf
-  s = s & "    ReDim oiValues(0 To 49)" & vbCrLf
-  s = s & "    ReDim oiCosts(0 To 49)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim nameAccum() As String" & vbCrLf
-  s = s & "    ReDim nameAccum(0 To 9)" & vbCrLf
-  s = s & "    Dim nameAccumCount As Long: nameAccumCount = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim li As Long" & vbCrLf
-  s = s & "    For li = LBound(oiLines) To UBound(oiLines)" & vbCrLf
-  s = s & "        Dim stripped As String" & vbCrLf
-  s = s & "        stripped = Trim$(oiLines(li))" & vbCrLf
-  s = s & "        If stripped = """" Then GoTo NextOILine" & vbCrLf
-  s = s & "        If Left$(stripped, 5) = ""Total"" Then GoTo NextOILine" & vbCrLf
-  s = s & "        If Left$(stripped, 17) = ""Other investments"" Then GoTo NextOILine" & vbCrLf
-  s = s & "        If IsSecBoilerplate(stripped) Then nameAccumCount = 0: GoTo NextOILine" & vbCrLf
-  s = s & "        If RegexTest(stripped, ""^\s*Security [Tt]otal\s"") Then nameAccumCount = 0: GoTo NextOILine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' COMMITMENT / Not Priced" & vbCrLf
-  s = s & "        If InStr(1, stripped, ""Not Priced"") > 0 Or InStr(1, stripped, ""COMMITMENT"") > 0 Then" & vbCrLf
-  s = s & "            Dim re As Object" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s+[\d,]+\.\d{3}\s+.*$"")" & vbCrLf
-  s = s & "            Dim namePart As String" & vbCrLf
-  s = s & "            namePart = re.Replace(stripped, """")" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s*COMMITMENT\s*(?:AMOUNT?|AMT?)?\s*$"")" & vbCrLf
-  s = s & "            namePart = Trim$(re.Replace(namePart, """"))" & vbCrLf
-  s = s & "            If namePart <> """" Then" & vbCrLf
-  s = s & "                If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)" & vbCrLf
-  s = s & "                nameAccum(nameAccumCount) = namePart" & vbCrLf
-  s = s & "                nameAccumCount = nameAccumCount + 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            nameAccumCount = 0" & vbCrLf
-  s = s & "            GoTo NextOILine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Value line" & vbCrLf
-  s = s & "        Dim valM As Object" & vbCrLf
-  s = s & "        Set valM = RegexMatch(stripped, ""([\d,]+\.\d{3})\s+1\.000\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "        If Not valM Is Nothing Then" & vbCrLf
-  s = s & "            Dim val As Double" & vbCrLf
-  s = s & "            val = SafeFloat(valM.SubMatches(1))" & vbCrLf
-  s = s & "            Dim before As String" & vbCrLf
-  s = s & "            Dim valIdx As Long" & vbCrLf
-  s = s & "            valIdx = InStr(1, stripped, valM.SubMatches(0))" & vbCrLf
-  s = s & "            If valIdx > 1 Then before = Trim$(Left$(stripped, valIdx - 1)) Else before = """"" & vbCrLf
-  s = s & "            Set re = CreateRegex(""\s*"" & MONTH_ALT & ""\s+\d{1,2},?\s+\d{2,4}\s*$"")" & vbCrLf
-  s = s & "            before = Trim$(re.Replace(before, """"))" & vbCrLf
-  s = s & "            If before <> """" Then" & vbCrLf
-  s = s & "                If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)" & vbCrLf
-  s = s & "                nameAccum(nameAccumCount) = before" & vbCrLf
-  s = s & "                nameAccumCount = nameAccumCount + 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            If nameAccumCount > 0 Then" & vbCrLf
-  s = s & "                Dim fullName As String" & vbCrLf
-  s = s & "                fullName = nameAccum(0)" & vbCrLf
-  s = s & "                Dim ni As Long" & vbCrLf
-  s = s & "                For ni = 1 To nameAccumCount - 1" & vbCrLf
-  s = s & "                    fullName = fullName & "" "" & nameAccum(ni)" & vbCrLf
-  s = s & "                Next ni" & vbCrLf
-  s = s & "                If oiEntryCount > UBound(oiNames) Then" & vbCrLf
-  s = s & "                    ReDim Preserve oiNames(0 To oiEntryCount + 49)" & vbCrLf
-  s = s & "                    ReDim Preserve oiValues(0 To oiEntryCount + 49)" & vbCrLf
-  s = s & "                    ReDim Preserve oiCosts(0 To oiEntryCount + 49)" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "                oiNames(oiEntryCount) = fullName" & vbCrLf
-  s = s & "                oiValues(oiEntryCount) = val" & vbCrLf
-  s = s & "                oiCosts(oiEntryCount) = val  ' PE at price=1.000: cost = value" & vbCrLf
-  s = s & "                oiEntryCount = oiEntryCount + 1" & vbCrLf
-  s = s & "                nameAccumCount = 0" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            GoTo NextOILine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If IsAllcapsName(stripped) Then" & vbCrLf
-  s = s & "            If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)" & vbCrLf
-  s = s & "            nameAccum(nameAccumCount) = stripped" & vbCrLf
-  s = s & "            nameAccumCount = nameAccumCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextOILine:" & vbCrLf
-  s = s & "    Next li" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Consolidate by normalized name" & vbCrLf
-  s = s & "    Dim normNames() As String" & vbCrLf
-  s = s & "    Dim normValues() As Double" & vbCrLf
-  s = s & "    Dim normCosts() As Double" & vbCrLf
-  s = s & "    Dim normCount As Long: normCount = 0" & vbCrLf
-  s = s & "    ReDim normNames(0 To oiEntryCount)" & vbCrLf
-  s = s & "    ReDim normValues(0 To oiEntryCount)" & vbCrLf
-  s = s & "    ReDim normCosts(0 To oiEntryCount)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim ei As Long" & vbCrLf
-  s = s & "    For ei = 0 To oiEntryCount - 1" & vbCrLf
-  s = s & "        If oiValues(ei) <= 0 Then GoTo NextOIEntry" & vbCrLf
-  s = s & "        Dim base As String" & vbCrLf
-  s = s & "        base = NormFundName(oiNames(ei))" & vbCrLf
-  s = s & "        Dim found As Boolean: found = False" & vbCrLf
-  s = s & "        Dim fi As Long" & vbCrLf
-  s = s & "        For fi = 0 To normCount - 1" & vbCrLf
-  s = s & "            If normNames(fi) = base Then" & vbCrLf
-  s = s & "                normValues(fi) = normValues(fi) + oiValues(ei)" & vbCrLf
-  s = s & "                normCosts(fi) = normCosts(fi) + oiCosts(ei)" & vbCrLf
-  s = s & "                found = True" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next fi" & vbCrLf
-  s = s & "        If Not found Then" & vbCrLf
-  s = s & "            normNames(normCount) = base" & vbCrLf
-  s = s & "            normValues(normCount) = oiValues(ei)" & vbCrLf
-  s = s & "            normCosts(normCount) = oiCosts(ei)" & vbCrLf
-  s = s & "            normCount = normCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextOIEntry:" & vbCrLf
-  s = s & "    Next ei" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Merge with existing Pass 2 entries under ""Non-traditional::Other investments""" & vbCrLf
-  s = s & "    Dim existingKey As String" & vbCrLf
-  s = s & "    existingKey = ""Non-traditional::Other investments""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    For fi = 0 To normCount - 1" & vbCrLf
-  s = s & "        ' Try to find existing entry with prefix match" & vbCrLf
-  s = s & "        Dim matched As Boolean: matched = False" & vbCrLf
-  s = s & "        Dim si As Long" & vbCrLf
-  s = s & "        For si = 0 To mSecCount - 1" & vbCrLf
-  s = s & "            If mSecEntries(si).CategoryKey = existingKey Then" & vbCrLf
-  s = s & "                Dim existingNorm As String" & vbCrLf
-  s = s & "                existingNorm = NormFundName(mSecEntries(si).Name)" & vbCrLf
-  s = s & "                Dim shorter As String, longer As String" & vbCrLf
-  s = s & "                If Len(existingNorm) <= Len(normNames(fi)) Then" & vbCrLf
-  s = s & "                    shorter = existingNorm: longer = normNames(fi)" & vbCrLf
-  s = s & "                Else" & vbCrLf
-  s = s & "                    shorter = normNames(fi): longer = existingNorm" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "                Dim isPrefixMatch As Boolean" & vbCrLf
-  s = s & "                If existingNorm = normNames(fi) Then" & vbCrLf
-  s = s & "                    isPrefixMatch = True" & vbCrLf
-  s = s & "                ElseIf Left$(longer, Len(shorter)) = shorter Then" & vbCrLf
-  s = s & "                    Dim suffix As String" & vbCrLf
-  s = s & "                    suffix = Mid$(longer, Len(shorter) + 1)" & vbCrLf
-  s = s & "                    isPrefixMatch = Not RegexTest(suffix, ""(?:\s|^)(?:II|III|IV|V|VI|VII|VIII|IX|X|SERIES)(?:\s|$)"")" & vbCrLf
-  s = s & "                Else" & vbCrLf
-  s = s & "                    isPrefixMatch = False" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "                If isPrefixMatch Then" & vbCrLf
-  s = s & "                    mSecEntries(si).Value = mSecEntries(si).Value + normValues(fi)" & vbCrLf
-  s = s & "                    If normCosts(fi) > 0 Then" & vbCrLf
-  s = s & "                        If IsNull(mSecEntries(si).CostBasis) Then" & vbCrLf
-  s = s & "                            mSecEntries(si).CostBasis = normCosts(fi)" & vbCrLf
-  s = s & "                        Else" & vbCrLf
-  s = s & "                            mSecEntries(si).CostBasis = CDbl(mSecEntries(si).CostBasis) + normCosts(fi)" & vbCrLf
-  s = s & "                        End If" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                    matched = True" & vbCrLf
-  s = s & "                    Exit For" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next si" & vbCrLf
-  s = s & "        If Not matched Then" & vbCrLf
-  s = s & "            Dim sec As SecurityDetail" & vbCrLf
-  s = s & "            sec.Name = normNames(fi)" & vbCrLf
-  s = s & "            sec.Symbol = """"" & vbCrLf
-  s = s & "            sec.Units = Null" & vbCrLf
-  s = s & "            sec.Value = normValues(fi)" & vbCrLf
-  s = s & "            If normCosts(fi) > 0 Then sec.CostBasis = normCosts(fi) Else sec.CostBasis = Null" & vbCrLf
-  s = s & "            sec.UnrealizedGL = Null" & vbCrLf
-  s = s & "            sec.IsEscrow = False" & vbCrLf
-  s = s & "            sec.CategoryKey = existingKey" & vbCrLf
-  s = s & "            AddSecEntry sec" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next fi" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Pass 4: Hedge funds ---" & vbCrLf
-  s = s & "Private Sub ExtractHedgeFundSecs(section As String)" & vbCrLf
-  s = s & "    Dim hfMatch As Object" & vbCrLf
-  s = s & "    Set hfMatch = RegexMatch(section, ""^Hedge funds\s*$"", False, True)" & vbCrLf
-  s = s & "    If hfMatch Is Nothing Then" & vbCrLf
-  s = s & "        Set hfMatch = RegexMatch(section, ""^Hedge funds[^,A-Za-z]*$"", False, True)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If hfMatch Is Nothing Then" & vbCrLf
-  s = s & "        Set hfMatch = RegexMatch(section, ""Hedge funds\s*$"", False, True)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If hfMatch Is Nothing Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim hfStart As Long" & vbCrLf
-  s = s & "    hfStart = hfMatch.FirstIndex + 1" & vbCrLf
-  s = s & "    Dim hfSection As String" & vbCrLf
-  s = s & "    hfSection = Mid$(section, hfStart)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim endKw() As String" & vbCrLf
-  s = s & "    endKw = Split(""Other investments|Private equity funds|Mutual funds|Closed end funds|Money market funds|Cash and money balances|Your total assets"", ""|"")" & vbCrLf
-  s = s & "    Dim hfEnd As Long" & vbCrLf
-  s = s & "    hfEnd = FindSecSectionEnd(hfSection, Len(""Hedge funds""), endKw)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim hfText As String" & vbCrLf
-  s = s & "    hfText = Left$(hfSection, hfEnd - 1)" & vbCrLf
-  s = s & "    Dim hfLines() As String" & vbCrLf
-  s = s & "    hfLines = Split(hfText, vbLf)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Collect entries" & vbCrLf
-  s = s & "    Dim hfNames() As String" & vbCrLf
-  s = s & "    Dim hfUnits() As Variant" & vbCrLf
-  s = s & "    Dim hfValues() As Double" & vbCrLf
-  s = s & "    Dim hfEntryCount As Long: hfEntryCount = 0" & vbCrLf
-  s = s & "    ReDim hfNames(0 To 49)" & vbCrLf
-  s = s & "    ReDim hfUnits(0 To 49)" & vbCrLf
-  s = s & "    ReDim hfValues(0 To 49)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim nameAccum() As String" & vbCrLf
-  s = s & "    ReDim nameAccum(0 To 9)" & vbCrLf
-  s = s & "    Dim nameAccumCount As Long: nameAccumCount = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim li As Long" & vbCrLf
-  s = s & "    For li = LBound(hfLines) To UBound(hfLines)" & vbCrLf
-  s = s & "        Dim stripped As String" & vbCrLf
-  s = s & "        stripped = Trim$(hfLines(li))" & vbCrLf
-  s = s & "        If stripped = """" Then GoTo NextHFLine" & vbCrLf
-  s = s & "        If Left$(stripped, 5) = ""Total"" Then GoTo NextHFLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Skip known prefixes" & vbCrLf
-  s = s & "        Dim skipHF As Boolean: skipHF = False" & vbCrLf
-  s = s & "        Dim spi As Long" & vbCrLf
-  s = s & "        For spi = 0 To mHFSkipCount - 1" & vbCrLf
-  s = s & "            If Left$(stripped, Len(mHFSkipPrefixes(spi))) = mHFSkipPrefixes(spi) Then skipHF = True: Exit For" & vbCrLf
-  s = s & "        Next spi" & vbCrLf
-  s = s & "        If Left$(stripped, 12) = ""reinvest"" Or Left$(stripped, 12) = ""include cash"" Then skipHF = True" & vbCrLf
-  s = s & "        If skipHF Then GoTo NextHFLine" & vbCrLf
-  s = s & "        If IsSecBoilerplate(stripped) Then nameAccumCount = 0: GoTo NextHFLine" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Value line: has 3dp AND 2dp numbers" & vbCrLf
-  s = s & "        Dim threeDecs As Object" & vbCrLf
-  s = s & "        Set threeDecs = RegexMatchAll(stripped, ""[\d,]+\.\d{3}"")" & vbCrLf
-  s = s & "        Dim twoDecs As Object" & vbCrLf
-  s = s & "        Set twoDecs = RegexMatchAll(stripped, ""[\d,]+\.\d{2}(?!\d)"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If threeDecs.Count >= 1 And twoDecs.Count >= 1 Then" & vbCrLf
-  s = s & "            Dim hfU As Variant" & vbCrLf
-  s = s & "            hfU = ParseNum(threeDecs(0).Value)" & vbCrLf
-  s = s & "            Dim hfV As Double" & vbCrLf
-  s = s & "            hfV = SafeFloat(twoDecs(twoDecs.Count - 1).Value)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Extract name from before first number" & vbCrLf
-  s = s & "            Dim firstNumIdx As Long" & vbCrLf
-  s = s & "            firstNumIdx = threeDecs(0).FirstIndex" & vbCrLf
-  s = s & "            If twoDecs(0).FirstIndex < firstNumIdx Then firstNumIdx = twoDecs(0).FirstIndex" & vbCrLf
-  s = s & "            Dim beforeNum As String" & vbCrLf
-  s = s & "            If firstNumIdx > 0 Then beforeNum = Trim$(Left$(stripped, firstNumIdx)) Else beforeNum = """"" & vbCrLf
-  s = s & "            ' Strip ""Initial trade date:"" prefix" & vbCrLf
-  s = s & "            Dim re As Object" & vbCrLf
-  s = s & "            Set re = CreateRegex(""^Initial trade date:\s*\w+\s*"")" & vbCrLf
-  s = s & "            beforeNum = Trim$(re.Replace(beforeNum, """"))" & vbCrLf
-  s = s & "            If beforeNum <> """" Then" & vbCrLf
-  s = s & "                If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)" & vbCrLf
-  s = s & "                nameAccum(nameAccumCount) = beforeNum" & vbCrLf
-  s = s & "                nameAccumCount = nameAccumCount + 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            If nameAccumCount > 0 Then" & vbCrLf
-  s = s & "                Dim fullName As String" & vbCrLf
-  s = s & "                fullName = nameAccum(0)" & vbCrLf
-  s = s & "                Dim ni As Long" & vbCrLf
-  s = s & "                For ni = 1 To nameAccumCount - 1" & vbCrLf
-  s = s & "                    fullName = fullName & "" "" & nameAccum(ni)" & vbCrLf
-  s = s & "                Next ni" & vbCrLf
-  s = s & "                If hfEntryCount > UBound(hfNames) Then" & vbCrLf
-  s = s & "                    ReDim Preserve hfNames(0 To hfEntryCount + 49)" & vbCrLf
-  s = s & "                    ReDim Preserve hfUnits(0 To hfEntryCount + 49)" & vbCrLf
-  s = s & "                    ReDim Preserve hfValues(0 To hfEntryCount + 49)" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "                hfNames(hfEntryCount) = fullName" & vbCrLf
-  s = s & "                hfUnits(hfEntryCount) = hfU" & vbCrLf
-  s = s & "                hfValues(hfEntryCount) = hfV" & vbCrLf
-  s = s & "                hfEntryCount = hfEntryCount + 1" & vbCrLf
-  s = s & "                nameAccumCount = 0" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            GoTo NextHFLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If IsAllcapsName(stripped) Then" & vbCrLf
-  s = s & "            If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)" & vbCrLf
-  s = s & "            nameAccum(nameAccumCount) = stripped" & vbCrLf
-  s = s & "            nameAccumCount = nameAccumCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextHFLine:" & vbCrLf
-  s = s & "    Next li" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Consolidate by normalized name" & vbCrLf
-  s = s & "    Dim normNames() As String" & vbCrLf
-  s = s & "    Dim normUnits() As Variant" & vbCrLf
-  s = s & "    Dim normValues() As Double" & vbCrLf
-  s = s & "    Dim normCount As Long: normCount = 0" & vbCrLf
-  s = s & "    ReDim normNames(0 To hfEntryCount)" & vbCrLf
-  s = s & "    ReDim normUnits(0 To hfEntryCount)" & vbCrLf
-  s = s & "    ReDim normValues(0 To hfEntryCount)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim ei As Long" & vbCrLf
-  s = s & "    For ei = 0 To hfEntryCount - 1" & vbCrLf
-  s = s & "        Dim base As String" & vbCrLf
-  s = s & "        base = NormFundName(hfNames(ei))" & vbCrLf
-  s = s & "        Dim found As Boolean: found = False" & vbCrLf
-  s = s & "        Dim fi As Long" & vbCrLf
-  s = s & "        For fi = 0 To normCount - 1" & vbCrLf
-  s = s & "            If normNames(fi) = base Then" & vbCrLf
-  s = s & "                normValues(fi) = normValues(fi) + hfValues(ei)" & vbCrLf
-  s = s & "                found = True" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next fi" & vbCrLf
-  s = s & "        If Not found Then" & vbCrLf
-  s = s & "            normNames(normCount) = base" & vbCrLf
-  s = s & "            normUnits(normCount) = hfUnits(ei)" & vbCrLf
-  s = s & "            normValues(normCount) = hfValues(ei)" & vbCrLf
-  s = s & "            normCount = normCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next ei" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Add to mSecEntries" & vbCrLf
-  s = s & "    For fi = 0 To normCount - 1" & vbCrLf
-  s = s & "        Dim sec As SecurityDetail" & vbCrLf
-  s = s & "        sec.Name = normNames(fi)" & vbCrLf
-  s = s & "        sec.Symbol = """"" & vbCrLf
-  s = s & "        sec.Units = normUnits(fi)" & vbCrLf
-  s = s & "        sec.Value = normValues(fi)" & vbCrLf
-  s = s & "        sec.CostBasis = Null" & vbCrLf
-  s = s & "        sec.UnrealizedGL = Null" & vbCrLf
-  s = s & "        sec.IsEscrow = False" & vbCrLf
-  s = s & "        sec.CategoryKey = ""Hedge funds""" & vbCrLf
-  s = s & "        AddSecEntry sec" & vbCrLf
-  s = s & "    Next fi" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Orchestrator ---" & vbCrLf
-  s = s & "Public Function ExtractDetailedSecurities(text As String) As SecurityDetail()" & vbCrLf
-  s = s & "    InitSecurityConstants" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Initialize module-level state" & vbCrLf
-  s = s & "    ReDim mSecEntries(0 To 49)" & vbCrLf
-  s = s & "    mSecCount = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Slice ""Your assets"" to ""Your total assets""" & vbCrLf
-  s = s & "    Dim startPos As Long" & vbCrLf
-  s = s & "    startPos = InStr(1, text, ""Your assets"")" & vbCrLf
-  s = s & "    Dim endPos As Long" & vbCrLf
-  s = s & "    endPos = InStr(1, text, ""Your total assets"")" & vbCrLf
-  s = s & "    If startPos = 0 Or endPos = 0 Then" & vbCrLf
-  s = s & "        ReDim mSecEntries(0 To 0)" & vbCrLf
-  s = s & "        ExtractDetailedSecurities = mSecEntries" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim section As String" & vbCrLf
-  s = s & "    section = Mid$(text, startPos, endPos - startPos)" & vbCrLf
-  s = s & "    Dim lines() As String" & vbCrLf
-  s = s & "    lines = Split(section, vbLf)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Pass 1: Collect Security total indices" & vbCrLf
-  s = s & "    Dim secTotalIndices() As Long" & vbCrLf
-  s = s & "    Dim stCount As Long" & vbCrLf
-  s = s & "    CollectSecTotalIndices lines, secTotalIndices, stCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Pass 2: Securities from totals" & vbCrLf
-  s = s & "    Dim curCat As String, curAC As String" & vbCrLf
-  s = s & "    Dim catScanned As Long" & vbCrLf
-  s = s & "    ExtractFromSecTotals lines, secTotalIndices, stCount, curCat, curAC, catScanned" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Pass 2b: Single-lot bonds" & vbCrLf
-  s = s & "    ExtractSingleLotSecs lines, secTotalIndices, stCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Pass 3: Private equity funds" & vbCrLf
-  s = s & "    ExtractPEFundSecs section" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Pass 3b: Other investments PE" & vbCrLf
-  s = s & "    ExtractOtherInvestPE section" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Pass 4: Hedge funds" & vbCrLf
-  s = s & "    ExtractHedgeFundSecs section" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Consolidate PE prefix matches (Do While — For loop can't track mSecCount shrinking)" & vbCrLf
-  s = s & "    Dim ki As Long" & vbCrLf
-  s = s & "    ki = 0" & vbCrLf
-  s = s & "    Do While ki < mSecCount" & vbCrLf
-  s = s & "        If InStr(1, mSecEntries(ki).CategoryKey, ""Other investments"") = 0 And _" & vbCrLf
-  s = s & "           InStr(1, mSecEntries(ki).CategoryKey, ""Private equity"") = 0 Then" & vbCrLf
-  s = s & "            ki = ki + 1" & vbCrLf
-  s = s & "            GoTo NextConsolidate" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        Dim normI As String" & vbCrLf
-  s = s & "        normI = NormFundName(mSecEntries(ki).Name)" & vbCrLf
-  s = s & "        Dim merged As Boolean" & vbCrLf
-  s = s & "        merged = False" & vbCrLf
-  s = s & "        Dim k As Long" & vbCrLf
-  s = s & "        For k = 0 To mSecCount - 1" & vbCrLf
-  s = s & "            If k = ki Then GoTo NextK" & vbCrLf
-  s = s & "            If mSecEntries(k).CategoryKey <> mSecEntries(ki).CategoryKey Then GoTo NextK" & vbCrLf
-  s = s & "            Dim normK As String" & vbCrLf
-  s = s & "            normK = NormFundName(mSecEntries(k).Name)" & vbCrLf
-  s = s & "            If normK = normI Then GoTo NextK" & vbCrLf
-  s = s & "            ' Check if normK starts with normI and extra suffix is not a series indicator" & vbCrLf
-  s = s & "            If Left$(normK, Len(normI)) = normI And (Len(normK) = Len(normI) Or Mid$(normK, Len(normI) + 1, 1) = "" "") Then" & vbCrLf
-  s = s & "                Dim suffix As String" & vbCrLf
-  s = s & "                suffix = Trim$(Mid$(normK, Len(normI) + 1))" & vbCrLf
-  s = s & "                If Len(suffix) > 0 And Not RegexTest(suffix, ""(?:\s|^)(?:II|III|IV|V|VI|VII|VIII|IX|X|SERIES)(?:\s|$)"") Then" & vbCrLf
-  s = s & "                    mSecEntries(k).Value = mSecEntries(k).Value + mSecEntries(ki).Value" & vbCrLf
-  s = s & "                    If Not IsNull(mSecEntries(ki).CostBasis) Then" & vbCrLf
-  s = s & "                        If IsNull(mSecEntries(k).CostBasis) Then" & vbCrLf
-  s = s & "                            mSecEntries(k).CostBasis = mSecEntries(ki).CostBasis" & vbCrLf
-  s = s & "                        Else" & vbCrLf
-  s = s & "                            mSecEntries(k).CostBasis = CDbl(mSecEntries(k).CostBasis) + CDbl(mSecEntries(ki).CostBasis)" & vbCrLf
-  s = s & "                        End If" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                    If Not IsNull(mSecEntries(ki).UnrealizedGL) Then" & vbCrLf
-  s = s & "                        If IsNull(mSecEntries(k).UnrealizedGL) Then" & vbCrLf
-  s = s & "                            mSecEntries(k).UnrealizedGL = mSecEntries(ki).UnrealizedGL" & vbCrLf
-  s = s & "                        Else" & vbCrLf
-  s = s & "                            mSecEntries(k).UnrealizedGL = CDbl(mSecEntries(k).UnrealizedGL) + CDbl(mSecEntries(ki).UnrealizedGL)" & vbCrLf
-  s = s & "                        End If" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                    ' Remove entry ki by shifting" & vbCrLf
-  s = s & "                    Dim ri As Long" & vbCrLf
-  s = s & "                    For ri = ki To mSecCount - 2" & vbCrLf
-  s = s & "                        mSecEntries(ri) = mSecEntries(ri + 1)" & vbCrLf
-  s = s & "                    Next ri" & vbCrLf
-  s = s & "                    mSecCount = mSecCount - 1" & vbCrLf
-  s = s & "                    merged = True" & vbCrLf
-  s = s & "                    Exit For  ' Don't advance ki — re-check this index" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "NextK:" & vbCrLf
-  s = s & "        Next k" & vbCrLf
-  s = s & "        If Not merged Then ki = ki + 1" & vbCrLf
-  s = s & "NextConsolidate:" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Sort alphabetically within each category key (simple bubble sort)" & vbCrLf
-  s = s & "    Dim swapped As Boolean" & vbCrLf
-  s = s & "    Do" & vbCrLf
-  s = s & "        swapped = False" & vbCrLf
-  s = s & "        Dim si As Long" & vbCrLf
-  s = s & "        For si = 0 To mSecCount - 2" & vbCrLf
-  s = s & "            If mSecEntries(si).CategoryKey = mSecEntries(si + 1).CategoryKey Then" & vbCrLf
-  s = s & "                If mSecEntries(si).Name > mSecEntries(si + 1).Name Then" & vbCrLf
-  s = s & "                    Dim tmp As SecurityDetail" & vbCrLf
-  s = s & "                    tmp = mSecEntries(si)" & vbCrLf
-  s = s & "                    mSecEntries(si) = mSecEntries(si + 1)" & vbCrLf
-  s = s & "                    mSecEntries(si + 1) = tmp" & vbCrLf
-  s = s & "                    swapped = True" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next si" & vbCrLf
-  s = s & "    Loop While swapped" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Trim and return" & vbCrLf
-  s = s & "    If mSecCount > 0 Then" & vbCrLf
-  s = s & "        ReDim Preserve mSecEntries(0 To mSecCount - 1)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        ReDim mSecEntries(0 To 0)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    ExtractDetailedSecurities = mSecEntries" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' --- Attach securities to holdings ---" & vbCrLf
-  s = s & "Public Sub AttachSecuritiesToHoldings(holdings() As Holding, holdingCount As Long, secs() As SecurityDetail, secCount As Long)" & vbCrLf
-  s = s & "    If secCount = 0 Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Build list of unique category keys" & vbCrLf
-  s = s & "    Dim allKeys() As String" & vbCrLf
-  s = s & "    Dim keyCount As Long: keyCount = 0" & vbCrLf
-  s = s & "    ReDim allKeys(0 To 49)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim si As Long" & vbCrLf
-  s = s & "    For si = 0 To secCount - 1" & vbCrLf
-  s = s & "        Dim found As Boolean: found = False" & vbCrLf
-  s = s & "        Dim ki As Long" & vbCrLf
-  s = s & "        For ki = 0 To keyCount - 1" & vbCrLf
-  s = s & "            If allKeys(ki) = secs(si).CategoryKey Then found = True: Exit For" & vbCrLf
-  s = s & "        Next ki" & vbCrLf
-  s = s & "        If Not found Then" & vbCrLf
-  s = s & "            If keyCount > UBound(allKeys) Then ReDim Preserve allKeys(0 To keyCount + 49)" & vbCrLf
-  s = s & "            allKeys(keyCount) = secs(si).CategoryKey" & vbCrLf
-  s = s & "            keyCount = keyCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next si" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Parse each key into assetClass + plainName" & vbCrLf
-  s = s & "    Dim keyAC() As String" & vbCrLf
-  s = s & "    Dim keyPlain() As String" & vbCrLf
-  s = s & "    ReDim keyAC(0 To keyCount - 1)" & vbCrLf
-  s = s & "    ReDim keyPlain(0 To keyCount - 1)" & vbCrLf
-  s = s & "    For ki = 0 To keyCount - 1" & vbCrLf
-  s = s & "        Dim sepPos As Long" & vbCrLf
-  s = s & "        sepPos = InStr(1, allKeys(ki), ""::"")" & vbCrLf
-  s = s & "        If sepPos > 0 Then" & vbCrLf
-  s = s & "            keyAC(ki) = Left$(allKeys(ki), sepPos - 1)" & vbCrLf
-  s = s & "            keyPlain(ki) = Mid$(allKeys(ki), sepPos + 2)" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            keyAC(ki) = """"" & vbCrLf
-  s = s & "            keyPlain(ki) = allKeys(ki)" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next ki" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Track which keys have been assigned" & vbCrLf
-  s = s & "    Dim assignedKeys() As Boolean" & vbCrLf
-  s = s & "    ReDim assignedKeys(0 To keyCount - 1)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Subcategory parents" & vbCrLf
-  s = s & "    ' ""Municipal securities"" -> ""Fixed income""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim hi As Long" & vbCrLf
-  s = s & "    For hi = 0 To holdingCount - 1" & vbCrLf
-  s = s & "        ' Find best matching key for this holding" & vbCrLf
-  s = s & "        Dim bestKey As Long: bestKey = -1" & vbCrLf
-  s = s & "        For ki = 0 To keyCount - 1" & vbCrLf
-  s = s & "            If assignedKeys(ki) Then GoTo NextKeyMatch" & vbCrLf
-  s = s & "            If keyPlain(ki) <> holdings(hi).Name Then GoTo NextKeyMatch" & vbCrLf
-  s = s & "            If keyAC(ki) <> """" And keyAC(ki) = holdings(hi).AssetType Then" & vbCrLf
-  s = s & "                bestKey = ki" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            If bestKey = -1 Then bestKey = ki" & vbCrLf
-  s = s & "NextKeyMatch:" & vbCrLf
-  s = s & "        Next ki" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If bestKey >= 0 Then" & vbCrLf
-  s = s & "            ' Count securities for this key" & vbCrLf
-  s = s & "            Dim secCountForKey As Long: secCountForKey = 0" & vbCrLf
-  s = s & "            For si = 0 To secCount - 1" & vbCrLf
-  s = s & "                If secs(si).CategoryKey = allKeys(bestKey) Then secCountForKey = secCountForKey + 1" & vbCrLf
-  s = s & "            Next si" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ReDim holdings(hi).Securities(0 To IIf(secCountForKey > 0, secCountForKey - 1, 0))" & vbCrLf
-  s = s & "            holdings(hi).SecurityCount = secCountForKey" & vbCrLf
-  s = s & "            Dim secIdx As Long: secIdx = 0" & vbCrLf
-  s = s & "            For si = 0 To secCount - 1" & vbCrLf
-  s = s & "                If secs(si).CategoryKey = allKeys(bestKey) Then" & vbCrLf
-  s = s & "                    holdings(hi).Securities(secIdx) = secs(si)" & vbCrLf
-  s = s & "                    secIdx = secIdx + 1" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            Next si" & vbCrLf
-  s = s & "            assignedKeys(bestKey) = True" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next hi" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Attach unmatched subcategories to parent" & vbCrLf
-  s = s & "    For ki = 0 To keyCount - 1" & vbCrLf
-  s = s & "        If assignedKeys(ki) Then GoTo NextUnmatched" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Check if this is a subcategory" & vbCrLf
-  s = s & "        Dim parentName As String: parentName = """"" & vbCrLf
-  s = s & "        If keyPlain(ki) = ""Municipal securities"" Then parentName = ""Fixed income""" & vbCrLf
-  s = s & "        If parentName = """" Then GoTo NextUnmatched" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Check if already matched directly" & vbCrLf
-  s = s & "        Dim directMatch As Boolean: directMatch = False" & vbCrLf
-  s = s & "        For hi = 0 To holdingCount - 1" & vbCrLf
-  s = s & "            If holdings(hi).Name = keyPlain(ki) Then directMatch = True: Exit For" & vbCrLf
-  s = s & "        Next hi" & vbCrLf
-  s = s & "        If directMatch Then GoTo NextUnmatched" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Find parent holding" & vbCrLf
-  s = s & "        Dim parentIdx As Long: parentIdx = -1" & vbCrLf
-  s = s & "        For hi = 0 To holdingCount - 1" & vbCrLf
-  s = s & "            If holdings(hi).Name = parentName Then" & vbCrLf
-  s = s & "                If keyAC(ki) <> """" Then" & vbCrLf
-  s = s & "                    If holdings(hi).AssetType = keyAC(ki) Then parentIdx = hi: Exit For" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "                If parentIdx = -1 Then parentIdx = hi" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next hi" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If parentIdx >= 0 Then" & vbCrLf
-  s = s & "            ' Append securities to parent" & vbCrLf
-  s = s & "            Dim oldCount As Long" & vbCrLf
-  s = s & "            oldCount = holdings(parentIdx).SecurityCount" & vbCrLf
-  s = s & "            Dim addCount As Long: addCount = 0" & vbCrLf
-  s = s & "            For si = 0 To secCount - 1" & vbCrLf
-  s = s & "                If secs(si).CategoryKey = allKeys(ki) Then addCount = addCount + 1" & vbCrLf
-  s = s & "            Next si" & vbCrLf
-  s = s & "            If addCount > 0 Then" & vbCrLf
-  s = s & "                ReDim Preserve holdings(parentIdx).Securities(0 To oldCount + addCount - 1)" & vbCrLf
-  s = s & "                Dim ai As Long: ai = oldCount" & vbCrLf
-  s = s & "                For si = 0 To secCount - 1" & vbCrLf
-  s = s & "                    If secs(si).CategoryKey = allKeys(ki) Then" & vbCrLf
-  s = s & "                        holdings(parentIdx).Securities(ai) = secs(si)" & vbCrLf
-  s = s & "                        ai = ai + 1" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                Next si" & vbCrLf
-  s = s & "                holdings(parentIdx).SecurityCount = oldCount + addCount" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            assignedKeys(ki) = True" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextUnmatched:" & vbCrLf
-  s = s & "    Next ki" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Array helper functions for creating string arrays inline" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function SArr(s1 As String) As String()" & vbCrLf
-  s = s & "    Dim a(0 To 0) As String" & vbCrLf
-  s = s & "    a(0) = s1" & vbCrLf
-  s = s & "    SArr = a" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function SArr2(s1 As String, s2 As String) As String()" & vbCrLf
-  s = s & "    Dim a(0 To 1) As String" & vbCrLf
-  s = s & "    a(0) = s1: a(1) = s2" & vbCrLf
-  s = s & "    SArr2 = a" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function SArr3(s1 As String, s2 As String, s3 As String) As String()" & vbCrLf
-  s = s & "    Dim a(0 To 2) As String" & vbCrLf
-  s = s & "    a(0) = s1: a(1) = s2: a(2) = s3" & vbCrLf
-  s = s & "    SArr3 = a" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Main entry point" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ExtractFromText(text As String) As StatementExtraction" & vbCrLf
-  s = s & "    Dim result As StatementExtraction" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Initialize dynamic arrays" & vbCrLf
-  s = s & "    ReDim result.Allocations(0 To 6)" & vbCrLf
-  s = s & "    ReDim result.Holdings(0 To 0)" & vbCrLf
-  s = s & "    ReDim result.Transactions(0 To 0)" & vbCrLf
-  s = s & "    ReDim result.Checks(0 To 20)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    result.Summary = ExtractAccountSummary(text)" & vbCrLf
-  s = s & "    result.Allocations = ExtractAssetAllocation(text)" & vbCrLf
-  s = s & "    result.AllocationCount = 7" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim h() As Holding" & vbCrLf
-  s = s & "    h = ExtractHoldings(text)" & vbCrLf
-  s = s & "    result.Holdings = h" & vbCrLf
-  s = s & "    result.HoldingCount = UBound(h) + 1" & vbCrLf
-  s = s & "    If result.HoldingCount = 1 And result.Holdings(0).Name = """" Then result.HoldingCount = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Attach detailed securities to holdings" & vbCrLf
-  s = s & "    Dim secs() As SecurityDetail" & vbCrLf
-  s = s & "    secs = ExtractDetailedSecurities(text)" & vbCrLf
-  s = s & "    Dim secCount As Long" & vbCrLf
-  s = s & "    ' Derive count from returned array (first entry with empty Name = unused slot)" & vbCrLf
-  s = s & "    secCount = UBound(secs) + 1" & vbCrLf
-  s = s & "    If secCount = 1 And secs(0).Name = """" And secs(0).Value = 0 Then secCount = 0" & vbCrLf
-  s = s & "    AttachSecuritiesToHoldings result.Holdings, result.HoldingCount, secs, secCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim t() As Transaction" & vbCrLf
-  s = s & "    t = ExtractTransactions(text)" & vbCrLf
-  s = s & "    result.Transactions = t" & vbCrLf
-  s = s & "    result.TransactionCount = UBound(t) + 1" & vbCrLf
-  s = s & "    If result.TransactionCount = 1 And result.Transactions(0).Activity = """" Then result.TransactionCount = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    result.Income = ExtractIncome(text)" & vbCrLf
-  s = s & "    result.Gains = ExtractGainsLosses(text)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Run reconciliation" & vbCrLf
-  s = s & "    RunReconciliation result" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractFromText = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  GetModule_UBSExtract = s
-End Function
+Sub WriteModule_UBSExtract(ts)
+  ts.WriteLine "Attribute VB_Name = ""UBSExtract"""
+  ts.WriteLine "Option Explicit"
+  ts.WriteLine ""
+  ts.WriteLine "' UBSExtract.bas — Core extraction logic for UBS statement text."
+  ts.WriteLine "' Port of web/src/extract.ts to VBA using VBScript.RegExp."
+  ts.WriteLine "'"
+  ts.WriteLine "' Provides:"
+  ts.WriteLine "'   Helper functions (ParseNum, SafeFloat, CleanAccountName, ExtractSection)"
+  ts.WriteLine "'   Extractors: AccountSummary, AssetAllocation, Holdings, Transactions, Income, GainsLosses"
+  ts.WriteLine "'   Reconciliation check"
+  ts.WriteLine "'   Main entry point: ExtractFromText()"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Types"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type AccountSummary"
+  ts.WriteLine "    AccountName As String"
+  ts.WriteLine "    FriendlyName As String"
+  ts.WriteLine "    AccountNumber As String"
+  ts.WriteLine "    FinancialAdvisor As String"
+  ts.WriteLine "    StatementPeriod As String"
+  ts.WriteLine "    OpeningValue As Double"
+  ts.WriteLine "    ClosingValue As Double"
+  ts.WriteLine "    NetDepositsWithdrawals As Double"
+  ts.WriteLine "    DepositsTransferredIn As Double"
+  ts.WriteLine "    DividendInterestIncome As Double"
+  ts.WriteLine "    ChangeInMarketValue As Double"
+  ts.WriteLine "    ChangeInAccruedInterest As Double"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type AssetAllocation"
+  ts.WriteLine "    Category As String"
+  ts.WriteLine "    Value As Double"
+  ts.WriteLine "    Percentage As Double"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type SecurityDetail"
+  ts.WriteLine "    Name As String"
+  ts.WriteLine "    Symbol As String"
+  ts.WriteLine "    Units As Variant          ' Double or Null"
+  ts.WriteLine "    Value As Double"
+  ts.WriteLine "    CostBasis As Variant      ' Double or Null"
+  ts.WriteLine "    UnrealizedGL As Variant   ' Double or Null"
+  ts.WriteLine "    IsEscrow As Boolean"
+  ts.WriteLine "    CategoryKey As String     ' composite ""AssetClass::Category"" or plain ""Category"""
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type Holding"
+  ts.WriteLine "    Name As String"
+  ts.WriteLine "    AssetType As String"
+  ts.WriteLine "    Value As Double"
+  ts.WriteLine "    CostBasis As Variant  ' Double or Null"
+  ts.WriteLine "    UnrealizedGL As Variant  ' Double or Null"
+  ts.WriteLine "    Securities() As SecurityDetail"
+  ts.WriteLine "    SecurityCount As Long"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type Transaction"
+  ts.WriteLine "    TxDate As String"
+  ts.WriteLine "    Activity As String"
+  ts.WriteLine "    Description As String"
+  ts.WriteLine "    Amount As Double"
+  ts.WriteLine "    Quantity As Variant  ' Double or Null"
+  ts.WriteLine "    Price As Variant  ' Double or Null"
+  ts.WriteLine "    Cusip As String"
+  ts.WriteLine "    Symbol As String"
+  ts.WriteLine "    RefNumber As String"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type IncomeDetail"
+  ts.WriteLine "    TaxableDividendsMonth As Double"
+  ts.WriteLine "    TaxExemptDividendsMonth As Double"
+  ts.WriteLine "    TaxableInterestMonth As Double"
+  ts.WriteLine "    TaxExemptInterestMonth As Double"
+  ts.WriteLine "    MiscellaneousMonth As Double"
+  ts.WriteLine "    AccruedInterestReceived As Double"
+  ts.WriteLine "    TotalMonth As Double"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type GainsAndLosses"
+  ts.WriteLine "    ShortTermRealizedMonth As Double"
+  ts.WriteLine "    ShortTermRealizedYtd As Double"
+  ts.WriteLine "    ShortTermUnrealized As Double"
+  ts.WriteLine "    LongTermRealizedMonth As Double"
+  ts.WriteLine "    LongTermRealizedYtd As Double"
+  ts.WriteLine "    LongTermUnrealized As Double"
+  ts.WriteLine "    TotalRealizedMonth As Double"
+  ts.WriteLine "    TotalRealizedYtd As Double"
+  ts.WriteLine "    TotalUnrealized As Double"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type TickAndTieCheck"
+  ts.WriteLine "    name As String"
+  ts.WriteLine "    Expected As Double"
+  ts.WriteLine "    Actual As Double"
+  ts.WriteLine "    Diff As Double"
+  ts.WriteLine "    Pass As Boolean"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type StatementExtraction"
+  ts.WriteLine "    Summary As AccountSummary"
+  ts.WriteLine "    Allocations() As AssetAllocation"
+  ts.WriteLine "    AllocationCount As Long"
+  ts.WriteLine "    Holdings() As Holding"
+  ts.WriteLine "    HoldingCount As Long"
+  ts.WriteLine "    Transactions() As Transaction"
+  ts.WriteLine "    TransactionCount As Long"
+  ts.WriteLine "    Income As IncomeDetail"
+  ts.WriteLine "    Gains As GainsAndLosses"
+  ts.WriteLine "    Checks() As TickAndTieCheck"
+  ts.WriteLine "    CheckCount As Long"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Constants"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Const NUM_PAT As String = ""-?[\d,]+\.\d{2}"""
+  ts.WriteLine "Private Const MONTH_ALT As String = ""(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"""
+  ts.WriteLine "Private Const DATE_PAT As String = ""(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}"""
+  ts.WriteLine "Private Const SECTION_LOOKAHEAD As Long = 2000"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Regex helper — cached RegExp object"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private mCachedRe As Object"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function CreateRegex(pattern As String, Optional isGlobal As Boolean = False, Optional isMultiline As Boolean = False, Optional ignoreCase As Boolean = False) As Object"
+  ts.WriteLine "    If mCachedRe Is Nothing Then"
+  ts.WriteLine "        Set mCachedRe = CreateObject(""VBScript.RegExp"")"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    mCachedRe.pattern = pattern"
+  ts.WriteLine "    mCachedRe.Global = isGlobal"
+  ts.WriteLine "    mCachedRe.MultiLine = isMultiline"
+  ts.WriteLine "    mCachedRe.ignoreCase = ignoreCase"
+  ts.WriteLine "    Set CreateRegex = mCachedRe"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function RegexMatch(text As String, pattern As String, Optional ignoreCase As Boolean = False, Optional isMultiline As Boolean = False) As Object"
+  ts.WriteLine "    ' Returns first match or Nothing"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateRegex(pattern, False, isMultiline, ignoreCase)"
+  ts.WriteLine "    Dim matches As Object"
+  ts.WriteLine "    Set matches = re.Execute(text)"
+  ts.WriteLine "    If matches.Count > 0 Then"
+  ts.WriteLine "        Set RegexMatch = matches(0)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        Set RegexMatch = Nothing"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function RegexMatchAll(text As String, pattern As String, Optional ignoreCase As Boolean = False) As Object"
+  ts.WriteLine "    ' Returns all matches"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateRegex(pattern, True, False, ignoreCase)"
+  ts.WriteLine "    Set RegexMatchAll = re.Execute(text)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function RegexTest(text As String, pattern As String, Optional ignoreCase As Boolean = False) As Boolean"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateRegex(pattern, False, False, ignoreCase)"
+  ts.WriteLine "    RegexTest = re.Test(text)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Number parsing"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ParseNum(value As Variant) As Variant"
+  ts.WriteLine "    ' Parse a value to Double, returning Null if unparseable"
+  ts.WriteLine "    If IsNull(value) Or IsEmpty(value) Then"
+  ts.WriteLine "        ParseNum = Null"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    Dim s As String"
+  ts.WriteLine "    s = CStr(value)"
+  ts.WriteLine "    s = Replace(s, "","", """")"
+  ts.WriteLine "    s = Replace(s, ""$"", """")"
+  ts.WriteLine "    s = Replace(s, ""%"", """")"
+  ts.WriteLine "    s = Trim(s)"
+  ts.WriteLine "    If s = """" Or s = ""N/A"" Or s = ""None"" Then"
+  ts.WriteLine "        ParseNum = Null"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If IsNumeric(s) Then"
+  ts.WriteLine "        ParseNum = CDbl(s)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        ParseNum = Null"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function SafeFloat(value As Variant) As Double"
+  ts.WriteLine "    ' Parse a value to Double, returning 0.0 if unparseable"
+  ts.WriteLine "    Dim result As Variant"
+  ts.WriteLine "    result = ParseNum(value)"
+  ts.WriteLine "    If IsNull(result) Then"
+  ts.WriteLine "        SafeFloat = 0#"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        SafeFloat = CDbl(result)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' String helpers"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function InStrLower(text As String, search As String, Optional startPos As Long = 1) As Long"
+  ts.WriteLine "    ' Case-insensitive InStr"
+  ts.WriteLine "    InStrLower = InStr(startPos, LCase$(text), LCase$(search))"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function MidLine(text As String, startPos As Long) As String"
+  ts.WriteLine "    ' Get text from startPos to end of line"
+  ts.WriteLine "    Dim eol As Long"
+  ts.WriteLine "    eol = InStr(startPos, text, vbLf)"
+  ts.WriteLine "    If eol = 0 Then"
+  ts.WriteLine "        MidLine = Mid$(text, startPos)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        MidLine = Mid$(text, startPos, eol - startPos)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function LineEnd(text As String, pos As Long) As Long"
+  ts.WriteLine "    ' Find end of line containing pos"
+  ts.WriteLine "    LineEnd = InStr(pos, text, vbLf)"
+  ts.WriteLine "    If LineEnd = 0 Then LineEnd = Len(text) + 1"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Section extraction"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ExtractSection(text As String, startMarkers() As String, endMarkers() As String) As String"
+  ts.WriteLine "    Dim tl As String"
+  ts.WriteLine "    tl = LCase$(text)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim startPos As Long"
+  ts.WriteLine "    startPos = 1"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = LBound(startMarkers) To UBound(startMarkers)"
+  ts.WriteLine "        Dim pos As Long"
+  ts.WriteLine "        pos = InStr(1, tl, LCase$(startMarkers(i)))"
+  ts.WriteLine "        If pos > 0 Then"
+  ts.WriteLine "            startPos = pos"
+  ts.WriteLine "            Exit For"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim endPos As Long"
+  ts.WriteLine "    endPos = Len(text) + 1"
+  ts.WriteLine "    Dim found As Boolean"
+  ts.WriteLine "    For i = LBound(endMarkers) To UBound(endMarkers)"
+  ts.WriteLine "        Dim ml As String"
+  ts.WriteLine "        ml = LCase$(endMarkers(i))"
+  ts.WriteLine "        Dim searchFrom As Long"
+  ts.WriteLine "        searchFrom = startPos + 1"
+  ts.WriteLine "        Do"
+  ts.WriteLine "            pos = InStr(searchFrom, tl, ml)"
+  ts.WriteLine "            If pos = 0 Or pos >= endPos Then Exit Do"
+  ts.WriteLine "            ' Skip ""(continued)"" page headers"
+  ts.WriteLine "            Dim afterMarker As String"
+  ts.WriteLine "            afterMarker = LTrim$(Mid$(tl, pos + Len(ml), 20))"
+  ts.WriteLine "            If Left$(afterMarker, 11) = ""(continued)"" Then"
+  ts.WriteLine "                searchFrom = pos + Len(ml)"
+  ts.WriteLine "            Else"
+  ts.WriteLine "                endPos = pos"
+  ts.WriteLine "                found = True"
+  ts.WriteLine "                Exit Do"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Loop"
+  ts.WriteLine "        If found Then Exit For"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractSection = Mid$(text, startPos, endPos - startPos)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Account name cleaning"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function CleanAccountName(nameBlockText As String) As String"
+  ts.WriteLine "    Dim nameParts() As String"
+  ts.WriteLine "    Dim partCount As Long"
+  ts.WriteLine "    partCount = 0"
+  ts.WriteLine "    ReDim nameParts(0 To 20)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim lines() As String"
+  ts.WriteLine "    lines = Split(nameBlockText, vbLf)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = LBound(lines) To UBound(lines)"
+  ts.WriteLine "        Dim line As String"
+  ts.WriteLine "        line = Trim$(lines(i))"
+  ts.WriteLine "        If line = """" Then GoTo NextNameLine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Skip city/state/zip"
+  ts.WriteLine "        If RegexTest(line, ""^[A-Z]+(?:\s+[A-Z]+){0,2}\s+[A-Z]{2}\s+\d{5}"") Then GoTo NextNameLine"
+  ts.WriteLine "        ' Skip street address"
+  ts.WriteLine "        If RegexTest(line, ""^\d+\s+.*\b(AVE|ST|RD|DR|BLVD|LN|CT|WAY|PL|CIR|TER|PKWY)\b"", True) Then GoTo NextNameLine"
+  ts.WriteLine "        ' Skip PO Box"
+  ts.WriteLine "        If RegexTest(line, ""^P\.?O\.?\s*BOX\s+\d+"", True) Then GoTo NextNameLine"
+  ts.WriteLine "        ' Skip account type (IRA etc)"
+  ts.WriteLine "        If RegexTest(line, ""^(?:TRADITIONAL|ROTH|SEP|ROLLOVER|INHERITED|SIMPLE)[\s-]*(?:IRA|I\.R\.A\.)$"", True) Then GoTo NextNameLine"
+  ts.WriteLine "        ' Skip trustee lines without trust words"
+  ts.WriteLine "        If RegexTest(line, ""^[A-Z][A-Z.\s]+(?:TRUSTEE|TTEE)$"") Then"
+  ts.WriteLine "            If Not RegexTest(line, ""\b(?:TRUST|TR|REV|FAM|IRREV)\b"") Then GoTo NextNameLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        ' Skip boilerplate"
+  ts.WriteLine "        If RegexTest(line, ""^(?:Questions about your statement|Call your Financial|=)"") Then GoTo NextNameLine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Strip trailing address"
+  ts.WriteLine "        Dim re As Object"
+  ts.WriteLine "        Set re = CreateRegex(""\s+\d+\s+[\w\s]+\b(AVE|ST|RD|DR|BLVD|LN|CT|WAY|PL|CIR|TER|PKWY)\b.*"", False, False, True)"
+  ts.WriteLine "        line = re.Replace(line, """")"
+  ts.WriteLine "        ' Strip trailing city/state/zip"
+  ts.WriteLine "        Set re = CreateRegex(""\s{2,}[A-Z]+(?:\s+[A-Z]+){0,2}\s+[A-Z]{2}\s+\d{5}(?:-\d{4})?.*"")"
+  ts.WriteLine "        line = re.Replace(line, """")"
+  ts.WriteLine "        line = Trim$(line)"
+  ts.WriteLine "        If line = """" Then GoTo NextNameLine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Skip duplicates"
+  ts.WriteLine "        Dim accumulated As String"
+  ts.WriteLine "        accumulated = JoinArray(nameParts, "" "", partCount)"
+  ts.WriteLine "        If accumulated <> """" And InStr(1, accumulated, line) > 0 Then GoTo NextNameLine"
+  ts.WriteLine ""
+  ts.WriteLine "        nameParts(partCount) = line"
+  ts.WriteLine "        partCount = partCount + 1"
+  ts.WriteLine "        If partCount > UBound(nameParts) Then ReDim Preserve nameParts(0 To partCount + 10)"
+  ts.WriteLine ""
+  ts.WriteLine "NextNameLine:"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim result As String"
+  ts.WriteLine "    result = JoinArray(nameParts, "" "", partCount)"
+  ts.WriteLine "    ' Collapse multiple spaces"
+  ts.WriteLine "    Set re = CreateRegex(""\s{2,}"", True)"
+  ts.WriteLine "    result = re.Replace(result, "" "")"
+  ts.WriteLine "    ' Strip pledge text"
+  ts.WriteLine "    Set re = CreateRegex(""\s*Pleg'd Coll Acct-FBO UBS Bank USA"", False, False, True)"
+  ts.WriteLine "    result = re.Replace(result, """")"
+  ts.WriteLine "    CleanAccountName = Trim$(result)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function JoinArray(arr() As String, delimiter As String, count As Long) As String"
+  ts.WriteLine "    If count = 0 Then"
+  ts.WriteLine "        JoinArray = """""
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    Dim result As String"
+  ts.WriteLine "    result = arr(0)"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 1 To count - 1"
+  ts.WriteLine "        result = result & delimiter & arr(i)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    JoinArray = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Holding number parser"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub ParseHoldingNumbers(textAfterName As String, ByRef Value As Double, ByRef CostBasis As Variant, ByRef UnrealizedGL As Variant)"
+  ts.WriteLine "    Value = 0#"
+  ts.WriteLine "    CostBasis = Null"
+  ts.WriteLine "    UnrealizedGL = Null"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim matches As Object"
+  ts.WriteLine "    Set matches = RegexMatchAll(textAfterName, NUM_PAT)"
+  ts.WriteLine "    If matches.Count = 0 Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Collect non-percentage numbers"
+  ts.WriteLine "    Dim numericVals() As Double"
+  ts.WriteLine "    Dim numCount As Long"
+  ts.WriteLine "    numCount = 0"
+  ts.WriteLine "    ReDim numericVals(0 To matches.Count - 1)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim remaining As String"
+  ts.WriteLine "    remaining = textAfterName"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To matches.Count - 1"
+  ts.WriteLine "        Dim numStr As String"
+  ts.WriteLine "        numStr = matches(i).Value"
+  ts.WriteLine "        Dim pos As Long"
+  ts.WriteLine "        pos = InStr(1, remaining, numStr)"
+  ts.WriteLine "        If pos = 0 Then GoTo NextNum"
+  ts.WriteLine "        Dim afterNum As String"
+  ts.WriteLine "        afterNum = LTrim$(Mid$(remaining, pos + Len(numStr)))"
+  ts.WriteLine "        If Left$(afterNum, 1) = ""%"" Then"
+  ts.WriteLine "            remaining = Mid$(afterNum, 2)"
+  ts.WriteLine "            GoTo NextNum"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        numericVals(numCount) = SafeFloat(numStr)"
+  ts.WriteLine "        numCount = numCount + 1"
+  ts.WriteLine "        remaining = afterNum"
+  ts.WriteLine "NextNum:"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    If numCount > 0 Then Value = numericVals(0)"
+  ts.WriteLine "    If numCount = 2 Then"
+  ts.WriteLine "        CostBasis = numericVals(1)"
+  ts.WriteLine "    ElseIf numCount = 3 Then"
+  ts.WriteLine "        CostBasis = numericVals(1)"
+  ts.WriteLine "        UnrealizedGL = numericVals(2)"
+  ts.WriteLine "    ElseIf numCount >= 4 Then"
+  ts.WriteLine "        CostBasis = numericVals(1)"
+  ts.WriteLine "        UnrealizedGL = numericVals(3)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Account Summary extraction"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ExtractAccountSummary(text As String) As AccountSummary"
+  ts.WriteLine "    Dim summary As AccountSummary"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim startM() As String: startM = SArr(""Account name:"")"
+  ts.WriteLine "    Dim endM() As String: endM = SArr2(""Your account balance sheet"", ""Summary of your assets"")"
+  ts.WriteLine "    Dim section As String"
+  ts.WriteLine "    section = ExtractSection(text, startM, endM)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Account name"
+  ts.WriteLine "    Dim m As Object"
+  ts.WriteLine "    Set m = RegexMatch(section, ""Account name:\s*([\s\S]*?)(?=Friendly account name:|Account number:)"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.AccountName = CleanAccountName(m.SubMatches(0))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Friendly name"
+  ts.WriteLine "    Set m = RegexMatch(section, ""Friendly account name:\s*(.+?)(?:\n|$)"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        Dim fn As String"
+  ts.WriteLine "        fn = Trim$(m.SubMatches(0))"
+  ts.WriteLine "        ' Strip side-by-side text"
+  ts.WriteLine "        Dim re As Object"
+  ts.WriteLine "        Set re = CreateRegex(""\s{2,}.*"")"
+  ts.WriteLine "        summary.FriendlyName = re.Replace(fn, """")"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Account number"
+  ts.WriteLine "    Set m = RegexMatch(section, ""Account number:\s*(.+?)(?:\n|$)"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.AccountNumber = Trim$(Replace(m.SubMatches(0), "" WM"", """"))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Financial advisor"
+  ts.WriteLine "    Set m = RegexMatch(section, ""Your Financial Advisor:\s*\n\s*(.+?)(?:\n|$)"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.FinancialAdvisor = Trim$(m.SubMatches(0))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Statement period"
+  ts.WriteLine "    Set m = RegexMatch(section, ""((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.StatementPeriod = Trim$(m.SubMatches(0))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Your assets (opening/closing)"
+  ts.WriteLine "    Set m = RegexMatch(section, ""Your assets\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.OpeningValue = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "        summary.ClosingValue = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Subtract liabilities if present"
+  ts.WriteLine "    Set m = RegexMatch(section, ""Your liabilities\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.OpeningValue = summary.OpeningValue + SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "        summary.ClosingValue = summary.ClosingValue + SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Loan accounts fallback"
+  ts.WriteLine "    If summary.OpeningValue = 0# And summary.ClosingValue = 0# Then"
+  ts.WriteLine "        Set m = RegexMatch(section, ""Total loan balance\s+\$?("" & NUM_PAT & "")\s+\$?("" & NUM_PAT & "")"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            summary.OpeningValue = -SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "            summary.ClosingValue = -SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Change in value section"
+  ts.WriteLine "    Dim tl As String"
+  ts.WriteLine "    tl = LCase$(text)"
+  ts.WriteLine "    Dim changeStart As Long"
+  ts.WriteLine "    changeStart = InStr(1, tl, ""change in the value of your account"")"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim changeSection As String"
+  ts.WriteLine "    If changeStart > 0 Then"
+  ts.WriteLine "        Dim closePos As Long"
+  ts.WriteLine "        closePos = InStr(changeStart, tl, ""closing account value"")"
+  ts.WriteLine "        If closePos > 0 Then"
+  ts.WriteLine "            Dim le As Long"
+  ts.WriteLine "            le = LineEnd(text, closePos)"
+  ts.WriteLine "            changeSection = Mid$(text, changeStart, le - changeStart)"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            changeSection = Mid$(text, changeStart, SECTION_LOOKAHEAD)"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Deposits transferred in"
+  ts.WriteLine "    Dim deposits As Double"
+  ts.WriteLine "    Set m = RegexMatch(changeSection, ""transferred in\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then deposits = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Withdrawals/out"
+  ts.WriteLine "    Dim withdrawals As Double"
+  ts.WriteLine "    Set re = CreateRegex(""^out\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"", False, True)"
+  ts.WriteLine "    Dim matches As Object"
+  ts.WriteLine "    Set matches = re.Execute(changeSection)"
+  ts.WriteLine "    If matches.Count > 0 Then"
+  ts.WriteLine "        withdrawals = SafeFloat(matches(0).SubMatches(0))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    If deposits = 0# And withdrawals = 0# Then"
+  ts.WriteLine "        Set m = RegexMatch(changeSection, ""out\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "        If Not m Is Nothing Then withdrawals = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    summary.DepositsTransferredIn = deposits"
+  ts.WriteLine "    summary.NetDepositsWithdrawals = deposits + withdrawals"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Dividend & interest income"
+  ts.WriteLine "    Set m = RegexMatch(changeSection, ""Dividend and interest income\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then summary.DividendInterestIncome = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Change in market value"
+  ts.WriteLine "    Set m = RegexMatch(changeSection, ""Change in market value\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then summary.ChangeInMarketValue = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Change in accrued interest"
+  ts.WriteLine "    Set m = RegexMatch(changeSection, ""Change in value of accrued[\s\S]+?interest\s+(-?"" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then summary.ChangeInAccruedInterest = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractAccountSummary = summary"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Asset Allocation extraction"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ExtractAssetAllocation(text As String) As AssetAllocation()"
+  ts.WriteLine "    Dim allocations() As AssetAllocation"
+  ts.WriteLine "    ReDim allocations(0 To 6)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim tl As String"
+  ts.WriteLine "    tl = LCase$(text)"
+  ts.WriteLine "    Dim summaryPos As Long"
+  ts.WriteLine "    summaryPos = InStr(1, tl, ""summary of your assets"")"
+  ts.WriteLine "    If summaryPos = 0 Then"
+  ts.WriteLine "        ExtractAssetAllocation = allocations"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim totalPos As Long"
+  ts.WriteLine "    totalPos = InStr(summaryPos, tl, ""total assets"")"
+  ts.WriteLine "    Dim section As String"
+  ts.WriteLine "    If totalPos > 0 Then"
+  ts.WriteLine "        Dim le As Long"
+  ts.WriteLine "        le = LineEnd(text, totalPos)"
+  ts.WriteLine "        section = Mid$(text, summaryPos, le - summaryPos)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        Dim startM() As String: startM = SArr(""Summary of your assets"")"
+  ts.WriteLine "        Dim endM() As String: endM = SArr(""Total assets"")"
+  ts.WriteLine "        section = ExtractSection(text, startM, endM)"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim categories(0 To 6) As String"
+  ts.WriteLine "    categories(0) = ""Cash and money balances"""
+  ts.WriteLine "    categories(1) = ""Cash alternatives"""
+  ts.WriteLine "    categories(2) = ""Equities"""
+  ts.WriteLine "    categories(3) = ""Fixed income"""
+  ts.WriteLine "    categories(4) = ""Non-traditional"""
+  ts.WriteLine "    categories(5) = ""Commodities"""
+  ts.WriteLine "    categories(6) = ""Other"""
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To 6"
+  ts.WriteLine "        allocations(i).Category = categories(i)"
+  ts.WriteLine "        ' Escape special regex chars in category name"
+  ts.WriteLine "        Dim escaped As String"
+  ts.WriteLine "        escaped = RegexEscape(categories(i))"
+  ts.WriteLine "        Dim m As Object"
+  ts.WriteLine "        Set m = RegexMatch(section, escaped & ""\s+("" & NUM_PAT & "")\s+(\d+\.\d{2})%"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            allocations(i).Value = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "            allocations(i).Percentage = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractAssetAllocation = allocations"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function RegexEscape(s As String) As String"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateRegex(""[.*+?^${}()|[\]\\]"", True)"
+  ts.WriteLine "    RegexEscape = re.Replace(s, ""\$&"")"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Holdings extraction"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ExtractHoldings(text As String) As Holding()"
+  ts.WriteLine "    Dim startM() As String: startM = SArr2(""Your total assets"", ""Summary of your assets"")"
+  ts.WriteLine "    Dim endM() As String: endM = SArr(""Account activity this month"")"
+  ts.WriteLine "    Dim section As String"
+  ts.WriteLine "    section = ExtractSection(text, startM, endM)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim holdings() As Holding"
+  ts.WriteLine "    Dim holdCount As Long"
+  ts.WriteLine "    holdCount = 0"
+  ts.WriteLine "    ReDim holdings(0 To 30)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim currentAssetClass As String"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Asset type map: holding name -> asset class"
+  ts.WriteLine "    Dim holdingNames(0 To 12) As String"
+  ts.WriteLine "    Dim assetTypes(0 To 12) As String"
+  ts.WriteLine "    holdingNames(0) = ""Cash and money balances"": assetTypes(0) = ""Cash and money balances"""
+  ts.WriteLine "    holdingNames(1) = ""Money market funds"": assetTypes(1) = ""Cash alternatives"""
+  ts.WriteLine "    holdingNames(2) = ""Common stock"": assetTypes(2) = ""Equities"""
+  ts.WriteLine "    holdingNames(3) = ""Municipal securities"": assetTypes(3) = ""Fixed income"""
+  ts.WriteLine "    holdingNames(4) = ""Fixed income"": assetTypes(4) = ""Fixed income"""
+  ts.WriteLine "    holdingNames(5) = ""Private equity funds"": assetTypes(5) = ""Non-traditional"""
+  ts.WriteLine "    holdingNames(6) = ""Hedge funds"": assetTypes(6) = ""Non-traditional"""
+  ts.WriteLine "    holdingNames(7) = ""Other investments"": assetTypes(7) = ""Non-traditional"""
+  ts.WriteLine "    holdingNames(8) = ""Other equity investments"": assetTypes(8) = ""Equities"""
+  ts.WriteLine "    holdingNames(9) = ""Mutual funds"": assetTypes(9) = ""Other"""
+  ts.WriteLine "    holdingNames(10) = ""Life insurance"": assetTypes(10) = ""Other"""
+  ts.WriteLine "    holdingNames(11) = ""Closed end funds & Exchange traded"": assetTypes(11) = ""Equities"""
+  ts.WriteLine "    holdingNames(12) = ""Total accrued interest"": assetTypes(12) = ""Fixed income"""
+  ts.WriteLine ""
+  ts.WriteLine "    ' Asset class prefixes"
+  ts.WriteLine "    Dim classPrefixes(0 To 6) As String"
+  ts.WriteLine "    Dim classNames(0 To 6) As String"
+  ts.WriteLine "    classPrefixes(0) = ""Cash alternatives "": classNames(0) = ""Cash alternatives"""
+  ts.WriteLine "    classPrefixes(1) = ""Fixed income "": classNames(1) = ""Fixed income"""
+  ts.WriteLine "    classPrefixes(2) = ""Commodities "": classNames(2) = ""Commodities"""
+  ts.WriteLine "    classPrefixes(3) = ""Cash "": classNames(3) = ""Cash and money balances"""
+  ts.WriteLine "    classPrefixes(4) = ""Equities "": classNames(4) = ""Equities"""
+  ts.WriteLine "    classPrefixes(5) = ""Non-traditional "": classNames(5) = ""Non-traditional"""
+  ts.WriteLine "    classPrefixes(6) = ""Other "": classNames(6) = ""Other"""
+  ts.WriteLine ""
+  ts.WriteLine "    Dim lines() As String"
+  ts.WriteLine "    lines = Split(section, vbLf)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim li As Long"
+  ts.WriteLine "    For li = LBound(lines) To UBound(lines)"
+  ts.WriteLine "        Dim line As String"
+  ts.WriteLine "        line = Trim$(lines(li))"
+  ts.WriteLine "        If line = """" Then GoTo NextHoldingLine"
+  ts.WriteLine "        If RegexTest(line, ""^=== PAGE \d+ ==="") Then GoTo NextHoldingLine"
+  ts.WriteLine "        If Left$(line, 13) = ""Percentage of"" Or Left$(line, 8) = ""Value on"" Or Left$(line, 16) = ""Your total assets"" Then GoTo NextHoldingLine"
+  ts.WriteLine "        If (Left$(line, 5) = ""Total"" And Left$(line, 22) <> ""Total accrued interest"") Or Left$(line, 9) = ""* Missing"" Then GoTo NextHoldingLine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Check asset class prefixes"
+  ts.WriteLine "        Dim rest As String"
+  ts.WriteLine "        rest = line"
+  ts.WriteLine "        Dim pi As Long"
+  ts.WriteLine "        For pi = 0 To 6"
+  ts.WriteLine "            If Left$(line, Len(classPrefixes(pi))) = classPrefixes(pi) Then"
+  ts.WriteLine "                currentAssetClass = classNames(pi)"
+  ts.WriteLine "                Dim after As String"
+  ts.WriteLine "                after = LTrim$(Mid$(line, Len(classPrefixes(pi)) + 1))"
+  ts.WriteLine "                If Left$(after, 1) = ""*"" Then after = LTrim$(Mid$(after, 2))"
+  ts.WriteLine "                ' Check if a holding name follows on same line"
+  ts.WriteLine "                Dim hi As Long"
+  ts.WriteLine "                For hi = 0 To 12"
+  ts.WriteLine "                    If Left$(after, Len(holdingNames(hi))) = holdingNames(hi) Then"
+  ts.WriteLine "                        rest = after"
+  ts.WriteLine "                        Exit For"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                Next hi"
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next pi"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Strip single-letter prefix (A-G)"
+  ts.WriteLine "        If Len(rest) >= 2 And Mid$(rest, 2, 1) = "" "" Then"
+  ts.WriteLine "            Dim fc As String"
+  ts.WriteLine "            fc = Left$(rest, 1)"
+  ts.WriteLine "            If fc >= ""A"" And fc <= ""G"" Then"
+  ts.WriteLine "                rest = Mid$(rest, 3)"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Strip leading asterisks"
+  ts.WriteLine "        Dim re As Object"
+  ts.WriteLine "        Set re = CreateRegex(""^\*+\s*"")"
+  ts.WriteLine "        Dim restClean As String"
+  ts.WriteLine "        restClean = re.Replace(rest, """")"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Match against holding names"
+  ts.WriteLine "        For hi = 0 To 12"
+  ts.WriteLine "            If Left$(restClean, Len(holdingNames(hi))) <> holdingNames(hi) Then GoTo NextHolding"
+  ts.WriteLine ""
+  ts.WriteLine "            Dim afterName As String"
+  ts.WriteLine "            afterName = Trim$(Mid$(restClean, Len(holdingNames(hi)) + 1))"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Special case: ""Closed end funds & Exchange traded"" needs numbers to follow"
+  ts.WriteLine "            If holdingNames(hi) = ""Closed end funds & Exchange traded"" Then"
+  ts.WriteLine "                If Not RegexTest(afterName, ""^("" & NUM_PAT & "")"") Then GoTo NextHolding"
+  ts.WriteLine "            End If"
+  ts.WriteLine ""
+  ts.WriteLine "            Dim hValue As Double, hCost As Variant, hGL As Variant"
+  ts.WriteLine "            ParseHoldingNumbers afterName, hValue, hCost, hGL"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Skip if no value and no numbers found"
+  ts.WriteLine "            If hValue = 0# And Not RegexTest(afterName, NUM_PAT) Then GoTo NextHolding"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Add holding"
+  ts.WriteLine "            If holdCount > UBound(holdings) Then ReDim Preserve holdings(0 To holdCount + 20)"
+  ts.WriteLine "            holdings(holdCount).Name = holdingNames(hi)"
+  ts.WriteLine "            If currentAssetClass <> """" Then"
+  ts.WriteLine "                holdings(holdCount).AssetType = currentAssetClass"
+  ts.WriteLine "            Else"
+  ts.WriteLine "                holdings(holdCount).AssetType = assetTypes(hi)"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            holdings(holdCount).Value = hValue"
+  ts.WriteLine "            holdings(holdCount).CostBasis = hCost"
+  ts.WriteLine "            holdings(holdCount).UnrealizedGL = hGL"
+  ts.WriteLine "            ReDim holdings(holdCount).Securities(0 To 0)"
+  ts.WriteLine "            holdings(holdCount).SecurityCount = 0"
+  ts.WriteLine "            holdCount = holdCount + 1"
+  ts.WriteLine "            Exit For"
+  ts.WriteLine "NextHolding:"
+  ts.WriteLine "        Next hi"
+  ts.WriteLine ""
+  ts.WriteLine "NextHoldingLine:"
+  ts.WriteLine "    Next li"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Handle ""Closed end funds & Exchange traded products"" spanning two lines"
+  ts.WriteLine "    Dim cefMatches As Object"
+  ts.WriteLine "    Set cefMatches = RegexMatchAll(section, ""Closed end funds & Exchange traded\s*\n\s*products\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "    Dim ci As Long"
+  ts.WriteLine "    For ci = 0 To cefMatches.Count - 1"
+  ts.WriteLine "        Dim cefValue As Double"
+  ts.WriteLine "        cefValue = SafeFloat(cefMatches(ci).SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "        If holdCount > UBound(holdings) Then ReDim Preserve holdings(0 To holdCount + 5)"
+  ts.WriteLine "        holdings(holdCount).Name = ""Closed end funds & Exchange traded products"""
+  ts.WriteLine "        holdings(holdCount).AssetType = ""Equities"""
+  ts.WriteLine "        holdings(holdCount).Value = cefValue"
+  ts.WriteLine "        holdings(holdCount).CostBasis = Null"
+  ts.WriteLine "        holdings(holdCount).UnrealizedGL = Null"
+  ts.WriteLine "        ReDim holdings(holdCount).Securities(0 To 0)"
+  ts.WriteLine "        holdings(holdCount).SecurityCount = 0"
+  ts.WriteLine "        holdCount = holdCount + 1"
+  ts.WriteLine "    Next ci"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Subtract liabilities from cash"
+  ts.WriteLine "    Dim liabM As Object"
+  ts.WriteLine "    Set liabM = RegexMatch(section, ""Total liabilities\s+-?\$?([\d,]+\.\d{2})"")"
+  ts.WriteLine "    If Not liabM Is Nothing Then"
+  ts.WriteLine "        Dim liabAmt As Double"
+  ts.WriteLine "        liabAmt = SafeFloat(liabM.SubMatches(0))"
+  ts.WriteLine "        Dim hIdx As Long"
+  ts.WriteLine "        For hIdx = 0 To holdCount - 1"
+  ts.WriteLine "            If holdings(hIdx).Name = ""Cash and money balances"" Then"
+  ts.WriteLine "                holdings(hIdx).Value = holdings(hIdx).Value - liabAmt"
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next hIdx"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ReDim Preserve holdings(0 To IIf(holdCount > 0, holdCount - 1, 0))"
+  ts.WriteLine "    ExtractHoldings = holdings"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Transaction extraction"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ExtractTransactions(text As String) As Transaction()"
+  ts.WriteLine "    Dim startM() As String: startM = SArr(""Account activity this month"" & vbLf)"
+  ts.WriteLine "    Dim endM() As String: endM = SArr2(""Money balance activities"", ""Important information about your statement"")"
+  ts.WriteLine "    Dim section As String"
+  ts.WriteLine "    section = ExtractSection(text, startM, endM)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim txs() As Transaction"
+  ts.WriteLine "    Dim txCount As Long"
+  ts.WriteLine "    txCount = 0"
+  ts.WriteLine "    ReDim txs(0 To 200)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Detect BSA"
+  ts.WriteLine "    Dim isBSA As Boolean"
+  ts.WriteLine "    isBSA = RegexTest(section, ""Cash and money balance"", True)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim lines() As String"
+  ts.WriteLine "    lines = Split(section, vbLf)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Skip prefixes"
+  ts.WriteLine "    Dim skipPrefixes() As String"
+  ts.WriteLine "    skipPrefixes = GetSkipPrefixes()"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Whitespace-collapse regex (hoisted — reused every line)"
+  ts.WriteLine "    Dim reWhitespace As Object"
+  ts.WriteLine "    Set reWhitespace = CreateRegex(""\s{2,}"", True)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Activity aliases"
+  ts.WriteLine "    ' ""Foreign Tax"" -> ""Foreign Tax Withheld"""
+  ts.WriteLine "    ' ""Visa Payment"" -> ""Credit Card Payment"""
+  ts.WriteLine "    ' ""Foreign"" -> ""Dividend"""
+  ts.WriteLine "    ' ""ACH WITHDRAWAL"" -> ""Withdrawal"""
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    i = 0"
+  ts.WriteLine "    Do While i <= UBound(lines)"
+  ts.WriteLine "        Dim line As String"
+  ts.WriteLine "        line = Trim$(lines(i))"
+  ts.WriteLine "        If line = """" Then GoTo NextTxLine"
+  ts.WriteLine "        If RegexTest(line, ""^=== PAGE \d+ ==="") Then GoTo NextTxLine"
+  ts.WriteLine "        If RegexTest(line, ""^Total[\s(a-z]"") Or line = ""Total"" Then GoTo NextTxLine"
+  ts.WriteLine "        If RegexTest(line, ""^(?:Closing )?[Cc]ash and money balance\s+\$"") Then GoTo NextTxLine"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim lineCompact As String"
+  ts.WriteLine "        lineCompact = reWhitespace.Replace(line, "" "")"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Check skip prefixes"
+  ts.WriteLine "        Dim parsedLine As String"
+  ts.WriteLine "        parsedLine = line"
+  ts.WriteLine "        Dim skipped As Boolean"
+  ts.WriteLine "        skipped = False"
+  ts.WriteLine "        Dim si As Long"
+  ts.WriteLine "        For si = LBound(skipPrefixes) To UBound(skipPrefixes)"
+  ts.WriteLine "            If Left$(line, Len(skipPrefixes(si))) = skipPrefixes(si) Or _"
+  ts.WriteLine "               Left$(lineCompact, Len(skipPrefixes(si))) = skipPrefixes(si) Then"
+  ts.WriteLine "                ' Check if section header with date following"
+  ts.WriteLine "                If IsSectionHeader(line, lineCompact, skipPrefixes(si)) Then"
+  ts.WriteLine "                    Dim restStr As String"
+  ts.WriteLine "                    If Left$(line, Len(skipPrefixes(si))) = skipPrefixes(si) Then"
+  ts.WriteLine "                        restStr = Mid$(line, Len(skipPrefixes(si)) + 1)"
+  ts.WriteLine "                    Else"
+  ts.WriteLine "                        restStr = Mid$(lineCompact, Len(skipPrefixes(si)) + 1)"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                    Dim dateInRest As Object"
+  ts.WriteLine "                    Set dateInRest = RegexMatch(restStr, ""("" & DATE_PAT & "")\s+"")"
+  ts.WriteLine "                    If Not dateInRest Is Nothing Then"
+  ts.WriteLine "                        parsedLine = Mid$(restStr, dateInRest.FirstIndex + 1)"
+  ts.WriteLine "                        parsedLine = Trim$(parsedLine)"
+  ts.WriteLine "                        Exit For"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                End If"
+  ts.WriteLine "                skipped = True"
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next si"
+  ts.WriteLine "        If skipped Then GoTo NextTxLine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Skip orphan metadata"
+  ts.WriteLine "        If RegexTest(line, ""^(?:SYMBOL:|CUSIP:|REF#:)"") Then GoTo NextTxLine"
+  ts.WriteLine "        ' Skip misc boilerplate"
+  ts.WriteLine "        If line = ""ab"" Or Left$(line, 3) = ""ab "" Or line = ""Check"" Or line = ""Checks"" Then GoTo NextTxLine"
+  ts.WriteLine "        If RegexTest(line, ""^for\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s"") Then GoTo NextTxLine"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim m As Object"
+  ts.WriteLine "        Dim re As Object"
+  ts.WriteLine ""
+  ts.WriteLine "        ' --- ATM FEE REBATE ---"
+  ts.WriteLine "        Set m = RegexMatch(line, ""^ATM FEE REBATE\s+\$?("" & NUM_PAT & "")$"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            Dim rebateDate As String"
+  ts.WriteLine "            If txCount > 0 Then rebateDate = txs(txCount - 1).TxDate Else rebateDate = """""
+  ts.WriteLine "            AddTx txs, txCount, rebateDate, ""Deposit"", ""ATM FEE REBATE"", SafeFloat(m.SubMatches(0)), Null, Null"
+  ts.WriteLine "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' BSA: strip trailing running balance"
+  ts.WriteLine "        If isBSA And RegexTest(parsedLine, ""[\d,]*\.\d{2,}\s+[\d,]+\.\d{2}$"") Then"
+  ts.WriteLine "            Set re = CreateRegex(""\s+[\d,]+\.\d{2}$"")"
+  ts.WriteLine "            parsedLine = re.Replace(parsedLine, """")"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Extract date"
+  ts.WriteLine "        Dim dateM As Object"
+  ts.WriteLine "        Set dateM = RegexMatch(parsedLine, ""("" & DATE_PAT & "")\s+"")"
+  ts.WriteLine "        If dateM Is Nothing Then GoTo NextTxLine"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim txDate As String"
+  ts.WriteLine "        txDate = dateM.SubMatches(0)"
+  ts.WriteLine "        Dim afterDate As String"
+  ts.WriteLine "        afterDate = Mid$(parsedLine, dateM.FirstIndex + Len(dateM.Value) + 1)"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Skip BSA balance lines after date"
+  ts.WriteLine "        If RegexTest(afterDate, ""^(?:Closing )?[Cc]ash and money balance\b"") Then GoTo NextTxLine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' --- Balance forward ---"
+  ts.WriteLine "        Set m = RegexMatch(afterDate, ""^Balance forward\s+\$?("" & NUM_PAT & "")$"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            AddTx txs, txCount, txDate, ""Deposit"", ""Balance forward"", SafeFloat(m.SubMatches(0)), Null, Null"
+  ts.WriteLine "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' --- Simple single-keyword transactions ---"
+  ts.WriteLine "        Set m = RegexMatch(afterDate, ""^(St Cap Gain|Lt Cap Gain|Cash In Lieu|Bill Payment|Bsa Check|Foreign Tax|Visa Payment|Correction|Transfer|Deposit|ACH WITHDRAWAL|Withdrawal|Dividend|Interest|Distribution|Refund|Closing|Foreign)\s+(.+?)\s+(-?\$?[\d,]*\.\d{2})$"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            Dim activity As String"
+  ts.WriteLine "            activity = m.SubMatches(0)"
+  ts.WriteLine "            Dim desc As String"
+  ts.WriteLine "            desc = Trim$(m.SubMatches(1))"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Apply aliases"
+  ts.WriteLine "            Select Case activity"
+  ts.WriteLine "                Case ""Foreign Tax"": activity = ""Foreign Tax Withheld"""
+  ts.WriteLine "                Case ""Visa Payment"": activity = ""Credit Card Payment"""
+  ts.WriteLine "                Case ""Foreign"": activity = ""Dividend"""
+  ts.WriteLine "                Case ""ACH WITHDRAWAL"": activity = ""Withdrawal"""
+  ts.WriteLine "            End Select"
+  ts.WriteLine ""
+  ts.WriteLine "            If isBSA And activity = ""Withdrawal"" And Left$(desc, 7) = ""CHECK #"" Then activity = ""Bsa Check"""
+  ts.WriteLine ""
+  ts.WriteLine "            AddTx txs, txCount, txDate, activity, desc, SafeFloat(m.SubMatches(2)), Null, Null"
+  ts.WriteLine "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Fix-up: ""Correction Of Int. Charge"""
+  ts.WriteLine "            If activity = ""Correction"" Then"
+  ts.WriteLine "                If txs(txCount - 1).Description = ""Of"" And i + 1 <= UBound(lines) Then"
+  ts.WriteLine "                    Dim nextLine As String"
+  ts.WriteLine "                    nextLine = Trim$(lines(i + 1))"
+  ts.WriteLine "                    If Left$(nextLine, 11) = ""Int. Charge"" Then"
+  ts.WriteLine "                        txs(txCount - 1).Activity = ""Correction Of Int. Charge"""
+  ts.WriteLine "                        txs(txCount - 1).Description = Trim$(Mid$(nextLine, 12))"
+  ts.WriteLine "                        i = i + 1"
+  ts.WriteLine "                        ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Fix-up: ""Interest Charge"""
+  ts.WriteLine "            If activity = ""Interest"" Then"
+  ts.WriteLine "                If Right$(txs(txCount - 1).Description, 7) = "" Charge"" Then"
+  ts.WriteLine "                    txs(txCount - 1).Activity = ""Interest Charge"""
+  ts.WriteLine "                    txs(txCount - 1).Description = Left$(txs(txCount - 1).Description, Len(txs(txCount - 1).Description) - 7)"
+  ts.WriteLine "                    txs(txCount - 1).Description = Trim$(txs(txCount - 1).Description)"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' --- Fee Charged ---"
+  ts.WriteLine "        Set m = RegexMatch(afterDate, ""^Fee(?:\s+Charged)?\s+(.+?)\s+(-?"" & NUM_PAT & "")$"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            AddTx txs, txCount, txDate, ""Fee Charged"", Trim$(m.SubMatches(0)), SafeFloat(m.SubMatches(1)), Null, Null"
+  ts.WriteLine "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' --- Credit Card Payment ---"
+  ts.WriteLine "        Set m = RegexMatch(afterDate, ""^(CREDIT CARD PAYMENT)\s+(-?"" & NUM_PAT & "")$"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            AddTx txs, txCount, txDate, ""Credit Card Payment"", m.SubMatches(0), SafeFloat(m.SubMatches(1)), Null, Null"
+  ts.WriteLine "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' --- Two-date (CashConnect / Visa debit) ---"
+  ts.WriteLine "        Set m = RegexMatch(afterDate, ""^("" & DATE_PAT & "")\s+(.+?)\s+(-?)\$?("" & NUM_PAT & "")$"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            Dim ccDesc As String"
+  ts.WriteLine "            ccDesc = Trim$(m.SubMatches(1))"
+  ts.WriteLine "            Dim ccAmt As Double"
+  ts.WriteLine "            ccAmt = SafeFloat(m.SubMatches(3))"
+  ts.WriteLine "            Dim ccActivity As String"
+  ts.WriteLine "            If ccDesc = ""CASHCONNECT"" Then ccActivity = ""CashConnect"" Else ccActivity = ""Card Purchase"""
+  ts.WriteLine "            AddTx txs, txCount, txDate, ccActivity, ccDesc, -ccAmt, Null, Null"
+  ts.WriteLine "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' --- Check ---"
+  ts.WriteLine "        Set m = RegexMatch(parsedLine, ""^(?:Checks\s+)?\d{4,10}\s+("" & DATE_PAT & "")\s+(.+?)\s+(-?"" & NUM_PAT & "")$"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            Dim chkActivity As String"
+  ts.WriteLine "            If isBSA Then chkActivity = ""Bsa Check"" Else chkActivity = ""Withdrawal"""
+  ts.WriteLine "            AddTx txs, txCount, m.SubMatches(0), chkActivity, Trim$(m.SubMatches(1)), SafeFloat(m.SubMatches(2)), Null, Null"
+  ts.WriteLine "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' --- Sold/Bought with price ---"
+  ts.WriteLine "        Set m = RegexMatch(afterDate, ""^(Sold|Bought)\s+(.+?)\s+(-?[\d,]+\.\d{3})\s+(-?[\d,]+\.\d{2,})\s+(-?"" & NUM_PAT & "")(?:\s+("" & NUM_PAT & ""))?$"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            Dim sbActivity As String"
+  ts.WriteLine "            If m.SubMatches(0) = ""Sold"" Then sbActivity = ""Sale"" Else sbActivity = ""Purchase"""
+  ts.WriteLine "            AddTx txs, txCount, txDate, sbActivity, Trim$(m.SubMatches(1)), SafeFloat(m.SubMatches(4)), ParseNum(m.SubMatches(2)), ParseNum(m.SubMatches(3))"
+  ts.WriteLine "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' --- Sold/Bought without price (money market) ---"
+  ts.WriteLine "        Set m = RegexMatch(afterDate, ""^(Sold|Bought)\s+(.+?)\s+(-?[\d,]+\.\d{3})\s+("" & NUM_PAT & "")$"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            If m.SubMatches(0) = ""Sold"" Then sbActivity = ""Sale"" Else sbActivity = ""Purchase"""
+  ts.WriteLine "            AddTx txs, txCount, txDate, sbActivity, Trim$(m.SubMatches(1)), SafeFloat(m.SubMatches(3)), ParseNum(m.SubMatches(2)), Null"
+  ts.WriteLine "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' --- Reinvestment 3-number ---"
+  ts.WriteLine "        Set m = RegexMatch(afterDate, ""^Reinvestment\s+(.+?)\s+([\d,]+\.\d{2,6})\s+([\d,]+\.\d{2,3})\s+(-?"" & NUM_PAT & "")$"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            Dim rDesc As String"
+  ts.WriteLine "            rDesc = Trim$(m.SubMatches(0))"
+  ts.WriteLine "            Set re = CreateRegex(""\s+AT$"")"
+  ts.WriteLine "            rDesc = re.Replace(rDesc, """")"
+  ts.WriteLine "            Set re = CreateRegex(""\s+DIVIDEND$"")"
+  ts.WriteLine "            rDesc = re.Replace(rDesc, """")"
+  ts.WriteLine "            AddTx txs, txCount, txDate, ""Reinvestment"", rDesc, SafeFloat(m.SubMatches(3)), ParseNum(m.SubMatches(1)), ParseNum(m.SubMatches(2))"
+  ts.WriteLine "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' --- Reinvestment 2-number ---"
+  ts.WriteLine "        Set m = RegexMatch(afterDate, ""^Reinvestment\s+(.+?)\s+([\d,]+\.\d{2,3})\s+(-?"" & NUM_PAT & "")$"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            rDesc = Trim$(m.SubMatches(0))"
+  ts.WriteLine "            Dim rPrice As Variant"
+  ts.WriteLine "            rPrice = Null"
+  ts.WriteLine "            Dim priceM As Object"
+  ts.WriteLine "            Set priceM = RegexMatch(rDesc, ""REINVESTED AT\s+([\d.]+)\s+NAV"")"
+  ts.WriteLine "            If Not priceM Is Nothing Then rPrice = ParseNum(priceM.SubMatches(0))"
+  ts.WriteLine "            Set re = CreateRegex(""\s+AT$"")"
+  ts.WriteLine "            rDesc = re.Replace(rDesc, """")"
+  ts.WriteLine "            Set re = CreateRegex(""\s+DIVIDEND$"")"
+  ts.WriteLine "            rDesc = re.Replace(rDesc, """")"
+  ts.WriteLine "            AddTx txs, txCount, txDate, ""Reinvestment"", rDesc, SafeFloat(m.SubMatches(2)), ParseNum(m.SubMatches(1)), rPrice"
+  ts.WriteLine "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' --- DTC transfer ---"
+  ts.WriteLine "        Set m = RegexMatch(afterDate, ""^(Receive Dtc|Deliver Dtc)\s+(.+?)\s+(-?[\d,]+\.\d{3})\s*(-?"" & NUM_PAT & "")$"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            AddTx txs, txCount, txDate, m.SubMatches(0), Trim$(m.SubMatches(1)), SafeFloat(m.SubMatches(3)), ParseNum(m.SubMatches(2)), Null"
+  ts.WriteLine "            ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' --- Call Redemption ---"
+  ts.WriteLine "        Set m = RegexMatch(afterDate, ""^Call\s+(.+?)\s+(-?[\d,]+\.\d{3})\s*(-?"" & NUM_PAT & "")(?:\s+("" & NUM_PAT & ""))?$"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            AddTx txs, txCount, txDate, ""Call Redemption"", Trim$(m.SubMatches(0)), SafeFloat(m.SubMatches(2)), ParseNum(m.SubMatches(1)), Null"
+  ts.WriteLine "            ' Consume ""Redemption"" continuation"
+  ts.WriteLine "            If i + 1 <= UBound(lines) Then"
+  ts.WriteLine "                If Left$(lines(i + 1), 10) = ""Redemption"" Then"
+  ts.WriteLine "                    Dim redemptionRest As String"
+  ts.WriteLine "                    redemptionRest = Trim$(Mid$(lines(i + 1), 11))"
+  ts.WriteLine "                    If redemptionRest <> """" Then"
+  ts.WriteLine "                        Dim cusipM As Object"
+  ts.WriteLine "                        Set cusipM = RegexMatch(redemptionRest, ""^CUSIP:\s*(\S+)"")"
+  ts.WriteLine "                        If Not cusipM Is Nothing Then"
+  ts.WriteLine "                            txs(txCount - 1).Cusip = cusipM.SubMatches(0)"
+  ts.WriteLine "                        Else"
+  ts.WriteLine "                            txs(txCount - 1).Description = txs(txCount - 1).Description & "" "" & redemptionRest"
+  ts.WriteLine "                        End If"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                    i = i + 1"
+  ts.WriteLine "                    ConsumeContinuations lines, i, txs, txCount, skipPrefixes"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "NextTxLine:"
+  ts.WriteLine "        i = i + 1"
+  ts.WriteLine "    Loop"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Post-processing: clean descriptions"
+  ts.WriteLine "    Dim ti As Long"
+  ts.WriteLine "    For ti = 0 To txCount - 1"
+  ts.WriteLine "        ' Strip UNSOLICITED"
+  ts.WriteLine "        Set re = CreateRegex(""\s*UNSOLICITED\b"", True)"
+  ts.WriteLine "        txs(ti).Description = re.Replace(txs(ti).Description, """")"
+  ts.WriteLine "        txs(ti).Description = Trim$(txs(ti).Description)"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Strip ""PAID ON NNNN"" references"
+  ts.WriteLine "        Set re = CreateRegex(""\s*PAID ON \d+(?:\s*AS OF \d{2}/\d{2}/\d{2,4})?(?:\s+(?:St Cap Gain|Lt Cap Gain|Dividend|Interest|Distribution|Deposit|Withdrawal|Refund|Closing|Transfer|Correction|Foreign|Fee|Sold|Bought|Reinvestment))?"")"
+  ts.WriteLine "        txs(ti).Description = Trim$(re.Replace(txs(ti).Description, """"))"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Strip trailing 4-digit code from transfers"
+  ts.WriteLine "        Set m = RegexMatch(txs(ti).Description, ""^((?:TO|FROM)\s+U\d\s+\d{5})\s+\d{4}$"")"
+  ts.WriteLine "        If Not m Is Nothing Then txs(ti).Description = m.SubMatches(0)"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Extract inline REF#"
+  ts.WriteLine "        Set m = RegexMatch(txs(ti).Description, ""\s*REF#:(\S+)\s*"")"
+  ts.WriteLine "        If Not m Is Nothing And txs(ti).RefNumber = """" Then"
+  ts.WriteLine "            txs(ti).RefNumber = m.SubMatches(0)"
+  ts.WriteLine "            Set re = CreateRegex(""\s*REF#:\S+"")"
+  ts.WriteLine "            txs(ti).Description = Trim$(re.Replace(txs(ti).Description, """"))"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Extract inline CUSIP"
+  ts.WriteLine "        Set m = RegexMatch(txs(ti).Description, ""\s*CUSIP:\s*(\S+)"")"
+  ts.WriteLine "        If Not m Is Nothing And txs(ti).Cusip = """" Then"
+  ts.WriteLine "            txs(ti).Cusip = m.SubMatches(0)"
+  ts.WriteLine "            Set re = CreateRegex(""\s*CUSIP:\s*\S+"")"
+  ts.WriteLine "            txs(ti).Description = Trim$(re.Replace(txs(ti).Description, """"))"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Extract inline SYMBOL"
+  ts.WriteLine "        Set m = RegexMatch(txs(ti).Description, ""\s*(?:/\s*)?SYMBOL:\s*(\S+)"")"
+  ts.WriteLine "        If Not m Is Nothing And txs(ti).Symbol = """" Then"
+  ts.WriteLine "            txs(ti).Symbol = m.SubMatches(0)"
+  ts.WriteLine "            Set re = CreateRegex(""\s*(?:/\s*)?SYMBOL:\s*\S+"")"
+  ts.WriteLine "            txs(ti).Description = Trim$(re.Replace(txs(ti).Description, """"))"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next ti"
+  ts.WriteLine ""
+  ts.WriteLine "    ReDim Preserve txs(0 To IIf(txCount > 0, txCount - 1, 0))"
+  ts.WriteLine "    ExtractTransactions = txs"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub AddTx(txs() As Transaction, ByRef txCount As Long, txDate As String, activity As String, desc As String, amount As Double, quantity As Variant, price As Variant)"
+  ts.WriteLine "    If txCount > UBound(txs) Then ReDim Preserve txs(0 To txCount + 100)"
+  ts.WriteLine "    txs(txCount).TxDate = txDate"
+  ts.WriteLine "    txs(txCount).Activity = activity"
+  ts.WriteLine "    txs(txCount).Description = desc"
+  ts.WriteLine "    txs(txCount).Amount = amount"
+  ts.WriteLine "    txs(txCount).Quantity = quantity"
+  ts.WriteLine "    txs(txCount).Price = price"
+  ts.WriteLine "    txs(txCount).Cusip = """""
+  ts.WriteLine "    txs(txCount).Symbol = """""
+  ts.WriteLine "    txs(txCount).RefNumber = """""
+  ts.WriteLine "    txCount = txCount + 1"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub ConsumeContinuations(lines() As String, ByRef i As Long, txs() As Transaction, txCount As Long, skipPrefixes() As String)"
+  ts.WriteLine "    If txCount = 0 Then Exit Sub"
+  ts.WriteLine "    Dim lastIdx As Long"
+  ts.WriteLine "    lastIdx = txCount - 1"
+  ts.WriteLine ""
+  ts.WriteLine "    Do While i + 1 <= UBound(lines)"
+  ts.WriteLine "        Dim nextLine As String"
+  ts.WriteLine "        nextLine = Trim$(lines(i + 1))"
+  ts.WriteLine "        If nextLine = """" Then Exit Do"
+  ts.WriteLine "        If RegexTest(nextLine, ""^Total[\s(a-z]"") Or nextLine = ""Total"" Then Exit Do"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Check skip prefixes"
+  ts.WriteLine "        Dim si As Long"
+  ts.WriteLine "        Dim isSkip As Boolean"
+  ts.WriteLine "        isSkip = False"
+  ts.WriteLine "        For si = LBound(skipPrefixes) To UBound(skipPrefixes)"
+  ts.WriteLine "            If Left$(nextLine, Len(skipPrefixes(si))) = skipPrefixes(si) Then"
+  ts.WriteLine "                isSkip = True"
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next si"
+  ts.WriteLine "        If isSkip Then Exit Do"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Check if new transaction starts"
+  ts.WriteLine "        If RegexTest(nextLine, ""("" & DATE_PAT & "")\s+"") Then Exit Do"
+  ts.WriteLine "        If RegexTest(nextLine, ""^ATM FEE REBATE\s+"") Then Exit Do"
+  ts.WriteLine "        If RegexTest(nextLine, ""^(?:Checks\s+)?\d{4,10}\s+("" & DATE_PAT & "")"") Then Exit Do"
+  ts.WriteLine ""
+  ts.WriteLine "        i = i + 1"
+  ts.WriteLine ""
+  ts.WriteLine "        ' CUSIP line"
+  ts.WriteLine "        Dim cm As Object"
+  ts.WriteLine "        Set cm = RegexMatch(nextLine, ""^CUSIP:\s*(\S+)"")"
+  ts.WriteLine "        If Not cm Is Nothing Then"
+  ts.WriteLine "            txs(lastIdx).Cusip = cm.SubMatches(0)"
+  ts.WriteLine "            Dim inlineSym As Object"
+  ts.WriteLine "            Set inlineSym = RegexMatch(nextLine, ""SYMBOL:\s*(\S+)"")"
+  ts.WriteLine "            If Not inlineSym Is Nothing Then txs(lastIdx).Symbol = inlineSym.SubMatches(0)"
+  ts.WriteLine "            GoTo NextCont"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' SYMBOL line"
+  ts.WriteLine "        Set cm = RegexMatch(nextLine, ""^SYMBOL:\s*(\S+)"")"
+  ts.WriteLine "        If Not cm Is Nothing Then"
+  ts.WriteLine "            txs(lastIdx).Symbol = cm.SubMatches(0)"
+  ts.WriteLine "            GoTo NextCont"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' REF# line"
+  ts.WriteLine "        Set cm = RegexMatch(nextLine, ""^REF#:(\S+)"")"
+  ts.WriteLine "        If Not cm Is Nothing Then"
+  ts.WriteLine "            txs(lastIdx).RefNumber = cm.SubMatches(0)"
+  ts.WriteLine "            GoTo NextCont"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Plain continuation"
+  ts.WriteLine "        txs(lastIdx).Description = txs(lastIdx).Description & "" "" & nextLine"
+  ts.WriteLine "NextCont:"
+  ts.WriteLine "    Loop"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function GetSkipPrefixes() As String()"
+  ts.WriteLine "    Dim p(0 To 71) As String"
+  ts.WriteLine "    p(0) = ""Date"": p(1) = ""(continued)"": p(2) = ""Account activity"": p(3) = ""Proceeds from"""
+  ts.WriteLine "    p(4) = ""For more information"": p(5) = ""Minimum Payment"": p(6) = ""UBS Visa"""
+  ts.WriteLine "    p(7) = ""payment information"": p(8) = ""This credit card"": p(9) = ""We provide"""
+  ts.WriteLine "    p(10) = ""We do not"": p(11) = ""Card Items"": p(12) = ""The new UBS"": p(13) = ""stunningly"""
+  ts.WriteLine "    p(14) = ""EXECUTION"""
+  ts.WriteLine "    p(15) = ""Quantity"": p(16) = ""Percentage of"": p(17) = ""Value on"""
+  ts.WriteLine "    p(18) = ""Dividend and interest income"": p(19) = ""Investment transactions"""
+  ts.WriteLine "    p(20) = ""Account name:"": p(21) = ""Friendly account name:"": p(22) = ""Account number:"""
+  ts.WriteLine "    p(23) = ""Account type:"": p(24) = ""Your notes"": p(25) = ""End of statement"""
+  ts.WriteLine "    p(26) = ""=== PAGE"": p(27) = ""CNQ7"": p(28) = ""NQ7"""
+  ts.WriteLine "    p(29) = ""Resource Management"": p(30) = ""Portfolio Management"": p(31) = ""Retirement Account"""
+  ts.WriteLine "    p(32) = ""your statement at the end"": p(33) = ""investment withdrawn for"""
+  ts.WriteLine "    p(34) = ""number Date Description"": p(35) = ""USA. UBS"""
+  ts.WriteLine "    p(36) = ""January 20"": p(37) = ""February 20"": p(38) = ""March 20"": p(39) = ""April 20"": p(40) = ""May 20"""
+  ts.WriteLine "    p(41) = ""June 20"": p(42) = ""July 20"": p(43) = ""August 20"": p(44) = ""September 20"": p(45) = ""October 20"""
+  ts.WriteLine "    p(46) = ""November 20"": p(47) = ""December 20"""
+  ts.WriteLine "    p(48) = ""Transaction"": p(49) = ""date "": p(50) = ""Cash/ATM transactions"""
+  ts.WriteLine "    p(51) = ""Interest (continued)"": p(52) = ""These are transfers"": p(53) = ""did not incur"""
+  ts.WriteLine "    p(54) = ""Bill payments"": p(55) = ""Deposits and other"": p(56) = ""Other funds debited"": p(57) = ""Fees """
+  ts.WriteLine "    p(58) = ""Card payments"": p(59) = ""My Choice"": p(60) = ""Rewards"": p(61) = ""Opening balance"""
+  ts.WriteLine "    p(62) = ""Points earned"": p(63) = ""Closing balance"": p(64) = ""Totalother"": p(65) = ""Totalprofessional"""
+  ts.WriteLine "    p(66) = ""Minimum Payment"": p(67) = ""Priority"": p(68) = ""UBS Insured Sweep Prgm"": p(69) = ""TOTAL"""
+  ts.WriteLine "    p(70) = ""Funds used for"": p(71) = ""Your """
+  ts.WriteLine "    ' Note: additional prefixes from TS omitted for length; these cover the core set"
+  ts.WriteLine "    GetSkipPrefixes = p"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function IsSectionHeader(line As String, lineCompact As String, prefix As String) As Boolean"
+  ts.WriteLine "    Dim headers() As String"
+  ts.WriteLine "    headers = Split(""Deposits and other|Other funds debited|Bill payments|Fees |Card payments|Dividend and interest income|Taxable dividends|Taxable interest|Tax-exempt|Investment transactions|Checks "", ""|"")"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = LBound(headers) To UBound(headers)"
+  ts.WriteLine "        If Left$(line, Len(headers(i))) = headers(i) Or Left$(lineCompact, Len(headers(i))) = headers(i) Then"
+  ts.WriteLine "            IsSectionHeader = True"
+  ts.WriteLine "            Exit Function"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    IsSectionHeader = False"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Income extraction"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ExtractIncome(text As String) As IncomeDetail"
+  ts.WriteLine "    Dim income As IncomeDetail"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim startM() As String: startM = SArr(""Dividend and interest income"")"
+  ts.WriteLine "    Dim endM() As String: endM = SArr3(""Summary of gains and losses"", ""Your assets"", ""Account activity this month"")"
+  ts.WriteLine "    Dim section As String"
+  ts.WriteLine "    section = ExtractSection(text, startM, endM)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim lines() As String"
+  ts.WriteLine "    lines = Split(section, vbLf)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = LBound(lines) To UBound(lines)"
+  ts.WriteLine "        Dim line As String"
+  ts.WriteLine "        line = Trim$(lines(i))"
+  ts.WriteLine "        If line = """" Then GoTo NextIncomeLine"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim m As Object"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Taxable dividends (or plain ""Dividends"" for IRA)"
+  ts.WriteLine "        Set m = RegexMatch(line, ""^(?:Taxable d|D)ividends\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "        If Not m Is Nothing Then income.TaxableDividendsMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Tax-exempt dividends"
+  ts.WriteLine "        Set m = RegexMatch(line, ""^Tax-exempt dividends\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "        If Not m Is Nothing Then income.TaxExemptDividendsMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Taxable interest"
+  ts.WriteLine "        Set m = RegexMatch(line, ""^(?:Taxable i|I)nterest\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "        If Not m Is Nothing Then income.TaxableInterestMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Tax-exempt interest"
+  ts.WriteLine "        Set m = RegexMatch(line, ""^Tax-exempt interest\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "        If Not m Is Nothing Then income.TaxExemptInterestMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Miscellaneous"
+  ts.WriteLine "        Set m = RegexMatch(line, ""^Miscellaneous\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "        If Not m Is Nothing Then income.MiscellaneousMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Prior year adjustment"
+  ts.WriteLine "        Set m = RegexMatch(line, ""^Prior year adjustment\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "        If Not m Is Nothing Then income.MiscellaneousMonth = income.MiscellaneousMonth + SafeFloat(m.SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Accrued interest received"
+  ts.WriteLine "        Set m = RegexMatch(line, ""^Total accrued interest received\s+\$?("" & NUM_PAT & "")"")"
+  ts.WriteLine "        If Not m Is Nothing Then income.AccruedInterestReceived = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Total"
+  ts.WriteLine "        Set m = RegexMatch(line, ""^Total dividend & interest\s+\$?("" & NUM_PAT & "")\s+\$?("" & NUM_PAT & "")"")"
+  ts.WriteLine "        If Not m Is Nothing Then income.TotalMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "NextIncomeLine:"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Fallback: compute total from categories"
+  ts.WriteLine "    If income.TotalMonth = 0# Then"
+  ts.WriteLine "        income.TotalMonth = income.TaxableDividendsMonth + income.TaxExemptDividendsMonth + _"
+  ts.WriteLine "            income.TaxableInterestMonth + income.TaxExemptInterestMonth + income.MiscellaneousMonth"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractIncome = income"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Gains and Losses extraction"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ExtractGainsLosses(text As String) As GainsAndLosses"
+  ts.WriteLine "    Dim gains As GainsAndLosses"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim tl As String"
+  ts.WriteLine "    tl = LCase$(text)"
+  ts.WriteLine "    Dim gainsStart As Long"
+  ts.WriteLine "    gainsStart = InStr(1, tl, ""summary of gains and losses"")"
+  ts.WriteLine "    If gainsStart = 0 Then"
+  ts.WriteLine "        ExtractGainsLosses = gains"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim closePos As Long"
+  ts.WriteLine "    closePos = InStr(gainsStart, tl, ""closing account value"")"
+  ts.WriteLine "    If closePos = 0 Then closePos = gainsStart + SECTION_LOOKAHEAD"
+  ts.WriteLine "    Dim le As Long"
+  ts.WriteLine "    le = LineEnd(text, closePos)"
+  ts.WriteLine "    Dim section As String"
+  ts.WriteLine "    section = Mid$(text, gainsStart, le - gainsStart)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim m As Object"
+  ts.WriteLine ""
+  ts.WriteLine "    Set m = RegexMatch(section, ""Short term\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        gains.ShortTermRealizedMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "        gains.ShortTermRealizedYtd = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "        gains.ShortTermUnrealized = SafeFloat(m.SubMatches(2))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Set m = RegexMatch(section, ""Long term\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        gains.LongTermRealizedMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "        gains.LongTermRealizedYtd = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "        gains.LongTermUnrealized = SafeFloat(m.SubMatches(2))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Set m = RegexMatch(section, ""Total\s+(-?\$?[\d,]+\.\d{2})\s+(-?\$?[\d,]+\.\d{2})\s+(-?\$?[\d,]+\.\d{2})"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        gains.TotalRealizedMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "        gains.TotalRealizedYtd = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "        gains.TotalUnrealized = SafeFloat(m.SubMatches(2))"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        gains.TotalRealizedMonth = gains.ShortTermRealizedMonth + gains.LongTermRealizedMonth"
+  ts.WriteLine "        gains.TotalRealizedYtd = gains.ShortTermRealizedYtd + gains.LongTermRealizedYtd"
+  ts.WriteLine "        gains.TotalUnrealized = gains.ShortTermUnrealized + gains.LongTermUnrealized"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractGainsLosses = gains"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Reconciliation"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub RunReconciliation(ext As StatementExtraction)"
+  ts.WriteLine "    ' Check 1: reconciliation"
+  ts.WriteLine "    ' opening + cashActivity + market_change + accrued = closing"
+  ts.WriteLine "    Dim cashActivity As Double"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To ext.TransactionCount - 1"
+  ts.WriteLine "        Dim act As String"
+  ts.WriteLine "        act = ext.Transactions(i).Activity"
+  ts.WriteLine "        ' Skip investment activities"
+  ts.WriteLine "        If act = ""Sale"" Or act = ""Purchase"" Or act = ""Reinvestment"" Or act = ""Call Redemption"" Or act = ""Cash In Lieu"" Then"
+  ts.WriteLine "            ' Investment activity — skip"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            cashActivity = cashActivity + ext.Transactions(i).Amount"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim expectedClosing As Double"
+  ts.WriteLine "    expectedClosing = ext.Summary.OpeningValue + cashActivity + _"
+  ts.WriteLine "        ext.Summary.ChangeInMarketValue + ext.Summary.ChangeInAccruedInterest + _"
+  ts.WriteLine "        ext.Income.AccruedInterestReceived"
+  ts.WriteLine ""
+  ts.WriteLine "    AddCheck ext, ""reconciliation"", ext.Summary.ClosingValue, expectedClosing"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Check 2: holdings_sum"
+  ts.WriteLine "    Dim holdingsSum As Double"
+  ts.WriteLine "    For i = 0 To ext.HoldingCount - 1"
+  ts.WriteLine "        holdingsSum = holdingsSum + ext.Holdings(i).Value"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    AddCheck ext, ""holdings_sum"", ext.Summary.ClosingValue, holdingsSum"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Check 5: income_transactions"
+  ts.WriteLine "    Dim incomeTxSum As Double"
+  ts.WriteLine "    For i = 0 To ext.TransactionCount - 1"
+  ts.WriteLine "        act = ext.Transactions(i).Activity"
+  ts.WriteLine "        If (act = ""Dividend"" Or act = ""Interest"" Or act = ""Distribution"" Or act = ""St Cap Gain"" Or act = ""Lt Cap Gain"") Then"
+  ts.WriteLine "            If ext.Transactions(i).Amount > 0 Then"
+  ts.WriteLine "                incomeTxSum = incomeTxSum + ext.Transactions(i).Amount"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    AddCheck ext, ""income_transactions"", ext.Income.TotalMonth, incomeTxSum + ext.Income.AccruedInterestReceived"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub AddCheck(ext As StatementExtraction, checkName As String, expected As Double, actual As Double)"
+  ts.WriteLine "    If ext.CheckCount > UBound(ext.Checks) Then ReDim Preserve ext.Checks(0 To ext.CheckCount + 10)"
+  ts.WriteLine "    ext.Checks(ext.CheckCount).name = checkName"
+  ts.WriteLine "    ext.Checks(ext.CheckCount).Expected = expected"
+  ts.WriteLine "    ext.Checks(ext.CheckCount).Actual = actual"
+  ts.WriteLine "    ext.Checks(ext.CheckCount).Diff = Round(expected - actual, 2)"
+  ts.WriteLine "    ext.Checks(ext.CheckCount).Pass = (Abs(Round((expected - actual) * 100, 0)) = 0)"
+  ts.WriteLine "    ext.CheckCount = ext.CheckCount + 1"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Detailed Securities Extraction"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Module-level state for securities extraction ---"
+  ts.WriteLine "Private mSecEntries() As SecurityDetail"
+  ts.WriteLine "Private mSecCount As Long"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Lazy-init constants ---"
+  ts.WriteLine "Private mSecConstsInit As Boolean"
+  ts.WriteLine "Private mCatKeys() As String"
+  ts.WriteLine "Private mCatVals() As String"
+  ts.WriteLine "Private mCatCount As Long"
+  ts.WriteLine "Private mACKeys() As String"
+  ts.WriteLine "Private mACVals() As String"
+  ts.WriteLine "Private mACCount As Long"
+  ts.WriteLine "Private mNameReject() As String"
+  ts.WriteLine "Private mNameRejectCount As Long"
+  ts.WriteLine "Private mNormPatterns() As String"
+  ts.WriteLine "Private mNormPatCount As Long"
+  ts.WriteLine "Private mBoilerplatePat As String"
+  ts.WriteLine "Private mHFSkipPrefixes() As String"
+  ts.WriteLine "Private mHFSkipCount As Long"
+  ts.WriteLine "Private mPESkipPrefixes() As String"
+  ts.WriteLine "Private mPESkipCount As Long"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub InitSecurityConstants()"
+  ts.WriteLine "    If mSecConstsInit Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Category keywords"
+  ts.WriteLine "    mCatCount = 10"
+  ts.WriteLine "    ReDim mCatKeys(0 To mCatCount - 1)"
+  ts.WriteLine "    ReDim mCatVals(0 To mCatCount - 1)"
+  ts.WriteLine "    mCatKeys(0) = ""Cash and money balances"": mCatVals(0) = ""Cash and money balances"""
+  ts.WriteLine "    mCatKeys(1) = ""Money market funds"": mCatVals(1) = ""Money market funds"""
+  ts.WriteLine "    mCatKeys(2) = ""Common stock"": mCatVals(2) = ""Common stock"""
+  ts.WriteLine "    mCatKeys(3) = ""Municipal securities"": mCatVals(3) = ""Municipal securities"""
+  ts.WriteLine "    mCatKeys(4) = ""Private equity funds"": mCatVals(4) = ""Private equity funds"""
+  ts.WriteLine "    mCatKeys(5) = ""Hedge funds"": mCatVals(5) = ""Hedge funds"""
+  ts.WriteLine "    mCatKeys(6) = ""Other investments"": mCatVals(6) = ""Other investments"""
+  ts.WriteLine "    mCatKeys(7) = ""Other equity investments"": mCatVals(7) = ""Other equity investments"""
+  ts.WriteLine "    mCatKeys(8) = ""Mutual funds"": mCatVals(8) = ""Mutual funds"""
+  ts.WriteLine "    mCatKeys(9) = ""Closed end funds"": mCatVals(9) = ""Closed end funds & Exchange traded products"""
+  ts.WriteLine ""
+  ts.WriteLine "    ' Asset class keywords"
+  ts.WriteLine "    mACCount = 6"
+  ts.WriteLine "    ReDim mACKeys(0 To mACCount - 1)"
+  ts.WriteLine "    ReDim mACVals(0 To mACCount - 1)"
+  ts.WriteLine "    mACKeys(0) = ""Cash and money balances"": mACVals(0) = ""Cash and money balances"""
+  ts.WriteLine "    mACKeys(1) = ""Cash alternatives"": mACVals(1) = ""Cash alternatives"""
+  ts.WriteLine "    mACKeys(2) = ""Non-traditional"": mACVals(2) = ""Non-traditional"""
+  ts.WriteLine "    mACKeys(3) = ""Fixed income"": mACVals(3) = ""Fixed income"""
+  ts.WriteLine "    mACKeys(4) = ""Equities"": mACVals(4) = ""Equities"""
+  ts.WriteLine "    mACKeys(5) = ""Commodities"": mACVals(5) = ""Commodities"""
+  ts.WriteLine ""
+  ts.WriteLine "    ' Name reject keywords (must match TS _NAME_REJECT_KEYWORDS)"
+  ts.WriteLine "    mNameRejectCount = 18"
+  ts.WriteLine "    ReDim mNameReject(0 To mNameRejectCount - 1)"
+  ts.WriteLine "    mNameReject(0) = ""FDIC"": mNameReject(1) = ""CNQ7"": mNameReject(2) = ""NQ7"""
+  ts.WriteLine "    mNameReject(3) = ""ENQ7"": mNameReject(4) = ""SIPC"": mNameReject(5) = ""Your assets"""
+  ts.WriteLine "    mNameReject(6) = ""Your total assets"": mNameReject(7) = ""=== PAGE"""
+  ts.WriteLine "    mNameReject(8) = ""UMB BANK"": mNameReject(9) = ""UBS Bank"""
+  ts.WriteLine "    mNameReject(10) = ""Citibank"": mNameReject(11) = ""Wells Fargo"""
+  ts.WriteLine "    mNameReject(12) = ""HSBC Bank"": mNameReject(13) = ""Customers Bank"""
+  ts.WriteLine "    mNameReject(14) = ""East West"": mNameReject(15) = ""Tristate"""
+  ts.WriteLine "    mNameReject(16) = ""Centennial"": mNameReject(17) = ""State Street"""
+  ts.WriteLine ""
+  ts.WriteLine "    ' Boilerplate pattern"
+  ts.WriteLine "    mBoilerplatePat = ""(Trade date:|Total reinvested|EAI:|continued|Purchase price|Number of shares|"" & _"
+  ts.WriteLine "        ""Holding|Cost basis|Total reinvested is|reporting purposes|include cash dividends|"" & _"
+  ts.WriteLine "        ""reinvest dividends|need to be adjusted|Investment return|purposes\.|"" & _"
+  ts.WriteLine "        ""reflected on your|ab |ab$|Portfolio Management|Resource Management|"" & _"
+  ts.WriteLine "        ""Account name:|Friendly account|Account number:|Page \d|Member SIPC|"" & _"
+  ts.WriteLine "        ""Your assets|Money market funds are|Institutional prime|per share|"" & _"
+  ts.WriteLine "        ""=== PAGE|Some prices|more information|4 4)"""
+  ts.WriteLine ""
+  ts.WriteLine "    ' Norm fund patterns (regex strings)"
+  ts.WriteLine "    mNormPatCount = 10"
+  ts.WriteLine "    ReDim mNormPatterns(0 To mNormPatCount - 1)"
+  ts.WriteLine "    mNormPatterns(0) = ""\s+A/O\s+.*$"""
+  ts.WriteLine "    mNormPatterns(1) = ""\s+ADJ\s+.*$"""
+  ts.WriteLine "    mNormPatterns(2) = ""\s+CALL\s+S/DIST\s*$"""
+  ts.WriteLine "    mNormPatterns(3) = ""\s+ADJ\s+RECENT\s+CALLS/DISTS\s*$"""
+  ts.WriteLine "    mNormPatterns(4) = ""\s+INVESTED\s*$"""
+  ts.WriteLine "    mNormPatterns(5) = ""\s+FUNDS?\s+IN\s*$"""
+  ts.WriteLine "    mNormPatterns(6) = ""\s+ESCROW\s*$"""
+  ts.WriteLine "    mNormPatterns(7) = ""\s+FUNDS?\s*$"""
+  ts.WriteLine "    mNormPatterns(8) = ""\s+NAV\s*$"""
+  ts.WriteLine "    mNormPatterns(9) = ""\s*,?\s*(?:LP|L\.P\.)\s*$"""
+  ts.WriteLine ""
+  ts.WriteLine "    ' HF skip prefixes"
+  ts.WriteLine "    mHFSkipCount = 12"
+  ts.WriteLine "    ReDim mHFSkipPrefixes(0 To mHFSkipCount - 1)"
+  ts.WriteLine "    mHFSkipPrefixes(0) = ""Hedge funds"": mHFSkipPrefixes(1) = ""Est."""
+  ts.WriteLine "    mHFSkipPrefixes(2) = ""Holding"": mHFSkipPrefixes(3) = ""Estimates"""
+  ts.WriteLine "    mHFSkipPrefixes(4) = ""value updated"": mHFSkipPrefixes(5) = ""adjusted by"""
+  ts.WriteLine "    mHFSkipPrefixes(6) = ""Purchase price"": mHFSkipPrefixes(7) = ""Number"""
+  ts.WriteLine "    mHFSkipPrefixes(8) = ""Cost basis"": mHFSkipPrefixes(9) = ""reporting purposes"""
+  ts.WriteLine "    mHFSkipPrefixes(10) = ""Tax lot"": mHFSkipPrefixes(11) = ""tax lot"""
+  ts.WriteLine ""
+  ts.WriteLine "    ' PE skip prefixes"
+  ts.WriteLine "    mPESkipCount = 6"
+  ts.WriteLine "    ReDim mPESkipPrefixes(0 To mPESkipCount - 1)"
+  ts.WriteLine "    mPESkipPrefixes(0) = ""Est."": mPESkipPrefixes(1) = ""Holding"""
+  ts.WriteLine "    mPESkipPrefixes(2) = ""Private equity"": mPESkipPrefixes(3) = ""Estimates"""
+  ts.WriteLine "    mPESkipPrefixes(4) = ""value updated"": mPESkipPrefixes(5) = ""adjusted by"""
+  ts.WriteLine ""
+  ts.WriteLine "    mSecConstsInit = True"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Helper: add a security entry to module-level array ---"
+  ts.WriteLine "Private Sub AddSecEntry(sec As SecurityDetail)"
+  ts.WriteLine "    If mSecCount > UBound(mSecEntries) Then"
+  ts.WriteLine "        ReDim Preserve mSecEntries(0 To mSecCount + 49)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    mSecEntries(mSecCount) = sec"
+  ts.WriteLine "    mSecCount = mSecCount + 1"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Helper functions ---"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function IsSecBoilerplate(line As String) As Boolean"
+  ts.WriteLine "    IsSecBoilerplate = RegexTest(line, mBoilerplatePat)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function IsAllcapsName(line As String) As Boolean"
+  ts.WriteLine "    Dim alphaCount As Long"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 1 To Len(line)"
+  ts.WriteLine "        Dim c As Long"
+  ts.WriteLine "        c = Asc(Mid$(line, i, 1))"
+  ts.WriteLine "        If c >= 65 And c <= 90 Then"
+  ts.WriteLine "            alphaCount = alphaCount + 1"
+  ts.WriteLine "        ElseIf c >= 97 And c <= 122 Then"
+  ts.WriteLine "            IsAllcapsName = False"
+  ts.WriteLine "            Exit Function"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    If alphaCount < 2 Then"
+  ts.WriteLine "        IsAllcapsName = False"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If line = ""ACCESS"" Then"
+  ts.WriteLine "        IsAllcapsName = False"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    ' Check reject keywords"
+  ts.WriteLine "    Dim ki As Long"
+  ts.WriteLine "    For ki = 0 To mNameRejectCount - 1"
+  ts.WriteLine "        If InStr(1, line, mNameReject(ki)) > 0 Then"
+  ts.WriteLine "            IsAllcapsName = False"
+  ts.WriteLine "            Exit Function"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next ki"
+  ts.WriteLine "    ' Check percentage pattern"
+  ts.WriteLine "    If RegexTest(line, ""\d+\.\d+%"") Then"
+  ts.WriteLine "        IsAllcapsName = False"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    IsAllcapsName = True"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function StripAccessPrefix(Name As String) As String"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateRegex(""^(?:ACCESS\s+)+|^ACCESS$"")"
+  ts.WriteLine "    StripAccessPrefix = Trim$(re.Replace(Name, """"))"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function StripBondSuffix(Name As String) As String"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateRegex(""\s+(?:(?:SR\s+[A-Z]\s+)?RV\s+)?BE/R/\s*$"")"
+  ts.WriteLine "    StripBondSuffix = Trim$(re.Replace(Name, """"))"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function CleanSecurityName(Name As String) As String"
+  ts.WriteLine "    Dim s As String"
+  ts.WriteLine "    s = Name"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateRegex(""\s*continued next page\s*"", True)"
+  ts.WriteLine "    s = re.Replace(s, """")"
+  ts.WriteLine "    Set re = CreateRegex(""\s*\(continued\)\s*"", True)"
+  ts.WriteLine "    s = Trim$(re.Replace(s, "" ""))"
+  ts.WriteLine "    Set re = CreateRegex(""\s*UNSOLICITED\s*"", True)"
+  ts.WriteLine "    s = Trim$(re.Replace(s, """"))"
+  ts.WriteLine "    s = StripAccessPrefix(s)"
+  ts.WriteLine "    s = StripBondSuffix(s)"
+  ts.WriteLine "    CleanSecurityName = s"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function UpdateSecCategory(lines() As String, fromIdx As Long, toIdx As Long, cur As String) As String"
+  ts.WriteLine "    Dim j As Long"
+  ts.WriteLine "    UpdateSecCategory = cur"
+  ts.WriteLine "    For j = fromIdx To toIdx"
+  ts.WriteLine "        Dim ki As Long"
+  ts.WriteLine "        For ki = 0 To mCatCount - 1"
+  ts.WriteLine "            If InStr(1, lines(j), mCatKeys(ki)) > 0 Then"
+  ts.WriteLine "                UpdateSecCategory = mCatVals(ki)"
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next ki"
+  ts.WriteLine "    Next j"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function UpdateSecAssetClass(lines() As String, fromIdx As Long, toIdx As Long, cur As String) As String"
+  ts.WriteLine "    Dim j As Long"
+  ts.WriteLine "    UpdateSecAssetClass = cur"
+  ts.WriteLine "    For j = fromIdx To toIdx"
+  ts.WriteLine "        Dim trimmed As String"
+  ts.WriteLine "        trimmed = Trim$(lines(j))"
+  ts.WriteLine "        If trimmed = ""Other"" Then"
+  ts.WriteLine "            UpdateSecAssetClass = ""Other"""
+  ts.WriteLine "        Else"
+  ts.WriteLine "            Dim ki As Long"
+  ts.WriteLine "            For ki = 0 To mACCount - 1"
+  ts.WriteLine "                If InStr(1, trimmed, mACKeys(ki)) > 0 Then"
+  ts.WriteLine "                    UpdateSecAssetClass = mACVals(ki)"
+  ts.WriteLine "                    Exit For"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            Next ki"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next j"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function NormFundName(Name As String) As String"
+  ts.WriteLine "    Dim base As String"
+  ts.WriteLine "    base = Name"
+  ts.WriteLine "    Dim pass As Long"
+  ts.WriteLine "    For pass = 0 To 2"
+  ts.WriteLine "        Dim pi As Long"
+  ts.WriteLine "        For pi = 0 To mNormPatCount - 1"
+  ts.WriteLine "            Dim re As Object"
+  ts.WriteLine "            Set re = CreateRegex(mNormPatterns(pi))"
+  ts.WriteLine "            base = re.Replace(base, """")"
+  ts.WriteLine "        Next pi"
+  ts.WriteLine "    Next pass"
+  ts.WriteLine "    ' Also strip trailing comma"
+  ts.WriteLine "    Dim reComma As Object"
+  ts.WriteLine "    Set reComma = CreateRegex(""\s*,\s*$"")"
+  ts.WriteLine "    base = reComma.Replace(base, """")"
+  ts.WriteLine "    NormFundName = Trim$(base)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function IsSecTradeLine(line As String) As Boolean"
+  ts.WriteLine "    ' Check for LT/ST marker"
+  ts.WriteLine "    If RegexTest(line, ""\d\s+[LS]T(?:\s|$)"") Then"
+  ts.WriteLine "        IsSecTradeLine = True"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    ' Fallback: Trade date: with 6+ numbers"
+  ts.WriteLine "    If Not RegexTest(line, ""Trade date:\s*"" & MONTH_ALT & ""\s"") Then"
+  ts.WriteLine "        IsSecTradeLine = False"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    Dim matches As Object"
+  ts.WriteLine "    Set matches = RegexMatchAll(line, ""-?[\d,]+\.\d{2,3}"")"
+  ts.WriteLine "    IsSecTradeLine = (matches.Count >= 6)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function CleanTradeLine(line As String) As String"
+  ts.WriteLine "    Dim m As Object"
+  ts.WriteLine "    Set m = RegexMatch(line, ""(\d\s+[LS]T)(?:\s|$)"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        CleanTradeLine = Left$(line, m.FirstIndex + Len(m.SubMatches(0)))"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        CleanTradeLine = line"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ExtractAllcapsPrefix(line As String) As String"
+  ts.WriteLine "    Dim pat As String"
+  ts.WriteLine "    pat = ""^([A-Z0-9\s/,.()&-]+?)\s+(?:EAI:|Moody:|S&P:|Original cost|Current yield|ACCRUED|Trade date:|"" & MONTH_ALT & ""\s)"""
+  ts.WriteLine "    Dim m As Object"
+  ts.WriteLine "    Set m = RegexMatch(line, pat)"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        Dim prefix As String"
+  ts.WriteLine "        prefix = Trim$(m.SubMatches(0))"
+  ts.WriteLine "        If Len(prefix) >= 3 Then"
+  ts.WriteLine "            If IsAllcapsName(prefix) Then"
+  ts.WriteLine "                ExtractAllcapsPrefix = prefix"
+  ts.WriteLine "                Exit Function"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    ExtractAllcapsPrefix = """""
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function FindSecSectionEnd(text As String, skipLen As Long, keywords() As String) As Long"
+  ts.WriteLine "    FindSecSectionEnd = Len(text) + 1  ' +1 so Left$(text, result-1) includes entire string"
+  ts.WriteLine "    Dim ki As Long"
+  ts.WriteLine "    For ki = LBound(keywords) To UBound(keywords)"
+  ts.WriteLine "        Dim pos As Long"
+  ts.WriteLine "        pos = InStr(skipLen + 2, text, keywords(ki))"
+  ts.WriteLine "        If pos > 0 And pos < FindSecSectionEnd Then"
+  ts.WriteLine "            FindSecSectionEnd = pos"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next ki"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function IsCategoryBoundary(line As String) As Boolean"
+  ts.WriteLine "    Dim ki As Long"
+  ts.WriteLine "    For ki = 0 To mCatCount - 1"
+  ts.WriteLine "        If InStr(1, line, mCatKeys(ki)) > 0 Then"
+  ts.WriteLine "            IsCategoryBoundary = True"
+  ts.WriteLine "            Exit Function"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next ki"
+  ts.WriteLine "    For ki = 0 To mACCount - 1"
+  ts.WriteLine "        If InStr(1, line, mACKeys(ki)) > 0 Then"
+  ts.WriteLine "            IsCategoryBoundary = True"
+  ts.WriteLine "            Exit Function"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next ki"
+  ts.WriteLine "    IsCategoryBoundary = False"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Trade Group types and scanning ---"
+  ts.WriteLine ""
+  ts.WriteLine "Private Type TradeGroup"
+  ts.WriteLine "    NameParts() As String"
+  ts.WriteLine "    NameCount As Long"
+  ts.WriteLine "    TradeIndices() As Long"
+  ts.WriteLine "    TradeCount As Long"
+  ts.WriteLine "    Symbol As String"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub InitTradeGroup(grp As TradeGroup)"
+  ts.WriteLine "    ReDim grp.NameParts(0 To 9)"
+  ts.WriteLine "    grp.NameCount = 0"
+  ts.WriteLine "    ReDim grp.TradeIndices(0 To 9)"
+  ts.WriteLine "    grp.TradeCount = 0"
+  ts.WriteLine "    grp.Symbol = """""
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub TGAddName(grp As TradeGroup, n As String)"
+  ts.WriteLine "    If grp.NameCount > UBound(grp.NameParts) Then"
+  ts.WriteLine "        ReDim Preserve grp.NameParts(0 To grp.NameCount + 9)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    grp.NameParts(grp.NameCount) = n"
+  ts.WriteLine "    grp.NameCount = grp.NameCount + 1"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub TGAddTrade(grp As TradeGroup, idx As Long)"
+  ts.WriteLine "    If grp.TradeCount > UBound(grp.TradeIndices) Then"
+  ts.WriteLine "        ReDim Preserve grp.TradeIndices(0 To grp.TradeCount + 9)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    grp.TradeIndices(grp.TradeCount) = idx"
+  ts.WriteLine "    grp.TradeCount = grp.TradeCount + 1"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function TGJoinNames(grp As TradeGroup) As String"
+  ts.WriteLine "    If grp.NameCount = 0 Then"
+  ts.WriteLine "        TGJoinNames = """""
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    Dim s As String"
+  ts.WriteLine "    s = grp.NameParts(0)"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 1 To grp.NameCount - 1"
+  ts.WriteLine "        s = s & "" "" & grp.NameParts(i)"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    TGJoinNames = s"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub ScanTradeGroups(lines() As String, startIdx As Long, endIdx As Long, _"
+  ts.WriteLine "    ByRef groups() As TradeGroup, ByRef groupCount As Long)"
+  ts.WriteLine ""
+  ts.WriteLine "    ReDim groups(0 To 19)"
+  ts.WriteLine "    groupCount = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim curNames() As String"
+  ts.WriteLine "    ReDim curNames(0 To 9)"
+  ts.WriteLine "    Dim curNameCount As Long: curNameCount = 0"
+  ts.WriteLine "    Dim curTrades() As Long"
+  ts.WriteLine "    ReDim curTrades(0 To 9)"
+  ts.WriteLine "    Dim curTradeCount As Long: curTradeCount = 0"
+  ts.WriteLine "    Dim curSymbol As String: curSymbol = """""
+  ts.WriteLine "    Dim sawTrade As Boolean: sawTrade = False"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim j As Long"
+  ts.WriteLine "    For j = startIdx To endIdx - 1"
+  ts.WriteLine "        Dim prev As String"
+  ts.WriteLine "        prev = Trim$(lines(j))"
+  ts.WriteLine "        If prev = """" Then GoTo NextScanLine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Category boundary → discard orphan names"
+  ts.WriteLine "        If curNameCount > 0 And Not sawTrade And curTradeCount = 0 Then"
+  ts.WriteLine "            If InStr(1, prev, ""(continued)"") = 0 Then"
+  ts.WriteLine "                If IsCategoryBoundary(prev) Then"
+  ts.WriteLine "                    curNameCount = 0"
+  ts.WriteLine "                    curSymbol = """""
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Check Symbol:"
+  ts.WriteLine "        Dim symM As Object"
+  ts.WriteLine "        Set symM = RegexMatch(prev, ""^Symbol:\s*(\S+)"")"
+  ts.WriteLine "        If Not symM Is Nothing Then curSymbol = symM.SubMatches(0)"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Trade line detection"
+  ts.WriteLine "        If IsSecTradeLine(prev) Then"
+  ts.WriteLine "            If curTradeCount > UBound(curTrades) Then ReDim Preserve curTrades(0 To curTradeCount + 9)"
+  ts.WriteLine "            curTrades(curTradeCount) = j"
+  ts.WriteLine "            curTradeCount = curTradeCount + 1"
+  ts.WriteLine "            If InStr(1, prev, ""INVESTED"") > 0 And InStr(1, prev, ""REINVESTED"") = 0 Then"
+  ts.WriteLine "                curNameCount = 0"
+  ts.WriteLine "                curSymbol = """""
+  ts.WriteLine "            Else"
+  ts.WriteLine "                sawTrade = True"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            GoTo NextScanLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' ""information was unavailable"""
+  ts.WriteLine "        If RegexTest(prev, ""information was unavailable"", True) Then"
+  ts.WriteLine "            If curTradeCount > UBound(curTrades) Then ReDim Preserve curTrades(0 To curTradeCount + 9)"
+  ts.WriteLine "            curTrades(curTradeCount) = j"
+  ts.WriteLine "            curTradeCount = curTradeCount + 1"
+  ts.WriteLine "            sawTrade = True"
+  ts.WriteLine "            GoTo NextScanLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        If IsSecBoilerplate(prev) Then GoTo NextScanLine"
+  ts.WriteLine "        If Not symM Is Nothing Then GoTo NextScanLine  ' standalone Symbol: line"
+  ts.WriteLine "        If RegexTest(prev, ""^(Trade date:|EAI:)"") Then GoTo NextScanLine"
+  ts.WriteLine "        If RegexTest(prev, ""^(?:BE/|R/|RV\s|SR\s|RATE\s|ACCRUED INTEREST|CUSIP\s|DATED DATE|Moody:|S&P:|Original cost)"") Then GoTo NextScanLine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Name detection"
+  ts.WriteLine "        Dim nameText As String"
+  ts.WriteLine "        nameText = """""
+  ts.WriteLine "        If IsAllcapsName(prev) Then"
+  ts.WriteLine "            nameText = prev"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            nameText = ExtractAllcapsPrefix(prev)"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        If nameText <> """" Then"
+  ts.WriteLine "            ' Name after trade → flush previous group"
+  ts.WriteLine "            If sawTrade And curNameCount > 0 Then"
+  ts.WriteLine "                If groupCount > UBound(groups) Then ReDim Preserve groups(0 To groupCount + 9)"
+  ts.WriteLine "                InitTradeGroup groups(groupCount)"
+  ts.WriteLine "                Dim ni As Long"
+  ts.WriteLine "                For ni = 0 To curNameCount - 1"
+  ts.WriteLine "                    TGAddName groups(groupCount), curNames(ni)"
+  ts.WriteLine "                Next ni"
+  ts.WriteLine "                Dim ti As Long"
+  ts.WriteLine "                For ti = 0 To curTradeCount - 1"
+  ts.WriteLine "                    TGAddTrade groups(groupCount), curTrades(ti)"
+  ts.WriteLine "                Next ti"
+  ts.WriteLine "                groups(groupCount).Symbol = curSymbol"
+  ts.WriteLine "                groupCount = groupCount + 1"
+  ts.WriteLine "                curNameCount = 0"
+  ts.WriteLine "                ReDim curTrades(0 To 9)"
+  ts.WriteLine "                curTradeCount = 0"
+  ts.WriteLine "                curSymbol = """""
+  ts.WriteLine "                sawTrade = False"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            If curNameCount > UBound(curNames) Then ReDim Preserve curNames(0 To curNameCount + 9)"
+  ts.WriteLine "            curNames(curNameCount) = nameText"
+  ts.WriteLine "            curNameCount = curNameCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextScanLine:"
+  ts.WriteLine "    Next j"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Push final group"
+  ts.WriteLine "    If curNameCount > 0 Or curTradeCount > 0 Then"
+  ts.WriteLine "        If groupCount > UBound(groups) Then ReDim Preserve groups(0 To groupCount + 9)"
+  ts.WriteLine "        InitTradeGroup groups(groupCount)"
+  ts.WriteLine "        For ni = 0 To curNameCount - 1"
+  ts.WriteLine "            TGAddName groups(groupCount), curNames(ni)"
+  ts.WriteLine "        Next ni"
+  ts.WriteLine "        For ti = 0 To curTradeCount - 1"
+  ts.WriteLine "            TGAddTrade groups(groupCount), curTrades(ti)"
+  ts.WriteLine "        Next ti"
+  ts.WriteLine "        groups(groupCount).Symbol = curSymbol"
+  ts.WriteLine "        groupCount = groupCount + 1"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function GroupHasCusipOrSymbol(grp As TradeGroup, lines() As String, rangeStart As Long) As Boolean"
+  ts.WriteLine "    If grp.TradeCount = 0 Then"
+  ts.WriteLine "        GroupHasCusipOrSymbol = False"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    Dim tradeStart As Long"
+  ts.WriteLine "    tradeStart = grp.TradeIndices(0)"
+  ts.WriteLine "    Dim firstTrade As String"
+  ts.WriteLine "    firstTrade = Trim$(lines(tradeStart))"
+  ts.WriteLine "    If RegexTest(firstTrade, ""^CUSIP\s+\S+"") Or RegexTest(firstTrade, ""^Symbol:\s*\S+"") Then"
+  ts.WriteLine "        GroupHasCusipOrSymbol = True"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    Dim j As Long"
+  ts.WriteLine "    Dim lb As Long"
+  ts.WriteLine "    lb = rangeStart"
+  ts.WriteLine "    If tradeStart - 15 > lb Then lb = tradeStart - 15"
+  ts.WriteLine "    For j = tradeStart - 1 To lb Step -1"
+  ts.WriteLine "        Dim trimmed As String"
+  ts.WriteLine "        trimmed = Trim$(lines(j))"
+  ts.WriteLine "        If RegexTest(trimmed, ""^CUSIP\s+\S+"") Or RegexTest(trimmed, ""^Symbol:\s*\S+"") Then"
+  ts.WriteLine "            GroupHasCusipOrSymbol = True"
+  ts.WriteLine "            Exit Function"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next j"
+  ts.WriteLine "    GroupHasCusipOrSymbol = False"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function GroupKey(grp As TradeGroup, lines() As String, rangeStart As Long, _"
+  ts.WriteLine "    fallbackCat As String, fallbackAC As String) As String"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim groupLine As Long"
+  ts.WriteLine "    If grp.TradeCount > 0 Then"
+  ts.WriteLine "        groupLine = grp.TradeIndices(0)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        groupLine = -1"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If groupLine < 0 Then"
+  ts.WriteLine "        If fallbackAC <> """" Then"
+  ts.WriteLine "            GroupKey = fallbackAC & ""::"" & fallbackCat"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            GroupKey = fallbackCat"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    Dim ac As String"
+  ts.WriteLine "    ac = UpdateSecAssetClass(lines, rangeStart, groupLine, fallbackAC)"
+  ts.WriteLine "    Dim cat As String"
+  ts.WriteLine "    cat = UpdateSecCategory(lines, rangeStart, groupLine, fallbackCat)"
+  ts.WriteLine "    If ac <> """" Then"
+  ts.WriteLine "        GroupKey = ac & ""::"" & cat"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        GroupKey = cat"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub EmitSingleLotSecurity(grp As TradeGroup, lines() As String, catKey As String)"
+  ts.WriteLine "    If grp.NameCount = 0 Or grp.TradeCount = 0 Then Exit Sub"
+  ts.WriteLine "    Dim secName As String"
+  ts.WriteLine "    secName = CleanSecurityName(TGJoinNames(grp))"
+  ts.WriteLine "    If secName = """" Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim tUnits As Double, tCost As Double, tValue As Double, tUnrealized As Double"
+  ts.WriteLine "    Dim infoUnavailable As Boolean"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim ti As Long"
+  ts.WriteLine "    For ti = 0 To grp.TradeCount - 1"
+  ts.WriteLine "        Dim tIdx As Long"
+  ts.WriteLine "        tIdx = grp.TradeIndices(ti)"
+  ts.WriteLine "        Dim tline As String"
+  ts.WriteLine "        tline = CleanTradeLine(Trim$(lines(tIdx)))"
+  ts.WriteLine ""
+  ts.WriteLine "        ' ""information was unavailable"""
+  ts.WriteLine "        If RegexTest(tline, ""information was unavailable"", True) Then"
+  ts.WriteLine "            infoUnavailable = True"
+  ts.WriteLine "            Dim splitIdx As Long"
+  ts.WriteLine "            splitIdx = 0"
+  ts.WriteLine "            Dim re As Object"
+  ts.WriteLine "            Set re = CreateRegex(""---.*unavailable.*---"", False, False, True)"
+  ts.WriteLine "            Dim sMatches As Object"
+  ts.WriteLine "            Set sMatches = re.Execute(tline)"
+  ts.WriteLine "            If sMatches.Count = 0 Then GoTo NextEmitTrade"
+  ts.WriteLine "            splitIdx = sMatches(0).FirstIndex + 1"
+  ts.WriteLine "            Dim beforeText As String"
+  ts.WriteLine "            beforeText = Left$(tline, splitIdx - 1)"
+  ts.WriteLine "            Dim dashEnd As Long"
+  ts.WriteLine "            dashEnd = InStr(splitIdx + 3, tline, ""---"")"
+  ts.WriteLine "            Dim afterText As String"
+  ts.WriteLine "            If dashEnd > 0 Then afterText = Mid$(tline, dashEnd + 3) Else afterText = """""
+  ts.WriteLine ""
+  ts.WriteLine "            Dim beforeNums As Object"
+  ts.WriteLine "            Set beforeNums = RegexMatchAll(beforeText, ""-?[\d,]+\.\d{3}"")"
+  ts.WriteLine "            Dim afterNums As Object"
+  ts.WriteLine "            Set afterNums = RegexMatchAll(afterText, ""-?[\d,]+\.\d{2,3}"")"
+  ts.WriteLine "            If beforeNums.Count >= 1 Then tUnits = tUnits + SafeFloat(beforeNums(beforeNums.Count - 1).Value)"
+  ts.WriteLine "            If afterNums.Count >= 2 Then"
+  ts.WriteLine "                tValue = tValue + SafeFloat(afterNums(1).Value)"
+  ts.WriteLine "            ElseIf afterNums.Count >= 1 Then"
+  ts.WriteLine "                tValue = tValue + SafeFloat(afterNums(0).Value)"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            GoTo NextEmitTrade"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim tnums As Object"
+  ts.WriteLine "        Set tnums = RegexMatchAll(tline, ""-?[\d,]+\.\d{2,3}"")"
+  ts.WriteLine ""
+  ts.WriteLine "        If InStr(1, tline, ""INVESTED"") > 0 And InStr(1, tline, ""REINVESTED"") = 0 Then"
+  ts.WriteLine "            ' INVESTED placeholder: add cost and value, skip units"
+  ts.WriteLine "            If tnums.Count >= 5 Then"
+  ts.WriteLine "                tCost = tCost + SafeFloat(tnums(2).Value)"
+  ts.WriteLine "                tValue = tValue + SafeFloat(tnums(4).Value)"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        ElseIf tnums.Count >= 6 Then"
+  ts.WriteLine "            Dim nLen As Long"
+  ts.WriteLine "            nLen = tnums.Count"
+  ts.WriteLine "            tUnits = tUnits + SafeFloat(tnums(nLen - 6).Value)"
+  ts.WriteLine "            tCost = tCost + SafeFloat(tnums(nLen - 4).Value)"
+  ts.WriteLine "            tValue = tValue + SafeFloat(tnums(nLen - 2).Value)"
+  ts.WriteLine "            tUnrealized = tUnrealized + SafeFloat(tnums(nLen - 1).Value)"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextEmitTrade:"
+  ts.WriteLine "    Next ti"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim sec As SecurityDetail"
+  ts.WriteLine "    sec.Name = secName"
+  ts.WriteLine "    sec.Symbol = grp.Symbol"
+  ts.WriteLine "    sec.Units = tUnits"
+  ts.WriteLine "    sec.Value = tValue"
+  ts.WriteLine "    If infoUnavailable Then"
+  ts.WriteLine "        sec.CostBasis = Null"
+  ts.WriteLine "        sec.UnrealizedGL = Null"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        sec.CostBasis = tCost"
+  ts.WriteLine "        sec.UnrealizedGL = tUnrealized"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    sec.IsEscrow = False"
+  ts.WriteLine "    sec.CategoryKey = catKey"
+  ts.WriteLine "    AddSecEntry sec"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Pass 1: Collect Security total line indices ---"
+  ts.WriteLine "Private Sub CollectSecTotalIndices(lines() As String, ByRef indices() As Long, ByRef idxCount As Long)"
+  ts.WriteLine "    ReDim indices(0 To 49)"
+  ts.WriteLine "    idxCount = 0"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = LBound(lines) To UBound(lines)"
+  ts.WriteLine "        If RegexTest(lines(i), ""^\s*Security [Tt]otal\s"") Then"
+  ts.WriteLine "            If idxCount > UBound(indices) Then ReDim Preserve indices(0 To idxCount + 49)"
+  ts.WriteLine "            indices(idxCount) = i"
+  ts.WriteLine "            idxCount = idxCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Pass 2: Extract securities from Security total lines ---"
+  ts.WriteLine "Private Sub ExtractFromSecTotals(lines() As String, indices() As Long, idxCount As Long, _"
+  ts.WriteLine "    ByRef curCat As String, ByRef curAC As String, ByRef catScanned As Long)"
+  ts.WriteLine ""
+  ts.WriteLine "    curCat = """""
+  ts.WriteLine "    curAC = """""
+  ts.WriteLine "    catScanned = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim idx As Long"
+  ts.WriteLine "    For idx = 0 To idxCount - 1"
+  ts.WriteLine "        Dim stLineIdx As Long"
+  ts.WriteLine "        stLineIdx = indices(idx)"
+  ts.WriteLine "        Dim stripped As String"
+  ts.WriteLine "        stripped = Trim$(lines(stLineIdx))"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim preScanAC As String: preScanAC = curAC"
+  ts.WriteLine "        Dim preScanCat As String: preScanCat = curCat"
+  ts.WriteLine "        Dim preScanFrom As Long: preScanFrom = catScanned"
+  ts.WriteLine ""
+  ts.WriteLine "        curAC = UpdateSecAssetClass(lines, catScanned, stLineIdx, curAC)"
+  ts.WriteLine "        curCat = UpdateSecCategory(lines, catScanned, stLineIdx, curCat)"
+  ts.WriteLine "        catScanned = stLineIdx + 1"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Parse numbers from Security total line"
+  ts.WriteLine "        Dim numbers As Object"
+  ts.WriteLine "        Set numbers = RegexMatchAll(stripped, ""-?[\d,]+\.\d{2,3}"")"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim units As Variant: units = Null"
+  ts.WriteLine "        Dim secValue As Double: secValue = 0"
+  ts.WriteLine "        Dim costBasis As Variant: costBasis = Null"
+  ts.WriteLine "        Dim unrealizedGl As Variant: unrealizedGl = Null"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Check for price/info unavailable"
+  ts.WriteLine "        Dim prevEnd As Long"
+  ts.WriteLine "        If idx > 0 Then prevEnd = indices(idx - 1) + 1 Else prevEnd = 0"
+  ts.WriteLine "        Dim priceUnavailable As Boolean: priceUnavailable = False"
+  ts.WriteLine "        Dim infoUnavailable As Boolean: infoUnavailable = False"
+  ts.WriteLine "        Dim j As Long"
+  ts.WriteLine "        For j = prevEnd To stLineIdx - 1"
+  ts.WriteLine "            If InStr(1, lines(j), ""Price was unavailable"") > 0 Then priceUnavailable = True"
+  ts.WriteLine "            If RegexTest(lines(j), ""information was unavailable"", True) Then infoUnavailable = True"
+  ts.WriteLine "            If priceUnavailable Or infoUnavailable Then Exit For"
+  ts.WriteLine "        Next j"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim nc As Long"
+  ts.WriteLine "        nc = numbers.Count"
+  ts.WriteLine "        If nc >= 7 Then"
+  ts.WriteLine "            units = ParseNum(numbers(0).Value)"
+  ts.WriteLine "            costBasis = ParseNum(numbers(3).Value)"
+  ts.WriteLine "            secValue = SafeFloat(numbers(4).Value)"
+  ts.WriteLine "            unrealizedGl = ParseNum(numbers(5).Value)"
+  ts.WriteLine "        ElseIf nc = 6 And priceUnavailable Then"
+  ts.WriteLine "            units = ParseNum(numbers(0).Value)"
+  ts.WriteLine "            costBasis = ParseNum(numbers(3).Value)"
+  ts.WriteLine "            secValue = 0"
+  ts.WriteLine "            unrealizedGl = ParseNum(numbers(4).Value)"
+  ts.WriteLine "        ElseIf nc >= 5 Then"
+  ts.WriteLine "            units = ParseNum(numbers(0).Value)"
+  ts.WriteLine "            costBasis = ParseNum(numbers(2).Value)"
+  ts.WriteLine "            secValue = SafeFloat(numbers(3).Value)"
+  ts.WriteLine "            unrealizedGl = ParseNum(numbers(4).Value)"
+  ts.WriteLine "        ElseIf nc >= 4 Then"
+  ts.WriteLine "            units = ParseNum(numbers(0).Value)"
+  ts.WriteLine "            costBasis = ParseNum(numbers(1).Value)"
+  ts.WriteLine "            secValue = SafeFloat(numbers(2).Value)"
+  ts.WriteLine "            unrealizedGl = ParseNum(numbers(3).Value)"
+  ts.WriteLine "        ElseIf infoUnavailable And nc >= 2 Then"
+  ts.WriteLine "            If nc >= 3 Then units = ParseNum(numbers(0).Value) Else units = Null"
+  ts.WriteLine "            secValue = SafeFloat(numbers(nc - 1).Value)"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Find name/symbol via trade group scanning"
+  ts.WriteLine "        Dim scanStart As Long"
+  ts.WriteLine "        If idx > 0 Then"
+  ts.WriteLine "            scanStart = indices(idx - 1) + 1"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            scanStart = 0"
+  ts.WriteLine "            For j = stLineIdx - 1 To 0 Step -1"
+  ts.WriteLine "                If InStr(1, lines(j), ""(continued)"") > 0 Then GoTo NextScanBack"
+  ts.WriteLine "                Dim ki As Long"
+  ts.WriteLine "                For ki = 0 To mCatCount - 1"
+  ts.WriteLine "                    If InStr(1, lines(j), mCatKeys(ki)) > 0 Then"
+  ts.WriteLine "                        scanStart = j"
+  ts.WriteLine "                        GoTo DoneScanBack"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                Next ki"
+  ts.WriteLine "NextScanBack:"
+  ts.WriteLine "            Next j"
+  ts.WriteLine "DoneScanBack:"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim groups() As TradeGroup"
+  ts.WriteLine "        Dim groupCount As Long"
+  ts.WriteLine "        ScanTradeGroups lines, scanStart, stLineIdx, groups, groupCount"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim key As String"
+  ts.WriteLine "        If curAC <> """" Then key = curAC & ""::"" & curCat Else key = curCat"
+  ts.WriteLine ""
+  ts.WriteLine "        ' All groups except last → emit as single-lot"
+  ts.WriteLine "        Dim g As Long"
+  ts.WriteLine "        For g = 0 To groupCount - 2"
+  ts.WriteLine "            If Not GroupHasCusipOrSymbol(groups(g), lines, scanStart) Then"
+  ts.WriteLine "                Dim gKey As String"
+  ts.WriteLine "                gKey = GroupKey(groups(g), lines, preScanFrom, preScanCat, preScanAC)"
+  ts.WriteLine "                EmitSingleLotSecurity groups(g), lines, gKey"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next g"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Last group → names for Security Total"
+  ts.WriteLine "        Dim nameParts() As String"
+  ts.WriteLine "        ReDim nameParts(0 To 9)"
+  ts.WriteLine "        Dim namePartCount As Long: namePartCount = 0"
+  ts.WriteLine "        Dim symbol As String: symbol = """""
+  ts.WriteLine ""
+  ts.WriteLine "        If groupCount > 0 Then"
+  ts.WriteLine "            Dim lastGrp As TradeGroup"
+  ts.WriteLine "            lastGrp = groups(groupCount - 1)"
+  ts.WriteLine "            Dim ni As Long"
+  ts.WriteLine "            For ni = 0 To lastGrp.NameCount - 1"
+  ts.WriteLine "                If namePartCount > UBound(nameParts) Then ReDim Preserve nameParts(0 To namePartCount + 9)"
+  ts.WriteLine "                nameParts(namePartCount) = lastGrp.NameParts(ni)"
+  ts.WriteLine "                namePartCount = namePartCount + 1"
+  ts.WriteLine "            Next ni"
+  ts.WriteLine "            symbol = lastGrp.Symbol"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim secName As String"
+  ts.WriteLine "        If namePartCount > 0 Then"
+  ts.WriteLine "            secName = nameParts(0)"
+  ts.WriteLine "            Dim pi As Long"
+  ts.WriteLine "            For pi = 1 To namePartCount - 1"
+  ts.WriteLine "                secName = secName & "" "" & nameParts(pi)"
+  ts.WriteLine "            Next pi"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            secName = """""
+  ts.WriteLine "        End If"
+  ts.WriteLine "        secName = CleanSecurityName(Trim$(secName))"
+  ts.WriteLine ""
+  ts.WriteLine "        If secName <> """" Or symbol <> """" Then"
+  ts.WriteLine "            Dim sec As SecurityDetail"
+  ts.WriteLine "            sec.Name = secName"
+  ts.WriteLine "            sec.Symbol = symbol"
+  ts.WriteLine "            sec.Units = units"
+  ts.WriteLine "            sec.Value = secValue"
+  ts.WriteLine "            sec.CostBasis = costBasis"
+  ts.WriteLine "            sec.UnrealizedGL = unrealizedGl"
+  ts.WriteLine "            sec.IsEscrow = priceUnavailable"
+  ts.WriteLine "            sec.CategoryKey = key"
+  ts.WriteLine "            AddSecEntry sec"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next idx"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Post-sweep: trade groups after last Security Total"
+  ts.WriteLine "    Dim postStart As Long"
+  ts.WriteLine "    If idxCount > 0 Then postStart = indices(idxCount - 1) + 1 Else postStart = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim hasPostTrades As Boolean: hasPostTrades = False"
+  ts.WriteLine "    For j = postStart To UBound(lines)"
+  ts.WriteLine "        If IsSecTradeLine(Trim$(lines(j))) Then hasPostTrades = True: Exit For"
+  ts.WriteLine "    Next j"
+  ts.WriteLine ""
+  ts.WriteLine "    If hasPostTrades Then"
+  ts.WriteLine "        Dim postPreAC As String: postPreAC = curAC"
+  ts.WriteLine "        Dim postPreCat As String: postPreCat = curCat"
+  ts.WriteLine "        Dim postPreFrom As Long: postPreFrom = catScanned"
+  ts.WriteLine "        curAC = UpdateSecAssetClass(lines, catScanned, UBound(lines), curAC)"
+  ts.WriteLine "        curCat = UpdateSecCategory(lines, catScanned, UBound(lines), curCat)"
+  ts.WriteLine "        catScanned = UBound(lines) + 1"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim postGroups() As TradeGroup"
+  ts.WriteLine "        Dim postGroupCount As Long"
+  ts.WriteLine "        ScanTradeGroups lines, postStart, UBound(lines) + 1, postGroups, postGroupCount"
+  ts.WriteLine "        For g = 0 To postGroupCount - 1"
+  ts.WriteLine "            If Not GroupHasCusipOrSymbol(postGroups(g), lines, postStart) Then"
+  ts.WriteLine "                gKey = GroupKey(postGroups(g), lines, postPreFrom, postPreCat, postPreAC)"
+  ts.WriteLine "                EmitSingleLotSecurity postGroups(g), lines, gKey"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next g"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Pass 2b: Single-lot securities (bonds without Security total) ---"
+  ts.WriteLine "Private Sub ExtractSingleLotSecs(lines() As String, indices() As Long, idxCount As Long)"
+  ts.WriteLine "    ' Build a set of Security total line indices for quick lookup"
+  ts.WriteLine "    Dim secTotalSet() As Boolean"
+  ts.WriteLine "    ReDim secTotalSet(LBound(lines) To UBound(lines))"
+  ts.WriteLine "    Dim si As Long"
+  ts.WriteLine "    For si = 0 To idxCount - 1"
+  ts.WriteLine "        secTotalSet(indices(si)) = True"
+  ts.WriteLine "    Next si"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim curCat As String: curCat = """""
+  ts.WriteLine "    Dim curAC As String: curAC = """""
+  ts.WriteLine "    Dim catScanned As Long: catScanned = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find all Symbol:/Exchange:/CUSIP markers"
+  ts.WriteLine "    Dim markerLines() As Long"
+  ts.WriteLine "    Dim markerSymbols() As String"
+  ts.WriteLine "    Dim markerCusips() As String"
+  ts.WriteLine "    Dim markerCount As Long: markerCount = 0"
+  ts.WriteLine "    ReDim markerLines(0 To 49)"
+  ts.WriteLine "    ReDim markerSymbols(0 To 49)"
+  ts.WriteLine "    ReDim markerCusips(0 To 49)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = LBound(lines) To UBound(lines)"
+  ts.WriteLine "        Dim trimmed As String"
+  ts.WriteLine "        trimmed = Trim$(lines(i))"
+  ts.WriteLine "        Dim m As Object"
+  ts.WriteLine "        Set m = RegexMatch(trimmed, ""^Symbol:\s*(\S+)"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            If markerCount > UBound(markerLines) Then"
+  ts.WriteLine "                ReDim Preserve markerLines(0 To markerCount + 49)"
+  ts.WriteLine "                ReDim Preserve markerSymbols(0 To markerCount + 49)"
+  ts.WriteLine "                ReDim Preserve markerCusips(0 To markerCount + 49)"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            markerLines(markerCount) = i"
+  ts.WriteLine "            markerSymbols(markerCount) = m.SubMatches(0)"
+  ts.WriteLine "            markerCusips(markerCount) = """""
+  ts.WriteLine "            markerCount = markerCount + 1"
+  ts.WriteLine "        ElseIf RegexTest(trimmed, ""^Exchange:\s"") Then"
+  ts.WriteLine "            If markerCount > UBound(markerLines) Then"
+  ts.WriteLine "                ReDim Preserve markerLines(0 To markerCount + 49)"
+  ts.WriteLine "                ReDim Preserve markerSymbols(0 To markerCount + 49)"
+  ts.WriteLine "                ReDim Preserve markerCusips(0 To markerCount + 49)"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            markerLines(markerCount) = i"
+  ts.WriteLine "            markerSymbols(markerCount) = """""
+  ts.WriteLine "            markerCusips(markerCount) = """""
+  ts.WriteLine "            markerCount = markerCount + 1"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            Set m = RegexMatch(trimmed, ""^CUSIP\s+(\S+)"")"
+  ts.WriteLine "            If Not m Is Nothing Then"
+  ts.WriteLine "                If markerCount > UBound(markerLines) Then"
+  ts.WriteLine "                    ReDim Preserve markerLines(0 To markerCount + 49)"
+  ts.WriteLine "                    ReDim Preserve markerSymbols(0 To markerCount + 49)"
+  ts.WriteLine "                    ReDim Preserve markerCusips(0 To markerCount + 49)"
+  ts.WriteLine "                End If"
+  ts.WriteLine "                markerLines(markerCount) = i"
+  ts.WriteLine "                markerSymbols(markerCount) = """""
+  ts.WriteLine "                markerCusips(markerCount) = m.SubMatches(0)"
+  ts.WriteLine "                markerCount = markerCount + 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim mi As Long"
+  ts.WriteLine "    For mi = 0 To markerCount - 1"
+  ts.WriteLine "        Dim markerIdx As Long"
+  ts.WriteLine "        markerIdx = markerLines(mi)"
+  ts.WriteLine "        Dim rangeEnd As Long"
+  ts.WriteLine "        If mi + 1 < markerCount Then rangeEnd = markerLines(mi + 1) Else rangeEnd = UBound(lines) + 1"
+  ts.WriteLine ""
+  ts.WriteLine "        curAC = UpdateSecAssetClass(lines, catScanned, markerIdx, curAC)"
+  ts.WriteLine "        curCat = UpdateSecCategory(lines, catScanned, markerIdx, curCat)"
+  ts.WriteLine "        catScanned = markerIdx + 1"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Collect trade lines"
+  ts.WriteLine "        Dim tUnits As Double, tCost As Double, tValue As Double, tUnrealized As Double"
+  ts.WriteLine "        tUnits = 0: tCost = 0: tValue = 0: tUnrealized = 0"
+  ts.WriteLine "        Dim tradeLineCount As Long: tradeLineCount = 0"
+  ts.WriteLine "        Dim infoUnavailable As Boolean: infoUnavailable = False"
+  ts.WriteLine "        Dim sawTrade As Boolean: sawTrade = False"
+  ts.WriteLine "        Dim actualLastTradeIdx As Long: actualLastTradeIdx = markerIdx"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim j As Long"
+  ts.WriteLine "        For j = markerIdx To rangeEnd - 1"
+  ts.WriteLine "            Dim rawLine As String"
+  ts.WriteLine "            rawLine = Trim$(lines(j))"
+  ts.WriteLine ""
+  ts.WriteLine "            ' ""information was unavailable"""
+  ts.WriteLine "            If RegexTest(rawLine, ""information was unavailable"", True) Then"
+  ts.WriteLine "                Dim re As Object"
+  ts.WriteLine "                Set re = CreateRegex(""---.*unavailable.*---"", False, False, True)"
+  ts.WriteLine "                Dim sMatches As Object"
+  ts.WriteLine "                Set sMatches = re.Execute(rawLine)"
+  ts.WriteLine "                If sMatches.Count > 0 Then"
+  ts.WriteLine "                    Dim splitIdx As Long"
+  ts.WriteLine "                    splitIdx = sMatches(0).FirstIndex + 1"
+  ts.WriteLine "                    Dim beforeText As String"
+  ts.WriteLine "                    beforeText = Left$(rawLine, splitIdx - 1)"
+  ts.WriteLine "                    Dim dashEnd As Long"
+  ts.WriteLine "                    dashEnd = InStr(splitIdx + 3, rawLine, ""---"")"
+  ts.WriteLine "                    Dim afterText As String"
+  ts.WriteLine "                    If dashEnd > 0 Then afterText = Mid$(rawLine, dashEnd + 3) Else afterText = """""
+  ts.WriteLine ""
+  ts.WriteLine "                    Dim beforeNums As Object"
+  ts.WriteLine "                    Set beforeNums = RegexMatchAll(beforeText, ""-?[\d,]+\.\d{3}"")"
+  ts.WriteLine "                    Dim afterNums As Object"
+  ts.WriteLine "                    Set afterNums = RegexMatchAll(afterText, ""-?[\d,]+\.\d{2,3}"")"
+  ts.WriteLine "                    If beforeNums.Count >= 1 And afterNums.Count >= 1 Then"
+  ts.WriteLine "                        Dim valueIdx As Long"
+  ts.WriteLine "                        If afterNums.Count >= 2 Then valueIdx = 1 Else valueIdx = 0"
+  ts.WriteLine "                        tUnits = tUnits + SafeFloat(beforeNums(beforeNums.Count - 1).Value)"
+  ts.WriteLine "                        tValue = tValue + SafeFloat(afterNums(valueIdx).Value)"
+  ts.WriteLine "                        infoUnavailable = True"
+  ts.WriteLine "                        sawTrade = True"
+  ts.WriteLine "                        actualLastTradeIdx = j"
+  ts.WriteLine "                        tradeLineCount = tradeLineCount + 1"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                End If"
+  ts.WriteLine "                GoTo NextSLLine"
+  ts.WriteLine "            End If"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Trade line"
+  ts.WriteLine "            If IsSecTradeLine(rawLine) Then"
+  ts.WriteLine "                sawTrade = True"
+  ts.WriteLine "                actualLastTradeIdx = j"
+  ts.WriteLine "                Dim tline As String"
+  ts.WriteLine "                tline = CleanTradeLine(rawLine)"
+  ts.WriteLine "                Dim tnums As Object"
+  ts.WriteLine "                Set tnums = RegexMatchAll(tline, ""-?[\d,]+\.\d{2,3}"")"
+  ts.WriteLine ""
+  ts.WriteLine "                If tnums.Count >= 8 Then"
+  ts.WriteLine "                    tUnits = tUnits + SafeFloat(tnums(0).Value)"
+  ts.WriteLine "                    tCost = tCost + SafeFloat(tnums(3).Value)"
+  ts.WriteLine "                    tValue = tValue + SafeFloat(tnums(5).Value)"
+  ts.WriteLine "                    tUnrealized = tUnrealized + SafeFloat(tnums(6).Value)"
+  ts.WriteLine "                    tradeLineCount = tradeLineCount + 1"
+  ts.WriteLine "                ElseIf tnums.Count >= 6 Then"
+  ts.WriteLine "                    Dim nLen As Long"
+  ts.WriteLine "                    nLen = tnums.Count"
+  ts.WriteLine "                    tUnits = tUnits + SafeFloat(tnums(nLen - 6).Value)"
+  ts.WriteLine "                    tCost = tCost + SafeFloat(tnums(nLen - 4).Value)"
+  ts.WriteLine "                    tValue = tValue + SafeFloat(tnums(nLen - 2).Value)"
+  ts.WriteLine "                    tUnrealized = tUnrealized + SafeFloat(tnums(nLen - 1).Value)"
+  ts.WriteLine "                    tradeLineCount = tradeLineCount + 1"
+  ts.WriteLine "                End If"
+  ts.WriteLine "                GoTo NextSLLine"
+  ts.WriteLine "            End If"
+  ts.WriteLine ""
+  ts.WriteLine "            ' After trade, check boundaries"
+  ts.WriteLine "            If sawTrade Then"
+  ts.WriteLine "                If rawLine = """" Then GoTo NextSLLine"
+  ts.WriteLine "                If IsSecBoilerplate(rawLine) Then GoTo NextSLLine"
+  ts.WriteLine "                If InStr(1, rawLine, ""(continued)"") > 0 Or InStr(1, rawLine, ""continued next page"") > 0 Then GoTo NextSLLine"
+  ts.WriteLine "                If j <= UBound(lines) And secTotalSet(j) Then Exit For"
+  ts.WriteLine "                If IsAllcapsName(rawLine) Then Exit For"
+  ts.WriteLine "                If IsCategoryBoundary(rawLine) Then Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "NextSLLine:"
+  ts.WriteLine "        Next j"
+  ts.WriteLine ""
+  ts.WriteLine "        If tradeLineCount = 0 Then GoTo NextMarker"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Check if this security has a Security total (skip if so)"
+  ts.WriteLine "        Dim hasSecTotal As Boolean: hasSecTotal = False"
+  ts.WriteLine "        For j = markerIdx To rangeEnd - 1"
+  ts.WriteLine "            If j <= UBound(lines) And secTotalSet(j) Then hasSecTotal = True: Exit For"
+  ts.WriteLine "            If j > actualLastTradeIdx Then"
+  ts.WriteLine "                Dim rl As String"
+  ts.WriteLine "                rl = Trim$(lines(j))"
+  ts.WriteLine "                If rl = """" Then GoTo NextSTCheck"
+  ts.WriteLine "                If IsSecBoilerplate(rl) Then GoTo NextSTCheck"
+  ts.WriteLine "                If InStr(1, rl, ""(continued)"") > 0 Or InStr(1, rl, ""continued next page"") > 0 Then GoTo NextSTCheck"
+  ts.WriteLine "                If IsSecTradeLine(rl) Then Exit For"
+  ts.WriteLine "                If IsAllcapsName(rl) Then Exit For"
+  ts.WriteLine "                If IsCategoryBoundary(rl) Then Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "NextSTCheck:"
+  ts.WriteLine "        Next j"
+  ts.WriteLine "        If hasSecTotal Then GoTo NextMarker"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Find name: scan backward"
+  ts.WriteLine "        Dim nameParts() As String"
+  ts.WriteLine "        ReDim nameParts(0 To 9)"
+  ts.WriteLine "        Dim namePartCount As Long: namePartCount = 0"
+  ts.WriteLine "        Dim prevBound As Long"
+  ts.WriteLine "        If mi > 0 Then prevBound = markerLines(mi - 1) + 1 Else prevBound = LBound(lines)"
+  ts.WriteLine "        Dim nameStart As Long"
+  ts.WriteLine "        nameStart = prevBound"
+  ts.WriteLine "        For j = markerIdx - 1 To prevBound Step -1"
+  ts.WriteLine "            Dim bline As String"
+  ts.WriteLine "            bline = Trim$(lines(j))"
+  ts.WriteLine "            If j <= UBound(lines) And secTotalSet(j) Then nameStart = j + 1: Exit For"
+  ts.WriteLine "            If IsSecTradeLine(bline) Then nameStart = j + 1: Exit For"
+  ts.WriteLine "            If IsSecBoilerplate(bline) Then nameStart = j + 1: Exit For"
+  ts.WriteLine "            If IsCategoryBoundary(bline) Then nameStart = j + 1: Exit For"
+  ts.WriteLine "        Next j"
+  ts.WriteLine "        For j = nameStart To markerIdx - 1"
+  ts.WriteLine "            Dim nl As String"
+  ts.WriteLine "            nl = Trim$(lines(j))"
+  ts.WriteLine "            If nl = """" Then GoTo NextNameSL"
+  ts.WriteLine "            If IsSecBoilerplate(nl) Then GoTo NextNameSL"
+  ts.WriteLine "            If InStr(1, nl, ""(continued)"") > 0 Then GoTo NextNameSL"
+  ts.WriteLine "            If RegexTest(nl, ""^(?:BE/|R/|RV\s|SR\s|RATE\s|ACCRUED INTEREST|CUSIP\s|DATED DATE|Moody:|S&P:|Original cost)"") Then GoTo NextNameSL"
+  ts.WriteLine "            If IsCategoryBoundary(nl) Then GoTo NextNameSL"
+  ts.WriteLine "            If IsAllcapsName(nl) Then"
+  ts.WriteLine "                If namePartCount > UBound(nameParts) Then ReDim Preserve nameParts(0 To namePartCount + 9)"
+  ts.WriteLine "                nameParts(namePartCount) = nl"
+  ts.WriteLine "                namePartCount = namePartCount + 1"
+  ts.WriteLine "            Else"
+  ts.WriteLine "                Dim prefix As String"
+  ts.WriteLine "                prefix = ExtractAllcapsPrefix(nl)"
+  ts.WriteLine "                If prefix <> """" Then"
+  ts.WriteLine "                    If namePartCount > UBound(nameParts) Then ReDim Preserve nameParts(0 To namePartCount + 9)"
+  ts.WriteLine "                    nameParts(namePartCount) = prefix"
+  ts.WriteLine "                    namePartCount = namePartCount + 1"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine "NextNameSL:"
+  ts.WriteLine "        Next j"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim secName As String"
+  ts.WriteLine "        If namePartCount > 0 Then"
+  ts.WriteLine "            secName = nameParts(0)"
+  ts.WriteLine "            Dim pi As Long"
+  ts.WriteLine "            For pi = 1 To namePartCount - 1"
+  ts.WriteLine "                secName = secName & "" "" & nameParts(pi)"
+  ts.WriteLine "            Next pi"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            secName = """""
+  ts.WriteLine "        End If"
+  ts.WriteLine "        secName = CleanSecurityName(Trim$(secName))"
+  ts.WriteLine ""
+  ts.WriteLine "        If Left$(secName, 6) = ""ESCROW"" Then GoTo NextMarker"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim symOrCusip As String"
+  ts.WriteLine "        If markerSymbols(mi) <> """" Then symOrCusip = markerSymbols(mi) Else symOrCusip = markerCusips(mi)"
+  ts.WriteLine ""
+  ts.WriteLine "        If secName <> """" Or symOrCusip <> """" Then"
+  ts.WriteLine "            Dim sec As SecurityDetail"
+  ts.WriteLine "            sec.Name = secName"
+  ts.WriteLine "            sec.Symbol = symOrCusip"
+  ts.WriteLine "            sec.Units = tUnits"
+  ts.WriteLine "            sec.Value = tValue"
+  ts.WriteLine "            If infoUnavailable Then"
+  ts.WriteLine "                sec.CostBasis = Null"
+  ts.WriteLine "                sec.UnrealizedGL = Null"
+  ts.WriteLine "            Else"
+  ts.WriteLine "                sec.CostBasis = tCost"
+  ts.WriteLine "                sec.UnrealizedGL = tUnrealized"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            sec.IsEscrow = False"
+  ts.WriteLine "            Dim key As String"
+  ts.WriteLine "            If curAC <> """" Then key = curAC & ""::"" & curCat Else key = curCat"
+  ts.WriteLine "            sec.CategoryKey = key"
+  ts.WriteLine "            AddSecEntry sec"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextMarker:"
+  ts.WriteLine "    Next mi"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Pass 3: Private equity funds ---"
+  ts.WriteLine "Private Sub ExtractPEFundSecs(section As String)"
+  ts.WriteLine "    ' Find ""Private equity funds"" header"
+  ts.WriteLine "    Dim peMatch As Object"
+  ts.WriteLine "    Set peMatch = RegexMatch(section, ""^Private equity funds\s*$"", False, True)"
+  ts.WriteLine "    If peMatch Is Nothing Then"
+  ts.WriteLine "        Set peMatch = RegexMatch(section, ""^Private equity funds[^,A-Za-z]*$"", False, True)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If peMatch Is Nothing Then"
+  ts.WriteLine "        Set peMatch = RegexMatch(section, ""Private equity funds\s*$"", False, True)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If peMatch Is Nothing Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim peStart As Long"
+  ts.WriteLine "    peStart = peMatch.FirstIndex + 1  ' 1-based for Mid$"
+  ts.WriteLine "    Dim peSection As String"
+  ts.WriteLine "    peSection = Mid$(section, peStart)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim endKw() As String"
+  ts.WriteLine "    endKw = Split(""Other investments|Mutual funds|Closed end funds|Money market funds|Cash and money balances"", ""|"")"
+  ts.WriteLine "    Dim peEnd As Long"
+  ts.WriteLine "    peEnd = FindSecSectionEnd(peSection, Len(""Private equity funds""), endKw)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim peText As String"
+  ts.WriteLine "    peText = Left$(peSection, peEnd - 1)"
+  ts.WriteLine "    Dim peLines() As String"
+  ts.WriteLine "    peLines = Split(peText, vbLf)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Collect PE entries"
+  ts.WriteLine "    Dim peNames() As String"
+  ts.WriteLine "    ReDim peNames(0 To 49)"
+  ts.WriteLine "    Dim peValues() As Double"
+  ts.WriteLine "    ReDim peValues(0 To 49)"
+  ts.WriteLine "    Dim peEntryCount As Long: peEntryCount = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim nameAccum() As String"
+  ts.WriteLine "    ReDim nameAccum(0 To 9)"
+  ts.WriteLine "    Dim nameAccumCount As Long: nameAccumCount = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim li As Long"
+  ts.WriteLine "    For li = LBound(peLines) To UBound(peLines)"
+  ts.WriteLine "        Dim strippedPE As String"
+  ts.WriteLine "        strippedPE = Trim$(peLines(li))"
+  ts.WriteLine "        If strippedPE = """" Then GoTo NextPELine"
+  ts.WriteLine "        If Left$(strippedPE, 5) = ""Total"" Then GoTo NextPELine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Skip known prefixes"
+  ts.WriteLine "        Dim skipPE As Boolean: skipPE = False"
+  ts.WriteLine "        Dim spi As Long"
+  ts.WriteLine "        For spi = 0 To mPESkipCount - 1"
+  ts.WriteLine "            If Left$(strippedPE, Len(mPESkipPrefixes(spi))) = mPESkipPrefixes(spi) Then skipPE = True: Exit For"
+  ts.WriteLine "        Next spi"
+  ts.WriteLine "        If skipPE Then GoTo NextPELine"
+  ts.WriteLine "        If IsSecBoilerplate(strippedPE) Then nameAccumCount = 0: GoTo NextPELine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' COMMITMENT / Not Priced"
+  ts.WriteLine "        If InStr(1, strippedPE, ""Not Priced"") > 0 Or InStr(1, strippedPE, ""COMMITMENT"") > 0 Then"
+  ts.WriteLine "            Dim re As Object"
+  ts.WriteLine "            Set re = CreateRegex(""\s+[\d,]+\.\d{3}\s+.*$"")"
+  ts.WriteLine "            Dim namePart As String"
+  ts.WriteLine "            namePart = re.Replace(strippedPE, """")"
+  ts.WriteLine "            Set re = CreateRegex(""\s*COMMITMENT\s*(?:AMOUNT?|AMT?)?\s*$"")"
+  ts.WriteLine "            namePart = Trim$(re.Replace(namePart, """"))"
+  ts.WriteLine "            If namePart <> """" Then"
+  ts.WriteLine "                If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)"
+  ts.WriteLine "                nameAccum(nameAccumCount) = namePart"
+  ts.WriteLine "                nameAccumCount = nameAccumCount + 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            ' Flush as null-value entry (commitment, skip later)"
+  ts.WriteLine "            nameAccumCount = 0"
+  ts.WriteLine "            GoTo NextPELine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Value line: ""units(3dp) 1.000 value(2dp)"""
+  ts.WriteLine "        Dim valM As Object"
+  ts.WriteLine "        Set valM = RegexMatch(strippedPE, ""([\d,]+\.\d{3})\s+1\.000\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "        If Not valM Is Nothing Then"
+  ts.WriteLine "            Dim val As Double"
+  ts.WriteLine "            val = SafeFloat(valM.SubMatches(1))"
+  ts.WriteLine "            Dim before As String"
+  ts.WriteLine "            Dim valIdx As Long"
+  ts.WriteLine "            valIdx = InStr(1, strippedPE, valM.SubMatches(0))"
+  ts.WriteLine "            If valIdx > 1 Then before = Trim$(Left$(strippedPE, valIdx - 1)) Else before = """""
+  ts.WriteLine "            ' Strip trailing trade dates"
+  ts.WriteLine "            Set re = CreateRegex(""\s*"" & MONTH_ALT & ""\s+\d{1,2},?\s+\d{2,4}\s*$"")"
+  ts.WriteLine "            before = Trim$(re.Replace(before, """"))"
+  ts.WriteLine "            If before <> """" Then"
+  ts.WriteLine "                If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)"
+  ts.WriteLine "                nameAccum(nameAccumCount) = before"
+  ts.WriteLine "                nameAccumCount = nameAccumCount + 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            If nameAccumCount > 0 Then"
+  ts.WriteLine "                ' Join name parts"
+  ts.WriteLine "                Dim fullName As String"
+  ts.WriteLine "                fullName = nameAccum(0)"
+  ts.WriteLine "                Dim ni As Long"
+  ts.WriteLine "                For ni = 1 To nameAccumCount - 1"
+  ts.WriteLine "                    fullName = fullName & "" "" & nameAccum(ni)"
+  ts.WriteLine "                Next ni"
+  ts.WriteLine "                ' Add to entries"
+  ts.WriteLine "                If peEntryCount > UBound(peNames) Then"
+  ts.WriteLine "                    ReDim Preserve peNames(0 To peEntryCount + 49)"
+  ts.WriteLine "                    ReDim Preserve peValues(0 To peEntryCount + 49)"
+  ts.WriteLine "                End If"
+  ts.WriteLine "                peNames(peEntryCount) = fullName"
+  ts.WriteLine "                peValues(peEntryCount) = val"
+  ts.WriteLine "                peEntryCount = peEntryCount + 1"
+  ts.WriteLine "                nameAccumCount = 0"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            GoTo NextPELine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' ALL CAPS name"
+  ts.WriteLine "        Dim alphaCount As Long: alphaCount = 0"
+  ts.WriteLine "        Dim hasLower As Boolean: hasLower = False"
+  ts.WriteLine "        Dim ci As Long"
+  ts.WriteLine "        For ci = 1 To Len(strippedPE)"
+  ts.WriteLine "            Dim ch As Long"
+  ts.WriteLine "            ch = Asc(Mid$(strippedPE, ci, 1))"
+  ts.WriteLine "            If ch >= 65 And ch <= 90 Then alphaCount = alphaCount + 1"
+  ts.WriteLine "            If ch >= 97 And ch <= 122 Then hasLower = True"
+  ts.WriteLine "        Next ci"
+  ts.WriteLine "        If alphaCount >= 2 And Not hasLower Then"
+  ts.WriteLine "            Dim rejectPE As Boolean: rejectPE = False"
+  ts.WriteLine "            If InStr(1, strippedPE, ""FDIC"") > 0 Or InStr(1, strippedPE, ""CNQ7"") > 0 Or _"
+  ts.WriteLine "               InStr(1, strippedPE, ""NQ7"") > 0 Or InStr(1, strippedPE, ""SIPC"") > 0 Then rejectPE = True"
+  ts.WriteLine "            If Not rejectPE Then"
+  ts.WriteLine "                If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)"
+  ts.WriteLine "                nameAccum(nameAccumCount) = strippedPE"
+  ts.WriteLine "                nameAccumCount = nameAccumCount + 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextPELine:"
+  ts.WriteLine "    Next li"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Consolidate by normalized name"
+  ts.WriteLine "    Dim normNames() As String"
+  ts.WriteLine "    Dim normValues() As Double"
+  ts.WriteLine "    Dim normCount As Long: normCount = 0"
+  ts.WriteLine "    ReDim normNames(0 To peEntryCount)"
+  ts.WriteLine "    ReDim normValues(0 To peEntryCount)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim ei As Long"
+  ts.WriteLine "    For ei = 0 To peEntryCount - 1"
+  ts.WriteLine "        If peValues(ei) <= 0 Then GoTo NextPEEntry"
+  ts.WriteLine "        Dim base As String"
+  ts.WriteLine "        base = NormFundName(peNames(ei))"
+  ts.WriteLine "        Dim found As Boolean: found = False"
+  ts.WriteLine "        Dim fi As Long"
+  ts.WriteLine "        For fi = 0 To normCount - 1"
+  ts.WriteLine "            If normNames(fi) = base Then"
+  ts.WriteLine "                normValues(fi) = normValues(fi) + peValues(ei)"
+  ts.WriteLine "                found = True"
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next fi"
+  ts.WriteLine "        If Not found Then"
+  ts.WriteLine "            normNames(normCount) = base"
+  ts.WriteLine "            normValues(normCount) = peValues(ei)"
+  ts.WriteLine "            normCount = normCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextPEEntry:"
+  ts.WriteLine "    Next ei"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Add to mSecEntries"
+  ts.WriteLine "    For fi = 0 To normCount - 1"
+  ts.WriteLine "        Dim sec As SecurityDetail"
+  ts.WriteLine "        sec.Name = normNames(fi)"
+  ts.WriteLine "        sec.Symbol = """""
+  ts.WriteLine "        sec.Units = Null"
+  ts.WriteLine "        sec.Value = normValues(fi)"
+  ts.WriteLine "        sec.CostBasis = Null"
+  ts.WriteLine "        sec.UnrealizedGL = Null"
+  ts.WriteLine "        sec.IsEscrow = False"
+  ts.WriteLine "        sec.CategoryKey = ""Private equity funds"""
+  ts.WriteLine "        AddSecEntry sec"
+  ts.WriteLine "    Next fi"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Pass 3b: Other investments PE-style entries ---"
+  ts.WriteLine "Private Sub ExtractOtherInvestPE(section As String)"
+  ts.WriteLine "    Dim oiMatch As Object"
+  ts.WriteLine "    Set oiMatch = RegexMatch(section, ""^Other investments\s*$"", False, True)"
+  ts.WriteLine "    If oiMatch Is Nothing Then"
+  ts.WriteLine "        Set oiMatch = RegexMatch(section, ""^Other investments[^,A-Za-z]*$"", False, True)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If oiMatch Is Nothing Then"
+  ts.WriteLine "        Set oiMatch = RegexMatch(section, ""Other investments\s*$"", False, True)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If oiMatch Is Nothing Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim oiStart As Long"
+  ts.WriteLine "    oiStart = oiMatch.FirstIndex + 1"
+  ts.WriteLine "    Dim oiSection As String"
+  ts.WriteLine "    oiSection = Mid$(section, oiStart)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim endKw() As String"
+  ts.WriteLine "    endKw = Split(""Private equity funds|Hedge funds|Mutual funds|Closed end funds|Money market funds|Cash and money balances|Common stock|Your total assets"", ""|"")"
+  ts.WriteLine "    Dim oiEnd As Long"
+  ts.WriteLine "    oiEnd = FindSecSectionEnd(oiSection, Len(""Other investments""), endKw)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim oiText As String"
+  ts.WriteLine "    oiText = Left$(oiSection, oiEnd - 1)"
+  ts.WriteLine "    Dim oiLines() As String"
+  ts.WriteLine "    oiLines = Split(oiText, vbLf)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Collect entries"
+  ts.WriteLine "    Dim oiNames() As String"
+  ts.WriteLine "    Dim oiValues() As Double"
+  ts.WriteLine "    Dim oiCosts() As Double"
+  ts.WriteLine "    Dim oiEntryCount As Long: oiEntryCount = 0"
+  ts.WriteLine "    ReDim oiNames(0 To 49)"
+  ts.WriteLine "    ReDim oiValues(0 To 49)"
+  ts.WriteLine "    ReDim oiCosts(0 To 49)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim nameAccum() As String"
+  ts.WriteLine "    ReDim nameAccum(0 To 9)"
+  ts.WriteLine "    Dim nameAccumCount As Long: nameAccumCount = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim li As Long"
+  ts.WriteLine "    For li = LBound(oiLines) To UBound(oiLines)"
+  ts.WriteLine "        Dim stripped As String"
+  ts.WriteLine "        stripped = Trim$(oiLines(li))"
+  ts.WriteLine "        If stripped = """" Then GoTo NextOILine"
+  ts.WriteLine "        If Left$(stripped, 5) = ""Total"" Then GoTo NextOILine"
+  ts.WriteLine "        If Left$(stripped, 17) = ""Other investments"" Then GoTo NextOILine"
+  ts.WriteLine "        If IsSecBoilerplate(stripped) Then nameAccumCount = 0: GoTo NextOILine"
+  ts.WriteLine "        If RegexTest(stripped, ""^\s*Security [Tt]otal\s"") Then nameAccumCount = 0: GoTo NextOILine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' COMMITMENT / Not Priced"
+  ts.WriteLine "        If InStr(1, stripped, ""Not Priced"") > 0 Or InStr(1, stripped, ""COMMITMENT"") > 0 Then"
+  ts.WriteLine "            Dim re As Object"
+  ts.WriteLine "            Set re = CreateRegex(""\s+[\d,]+\.\d{3}\s+.*$"")"
+  ts.WriteLine "            Dim namePart As String"
+  ts.WriteLine "            namePart = re.Replace(stripped, """")"
+  ts.WriteLine "            Set re = CreateRegex(""\s*COMMITMENT\s*(?:AMOUNT?|AMT?)?\s*$"")"
+  ts.WriteLine "            namePart = Trim$(re.Replace(namePart, """"))"
+  ts.WriteLine "            If namePart <> """" Then"
+  ts.WriteLine "                If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)"
+  ts.WriteLine "                nameAccum(nameAccumCount) = namePart"
+  ts.WriteLine "                nameAccumCount = nameAccumCount + 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            nameAccumCount = 0"
+  ts.WriteLine "            GoTo NextOILine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Value line"
+  ts.WriteLine "        Dim valM As Object"
+  ts.WriteLine "        Set valM = RegexMatch(stripped, ""([\d,]+\.\d{3})\s+1\.000\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "        If Not valM Is Nothing Then"
+  ts.WriteLine "            Dim val As Double"
+  ts.WriteLine "            val = SafeFloat(valM.SubMatches(1))"
+  ts.WriteLine "            Dim before As String"
+  ts.WriteLine "            Dim valIdx As Long"
+  ts.WriteLine "            valIdx = InStr(1, stripped, valM.SubMatches(0))"
+  ts.WriteLine "            If valIdx > 1 Then before = Trim$(Left$(stripped, valIdx - 1)) Else before = """""
+  ts.WriteLine "            Set re = CreateRegex(""\s*"" & MONTH_ALT & ""\s+\d{1,2},?\s+\d{2,4}\s*$"")"
+  ts.WriteLine "            before = Trim$(re.Replace(before, """"))"
+  ts.WriteLine "            If before <> """" Then"
+  ts.WriteLine "                If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)"
+  ts.WriteLine "                nameAccum(nameAccumCount) = before"
+  ts.WriteLine "                nameAccumCount = nameAccumCount + 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            If nameAccumCount > 0 Then"
+  ts.WriteLine "                Dim fullName As String"
+  ts.WriteLine "                fullName = nameAccum(0)"
+  ts.WriteLine "                Dim ni As Long"
+  ts.WriteLine "                For ni = 1 To nameAccumCount - 1"
+  ts.WriteLine "                    fullName = fullName & "" "" & nameAccum(ni)"
+  ts.WriteLine "                Next ni"
+  ts.WriteLine "                If oiEntryCount > UBound(oiNames) Then"
+  ts.WriteLine "                    ReDim Preserve oiNames(0 To oiEntryCount + 49)"
+  ts.WriteLine "                    ReDim Preserve oiValues(0 To oiEntryCount + 49)"
+  ts.WriteLine "                    ReDim Preserve oiCosts(0 To oiEntryCount + 49)"
+  ts.WriteLine "                End If"
+  ts.WriteLine "                oiNames(oiEntryCount) = fullName"
+  ts.WriteLine "                oiValues(oiEntryCount) = val"
+  ts.WriteLine "                oiCosts(oiEntryCount) = val  ' PE at price=1.000: cost = value"
+  ts.WriteLine "                oiEntryCount = oiEntryCount + 1"
+  ts.WriteLine "                nameAccumCount = 0"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            GoTo NextOILine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        If IsAllcapsName(stripped) Then"
+  ts.WriteLine "            If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)"
+  ts.WriteLine "            nameAccum(nameAccumCount) = stripped"
+  ts.WriteLine "            nameAccumCount = nameAccumCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextOILine:"
+  ts.WriteLine "    Next li"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Consolidate by normalized name"
+  ts.WriteLine "    Dim normNames() As String"
+  ts.WriteLine "    Dim normValues() As Double"
+  ts.WriteLine "    Dim normCosts() As Double"
+  ts.WriteLine "    Dim normCount As Long: normCount = 0"
+  ts.WriteLine "    ReDim normNames(0 To oiEntryCount)"
+  ts.WriteLine "    ReDim normValues(0 To oiEntryCount)"
+  ts.WriteLine "    ReDim normCosts(0 To oiEntryCount)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim ei As Long"
+  ts.WriteLine "    For ei = 0 To oiEntryCount - 1"
+  ts.WriteLine "        If oiValues(ei) <= 0 Then GoTo NextOIEntry"
+  ts.WriteLine "        Dim base As String"
+  ts.WriteLine "        base = NormFundName(oiNames(ei))"
+  ts.WriteLine "        Dim found As Boolean: found = False"
+  ts.WriteLine "        Dim fi As Long"
+  ts.WriteLine "        For fi = 0 To normCount - 1"
+  ts.WriteLine "            If normNames(fi) = base Then"
+  ts.WriteLine "                normValues(fi) = normValues(fi) + oiValues(ei)"
+  ts.WriteLine "                normCosts(fi) = normCosts(fi) + oiCosts(ei)"
+  ts.WriteLine "                found = True"
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next fi"
+  ts.WriteLine "        If Not found Then"
+  ts.WriteLine "            normNames(normCount) = base"
+  ts.WriteLine "            normValues(normCount) = oiValues(ei)"
+  ts.WriteLine "            normCosts(normCount) = oiCosts(ei)"
+  ts.WriteLine "            normCount = normCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextOIEntry:"
+  ts.WriteLine "    Next ei"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Merge with existing Pass 2 entries under ""Non-traditional::Other investments"""
+  ts.WriteLine "    Dim existingKey As String"
+  ts.WriteLine "    existingKey = ""Non-traditional::Other investments"""
+  ts.WriteLine ""
+  ts.WriteLine "    For fi = 0 To normCount - 1"
+  ts.WriteLine "        ' Try to find existing entry with prefix match"
+  ts.WriteLine "        Dim matched As Boolean: matched = False"
+  ts.WriteLine "        Dim si As Long"
+  ts.WriteLine "        For si = 0 To mSecCount - 1"
+  ts.WriteLine "            If mSecEntries(si).CategoryKey = existingKey Then"
+  ts.WriteLine "                Dim existingNorm As String"
+  ts.WriteLine "                existingNorm = NormFundName(mSecEntries(si).Name)"
+  ts.WriteLine "                Dim shorter As String, longer As String"
+  ts.WriteLine "                If Len(existingNorm) <= Len(normNames(fi)) Then"
+  ts.WriteLine "                    shorter = existingNorm: longer = normNames(fi)"
+  ts.WriteLine "                Else"
+  ts.WriteLine "                    shorter = normNames(fi): longer = existingNorm"
+  ts.WriteLine "                End If"
+  ts.WriteLine "                Dim isPrefixMatch As Boolean"
+  ts.WriteLine "                If existingNorm = normNames(fi) Then"
+  ts.WriteLine "                    isPrefixMatch = True"
+  ts.WriteLine "                ElseIf Left$(longer, Len(shorter)) = shorter Then"
+  ts.WriteLine "                    Dim suffix As String"
+  ts.WriteLine "                    suffix = Mid$(longer, Len(shorter) + 1)"
+  ts.WriteLine "                    isPrefixMatch = Not RegexTest(suffix, ""(?:\s|^)(?:II|III|IV|V|VI|VII|VIII|IX|X|SERIES)(?:\s|$)"")"
+  ts.WriteLine "                Else"
+  ts.WriteLine "                    isPrefixMatch = False"
+  ts.WriteLine "                End If"
+  ts.WriteLine "                If isPrefixMatch Then"
+  ts.WriteLine "                    mSecEntries(si).Value = mSecEntries(si).Value + normValues(fi)"
+  ts.WriteLine "                    If normCosts(fi) > 0 Then"
+  ts.WriteLine "                        If IsNull(mSecEntries(si).CostBasis) Then"
+  ts.WriteLine "                            mSecEntries(si).CostBasis = normCosts(fi)"
+  ts.WriteLine "                        Else"
+  ts.WriteLine "                            mSecEntries(si).CostBasis = CDbl(mSecEntries(si).CostBasis) + normCosts(fi)"
+  ts.WriteLine "                        End If"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                    matched = True"
+  ts.WriteLine "                    Exit For"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next si"
+  ts.WriteLine "        If Not matched Then"
+  ts.WriteLine "            Dim sec As SecurityDetail"
+  ts.WriteLine "            sec.Name = normNames(fi)"
+  ts.WriteLine "            sec.Symbol = """""
+  ts.WriteLine "            sec.Units = Null"
+  ts.WriteLine "            sec.Value = normValues(fi)"
+  ts.WriteLine "            If normCosts(fi) > 0 Then sec.CostBasis = normCosts(fi) Else sec.CostBasis = Null"
+  ts.WriteLine "            sec.UnrealizedGL = Null"
+  ts.WriteLine "            sec.IsEscrow = False"
+  ts.WriteLine "            sec.CategoryKey = existingKey"
+  ts.WriteLine "            AddSecEntry sec"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next fi"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Pass 4: Hedge funds ---"
+  ts.WriteLine "Private Sub ExtractHedgeFundSecs(section As String)"
+  ts.WriteLine "    Dim hfMatch As Object"
+  ts.WriteLine "    Set hfMatch = RegexMatch(section, ""^Hedge funds\s*$"", False, True)"
+  ts.WriteLine "    If hfMatch Is Nothing Then"
+  ts.WriteLine "        Set hfMatch = RegexMatch(section, ""^Hedge funds[^,A-Za-z]*$"", False, True)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If hfMatch Is Nothing Then"
+  ts.WriteLine "        Set hfMatch = RegexMatch(section, ""Hedge funds\s*$"", False, True)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If hfMatch Is Nothing Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim hfStart As Long"
+  ts.WriteLine "    hfStart = hfMatch.FirstIndex + 1"
+  ts.WriteLine "    Dim hfSection As String"
+  ts.WriteLine "    hfSection = Mid$(section, hfStart)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim endKw() As String"
+  ts.WriteLine "    endKw = Split(""Other investments|Private equity funds|Mutual funds|Closed end funds|Money market funds|Cash and money balances|Your total assets"", ""|"")"
+  ts.WriteLine "    Dim hfEnd As Long"
+  ts.WriteLine "    hfEnd = FindSecSectionEnd(hfSection, Len(""Hedge funds""), endKw)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim hfText As String"
+  ts.WriteLine "    hfText = Left$(hfSection, hfEnd - 1)"
+  ts.WriteLine "    Dim hfLines() As String"
+  ts.WriteLine "    hfLines = Split(hfText, vbLf)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Collect entries"
+  ts.WriteLine "    Dim hfNames() As String"
+  ts.WriteLine "    Dim hfUnits() As Variant"
+  ts.WriteLine "    Dim hfValues() As Double"
+  ts.WriteLine "    Dim hfEntryCount As Long: hfEntryCount = 0"
+  ts.WriteLine "    ReDim hfNames(0 To 49)"
+  ts.WriteLine "    ReDim hfUnits(0 To 49)"
+  ts.WriteLine "    ReDim hfValues(0 To 49)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim nameAccum() As String"
+  ts.WriteLine "    ReDim nameAccum(0 To 9)"
+  ts.WriteLine "    Dim nameAccumCount As Long: nameAccumCount = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim li As Long"
+  ts.WriteLine "    For li = LBound(hfLines) To UBound(hfLines)"
+  ts.WriteLine "        Dim stripped As String"
+  ts.WriteLine "        stripped = Trim$(hfLines(li))"
+  ts.WriteLine "        If stripped = """" Then GoTo NextHFLine"
+  ts.WriteLine "        If Left$(stripped, 5) = ""Total"" Then GoTo NextHFLine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Skip known prefixes"
+  ts.WriteLine "        Dim skipHF As Boolean: skipHF = False"
+  ts.WriteLine "        Dim spi As Long"
+  ts.WriteLine "        For spi = 0 To mHFSkipCount - 1"
+  ts.WriteLine "            If Left$(stripped, Len(mHFSkipPrefixes(spi))) = mHFSkipPrefixes(spi) Then skipHF = True: Exit For"
+  ts.WriteLine "        Next spi"
+  ts.WriteLine "        If Left$(stripped, 12) = ""reinvest"" Or Left$(stripped, 12) = ""include cash"" Then skipHF = True"
+  ts.WriteLine "        If skipHF Then GoTo NextHFLine"
+  ts.WriteLine "        If IsSecBoilerplate(stripped) Then nameAccumCount = 0: GoTo NextHFLine"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Value line: has 3dp AND 2dp numbers"
+  ts.WriteLine "        Dim threeDecs As Object"
+  ts.WriteLine "        Set threeDecs = RegexMatchAll(stripped, ""[\d,]+\.\d{3}"")"
+  ts.WriteLine "        Dim twoDecs As Object"
+  ts.WriteLine "        Set twoDecs = RegexMatchAll(stripped, ""[\d,]+\.\d{2}(?!\d)"")"
+  ts.WriteLine ""
+  ts.WriteLine "        If threeDecs.Count >= 1 And twoDecs.Count >= 1 Then"
+  ts.WriteLine "            Dim hfU As Variant"
+  ts.WriteLine "            hfU = ParseNum(threeDecs(0).Value)"
+  ts.WriteLine "            Dim hfV As Double"
+  ts.WriteLine "            hfV = SafeFloat(twoDecs(twoDecs.Count - 1).Value)"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Extract name from before first number"
+  ts.WriteLine "            Dim firstNumIdx As Long"
+  ts.WriteLine "            firstNumIdx = threeDecs(0).FirstIndex"
+  ts.WriteLine "            If twoDecs(0).FirstIndex < firstNumIdx Then firstNumIdx = twoDecs(0).FirstIndex"
+  ts.WriteLine "            Dim beforeNum As String"
+  ts.WriteLine "            If firstNumIdx > 0 Then beforeNum = Trim$(Left$(stripped, firstNumIdx)) Else beforeNum = """""
+  ts.WriteLine "            ' Strip ""Initial trade date:"" prefix"
+  ts.WriteLine "            Dim re As Object"
+  ts.WriteLine "            Set re = CreateRegex(""^Initial trade date:\s*\w+\s*"")"
+  ts.WriteLine "            beforeNum = Trim$(re.Replace(beforeNum, """"))"
+  ts.WriteLine "            If beforeNum <> """" Then"
+  ts.WriteLine "                If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)"
+  ts.WriteLine "                nameAccum(nameAccumCount) = beforeNum"
+  ts.WriteLine "                nameAccumCount = nameAccumCount + 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            If nameAccumCount > 0 Then"
+  ts.WriteLine "                Dim fullName As String"
+  ts.WriteLine "                fullName = nameAccum(0)"
+  ts.WriteLine "                Dim ni As Long"
+  ts.WriteLine "                For ni = 1 To nameAccumCount - 1"
+  ts.WriteLine "                    fullName = fullName & "" "" & nameAccum(ni)"
+  ts.WriteLine "                Next ni"
+  ts.WriteLine "                If hfEntryCount > UBound(hfNames) Then"
+  ts.WriteLine "                    ReDim Preserve hfNames(0 To hfEntryCount + 49)"
+  ts.WriteLine "                    ReDim Preserve hfUnits(0 To hfEntryCount + 49)"
+  ts.WriteLine "                    ReDim Preserve hfValues(0 To hfEntryCount + 49)"
+  ts.WriteLine "                End If"
+  ts.WriteLine "                hfNames(hfEntryCount) = fullName"
+  ts.WriteLine "                hfUnits(hfEntryCount) = hfU"
+  ts.WriteLine "                hfValues(hfEntryCount) = hfV"
+  ts.WriteLine "                hfEntryCount = hfEntryCount + 1"
+  ts.WriteLine "                nameAccumCount = 0"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            GoTo NextHFLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        If IsAllcapsName(stripped) Then"
+  ts.WriteLine "            If nameAccumCount > UBound(nameAccum) Then ReDim Preserve nameAccum(0 To nameAccumCount + 9)"
+  ts.WriteLine "            nameAccum(nameAccumCount) = stripped"
+  ts.WriteLine "            nameAccumCount = nameAccumCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextHFLine:"
+  ts.WriteLine "    Next li"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Consolidate by normalized name"
+  ts.WriteLine "    Dim normNames() As String"
+  ts.WriteLine "    Dim normUnits() As Variant"
+  ts.WriteLine "    Dim normValues() As Double"
+  ts.WriteLine "    Dim normCount As Long: normCount = 0"
+  ts.WriteLine "    ReDim normNames(0 To hfEntryCount)"
+  ts.WriteLine "    ReDim normUnits(0 To hfEntryCount)"
+  ts.WriteLine "    ReDim normValues(0 To hfEntryCount)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim ei As Long"
+  ts.WriteLine "    For ei = 0 To hfEntryCount - 1"
+  ts.WriteLine "        Dim base As String"
+  ts.WriteLine "        base = NormFundName(hfNames(ei))"
+  ts.WriteLine "        Dim found As Boolean: found = False"
+  ts.WriteLine "        Dim fi As Long"
+  ts.WriteLine "        For fi = 0 To normCount - 1"
+  ts.WriteLine "            If normNames(fi) = base Then"
+  ts.WriteLine "                normValues(fi) = normValues(fi) + hfValues(ei)"
+  ts.WriteLine "                found = True"
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next fi"
+  ts.WriteLine "        If Not found Then"
+  ts.WriteLine "            normNames(normCount) = base"
+  ts.WriteLine "            normUnits(normCount) = hfUnits(ei)"
+  ts.WriteLine "            normValues(normCount) = hfValues(ei)"
+  ts.WriteLine "            normCount = normCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next ei"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Add to mSecEntries"
+  ts.WriteLine "    For fi = 0 To normCount - 1"
+  ts.WriteLine "        Dim sec As SecurityDetail"
+  ts.WriteLine "        sec.Name = normNames(fi)"
+  ts.WriteLine "        sec.Symbol = """""
+  ts.WriteLine "        sec.Units = normUnits(fi)"
+  ts.WriteLine "        sec.Value = normValues(fi)"
+  ts.WriteLine "        sec.CostBasis = Null"
+  ts.WriteLine "        sec.UnrealizedGL = Null"
+  ts.WriteLine "        sec.IsEscrow = False"
+  ts.WriteLine "        sec.CategoryKey = ""Hedge funds"""
+  ts.WriteLine "        AddSecEntry sec"
+  ts.WriteLine "    Next fi"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Orchestrator ---"
+  ts.WriteLine "Public Function ExtractDetailedSecurities(text As String) As SecurityDetail()"
+  ts.WriteLine "    InitSecurityConstants"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Initialize module-level state"
+  ts.WriteLine "    ReDim mSecEntries(0 To 49)"
+  ts.WriteLine "    mSecCount = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Slice ""Your assets"" to ""Your total assets"""
+  ts.WriteLine "    Dim startPos As Long"
+  ts.WriteLine "    startPos = InStr(1, text, ""Your assets"")"
+  ts.WriteLine "    Dim endPos As Long"
+  ts.WriteLine "    endPos = InStr(1, text, ""Your total assets"")"
+  ts.WriteLine "    If startPos = 0 Or endPos = 0 Then"
+  ts.WriteLine "        ReDim mSecEntries(0 To 0)"
+  ts.WriteLine "        ExtractDetailedSecurities = mSecEntries"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim section As String"
+  ts.WriteLine "    section = Mid$(text, startPos, endPos - startPos)"
+  ts.WriteLine "    Dim lines() As String"
+  ts.WriteLine "    lines = Split(section, vbLf)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Pass 1: Collect Security total indices"
+  ts.WriteLine "    Dim secTotalIndices() As Long"
+  ts.WriteLine "    Dim stCount As Long"
+  ts.WriteLine "    CollectSecTotalIndices lines, secTotalIndices, stCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Pass 2: Securities from totals"
+  ts.WriteLine "    Dim curCat As String, curAC As String"
+  ts.WriteLine "    Dim catScanned As Long"
+  ts.WriteLine "    ExtractFromSecTotals lines, secTotalIndices, stCount, curCat, curAC, catScanned"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Pass 2b: Single-lot bonds"
+  ts.WriteLine "    ExtractSingleLotSecs lines, secTotalIndices, stCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Pass 3: Private equity funds"
+  ts.WriteLine "    ExtractPEFundSecs section"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Pass 3b: Other investments PE"
+  ts.WriteLine "    ExtractOtherInvestPE section"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Pass 4: Hedge funds"
+  ts.WriteLine "    ExtractHedgeFundSecs section"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Consolidate PE prefix matches (Do While — For loop can't track mSecCount shrinking)"
+  ts.WriteLine "    Dim ki As Long"
+  ts.WriteLine "    ki = 0"
+  ts.WriteLine "    Do While ki < mSecCount"
+  ts.WriteLine "        If InStr(1, mSecEntries(ki).CategoryKey, ""Other investments"") = 0 And _"
+  ts.WriteLine "           InStr(1, mSecEntries(ki).CategoryKey, ""Private equity"") = 0 Then"
+  ts.WriteLine "            ki = ki + 1"
+  ts.WriteLine "            GoTo NextConsolidate"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        Dim normI As String"
+  ts.WriteLine "        normI = NormFundName(mSecEntries(ki).Name)"
+  ts.WriteLine "        Dim merged As Boolean"
+  ts.WriteLine "        merged = False"
+  ts.WriteLine "        Dim k As Long"
+  ts.WriteLine "        For k = 0 To mSecCount - 1"
+  ts.WriteLine "            If k = ki Then GoTo NextK"
+  ts.WriteLine "            If mSecEntries(k).CategoryKey <> mSecEntries(ki).CategoryKey Then GoTo NextK"
+  ts.WriteLine "            Dim normK As String"
+  ts.WriteLine "            normK = NormFundName(mSecEntries(k).Name)"
+  ts.WriteLine "            If normK = normI Then GoTo NextK"
+  ts.WriteLine "            ' Check if normK starts with normI and extra suffix is not a series indicator"
+  ts.WriteLine "            If Left$(normK, Len(normI)) = normI And (Len(normK) = Len(normI) Or Mid$(normK, Len(normI) + 1, 1) = "" "") Then"
+  ts.WriteLine "                Dim suffix As String"
+  ts.WriteLine "                suffix = Trim$(Mid$(normK, Len(normI) + 1))"
+  ts.WriteLine "                If Len(suffix) > 0 And Not RegexTest(suffix, ""(?:\s|^)(?:II|III|IV|V|VI|VII|VIII|IX|X|SERIES)(?:\s|$)"") Then"
+  ts.WriteLine "                    mSecEntries(k).Value = mSecEntries(k).Value + mSecEntries(ki).Value"
+  ts.WriteLine "                    If Not IsNull(mSecEntries(ki).CostBasis) Then"
+  ts.WriteLine "                        If IsNull(mSecEntries(k).CostBasis) Then"
+  ts.WriteLine "                            mSecEntries(k).CostBasis = mSecEntries(ki).CostBasis"
+  ts.WriteLine "                        Else"
+  ts.WriteLine "                            mSecEntries(k).CostBasis = CDbl(mSecEntries(k).CostBasis) + CDbl(mSecEntries(ki).CostBasis)"
+  ts.WriteLine "                        End If"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                    If Not IsNull(mSecEntries(ki).UnrealizedGL) Then"
+  ts.WriteLine "                        If IsNull(mSecEntries(k).UnrealizedGL) Then"
+  ts.WriteLine "                            mSecEntries(k).UnrealizedGL = mSecEntries(ki).UnrealizedGL"
+  ts.WriteLine "                        Else"
+  ts.WriteLine "                            mSecEntries(k).UnrealizedGL = CDbl(mSecEntries(k).UnrealizedGL) + CDbl(mSecEntries(ki).UnrealizedGL)"
+  ts.WriteLine "                        End If"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                    ' Remove entry ki by shifting"
+  ts.WriteLine "                    Dim ri As Long"
+  ts.WriteLine "                    For ri = ki To mSecCount - 2"
+  ts.WriteLine "                        mSecEntries(ri) = mSecEntries(ri + 1)"
+  ts.WriteLine "                    Next ri"
+  ts.WriteLine "                    mSecCount = mSecCount - 1"
+  ts.WriteLine "                    merged = True"
+  ts.WriteLine "                    Exit For  ' Don't advance ki — re-check this index"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine "NextK:"
+  ts.WriteLine "        Next k"
+  ts.WriteLine "        If Not merged Then ki = ki + 1"
+  ts.WriteLine "NextConsolidate:"
+  ts.WriteLine "    Loop"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Sort alphabetically within each category key (simple bubble sort)"
+  ts.WriteLine "    Dim swapped As Boolean"
+  ts.WriteLine "    Do"
+  ts.WriteLine "        swapped = False"
+  ts.WriteLine "        Dim si As Long"
+  ts.WriteLine "        For si = 0 To mSecCount - 2"
+  ts.WriteLine "            If mSecEntries(si).CategoryKey = mSecEntries(si + 1).CategoryKey Then"
+  ts.WriteLine "                If mSecEntries(si).Name > mSecEntries(si + 1).Name Then"
+  ts.WriteLine "                    Dim tmp As SecurityDetail"
+  ts.WriteLine "                    tmp = mSecEntries(si)"
+  ts.WriteLine "                    mSecEntries(si) = mSecEntries(si + 1)"
+  ts.WriteLine "                    mSecEntries(si + 1) = tmp"
+  ts.WriteLine "                    swapped = True"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next si"
+  ts.WriteLine "    Loop While swapped"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Trim and return"
+  ts.WriteLine "    If mSecCount > 0 Then"
+  ts.WriteLine "        ReDim Preserve mSecEntries(0 To mSecCount - 1)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        ReDim mSecEntries(0 To 0)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    ExtractDetailedSecurities = mSecEntries"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' --- Attach securities to holdings ---"
+  ts.WriteLine "Public Sub AttachSecuritiesToHoldings(holdings() As Holding, holdingCount As Long, secs() As SecurityDetail, secCount As Long)"
+  ts.WriteLine "    If secCount = 0 Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Build list of unique category keys"
+  ts.WriteLine "    Dim allKeys() As String"
+  ts.WriteLine "    Dim keyCount As Long: keyCount = 0"
+  ts.WriteLine "    ReDim allKeys(0 To 49)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim si As Long"
+  ts.WriteLine "    For si = 0 To secCount - 1"
+  ts.WriteLine "        Dim found As Boolean: found = False"
+  ts.WriteLine "        Dim ki As Long"
+  ts.WriteLine "        For ki = 0 To keyCount - 1"
+  ts.WriteLine "            If allKeys(ki) = secs(si).CategoryKey Then found = True: Exit For"
+  ts.WriteLine "        Next ki"
+  ts.WriteLine "        If Not found Then"
+  ts.WriteLine "            If keyCount > UBound(allKeys) Then ReDim Preserve allKeys(0 To keyCount + 49)"
+  ts.WriteLine "            allKeys(keyCount) = secs(si).CategoryKey"
+  ts.WriteLine "            keyCount = keyCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next si"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Parse each key into assetClass + plainName"
+  ts.WriteLine "    Dim keyAC() As String"
+  ts.WriteLine "    Dim keyPlain() As String"
+  ts.WriteLine "    ReDim keyAC(0 To keyCount - 1)"
+  ts.WriteLine "    ReDim keyPlain(0 To keyCount - 1)"
+  ts.WriteLine "    For ki = 0 To keyCount - 1"
+  ts.WriteLine "        Dim sepPos As Long"
+  ts.WriteLine "        sepPos = InStr(1, allKeys(ki), ""::"")"
+  ts.WriteLine "        If sepPos > 0 Then"
+  ts.WriteLine "            keyAC(ki) = Left$(allKeys(ki), sepPos - 1)"
+  ts.WriteLine "            keyPlain(ki) = Mid$(allKeys(ki), sepPos + 2)"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            keyAC(ki) = """""
+  ts.WriteLine "            keyPlain(ki) = allKeys(ki)"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next ki"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Track which keys have been assigned"
+  ts.WriteLine "    Dim assignedKeys() As Boolean"
+  ts.WriteLine "    ReDim assignedKeys(0 To keyCount - 1)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Subcategory parents"
+  ts.WriteLine "    ' ""Municipal securities"" -> ""Fixed income"""
+  ts.WriteLine ""
+  ts.WriteLine "    Dim hi As Long"
+  ts.WriteLine "    For hi = 0 To holdingCount - 1"
+  ts.WriteLine "        ' Find best matching key for this holding"
+  ts.WriteLine "        Dim bestKey As Long: bestKey = -1"
+  ts.WriteLine "        For ki = 0 To keyCount - 1"
+  ts.WriteLine "            If assignedKeys(ki) Then GoTo NextKeyMatch"
+  ts.WriteLine "            If keyPlain(ki) <> holdings(hi).Name Then GoTo NextKeyMatch"
+  ts.WriteLine "            If keyAC(ki) <> """" And keyAC(ki) = holdings(hi).AssetType Then"
+  ts.WriteLine "                bestKey = ki"
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            If bestKey = -1 Then bestKey = ki"
+  ts.WriteLine "NextKeyMatch:"
+  ts.WriteLine "        Next ki"
+  ts.WriteLine ""
+  ts.WriteLine "        If bestKey >= 0 Then"
+  ts.WriteLine "            ' Count securities for this key"
+  ts.WriteLine "            Dim secCountForKey As Long: secCountForKey = 0"
+  ts.WriteLine "            For si = 0 To secCount - 1"
+  ts.WriteLine "                If secs(si).CategoryKey = allKeys(bestKey) Then secCountForKey = secCountForKey + 1"
+  ts.WriteLine "            Next si"
+  ts.WriteLine ""
+  ts.WriteLine "            ReDim holdings(hi).Securities(0 To IIf(secCountForKey > 0, secCountForKey - 1, 0))"
+  ts.WriteLine "            holdings(hi).SecurityCount = secCountForKey"
+  ts.WriteLine "            Dim secIdx As Long: secIdx = 0"
+  ts.WriteLine "            For si = 0 To secCount - 1"
+  ts.WriteLine "                If secs(si).CategoryKey = allKeys(bestKey) Then"
+  ts.WriteLine "                    holdings(hi).Securities(secIdx) = secs(si)"
+  ts.WriteLine "                    secIdx = secIdx + 1"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            Next si"
+  ts.WriteLine "            assignedKeys(bestKey) = True"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next hi"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Attach unmatched subcategories to parent"
+  ts.WriteLine "    For ki = 0 To keyCount - 1"
+  ts.WriteLine "        If assignedKeys(ki) Then GoTo NextUnmatched"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Check if this is a subcategory"
+  ts.WriteLine "        Dim parentName As String: parentName = """""
+  ts.WriteLine "        If keyPlain(ki) = ""Municipal securities"" Then parentName = ""Fixed income"""
+  ts.WriteLine "        If parentName = """" Then GoTo NextUnmatched"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Check if already matched directly"
+  ts.WriteLine "        Dim directMatch As Boolean: directMatch = False"
+  ts.WriteLine "        For hi = 0 To holdingCount - 1"
+  ts.WriteLine "            If holdings(hi).Name = keyPlain(ki) Then directMatch = True: Exit For"
+  ts.WriteLine "        Next hi"
+  ts.WriteLine "        If directMatch Then GoTo NextUnmatched"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Find parent holding"
+  ts.WriteLine "        Dim parentIdx As Long: parentIdx = -1"
+  ts.WriteLine "        For hi = 0 To holdingCount - 1"
+  ts.WriteLine "            If holdings(hi).Name = parentName Then"
+  ts.WriteLine "                If keyAC(ki) <> """" Then"
+  ts.WriteLine "                    If holdings(hi).AssetType = keyAC(ki) Then parentIdx = hi: Exit For"
+  ts.WriteLine "                End If"
+  ts.WriteLine "                If parentIdx = -1 Then parentIdx = hi"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next hi"
+  ts.WriteLine ""
+  ts.WriteLine "        If parentIdx >= 0 Then"
+  ts.WriteLine "            ' Append securities to parent"
+  ts.WriteLine "            Dim oldCount As Long"
+  ts.WriteLine "            oldCount = holdings(parentIdx).SecurityCount"
+  ts.WriteLine "            Dim addCount As Long: addCount = 0"
+  ts.WriteLine "            For si = 0 To secCount - 1"
+  ts.WriteLine "                If secs(si).CategoryKey = allKeys(ki) Then addCount = addCount + 1"
+  ts.WriteLine "            Next si"
+  ts.WriteLine "            If addCount > 0 Then"
+  ts.WriteLine "                ReDim Preserve holdings(parentIdx).Securities(0 To oldCount + addCount - 1)"
+  ts.WriteLine "                Dim ai As Long: ai = oldCount"
+  ts.WriteLine "                For si = 0 To secCount - 1"
+  ts.WriteLine "                    If secs(si).CategoryKey = allKeys(ki) Then"
+  ts.WriteLine "                        holdings(parentIdx).Securities(ai) = secs(si)"
+  ts.WriteLine "                        ai = ai + 1"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                Next si"
+  ts.WriteLine "                holdings(parentIdx).SecurityCount = oldCount + addCount"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            assignedKeys(ki) = True"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextUnmatched:"
+  ts.WriteLine "    Next ki"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Array helper functions for creating string arrays inline"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function SArr(s1 As String) As String()"
+  ts.WriteLine "    Dim a(0 To 0) As String"
+  ts.WriteLine "    a(0) = s1"
+  ts.WriteLine "    SArr = a"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function SArr2(s1 As String, s2 As String) As String()"
+  ts.WriteLine "    Dim a(0 To 1) As String"
+  ts.WriteLine "    a(0) = s1: a(1) = s2"
+  ts.WriteLine "    SArr2 = a"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function SArr3(s1 As String, s2 As String, s3 As String) As String()"
+  ts.WriteLine "    Dim a(0 To 2) As String"
+  ts.WriteLine "    a(0) = s1: a(1) = s2: a(2) = s3"
+  ts.WriteLine "    SArr3 = a"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Main entry point"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ExtractFromText(text As String) As StatementExtraction"
+  ts.WriteLine "    Dim result As StatementExtraction"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Initialize dynamic arrays"
+  ts.WriteLine "    ReDim result.Allocations(0 To 6)"
+  ts.WriteLine "    ReDim result.Holdings(0 To 0)"
+  ts.WriteLine "    ReDim result.Transactions(0 To 0)"
+  ts.WriteLine "    ReDim result.Checks(0 To 20)"
+  ts.WriteLine ""
+  ts.WriteLine "    result.Summary = ExtractAccountSummary(text)"
+  ts.WriteLine "    result.Allocations = ExtractAssetAllocation(text)"
+  ts.WriteLine "    result.AllocationCount = 7"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim h() As Holding"
+  ts.WriteLine "    h = ExtractHoldings(text)"
+  ts.WriteLine "    result.Holdings = h"
+  ts.WriteLine "    result.HoldingCount = UBound(h) + 1"
+  ts.WriteLine "    If result.HoldingCount = 1 And result.Holdings(0).Name = """" Then result.HoldingCount = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Attach detailed securities to holdings"
+  ts.WriteLine "    Dim secs() As SecurityDetail"
+  ts.WriteLine "    secs = ExtractDetailedSecurities(text)"
+  ts.WriteLine "    Dim secCount As Long"
+  ts.WriteLine "    ' Derive count from returned array (first entry with empty Name = unused slot)"
+  ts.WriteLine "    secCount = UBound(secs) + 1"
+  ts.WriteLine "    If secCount = 1 And secs(0).Name = """" And secs(0).Value = 0 Then secCount = 0"
+  ts.WriteLine "    AttachSecuritiesToHoldings result.Holdings, result.HoldingCount, secs, secCount"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim t() As Transaction"
+  ts.WriteLine "    t = ExtractTransactions(text)"
+  ts.WriteLine "    result.Transactions = t"
+  ts.WriteLine "    result.TransactionCount = UBound(t) + 1"
+  ts.WriteLine "    If result.TransactionCount = 1 And result.Transactions(0).Activity = """" Then result.TransactionCount = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    result.Income = ExtractIncome(text)"
+  ts.WriteLine "    result.Gains = ExtractGainsLosses(text)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Run reconciliation"
+  ts.WriteLine "    RunReconciliation result"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractFromText = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+End Sub
 
-Function GetModule_UBSLoanExtract()
-  Dim s
-  s = ""
-  s = s & "Attribute VB_Name = ""UBSLoanExtract""" & vbCrLf
-  s = s & "Option Explicit" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' UBSLoanExtract.bas — Loan account extraction for UBS Bank USA / Premier Credit Line." & vbCrLf
-  s = s & "' Port of web/src/extract-loan.ts to VBA." & vbCrLf
-  s = s & "'" & vbCrLf
-  s = s & "' Handles both active loan accounts (with balances, transactions, fixed contracts)" & vbCrLf
-  s = s & "' and zero-balance accounts (credit line with no outstanding balance)." & vbCrLf
-  s = s & "'" & vbCrLf
-  s = s & "' Provides:" & vbCrLf
-  s = s & "'   Types: LoanSummary, LoanActivity, LoanTransaction, FixedLoanContract, LoanExtraction" & vbCrLf
-  s = s & "'   Sub-parsers: ParseLoanSummary, ParseLoanActivity, ParseLoanTransactions, ParseLoanContracts" & vbCrLf
-  s = s & "'   Entry point: ExtractLoanFromText()" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Types" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type LoanSummary" & vbCrLf
-  s = s & "    AccountName As String" & vbCrLf
-  s = s & "    AccountNumbers As String" & vbCrLf
-  s = s & "    LoanType As String" & vbCrLf
-  s = s & "    StatementPeriod As String" & vbCrLf
-  s = s & "    VariableRate As Double" & vbCrLf
-  s = s & "    OpeningBalance As Double" & vbCrLf
-  s = s & "    ClosingBalance As Double" & vbCrLf
-  s = s & "    AvailableCredit As Double" & vbCrLf
-  s = s & "    VariableOpening As Double" & vbCrLf
-  s = s & "    VariableClosing As Double" & vbCrLf
-  s = s & "    FixedOpening As Double" & vbCrLf
-  s = s & "    FixedClosing As Double" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type LoanActivity" & vbCrLf
-  s = s & "    OpeningMonth As Double" & vbCrLf
-  s = s & "    OpeningYtd As Double" & vbCrLf
-  s = s & "    RepaymentsMonth As Double" & vbCrLf
-  s = s & "    RepaymentsYtd As Double" & vbCrLf
-  s = s & "    WithdrawalsMonth As Double" & vbCrLf
-  s = s & "    WithdrawalsYtd As Double" & vbCrLf
-  s = s & "    InterestMonth As Double" & vbCrLf
-  s = s & "    InterestYtd As Double" & vbCrLf
-  s = s & "    ClosingMonth As Double" & vbCrLf
-  s = s & "    ClosingYtd As Double" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type LoanTransaction" & vbCrLf
-  s = s & "    TxDate As String" & vbCrLf
-  s = s & "    Category As String" & vbCrLf
-  s = s & "    Description As String" & vbCrLf
-  s = s & "    Amount As Double" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type FixedLoanContract" & vbCrLf
-  s = s & "    ContractNumber As String" & vbCrLf
-  s = s & "    Period As String" & vbCrLf
-  s = s & "    Rate As Double" & vbCrLf
-  s = s & "    Balance As Double" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type LoanExtraction" & vbCrLf
-  s = s & "    Summary As LoanSummary" & vbCrLf
-  s = s & "    Activity As LoanActivity" & vbCrLf
-  s = s & "    Transactions() As LoanTransaction" & vbCrLf
-  s = s & "    TransactionCount As Long" & vbCrLf
-  s = s & "    FixedContracts() As FixedLoanContract" & vbCrLf
-  s = s & "    ContractCount As Long" & vbCrLf
-  s = s & "    InterestYtd As Double" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Constants" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Const NUM_PAT As String = ""-?[\d,]+\.\d{2}""" & vbCrLf
-  s = s & "Private Const MONTH_ALT As String = ""(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)""" & vbCrLf
-  s = s & "Private Const MONTH_FULL As String = ""(?:January|February|March|April|May|June|July|August|September|October|November|December)""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Regex helper — cached RegExp object" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private mCachedRe As Object" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function CreateRegex(pattern As String, Optional isGlobal As Boolean = False, Optional isMultiline As Boolean = False, Optional ignoreCase As Boolean = False) As Object" & vbCrLf
-  s = s & "    If mCachedRe Is Nothing Then" & vbCrLf
-  s = s & "        Set mCachedRe = CreateObject(""VBScript.RegExp"")" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    mCachedRe.pattern = pattern" & vbCrLf
-  s = s & "    mCachedRe.Global = isGlobal" & vbCrLf
-  s = s & "    mCachedRe.MultiLine = isMultiline" & vbCrLf
-  s = s & "    mCachedRe.ignoreCase = ignoreCase" & vbCrLf
-  s = s & "    Set CreateRegex = mCachedRe" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function RegexMatch(text As String, pattern As String, Optional ignoreCase As Boolean = False, Optional isMultiline As Boolean = False) As Object" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateRegex(pattern, False, isMultiline, ignoreCase)" & vbCrLf
-  s = s & "    Dim matches As Object" & vbCrLf
-  s = s & "    Set matches = re.Execute(text)" & vbCrLf
-  s = s & "    If matches.Count > 0 Then" & vbCrLf
-  s = s & "        Set RegexMatch = matches(0)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        Set RegexMatch = Nothing" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function RegexMatchAll(text As String, pattern As String, Optional ignoreCase As Boolean = False, Optional isGlobal As Boolean = True) As Object" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateRegex(pattern, isGlobal, False, ignoreCase)" & vbCrLf
-  s = s & "    Set RegexMatchAll = re.Execute(text)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function RegexTest(text As String, pattern As String, Optional ignoreCase As Boolean = False) As Boolean" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateRegex(pattern, False, False, ignoreCase)" & vbCrLf
-  s = s & "    RegexTest = re.Test(text)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Number parsing (duplicated from UBSExtract to avoid circular deps)" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function SafeFloat(value As Variant) As Double" & vbCrLf
-  s = s & "    If IsNull(value) Or IsEmpty(value) Then" & vbCrLf
-  s = s & "        SafeFloat = 0#" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    Dim s As String" & vbCrLf
-  s = s & "    s = CStr(value)" & vbCrLf
-  s = s & "    s = Replace(s, "","", """")" & vbCrLf
-  s = s & "    s = Replace(s, ""$"", """")" & vbCrLf
-  s = s & "    s = Replace(s, ""%"", """")" & vbCrLf
-  s = s & "    s = Trim(s)" & vbCrLf
-  s = s & "    If s = """" Or s = ""N/A"" Or s = ""None"" Then" & vbCrLf
-  s = s & "        SafeFloat = 0#" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If IsNumeric(s) Then" & vbCrLf
-  s = s & "        SafeFloat = CDbl(s)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        SafeFloat = 0#" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Sub-parsers" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ParseLoanSummary(text As String) As LoanSummary" & vbCrLf
-  s = s & "    Dim summary As LoanSummary" & vbCrLf
-  s = s & "    Dim m As Object" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Account name" & vbCrLf
-  s = s & "    Set m = RegexMatch(text, ""Account name:\s*([\s\S]*?)(?=Account number:)"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.AccountName = UBSExtract.CleanAccountName(m.SubMatches(0))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Account numbers — strip trailing "" WM""" & vbCrLf
-  s = s & "    Set m = RegexMatch(text, ""Account number:\s*(.+)"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        Dim re As Object" & vbCrLf
-  s = s & "        Set re = CreateRegex(""\s+WM\b"", True)" & vbCrLf
-  s = s & "        summary.AccountNumbers = Trim$(re.Replace(m.SubMatches(0), """"))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Loan type — ""Premier Credit Line - Non-Purpose"" etc." & vbCrLf
-  s = s & "    Set m = RegexMatch(text, ""Premier Credit Line\s*-\s*(.+?)(?:\n|$)"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.LoanType = ""Premier Credit Line - "" & Trim$(m.SubMatches(0))" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        summary.LoanType = ""Premier Credit Line""" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Statement period" & vbCrLf
-  s = s & "    Set m = RegexMatch(text, ""("" & MONTH_FULL & ""\s+\d{4}(?:\s*-\s*(?:Jan\.|Feb\.|Mar\.|Apr\.|May\.|Jun\.|Jul\.|Aug\.|Sep\.|Oct\.|Nov\.|Dec\.)\s+\d{4})?)"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.StatementPeriod = Trim$(m.SubMatches(0))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Variable interest rate" & vbCrLf
-  s = s & "    Set m = RegexMatch(text, ""Current variable interest rate[\s\S]*?(\d+\.\d+)%"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.VariableRate = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Variable rate loan balances" & vbCrLf
-  s = s & "    Set m = RegexMatch(text, ""Variable rate loan\s*\([^)]+\)\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.VariableOpening = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "        summary.VariableClosing = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Fixed rate loan balances" & vbCrLf
-  s = s & "    Set m = RegexMatch(text, ""Fixed rate loan\s*\([^)]+\)\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.FixedOpening = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "        summary.FixedClosing = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Total loan balance" & vbCrLf
-  s = s & "    Set m = RegexMatch(text, ""Total loan balance\s+\$?("" & NUM_PAT & "")\s+\$?("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.OpeningBalance = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "        summary.ClosingBalance = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        summary.OpeningBalance = summary.VariableOpening + summary.FixedOpening" & vbCrLf
-  s = s & "        summary.ClosingBalance = summary.VariableClosing + summary.FixedClosing" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Available credit" & vbCrLf
-  s = s & "    Set m = RegexMatch(text, ""Available credit\d?\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        summary.AvailableCredit = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ParseLoanSummary = summary" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ParseLoanActivity(text As String) As LoanActivity" & vbCrLf
-  s = s & "    Dim activity As LoanActivity" & vbCrLf
-  s = s & "    Dim m As Object" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Set m = RegexMatch(text, ""Loan activity summary[\s\S]*?Closing balances[\s\S]*?\n"")" & vbCrLf
-  s = s & "    If m Is Nothing Then" & vbCrLf
-  s = s & "        ParseLoanActivity = activity" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim actText As String" & vbCrLf
-  s = s & "    actText = m.Value" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Opening balances" & vbCrLf
-  s = s & "    Set m = RegexMatch(actText, ""Opening balances\s+(-?\$?"" & NUM_PAT & "")\s+(-?\$?"" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        activity.OpeningMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "        activity.OpeningYtd = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Repayments/credits" & vbCrLf
-  s = s & "    Set m = RegexMatch(actText, ""Repayments\/credits\s+(-?\$?"" & NUM_PAT & "")\s+(-?\$?"" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        activity.RepaymentsMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "        activity.RepaymentsYtd = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Withdrawals" & vbCrLf
-  s = s & "    Set m = RegexMatch(actText, ""Withdrawals\s+(-?\$?"" & NUM_PAT & "")\s+(-?\$?"" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        activity.WithdrawalsMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "        activity.WithdrawalsYtd = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Interest" & vbCrLf
-  s = s & "    Set m = RegexMatch(actText, ""Interest\s+(-?\$?"" & NUM_PAT & "")\s+(-?\$?"" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        activity.InterestMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "        activity.InterestYtd = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Closing balances" & vbCrLf
-  s = s & "    Set m = RegexMatch(actText, ""Closing balances\s+(-?\$?"" & NUM_PAT & "")\s+(-?\$?"" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        activity.ClosingMonth = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "        activity.ClosingYtd = SafeFloat(m.SubMatches(1))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ParseLoanActivity = activity" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub ParseLoanTransactions(text As String, ByRef txs() As LoanTransaction, ByRef txCount As Long)" & vbCrLf
-  s = s & "    txCount = 0" & vbCrLf
-  s = s & "    ReDim txs(0 To 31)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim m As Object" & vbCrLf
-  s = s & "    Set m = RegexMatch(text, ""Loan activity this month[\s\S]*?(?=Interest and fees charged|Variable rate changes|Information about your loan|$)"")" & vbCrLf
-  s = s & "    If m Is Nothing Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim txText As String" & vbCrLf
-  s = s & "    txText = m.Value" & vbCrLf
-  s = s & "    Dim currentCategory As String" & vbCrLf
-  s = s & "    currentCategory = """"" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim lines() As String" & vbCrLf
-  s = s & "    lines = Split(txText, vbLf)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = LBound(lines) To UBound(lines)" & vbCrLf
-  s = s & "        Dim line As String" & vbCrLf
-  s = s & "        line = lines(i)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Category headers" & vbCrLf
-  s = s & "        If RegexTest(line, ""^Repayments\/credits\b"") Then" & vbCrLf
-  s = s & "            currentCategory = ""Repayment""" & vbCrLf
-  s = s & "        ElseIf RegexTest(line, ""^Withdrawals\b"") Then" & vbCrLf
-  s = s & "            currentCategory = ""Withdrawal""" & vbCrLf
-  s = s & "        ElseIf RegexTest(line, ""^Interest\b"") Then" & vbCrLf
-  s = s & "            currentCategory = ""Interest""" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Category header + transaction on same line" & vbCrLf
-  s = s & "        Dim catTxM As Object" & vbCrLf
-  s = s & "        Set catTxM = RegexMatch(line, ""(?:Repayments/credits|Withdrawals|Interest)\s+("" & MONTH_ALT & ""\s+\d{1,2})\s+(.+?)\s+(-?"" & NUM_PAT & "")\s*$"")" & vbCrLf
-  s = s & "        If Not catTxM Is Nothing Then" & vbCrLf
-  s = s & "            ' Update category from this line" & vbCrLf
-  s = s & "            If RegexTest(line, ""^Repayments/credits"") Then currentCategory = ""Repayment""" & vbCrLf
-  s = s & "            If RegexTest(line, ""^Withdrawals"") Then currentCategory = ""Withdrawal""" & vbCrLf
-  s = s & "            If RegexTest(line, ""^Interest"") Then currentCategory = ""Interest""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            If txCount > UBound(txs) Then ReDim Preserve txs(0 To txCount + 15)" & vbCrLf
-  s = s & "            txs(txCount).TxDate = catTxM.SubMatches(0)" & vbCrLf
-  s = s & "            txs(txCount).Category = currentCategory" & vbCrLf
-  s = s & "            txs(txCount).Description = Trim$(catTxM.SubMatches(1))" & vbCrLf
-  s = s & "            txs(txCount).Amount = SafeFloat(catTxM.SubMatches(2))" & vbCrLf
-  s = s & "            txCount = txCount + 1" & vbCrLf
-  s = s & "            GoTo NextTxLine" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Standalone transaction line" & vbCrLf
-  s = s & "        If currentCategory <> """" Then" & vbCrLf
-  s = s & "            Dim txM As Object" & vbCrLf
-  s = s & "            Set txM = RegexMatch(line, ""("" & MONTH_ALT & ""\s+\d{1,2})\s+(.+?)\s+(-?"" & NUM_PAT & "")\s*$"")" & vbCrLf
-  s = s & "            If Not txM Is Nothing Then" & vbCrLf
-  s = s & "                If txCount > UBound(txs) Then ReDim Preserve txs(0 To txCount + 15)" & vbCrLf
-  s = s & "                txs(txCount).TxDate = txM.SubMatches(0)" & vbCrLf
-  s = s & "                txs(txCount).Category = currentCategory" & vbCrLf
-  s = s & "                txs(txCount).Description = Trim$(txM.SubMatches(1))" & vbCrLf
-  s = s & "                txs(txCount).Amount = SafeFloat(txM.SubMatches(2))" & vbCrLf
-  s = s & "                txCount = txCount + 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextTxLine:" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub ParseLoanContracts(text As String, ByRef contracts() As FixedLoanContract, ByRef contractCount As Long)" & vbCrLf
-  s = s & "    contractCount = 0" & vbCrLf
-  s = s & "    ReDim contracts(0 To 7)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim m As Object" & vbCrLf
-  s = s & "    Set m = RegexMatch(text, ""Fixed loan contracts[\s\S]*?(?=Upcoming interest|Information about|$)"")" & vbCrLf
-  s = s & "    If m Is Nothing Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim contractText As String" & vbCrLf
-  s = s & "    contractText = m.Value" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim matches As Object" & vbCrLf
-  s = s & "    Set matches = RegexMatchAll(contractText, ""(\d{6})\s+(\d{2}\.\d{2}\.\d{2}\s*-\s*\d{2}\.\d{2}\.\d{2})\s+(\d+\.\d+)%\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To matches.Count - 1" & vbCrLf
-  s = s & "        If contractCount > UBound(contracts) Then ReDim Preserve contracts(0 To contractCount + 7)" & vbCrLf
-  s = s & "        contracts(contractCount).ContractNumber = matches(i).SubMatches(0)" & vbCrLf
-  s = s & "        contracts(contractCount).Period = Trim$(matches(i).SubMatches(1))" & vbCrLf
-  s = s & "        contracts(contractCount).Rate = SafeFloat(matches(i).SubMatches(2))" & vbCrLf
-  s = s & "        contracts(contractCount).Balance = SafeFloat(matches(i).SubMatches(3))" & vbCrLf
-  s = s & "        contractCount = contractCount + 1" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Entry Point" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ExtractLoanFromText(text As String) As LoanExtraction" & vbCrLf
-  s = s & "    Dim result As LoanExtraction" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    result.Summary = ParseLoanSummary(text)" & vbCrLf
-  s = s & "    result.Activity = ParseLoanActivity(text)" & vbCrLf
-  s = s & "    ParseLoanTransactions text, result.Transactions, result.TransactionCount" & vbCrLf
-  s = s & "    ParseLoanContracts text, result.FixedContracts, result.ContractCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Interest YTD" & vbCrLf
-  s = s & "    Dim m As Object" & vbCrLf
-  s = s & "    Set m = RegexMatch(text, ""Total charged in 20\d{2}\s+\$?("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "    If Not m Is Nothing Then" & vbCrLf
-  s = s & "        result.InterestYtd = SafeFloat(m.SubMatches(0))" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractLoanFromText = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  GetModule_UBSLoanExtract = s
-End Function
+Sub WriteModule_UBSLoanExtract(ts)
+  ts.WriteLine "Attribute VB_Name = ""UBSLoanExtract"""
+  ts.WriteLine "Option Explicit"
+  ts.WriteLine ""
+  ts.WriteLine "' UBSLoanExtract.bas — Loan account extraction for UBS Bank USA / Premier Credit Line."
+  ts.WriteLine "' Port of web/src/extract-loan.ts to VBA."
+  ts.WriteLine "'"
+  ts.WriteLine "' Handles both active loan accounts (with balances, transactions, fixed contracts)"
+  ts.WriteLine "' and zero-balance accounts (credit line with no outstanding balance)."
+  ts.WriteLine "'"
+  ts.WriteLine "' Provides:"
+  ts.WriteLine "'   Types: LoanSummary, LoanActivity, LoanTransaction, FixedLoanContract, LoanExtraction"
+  ts.WriteLine "'   Sub-parsers: ParseLoanSummary, ParseLoanActivity, ParseLoanTransactions, ParseLoanContracts"
+  ts.WriteLine "'   Entry point: ExtractLoanFromText()"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Types"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type LoanSummary"
+  ts.WriteLine "    AccountName As String"
+  ts.WriteLine "    AccountNumbers As String"
+  ts.WriteLine "    LoanType As String"
+  ts.WriteLine "    StatementPeriod As String"
+  ts.WriteLine "    VariableRate As Double"
+  ts.WriteLine "    OpeningBalance As Double"
+  ts.WriteLine "    ClosingBalance As Double"
+  ts.WriteLine "    AvailableCredit As Double"
+  ts.WriteLine "    VariableOpening As Double"
+  ts.WriteLine "    VariableClosing As Double"
+  ts.WriteLine "    FixedOpening As Double"
+  ts.WriteLine "    FixedClosing As Double"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type LoanActivity"
+  ts.WriteLine "    OpeningMonth As Double"
+  ts.WriteLine "    OpeningYtd As Double"
+  ts.WriteLine "    RepaymentsMonth As Double"
+  ts.WriteLine "    RepaymentsYtd As Double"
+  ts.WriteLine "    WithdrawalsMonth As Double"
+  ts.WriteLine "    WithdrawalsYtd As Double"
+  ts.WriteLine "    InterestMonth As Double"
+  ts.WriteLine "    InterestYtd As Double"
+  ts.WriteLine "    ClosingMonth As Double"
+  ts.WriteLine "    ClosingYtd As Double"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type LoanTransaction"
+  ts.WriteLine "    TxDate As String"
+  ts.WriteLine "    Category As String"
+  ts.WriteLine "    Description As String"
+  ts.WriteLine "    Amount As Double"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type FixedLoanContract"
+  ts.WriteLine "    ContractNumber As String"
+  ts.WriteLine "    Period As String"
+  ts.WriteLine "    Rate As Double"
+  ts.WriteLine "    Balance As Double"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type LoanExtraction"
+  ts.WriteLine "    Summary As LoanSummary"
+  ts.WriteLine "    Activity As LoanActivity"
+  ts.WriteLine "    Transactions() As LoanTransaction"
+  ts.WriteLine "    TransactionCount As Long"
+  ts.WriteLine "    FixedContracts() As FixedLoanContract"
+  ts.WriteLine "    ContractCount As Long"
+  ts.WriteLine "    InterestYtd As Double"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Constants"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Const NUM_PAT As String = ""-?[\d,]+\.\d{2}"""
+  ts.WriteLine "Private Const MONTH_ALT As String = ""(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"""
+  ts.WriteLine "Private Const MONTH_FULL As String = ""(?:January|February|March|April|May|June|July|August|September|October|November|December)"""
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Regex helper — cached RegExp object"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private mCachedRe As Object"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function CreateRegex(pattern As String, Optional isGlobal As Boolean = False, Optional isMultiline As Boolean = False, Optional ignoreCase As Boolean = False) As Object"
+  ts.WriteLine "    If mCachedRe Is Nothing Then"
+  ts.WriteLine "        Set mCachedRe = CreateObject(""VBScript.RegExp"")"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    mCachedRe.pattern = pattern"
+  ts.WriteLine "    mCachedRe.Global = isGlobal"
+  ts.WriteLine "    mCachedRe.MultiLine = isMultiline"
+  ts.WriteLine "    mCachedRe.ignoreCase = ignoreCase"
+  ts.WriteLine "    Set CreateRegex = mCachedRe"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function RegexMatch(text As String, pattern As String, Optional ignoreCase As Boolean = False, Optional isMultiline As Boolean = False) As Object"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateRegex(pattern, False, isMultiline, ignoreCase)"
+  ts.WriteLine "    Dim matches As Object"
+  ts.WriteLine "    Set matches = re.Execute(text)"
+  ts.WriteLine "    If matches.Count > 0 Then"
+  ts.WriteLine "        Set RegexMatch = matches(0)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        Set RegexMatch = Nothing"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function RegexMatchAll(text As String, pattern As String, Optional ignoreCase As Boolean = False, Optional isGlobal As Boolean = True) As Object"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateRegex(pattern, isGlobal, False, ignoreCase)"
+  ts.WriteLine "    Set RegexMatchAll = re.Execute(text)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function RegexTest(text As String, pattern As String, Optional ignoreCase As Boolean = False) As Boolean"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateRegex(pattern, False, False, ignoreCase)"
+  ts.WriteLine "    RegexTest = re.Test(text)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Number parsing (duplicated from UBSExtract to avoid circular deps)"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function SafeFloat(value As Variant) As Double"
+  ts.WriteLine "    If IsNull(value) Or IsEmpty(value) Then"
+  ts.WriteLine "        SafeFloat = 0#"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    Dim s As String"
+  ts.WriteLine "    s = CStr(value)"
+  ts.WriteLine "    s = Replace(s, "","", """")"
+  ts.WriteLine "    s = Replace(s, ""$"", """")"
+  ts.WriteLine "    s = Replace(s, ""%"", """")"
+  ts.WriteLine "    s = Trim(s)"
+  ts.WriteLine "    If s = """" Or s = ""N/A"" Or s = ""None"" Then"
+  ts.WriteLine "        SafeFloat = 0#"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If IsNumeric(s) Then"
+  ts.WriteLine "        SafeFloat = CDbl(s)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        SafeFloat = 0#"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Sub-parsers"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ParseLoanSummary(text As String) As LoanSummary"
+  ts.WriteLine "    Dim summary As LoanSummary"
+  ts.WriteLine "    Dim m As Object"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Account name"
+  ts.WriteLine "    Set m = RegexMatch(text, ""Account name:\s*([\s\S]*?)(?=Account number:)"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.AccountName = UBSExtract.CleanAccountName(m.SubMatches(0))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Account numbers — strip trailing "" WM"""
+  ts.WriteLine "    Set m = RegexMatch(text, ""Account number:\s*(.+)"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        Dim re As Object"
+  ts.WriteLine "        Set re = CreateRegex(""\s+WM\b"", True)"
+  ts.WriteLine "        summary.AccountNumbers = Trim$(re.Replace(m.SubMatches(0), """"))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Loan type — ""Premier Credit Line - Non-Purpose"" etc."
+  ts.WriteLine "    Set m = RegexMatch(text, ""Premier Credit Line\s*-\s*(.+?)(?:\n|$)"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.LoanType = ""Premier Credit Line - "" & Trim$(m.SubMatches(0))"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        summary.LoanType = ""Premier Credit Line"""
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Statement period"
+  ts.WriteLine "    Set m = RegexMatch(text, ""("" & MONTH_FULL & ""\s+\d{4}(?:\s*-\s*(?:Jan\.|Feb\.|Mar\.|Apr\.|May\.|Jun\.|Jul\.|Aug\.|Sep\.|Oct\.|Nov\.|Dec\.)\s+\d{4})?)"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.StatementPeriod = Trim$(m.SubMatches(0))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Variable interest rate"
+  ts.WriteLine "    Set m = RegexMatch(text, ""Current variable interest rate[\s\S]*?(\d+\.\d+)%"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.VariableRate = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Variable rate loan balances"
+  ts.WriteLine "    Set m = RegexMatch(text, ""Variable rate loan\s*\([^)]+\)\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.VariableOpening = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "        summary.VariableClosing = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Fixed rate loan balances"
+  ts.WriteLine "    Set m = RegexMatch(text, ""Fixed rate loan\s*\([^)]+\)\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.FixedOpening = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "        summary.FixedClosing = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Total loan balance"
+  ts.WriteLine "    Set m = RegexMatch(text, ""Total loan balance\s+\$?("" & NUM_PAT & "")\s+\$?("" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.OpeningBalance = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "        summary.ClosingBalance = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        summary.OpeningBalance = summary.VariableOpening + summary.FixedOpening"
+  ts.WriteLine "        summary.ClosingBalance = summary.VariableClosing + summary.FixedClosing"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Available credit"
+  ts.WriteLine "    Set m = RegexMatch(text, ""Available credit\d?\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        summary.AvailableCredit = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ParseLoanSummary = summary"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ParseLoanActivity(text As String) As LoanActivity"
+  ts.WriteLine "    Dim activity As LoanActivity"
+  ts.WriteLine "    Dim m As Object"
+  ts.WriteLine ""
+  ts.WriteLine "    Set m = RegexMatch(text, ""Loan activity summary[\s\S]*?Closing balances[\s\S]*?\n"")"
+  ts.WriteLine "    If m Is Nothing Then"
+  ts.WriteLine "        ParseLoanActivity = activity"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim actText As String"
+  ts.WriteLine "    actText = m.Value"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Opening balances"
+  ts.WriteLine "    Set m = RegexMatch(actText, ""Opening balances\s+(-?\$?"" & NUM_PAT & "")\s+(-?\$?"" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        activity.OpeningMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "        activity.OpeningYtd = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Repayments/credits"
+  ts.WriteLine "    Set m = RegexMatch(actText, ""Repayments\/credits\s+(-?\$?"" & NUM_PAT & "")\s+(-?\$?"" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        activity.RepaymentsMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "        activity.RepaymentsYtd = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Withdrawals"
+  ts.WriteLine "    Set m = RegexMatch(actText, ""Withdrawals\s+(-?\$?"" & NUM_PAT & "")\s+(-?\$?"" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        activity.WithdrawalsMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "        activity.WithdrawalsYtd = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Interest"
+  ts.WriteLine "    Set m = RegexMatch(actText, ""Interest\s+(-?\$?"" & NUM_PAT & "")\s+(-?\$?"" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        activity.InterestMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "        activity.InterestYtd = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Closing balances"
+  ts.WriteLine "    Set m = RegexMatch(actText, ""Closing balances\s+(-?\$?"" & NUM_PAT & "")\s+(-?\$?"" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        activity.ClosingMonth = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "        activity.ClosingYtd = SafeFloat(m.SubMatches(1))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ParseLoanActivity = activity"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub ParseLoanTransactions(text As String, ByRef txs() As LoanTransaction, ByRef txCount As Long)"
+  ts.WriteLine "    txCount = 0"
+  ts.WriteLine "    ReDim txs(0 To 31)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim m As Object"
+  ts.WriteLine "    Set m = RegexMatch(text, ""Loan activity this month[\s\S]*?(?=Interest and fees charged|Variable rate changes|Information about your loan|$)"")"
+  ts.WriteLine "    If m Is Nothing Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim txText As String"
+  ts.WriteLine "    txText = m.Value"
+  ts.WriteLine "    Dim currentCategory As String"
+  ts.WriteLine "    currentCategory = """""
+  ts.WriteLine ""
+  ts.WriteLine "    Dim lines() As String"
+  ts.WriteLine "    lines = Split(txText, vbLf)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = LBound(lines) To UBound(lines)"
+  ts.WriteLine "        Dim line As String"
+  ts.WriteLine "        line = lines(i)"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Category headers"
+  ts.WriteLine "        If RegexTest(line, ""^Repayments\/credits\b"") Then"
+  ts.WriteLine "            currentCategory = ""Repayment"""
+  ts.WriteLine "        ElseIf RegexTest(line, ""^Withdrawals\b"") Then"
+  ts.WriteLine "            currentCategory = ""Withdrawal"""
+  ts.WriteLine "        ElseIf RegexTest(line, ""^Interest\b"") Then"
+  ts.WriteLine "            currentCategory = ""Interest"""
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Category header + transaction on same line"
+  ts.WriteLine "        Dim catTxM As Object"
+  ts.WriteLine "        Set catTxM = RegexMatch(line, ""(?:Repayments/credits|Withdrawals|Interest)\s+("" & MONTH_ALT & ""\s+\d{1,2})\s+(.+?)\s+(-?"" & NUM_PAT & "")\s*$"")"
+  ts.WriteLine "        If Not catTxM Is Nothing Then"
+  ts.WriteLine "            ' Update category from this line"
+  ts.WriteLine "            If RegexTest(line, ""^Repayments/credits"") Then currentCategory = ""Repayment"""
+  ts.WriteLine "            If RegexTest(line, ""^Withdrawals"") Then currentCategory = ""Withdrawal"""
+  ts.WriteLine "            If RegexTest(line, ""^Interest"") Then currentCategory = ""Interest"""
+  ts.WriteLine ""
+  ts.WriteLine "            If txCount > UBound(txs) Then ReDim Preserve txs(0 To txCount + 15)"
+  ts.WriteLine "            txs(txCount).TxDate = catTxM.SubMatches(0)"
+  ts.WriteLine "            txs(txCount).Category = currentCategory"
+  ts.WriteLine "            txs(txCount).Description = Trim$(catTxM.SubMatches(1))"
+  ts.WriteLine "            txs(txCount).Amount = SafeFloat(catTxM.SubMatches(2))"
+  ts.WriteLine "            txCount = txCount + 1"
+  ts.WriteLine "            GoTo NextTxLine"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Standalone transaction line"
+  ts.WriteLine "        If currentCategory <> """" Then"
+  ts.WriteLine "            Dim txM As Object"
+  ts.WriteLine "            Set txM = RegexMatch(line, ""("" & MONTH_ALT & ""\s+\d{1,2})\s+(.+?)\s+(-?"" & NUM_PAT & "")\s*$"")"
+  ts.WriteLine "            If Not txM Is Nothing Then"
+  ts.WriteLine "                If txCount > UBound(txs) Then ReDim Preserve txs(0 To txCount + 15)"
+  ts.WriteLine "                txs(txCount).TxDate = txM.SubMatches(0)"
+  ts.WriteLine "                txs(txCount).Category = currentCategory"
+  ts.WriteLine "                txs(txCount).Description = Trim$(txM.SubMatches(1))"
+  ts.WriteLine "                txs(txCount).Amount = SafeFloat(txM.SubMatches(2))"
+  ts.WriteLine "                txCount = txCount + 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextTxLine:"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub ParseLoanContracts(text As String, ByRef contracts() As FixedLoanContract, ByRef contractCount As Long)"
+  ts.WriteLine "    contractCount = 0"
+  ts.WriteLine "    ReDim contracts(0 To 7)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim m As Object"
+  ts.WriteLine "    Set m = RegexMatch(text, ""Fixed loan contracts[\s\S]*?(?=Upcoming interest|Information about|$)"")"
+  ts.WriteLine "    If m Is Nothing Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim contractText As String"
+  ts.WriteLine "    contractText = m.Value"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim matches As Object"
+  ts.WriteLine "    Set matches = RegexMatchAll(contractText, ""(\d{6})\s+(\d{2}\.\d{2}\.\d{2}\s*-\s*\d{2}\.\d{2}\.\d{2})\s+(\d+\.\d+)%\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To matches.Count - 1"
+  ts.WriteLine "        If contractCount > UBound(contracts) Then ReDim Preserve contracts(0 To contractCount + 7)"
+  ts.WriteLine "        contracts(contractCount).ContractNumber = matches(i).SubMatches(0)"
+  ts.WriteLine "        contracts(contractCount).Period = Trim$(matches(i).SubMatches(1))"
+  ts.WriteLine "        contracts(contractCount).Rate = SafeFloat(matches(i).SubMatches(2))"
+  ts.WriteLine "        contracts(contractCount).Balance = SafeFloat(matches(i).SubMatches(3))"
+  ts.WriteLine "        contractCount = contractCount + 1"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Entry Point"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ExtractLoanFromText(text As String) As LoanExtraction"
+  ts.WriteLine "    Dim result As LoanExtraction"
+  ts.WriteLine ""
+  ts.WriteLine "    result.Summary = ParseLoanSummary(text)"
+  ts.WriteLine "    result.Activity = ParseLoanActivity(text)"
+  ts.WriteLine "    ParseLoanTransactions text, result.Transactions, result.TransactionCount"
+  ts.WriteLine "    ParseLoanContracts text, result.FixedContracts, result.ContractCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Interest YTD"
+  ts.WriteLine "    Dim m As Object"
+  ts.WriteLine "    Set m = RegexMatch(text, ""Total charged in 20\d{2}\s+\$?("" & NUM_PAT & "")"")"
+  ts.WriteLine "    If Not m Is Nothing Then"
+  ts.WriteLine "        result.InterestYtd = SafeFloat(m.SubMatches(0))"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractLoanFromText = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+End Sub
 
-Function GetModule_UBSSummary()
-  Dim s
-  s = ""
-  s = s & "Attribute VB_Name = ""UBSSummary""" & vbCrLf
-  s = s & "Option Explicit" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' UBSSummary.bas — Summary PDF detection, section splitting, table parsers, tick-and-tie." & vbCrLf
-  s = s & "' Port of web/src/summary.ts to VBA." & vbCrLf
-  s = s & "'" & vbCrLf
-  s = s & "' Provides:" & vbCrLf
-  s = s & "'   Detection:      IsSummaryPdf, IsMultiAccountPdf" & vbCrLf
-  s = s & "'   Splitting:      FindPageBoundaries, FindAccountSections, FindLoanSections, GetSummaryPages" & vbCrLf
-  s = s & "'   Page helpers:   BuildPagesText" & vbCrLf
-  s = s & "'   Table parsers:  ParseSummaryAccountsTable, ParseSummaryChangeTable, ParseSummaryGainsTable" & vbCrLf
-  s = s & "'   Tick-and-tie:   RunTickAndTie" & vbCrLf
-  s = s & "'   Entry points:   ExtractSummaryPdf, ExtractMultiAccountPdf" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Types" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type AccountSection" & vbCrLf
-  s = s & "    StartPage As Long   ' 0-based page index" & vbCrLf
-  s = s & "    EndPage As Long     ' 0-based, exclusive" & vbCrLf
-  s = s & "    PageCount As Long" & vbCrLf
-  s = s & "    Header As String    ' First line of section" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type SummaryAccountRef" & vbCrLf
-  s = s & "    FriendlyName As String" & vbCrLf
-  s = s & "    OpeningValue As Double" & vbCrLf
-  s = s & "    ClosingValue As Double" & vbCrLf
-  s = s & "    Percentage As Double" & vbCrLf
-  s = s & "    AccountNumber As String" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type SummaryChangeRef" & vbCrLf
-  s = s & "    OpeningValue As Double" & vbCrLf
-  s = s & "    Deposits As Double" & vbCrLf
-  s = s & "    Withdrawals As Double" & vbCrLf
-  s = s & "    DividendInterestIncome As Double   ' MONTHLY, not YTD" & vbCrLf
-  s = s & "    OutsideAssets As Double" & vbCrLf
-  s = s & "    ChangeInMarketValue As Double" & vbCrLf
-  s = s & "    ClosingValue As Double" & vbCrLf
-  s = s & "    AccountNumber As String" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type SummaryGainsRef" & vbCrLf
-  s = s & "    ShortTermRealizedMonth As Double" & vbCrLf
-  s = s & "    LongTermRealizedMonth As Double" & vbCrLf
-  s = s & "    ShortTermRealizedYtd As Double" & vbCrLf
-  s = s & "    LongTermRealizedYtd As Double" & vbCrLf
-  s = s & "    ShortTermUnrealized As Double" & vbCrLf
-  s = s & "    LongTermUnrealized As Double" & vbCrLf
-  s = s & "    AccountNumber As String" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type AccountExtractionResult" & vbCrLf
-  s = s & "    AccountNumber As String" & vbCrLf
-  s = s & "    Extraction As UBSExtract.StatementExtraction" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type LoanAccountResult" & vbCrLf
-  s = s & "    AccountNumber As String" & vbCrLf
-  s = s & "    Extraction As UBSLoanExtract.LoanExtraction" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type PortfolioExtraction" & vbCrLf
-  s = s & "    Accounts() As AccountExtractionResult" & vbCrLf
-  s = s & "    AccountCount As Long" & vbCrLf
-  s = s & "    LoanAccounts() As LoanAccountResult" & vbCrLf
-  s = s & "    LoanAccountCount As Long" & vbCrLf
-  s = s & "    Warnings() As String" & vbCrLf
-  s = s & "    WarningCount As Long" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Constants" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Const NUM_PAT As String = ""-?[\d,]+\.\d{2}""" & vbCrLf
-  s = s & "Private Const TOLERANCE_SUMMARY As Double = 0.02" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Regex helper — cached RegExp object" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private mCachedRe As Object" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function CreateRegex(pattern As String, Optional isGlobal As Boolean = False, Optional isMultiline As Boolean = False, Optional ignoreCase As Boolean = False) As Object" & vbCrLf
-  s = s & "    If mCachedRe Is Nothing Then" & vbCrLf
-  s = s & "        Set mCachedRe = CreateObject(""VBScript.RegExp"")" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    mCachedRe.pattern = pattern" & vbCrLf
-  s = s & "    mCachedRe.Global = isGlobal" & vbCrLf
-  s = s & "    mCachedRe.MultiLine = isMultiline" & vbCrLf
-  s = s & "    mCachedRe.ignoreCase = ignoreCase" & vbCrLf
-  s = s & "    Set CreateRegex = mCachedRe" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function RegexMatch(text As String, pattern As String, Optional ignoreCase As Boolean = False, Optional isMultiline As Boolean = False) As Object" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateRegex(pattern, False, isMultiline, ignoreCase)" & vbCrLf
-  s = s & "    Dim matches As Object" & vbCrLf
-  s = s & "    Set matches = re.Execute(text)" & vbCrLf
-  s = s & "    If matches.Count > 0 Then" & vbCrLf
-  s = s & "        Set RegexMatch = matches(0)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        Set RegexMatch = Nothing" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function RegexMatchAll(text As String, pattern As String, Optional ignoreCase As Boolean = False) As Object" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateRegex(pattern, True, False, ignoreCase)" & vbCrLf
-  s = s & "    Set RegexMatchAll = re.Execute(text)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function RegexTest(text As String, pattern As String, Optional ignoreCase As Boolean = False) As Boolean" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateRegex(pattern, False, False, ignoreCase)" & vbCrLf
-  s = s & "    RegexTest = re.Test(text)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function SafeFloat(value As Variant) As Double" & vbCrLf
-  s = s & "    If IsNull(value) Or IsEmpty(value) Then" & vbCrLf
-  s = s & "        SafeFloat = 0#" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    Dim s As String" & vbCrLf
-  s = s & "    s = CStr(value)" & vbCrLf
-  s = s & "    s = Replace(s, "","", """")" & vbCrLf
-  s = s & "    s = Replace(s, ""$"", """")" & vbCrLf
-  s = s & "    s = Replace(s, ""%"", """")" & vbCrLf
-  s = s & "    s = Trim(s)" & vbCrLf
-  s = s & "    If s = """" Then SafeFloat = 0#: Exit Function" & vbCrLf
-  s = s & "    If IsNumeric(s) Then" & vbCrLf
-  s = s & "        SafeFloat = CDbl(s)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        SafeFloat = 0#" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' PDF detection" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function IsSummaryPdf(firstPageText As String) As Boolean" & vbCrLf
-  s = s & "    IsSummaryPdf = (InStr(1, firstPageText, ""Summary of your UBS Portfolio"") > 0)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function IsMultiAccountPdf(pages() As String) As Boolean" & vbCrLf
-  s = s & "    Dim count As Long" & vbCrLf
-  s = s & "    count = 0" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = LBound(pages) To UBound(pages)" & vbCrLf
-  s = s & "        If RegexTest(pages(i), ""Page 1 of (\d+)"") Then" & vbCrLf
-  s = s & "            count = count + 1" & vbCrLf
-  s = s & "            If count >= 2 Then" & vbCrLf
-  s = s & "                IsMultiAccountPdf = True" & vbCrLf
-  s = s & "                Exit Function" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    IsMultiAccountPdf = False" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Household nickname extraction" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ExtractHouseholdNickname(firstPageText As String) As String" & vbCrLf
-  s = s & "    ExtractHouseholdNickname = """"" & vbCrLf
-  s = s & "    If InStr(1, firstPageText, ""Summary of your UBS Portfolio"") = 0 Then Exit Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim lines() As String" & vbCrLf
-  s = s & "    lines = Split(firstPageText, vbLf)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find the code/barcode line: starts with 3+ uppercase letters followed by digits" & vbCrLf
-  s = s & "    Dim codeLineIdx As Long" & vbCrLf
-  s = s & "    codeLineIdx = -1" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = LBound(lines) To UBound(lines)" & vbCrLf
-  s = s & "        If RegexTest(Trim$(lines(i)), ""^[A-Z]{3}\d{5,}"") Then" & vbCrLf
-  s = s & "            codeLineIdx = i" & vbCrLf
-  s = s & "            Exit For" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If codeLineIdx < 0 Or codeLineIdx + 2 > UBound(lines) Then Exit Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim candidate As String" & vbCrLf
-  s = s & "    candidate = Trim$(lines(codeLineIdx + 1))" & vbCrLf
-  s = s & "    If candidate = """" Then Exit Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Check if next line is a street address (starts with a digit)" & vbCrLf
-  s = s & "    Dim nextLine As String" & vbCrLf
-  s = s & "    nextLine = Trim$(lines(codeLineIdx + 2))" & vbCrLf
-  s = s & "    If Not RegexTest(nextLine, ""^\d"") Then Exit Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractHouseholdNickname = candidate" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Page boundary detection" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub FindPageBoundaries(pages() As String, ByRef sections() As AccountSection, ByRef sectionCount As Long)" & vbCrLf
-  s = s & "    sectionCount = 0" & vbCrLf
-  s = s & "    ReDim sections(0 To 15)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Track which pages are already boundaries" & vbCrLf
-  s = s & "    Dim boundaryStarts() As Boolean" & vbCrLf
-  s = s & "    ReDim boundaryStarts(LBound(pages) To UBound(pages))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long, m As Object" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Primary: ""Page 1 of N"" boundaries" & vbCrLf
-  s = s & "    For i = LBound(pages) To UBound(pages)" & vbCrLf
-  s = s & "        Set m = RegexMatch(pages(i), ""Page 1 of (\d+)"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            Dim total As Long" & vbCrLf
-  s = s & "            total = CLng(m.SubMatches(0))" & vbCrLf
-  s = s & "            Dim firstLine As String" & vbCrLf
-  s = s & "            Dim trimmed As String" & vbCrLf
-  s = s & "            trimmed = Trim$(pages(i))" & vbCrLf
-  s = s & "            Dim nlPos As Long" & vbCrLf
-  s = s & "            nlPos = InStr(1, trimmed, vbLf)" & vbCrLf
-  s = s & "            If nlPos > 0 Then" & vbCrLf
-  s = s & "                firstLine = Left$(trimmed, nlPos - 1)" & vbCrLf
-  s = s & "            Else" & vbCrLf
-  s = s & "                firstLine = trimmed" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            If sectionCount > UBound(sections) Then ReDim Preserve sections(0 To sectionCount + 15)" & vbCrLf
-  s = s & "            sections(sectionCount).StartPage = i" & vbCrLf
-  s = s & "            sections(sectionCount).PageCount = total" & vbCrLf
-  s = s & "            sections(sectionCount).Header = firstLine" & vbCrLf
-  s = s & "            sections(sectionCount).EndPage = 0" & vbCrLf
-  s = s & "            sectionCount = sectionCount + 1" & vbCrLf
-  s = s & "            boundaryStarts(i) = True" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Secondary: ""End of statement"" -> scan forward for next section start" & vbCrLf
-  s = s & "    For i = LBound(pages) To UBound(pages)" & vbCrLf
-  s = s & "        If RegexTest(pages(i), ""End of statement for account number"", True) Then" & vbCrLf
-  s = s & "            Dim j As Long" & vbCrLf
-  s = s & "            For j = i + 1 To UBound(pages)" & vbCrLf
-  s = s & "                If boundaryStarts(j) Then Exit For" & vbCrLf
-  s = s & "                Set m = RegexMatch(pages(j), ""Page \d+ of (\d+)"")" & vbCrLf
-  s = s & "                If Not m Is Nothing Then" & vbCrLf
-  s = s & "                    trimmed = Trim$(pages(j))" & vbCrLf
-  s = s & "                    nlPos = InStr(1, trimmed, vbLf)" & vbCrLf
-  s = s & "                    If nlPos > 0 Then" & vbCrLf
-  s = s & "                        firstLine = Left$(trimmed, nlPos - 1)" & vbCrLf
-  s = s & "                    Else" & vbCrLf
-  s = s & "                        firstLine = trimmed" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                    total = CLng(m.SubMatches(0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                    If sectionCount > UBound(sections) Then ReDim Preserve sections(0 To sectionCount + 15)" & vbCrLf
-  s = s & "                    sections(sectionCount).StartPage = j" & vbCrLf
-  s = s & "                    sections(sectionCount).PageCount = total" & vbCrLf
-  s = s & "                    sections(sectionCount).Header = firstLine" & vbCrLf
-  s = s & "                    sections(sectionCount).EndPage = 0" & vbCrLf
-  s = s & "                    sectionCount = sectionCount + 1" & vbCrLf
-  s = s & "                    boundaryStarts(j) = True" & vbCrLf
-  s = s & "                    Exit For" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            Next j" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Sort by start page (simple bubble sort — small arrays)" & vbCrLf
-  s = s & "    Dim k As Long" & vbCrLf
-  s = s & "    Dim tempSection As AccountSection" & vbCrLf
-  s = s & "    For i = 0 To sectionCount - 2" & vbCrLf
-  s = s & "        For k = 0 To sectionCount - 2 - i" & vbCrLf
-  s = s & "            If sections(k).StartPage > sections(k + 1).StartPage Then" & vbCrLf
-  s = s & "                tempSection = sections(k)" & vbCrLf
-  s = s & "                sections(k) = sections(k + 1)" & vbCrLf
-  s = s & "                sections(k + 1) = tempSection" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next k" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Each section ends where the next begins (last section ends at final page)" & vbCrLf
-  s = s & "    For i = 0 To sectionCount - 1" & vbCrLf
-  s = s & "        If i + 1 < sectionCount Then" & vbCrLf
-  s = s & "            sections(i).EndPage = sections(i + 1).StartPage" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            sections(i).EndPage = UBound(pages) + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub FindAccountSections(pages() As String, ByRef sections() As AccountSection, ByRef sectionCount As Long)" & vbCrLf
-  s = s & "    Dim allSections() As AccountSection" & vbCrLf
-  s = s & "    Dim allCount As Long" & vbCrLf
-  s = s & "    FindPageBoundaries pages, allSections, allCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Skip first section (portfolio summary) and loan accounts" & vbCrLf
-  s = s & "    sectionCount = 0" & vbCrLf
-  s = s & "    ReDim sections(0 To 15)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To allCount - 1" & vbCrLf
-  s = s & "        If i > 0 And Left$(allSections(i).Header, 12) <> ""UBS Bank USA"" Then" & vbCrLf
-  s = s & "            If sectionCount > UBound(sections) Then ReDim Preserve sections(0 To sectionCount + 15)" & vbCrLf
-  s = s & "            sections(sectionCount) = allSections(i)" & vbCrLf
-  s = s & "            sectionCount = sectionCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub FindAccountSectionsNoSummary(pages() As String, ByRef sections() As AccountSection, ByRef sectionCount As Long)" & vbCrLf
-  s = s & "    Dim allSections() As AccountSection" & vbCrLf
-  s = s & "    Dim allCount As Long" & vbCrLf
-  s = s & "    FindPageBoundaries pages, allSections, allCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Keep all non-loan sections (no summary to skip)" & vbCrLf
-  s = s & "    sectionCount = 0" & vbCrLf
-  s = s & "    ReDim sections(0 To 15)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To allCount - 1" & vbCrLf
-  s = s & "        If Left$(allSections(i).Header, 12) <> ""UBS Bank USA"" Then" & vbCrLf
-  s = s & "            If sectionCount > UBound(sections) Then ReDim Preserve sections(0 To sectionCount + 15)" & vbCrLf
-  s = s & "            sections(sectionCount) = allSections(i)" & vbCrLf
-  s = s & "            sectionCount = sectionCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub FindLoanSections(pages() As String, ByRef sections() As AccountSection, ByRef sectionCount As Long)" & vbCrLf
-  s = s & "    Dim allSections() As AccountSection" & vbCrLf
-  s = s & "    Dim allCount As Long" & vbCrLf
-  s = s & "    FindPageBoundaries pages, allSections, allCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    sectionCount = 0" & vbCrLf
-  s = s & "    ReDim sections(0 To 7)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To allCount - 1" & vbCrLf
-  s = s & "        If Left$(allSections(i).Header, 12) = ""UBS Bank USA"" Then" & vbCrLf
-  s = s & "            If sectionCount > UBound(sections) Then ReDim Preserve sections(0 To sectionCount + 7)" & vbCrLf
-  s = s & "            sections(sectionCount) = allSections(i)" & vbCrLf
-  s = s & "            sectionCount = sectionCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub GetSummaryPages(pages() As String, ByRef pageIndices() As Long, ByRef indexCount As Long)" & vbCrLf
-  s = s & "    indexCount = 0" & vbCrLf
-  s = s & "    ReDim pageIndices(0 To 15)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = LBound(pages) To UBound(pages)" & vbCrLf
-  s = s & "        Dim m As Object" & vbCrLf
-  s = s & "        Set m = RegexMatch(pages(i), ""Page 1 of (\d+)"")" & vbCrLf
-  s = s & "        If Not m Is Nothing Then" & vbCrLf
-  s = s & "            Dim total As Long" & vbCrLf
-  s = s & "            total = CLng(m.SubMatches(0))" & vbCrLf
-  s = s & "            Dim k As Long" & vbCrLf
-  s = s & "            For k = 0 To total - 1" & vbCrLf
-  s = s & "                If indexCount > UBound(pageIndices) Then ReDim Preserve pageIndices(0 To indexCount + 15)" & vbCrLf
-  s = s & "                pageIndices(indexCount) = i + k" & vbCrLf
-  s = s & "                indexCount = indexCount + 1" & vbCrLf
-  s = s & "            Next k" & vbCrLf
-  s = s & "            Exit For" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Page text helpers" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function BuildPagesText(pages() As String, pageIndices() As Long, indexCount As Long) As String" & vbCrLf
-  s = s & "    Dim parts() As String" & vbCrLf
-  s = s & "    Dim partCount As Long" & vbCrLf
-  s = s & "    partCount = 0" & vbCrLf
-  s = s & "    ReDim parts(0 To indexCount)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim k As Long" & vbCrLf
-  s = s & "    For k = 0 To indexCount - 1" & vbCrLf
-  s = s & "        Dim idx As Long" & vbCrLf
-  s = s & "        idx = pageIndices(k)" & vbCrLf
-  s = s & "        If idx < LBound(pages) Or idx > UBound(pages) Then GoTo NextPageIdx" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim text As String" & vbCrLf
-  s = s & "        text = Trim$(pages(idx))" & vbCrLf
-  s = s & "        If text = """" Then GoTo NextPageIdx" & vbCrLf
-  s = s & "        If Left$(text, 43) = ""Important information about your statement"" Then Exit For" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        parts(partCount) = ""=== PAGE "" & (idx + 1) & "" ==="" & vbLf & pages(idx)" & vbCrLf
-  s = s & "        partCount = partCount + 1" & vbCrLf
-  s = s & "NextPageIdx:" & vbCrLf
-  s = s & "    Next k" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If partCount = 0 Then" & vbCrLf
-  s = s & "        BuildPagesText = """"" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        ' Join with double newline" & vbCrLf
-  s = s & "        Dim result As String" & vbCrLf
-  s = s & "        result = parts(0)" & vbCrLf
-  s = s & "        Dim i As Long" & vbCrLf
-  s = s & "        For i = 1 To partCount - 1" & vbCrLf
-  s = s & "            result = result & vbLf & vbLf & parts(i)" & vbCrLf
-  s = s & "        Next i" & vbCrLf
-  s = s & "        BuildPagesText = result" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function IsBoilerplatePage(pageText As String) As Boolean" & vbCrLf
-  s = s & "    If InStr(1, pageText, ""Important information about your statement"", vbTextCompare) > 0 Then" & vbCrLf
-  s = s & "        IsBoilerplatePage = True" & vbCrLf
-  s = s & "    ElseIf InStr(1, pageText, ""For more information about any"", vbTextCompare) > 0 Then" & vbCrLf
-  s = s & "        IsBoilerplatePage = True" & vbCrLf
-  s = s & "    ElseIf InStr(1, pageText, ""UBS Financial Services Inc. is a subsidiary"", vbTextCompare) > 0 Then" & vbCrLf
-  s = s & "        IsBoilerplatePage = True" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        IsBoilerplatePage = False" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Summary table parsers" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub ParseSummaryAccountsTable(summaryText As String, ByRef refs() As SummaryAccountRef, ByRef refCount As Long)" & vbCrLf
-  s = s & "    refCount = 0" & vbCrLf
-  s = s & "    ReDim refs(0 To 15)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim matches As Object" & vbCrLf
-  s = s & "    Set matches = RegexMatchAll(summaryText, ""(?:\*{1,2}|\d+)\s+((?:U2|5V)\s+\S+\s+WM)\s+(.+?)\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+(-?"" & NUM_PAT & "")%"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To matches.Count - 1" & vbCrLf
-  s = s & "        If refCount > UBound(refs) Then ReDim Preserve refs(0 To refCount + 15)" & vbCrLf
-  s = s & "        Dim acctNum As String" & vbCrLf
-  s = s & "        acctNum = Trim$(matches(i).SubMatches(0))" & vbCrLf
-  s = s & "        ' Strip trailing "" WM""" & vbCrLf
-  s = s & "        Dim re As Object" & vbCrLf
-  s = s & "        Set re = CreateRegex(""\s+WM$"")" & vbCrLf
-  s = s & "        acctNum = re.Replace(acctNum, """")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        refs(refCount).AccountNumber = acctNum" & vbCrLf
-  s = s & "        refs(refCount).FriendlyName = Trim$(matches(i).SubMatches(1))" & vbCrLf
-  s = s & "        refs(refCount).OpeningValue = SafeFloat(matches(i).SubMatches(2))" & vbCrLf
-  s = s & "        refs(refCount).ClosingValue = SafeFloat(matches(i).SubMatches(3))" & vbCrLf
-  s = s & "        refs(refCount).Percentage = SafeFloat(matches(i).SubMatches(4))" & vbCrLf
-  s = s & "        refCount = refCount + 1" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub ParseSummaryChangeTable(summaryText As String, ByRef refs() As SummaryChangeRef, ByRef refCount As Long)" & vbCrLf
-  s = s & "    refCount = 0" & vbCrLf
-  s = s & "    ReDim refs(0 To 15)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim matches As Object" & vbCrLf
-  s = s & "    Set matches = RegexMatchAll(summaryText, ""((?:U2|5V)\s+\S+\s+WM)\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+(-?"" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+(-?"" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To matches.Count - 1" & vbCrLf
-  s = s & "        If refCount > UBound(refs) Then ReDim Preserve refs(0 To refCount + 15)" & vbCrLf
-  s = s & "        Dim acctNum As String" & vbCrLf
-  s = s & "        acctNum = Trim$(matches(i).SubMatches(0))" & vbCrLf
-  s = s & "        Dim re As Object" & vbCrLf
-  s = s & "        Set re = CreateRegex(""\s+WM$"")" & vbCrLf
-  s = s & "        acctNum = re.Replace(acctNum, """")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        refs(refCount).AccountNumber = acctNum" & vbCrLf
-  s = s & "        refs(refCount).OpeningValue = SafeFloat(matches(i).SubMatches(1))" & vbCrLf
-  s = s & "        refs(refCount).Deposits = SafeFloat(matches(i).SubMatches(2))" & vbCrLf
-  s = s & "        refs(refCount).Withdrawals = SafeFloat(matches(i).SubMatches(3))" & vbCrLf
-  s = s & "        refs(refCount).DividendInterestIncome = SafeFloat(matches(i).SubMatches(4))" & vbCrLf
-  s = s & "        refs(refCount).OutsideAssets = SafeFloat(matches(i).SubMatches(5))" & vbCrLf
-  s = s & "        refs(refCount).ChangeInMarketValue = SafeFloat(matches(i).SubMatches(6))" & vbCrLf
-  s = s & "        refs(refCount).ClosingValue = SafeFloat(matches(i).SubMatches(7))" & vbCrLf
-  s = s & "        refCount = refCount + 1" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub ParseSummaryGainsTable(summaryText As String, ByRef refs() As SummaryGainsRef, ByRef refCount As Long)" & vbCrLf
-  s = s & "    refCount = 0" & vbCrLf
-  s = s & "    ReDim refs(0 To 15)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim gainsStart As Long" & vbCrLf
-  s = s & "    gainsStart = InStr(1, summaryText, ""Summary of gains and losses by account"")" & vbCrLf
-  s = s & "    If gainsStart = 0 Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim gainsText As String" & vbCrLf
-  s = s & "    gainsText = Mid$(summaryText, gainsStart)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Account on one line, name + 6 numbers on next (multiline not needed since we use \s* for newline)" & vbCrLf
-  s = s & "    Dim matches As Object" & vbCrLf
-  s = s & "    Set matches = RegexMatchAll(gainsText, ""((?:U2|5V)\s+\S+\s+WM)\s*\n(.+?)\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To matches.Count - 1" & vbCrLf
-  s = s & "        If refCount > UBound(refs) Then ReDim Preserve refs(0 To refCount + 15)" & vbCrLf
-  s = s & "        Dim acctNum As String" & vbCrLf
-  s = s & "        acctNum = Trim$(matches(i).SubMatches(0))" & vbCrLf
-  s = s & "        Dim re As Object" & vbCrLf
-  s = s & "        Set re = CreateRegex(""\s+WM$"")" & vbCrLf
-  s = s & "        acctNum = re.Replace(acctNum, """")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        refs(refCount).AccountNumber = acctNum" & vbCrLf
-  s = s & "        refs(refCount).ShortTermRealizedMonth = SafeFloat(matches(i).SubMatches(2))" & vbCrLf
-  s = s & "        refs(refCount).LongTermRealizedMonth = SafeFloat(matches(i).SubMatches(3))" & vbCrLf
-  s = s & "        refs(refCount).ShortTermRealizedYtd = SafeFloat(matches(i).SubMatches(4))" & vbCrLf
-  s = s & "        refs(refCount).LongTermRealizedYtd = SafeFloat(matches(i).SubMatches(5))" & vbCrLf
-  s = s & "        refs(refCount).ShortTermUnrealized = SafeFloat(matches(i).SubMatches(6))" & vbCrLf
-  s = s & "        refs(refCount).LongTermUnrealized = SafeFloat(matches(i).SubMatches(7))" & vbCrLf
-  s = s & "        refCount = refCount + 1" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Tick-and-Tie" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Investment/income activity sets (match extract-constants.ts)" & vbCrLf
-  s = s & "Private Function IsInvestmentActivity(activity As String) As Boolean" & vbCrLf
-  s = s & "    Select Case activity" & vbCrLf
-  s = s & "        Case ""Sale"", ""Purchase"", ""Reinvestment"", ""Call Redemption"", ""Cash In Lieu""" & vbCrLf
-  s = s & "            IsInvestmentActivity = True" & vbCrLf
-  s = s & "        Case Else" & vbCrLf
-  s = s & "            IsInvestmentActivity = False" & vbCrLf
-  s = s & "    End Select" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function IsIncomeActivity(activity As String) As Boolean" & vbCrLf
-  s = s & "    Select Case activity" & vbCrLf
-  s = s & "        Case ""Dividend"", ""Interest"", ""Distribution"", ""St Cap Gain"", ""Lt Cap Gain""" & vbCrLf
-  s = s & "            IsIncomeActivity = True" & vbCrLf
-  s = s & "        Case Else" & vbCrLf
-  s = s & "            IsIncomeActivity = False" & vbCrLf
-  s = s & "    End Select" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub RunTickAndTie( _" & vbCrLf
-  s = s & "    accounts() As AccountExtractionResult, accountCount As Long, _" & vbCrLf
-  s = s & "    summaryAccounts() As SummaryAccountRef, summaryAccountCount As Long, _" & vbCrLf
-  s = s & "    summaryChanges() As SummaryChangeRef, summaryChangeCount As Long, _" & vbCrLf
-  s = s & "    summaryGains() As SummaryGainsRef, summaryGainsCount As Long)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim ai As Long" & vbCrLf
-  s = s & "    For ai = 0 To accountCount - 1" & vbCrLf
-  s = s & "        Dim acctNum As String" & vbCrLf
-  s = s & "        acctNum = accounts(ai).Extraction.Summary.AccountNumber" & vbCrLf
-  s = s & "        Dim ext As UBSExtract.StatementExtraction" & vbCrLf
-  s = s & "        ext = accounts(ai).Extraction" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Compute holdings sum (+ insurance if not already included)" & vbCrLf
-  s = s & "        Dim holdingsSum As Double" & vbCrLf
-  s = s & "        holdingsSum = 0#" & vbCrLf
-  s = s & "        Dim hi As Long" & vbCrLf
-  s = s & "        For hi = 0 To ext.HoldingCount - 1" & vbCrLf
-  s = s & "            holdingsSum = holdingsSum + ext.Holdings(hi).Value" & vbCrLf
-  s = s & "        Next hi" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Find matching summary account ref" & vbCrLf
-  s = s & "        Dim si As Long" & vbCrLf
-  s = s & "        For si = 0 To summaryAccountCount - 1" & vbCrLf
-  s = s & "            If summaryAccounts(si).AccountNumber = acctNum Then" & vbCrLf
-  s = s & "                AddCheck ext, ""tnt_closing_value"", summaryAccounts(si).ClosingValue, holdingsSum" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next si" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Find matching summary change ref" & vbCrLf
-  s = s & "        For si = 0 To summaryChangeCount - 1" & vbCrLf
-  s = s & "            If summaryChanges(si).AccountNumber = acctNum Then" & vbCrLf
-  s = s & "                Dim ref As SummaryChangeRef" & vbCrLf
-  s = s & "                ref = summaryChanges(si)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                AddCheck ext, ""tnt_closing_value_change_table"", ref.ClosingValue, holdingsSum" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                ' Income: sum of positive income transactions + accrued interest received" & vbCrLf
-  s = s & "                Dim incomeTxnSum As Double" & vbCrLf
-  s = s & "                incomeTxnSum = 0#" & vbCrLf
-  s = s & "                Dim ti As Long" & vbCrLf
-  s = s & "                For ti = 0 To ext.TransactionCount - 1" & vbCrLf
-  s = s & "                    If IsIncomeActivity(ext.Transactions(ti).Activity) And ext.Transactions(ti).Amount > 0 Then" & vbCrLf
-  s = s & "                        incomeTxnSum = incomeTxnSum + ext.Transactions(ti).Amount" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                Next ti" & vbCrLf
-  s = s & "                incomeTxnSum = incomeTxnSum + ext.Income.AccruedInterestReceived" & vbCrLf
-  s = s & "                AddCheck ext, ""tnt_income_month"", ref.DividendInterestIncome, incomeTxnSum" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                ' Net deposits/withdrawals: non-investment, non-income transactions" & vbCrLf
-  s = s & "                Dim netDepsWd As Double" & vbCrLf
-  s = s & "                netDepsWd = 0#" & vbCrLf
-  s = s & "                For ti = 0 To ext.TransactionCount - 1" & vbCrLf
-  s = s & "                    If Not IsInvestmentActivity(ext.Transactions(ti).Activity) And _" & vbCrLf
-  s = s & "                       Not IsIncomeActivity(ext.Transactions(ti).Activity) Then" & vbCrLf
-  s = s & "                        netDepsWd = netDepsWd + ext.Transactions(ti).Amount" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                Next ti" & vbCrLf
-  s = s & "                AddCheck ext, ""tnt_net_deposits_withdrawals"", ref.Deposits + ref.Withdrawals, netDepsWd" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                ' Market change: derived from reconciliation equation" & vbCrLf
-  s = s & "                Dim cashActivity As Double" & vbCrLf
-  s = s & "                cashActivity = 0#" & vbCrLf
-  s = s & "                For ti = 0 To ext.TransactionCount - 1" & vbCrLf
-  s = s & "                    If Not IsInvestmentActivity(ext.Transactions(ti).Activity) Then" & vbCrLf
-  s = s & "                        cashActivity = cashActivity + ext.Transactions(ti).Amount" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                Next ti" & vbCrLf
-  s = s & "                Dim derivedMarketChange As Double" & vbCrLf
-  s = s & "                derivedMarketChange = ext.Summary.ClosingValue - ext.Summary.OpeningValue _" & vbCrLf
-  s = s & "                    - cashActivity - ext.Summary.ChangeInAccruedInterest - ext.Income.AccruedInterestReceived" & vbCrLf
-  s = s & "                AddCheck ext, ""tnt_market_change"", ref.ChangeInMarketValue, derivedMarketChange" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next si" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Find matching summary gains ref" & vbCrLf
-  s = s & "        For si = 0 To summaryGainsCount - 1" & vbCrLf
-  s = s & "            If summaryGains(si).AccountNumber = acctNum Then" & vbCrLf
-  s = s & "                ' Check if holdings have unrealized data" & vbCrLf
-  s = s & "                Dim hasUnrealized As Boolean" & vbCrLf
-  s = s & "                hasUnrealized = False" & vbCrLf
-  s = s & "                For hi = 0 To ext.HoldingCount - 1" & vbCrLf
-  s = s & "                    If Not IsNull(ext.Holdings(hi).UnrealizedGL) Then" & vbCrLf
-  s = s & "                        hasUnrealized = True" & vbCrLf
-  s = s & "                        Exit For" & vbCrLf
-  s = s & "                    End If" & vbCrLf
-  s = s & "                Next hi" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "                If hasUnrealized Then" & vbCrLf
-  s = s & "                    Dim unrealizedSum As Double" & vbCrLf
-  s = s & "                    unrealizedSum = 0#" & vbCrLf
-  s = s & "                    For hi = 0 To ext.HoldingCount - 1" & vbCrLf
-  s = s & "                        If Not IsNull(ext.Holdings(hi).UnrealizedGL) Then" & vbCrLf
-  s = s & "                            unrealizedSum = unrealizedSum + CDbl(ext.Holdings(hi).UnrealizedGL)" & vbCrLf
-  s = s & "                        End If" & vbCrLf
-  s = s & "                    Next hi" & vbCrLf
-  s = s & "                    AddCheck ext, ""tnt_total_unrealized"", _" & vbCrLf
-  s = s & "                        summaryGains(si).ShortTermUnrealized + summaryGains(si).LongTermUnrealized, unrealizedSum" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "                Exit For" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next si" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Store updated extraction back" & vbCrLf
-  s = s & "        accounts(ai).Extraction = ext" & vbCrLf
-  s = s & "    Next ai" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub AddCheck(ByRef ext As UBSExtract.StatementExtraction, field As String, Expected As Double, Actual As Double)" & vbCrLf
-  s = s & "    If ext.CheckCount > UBound(ext.Checks) Then" & vbCrLf
-  s = s & "        ReDim Preserve ext.Checks(0 To ext.CheckCount + 15)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    ext.Checks(ext.CheckCount).name = field" & vbCrLf
-  s = s & "    ext.Checks(ext.CheckCount).Expected = Expected" & vbCrLf
-  s = s & "    ext.Checks(ext.CheckCount).Actual = Actual" & vbCrLf
-  s = s & "    ext.Checks(ext.CheckCount).Diff = Expected - Actual" & vbCrLf
-  s = s & "    ext.Checks(ext.CheckCount).Pass = (Abs(Expected - Actual) < TOLERANCE_SUMMARY)" & vbCrLf
-  s = s & "    ext.CheckCount = ext.CheckCount + 1" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Shared extraction helpers" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub ExtractAccountSectionsData( _" & vbCrLf
-  s = s & "    pages() As String, _" & vbCrLf
-  s = s & "    sections() As AccountSection, sectionCount As Long, _" & vbCrLf
-  s = s & "    ByRef results() As AccountExtractionResult, ByRef resultCount As Long, _" & vbCrLf
-  s = s & "    ByRef warnings() As String, ByRef warningCount As Long)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    resultCount = 0" & vbCrLf
-  s = s & "    ReDim results(0 To 15)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim idx As Long" & vbCrLf
-  s = s & "    For idx = 0 To sectionCount - 1" & vbCrLf
-  s = s & "        ' Build page indices for this section" & vbCrLf
-  s = s & "        Dim pageIndices() As Long" & vbCrLf
-  s = s & "        Dim piCount As Long" & vbCrLf
-  s = s & "        piCount = sections(idx).EndPage - sections(idx).StartPage" & vbCrLf
-  s = s & "        ReDim pageIndices(0 To piCount - 1)" & vbCrLf
-  s = s & "        Dim k As Long" & vbCrLf
-  s = s & "        For k = 0 To piCount - 1" & vbCrLf
-  s = s & "            pageIndices(k) = sections(idx).StartPage + k" & vbCrLf
-  s = s & "        Next k" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim text As String" & vbCrLf
-  s = s & "        text = BuildPagesText(pages, pageIndices, piCount)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        On Error GoTo ExtractError" & vbCrLf
-  s = s & "        Dim ext As UBSExtract.StatementExtraction" & vbCrLf
-  s = s & "        ext = UBSExtract.ExtractFromText(text)" & vbCrLf
-  s = s & "        On Error GoTo 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If resultCount > UBound(results) Then ReDim Preserve results(0 To resultCount + 15)" & vbCrLf
-  s = s & "        results(resultCount).AccountNumber = ext.Summary.AccountNumber" & vbCrLf
-  s = s & "        results(resultCount).Extraction = ext" & vbCrLf
-  s = s & "        resultCount = resultCount + 1" & vbCrLf
-  s = s & "        GoTo NextSection" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "ExtractError:" & vbCrLf
-  s = s & "        If warningCount > UBound(warnings) Then ReDim Preserve warnings(0 To warningCount + 15)" & vbCrLf
-  s = s & "        warnings(warningCount) = ""Failed to extract section "" & (idx + 1) & _" & vbCrLf
-  s = s & "            "" (pages "" & (sections(idx).StartPage + 1) & ""-"" & sections(idx).EndPage & ""): "" & Err.Description" & vbCrLf
-  s = s & "        warningCount = warningCount + 1" & vbCrLf
-  s = s & "        Resume NextSection" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "NextSection:" & vbCrLf
-  s = s & "    Next idx" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub ExtractLoanSectionsData( _" & vbCrLf
-  s = s & "    pages() As String, _" & vbCrLf
-  s = s & "    sections() As AccountSection, sectionCount As Long, _" & vbCrLf
-  s = s & "    ByRef results() As LoanAccountResult, ByRef resultCount As Long, _" & vbCrLf
-  s = s & "    ByRef warnings() As String, ByRef warningCount As Long)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    resultCount = 0" & vbCrLf
-  s = s & "    ReDim results(0 To 7)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim idx As Long" & vbCrLf
-  s = s & "    For idx = 0 To sectionCount - 1" & vbCrLf
-  s = s & "        Dim pageIndices() As Long" & vbCrLf
-  s = s & "        Dim piCount As Long" & vbCrLf
-  s = s & "        piCount = sections(idx).EndPage - sections(idx).StartPage" & vbCrLf
-  s = s & "        ReDim pageIndices(0 To piCount - 1)" & vbCrLf
-  s = s & "        Dim k As Long" & vbCrLf
-  s = s & "        For k = 0 To piCount - 1" & vbCrLf
-  s = s & "            pageIndices(k) = sections(idx).StartPage + k" & vbCrLf
-  s = s & "        Next k" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim loanText As String" & vbCrLf
-  s = s & "        loanText = BuildPagesText(pages, pageIndices, piCount)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        On Error GoTo LoanExtractError" & vbCrLf
-  s = s & "        Dim loanExt As UBSLoanExtract.LoanExtraction" & vbCrLf
-  s = s & "        loanExt = UBSLoanExtract.ExtractLoanFromText(loanText)" & vbCrLf
-  s = s & "        On Error GoTo 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If resultCount > UBound(results) Then ReDim Preserve results(0 To resultCount + 7)" & vbCrLf
-  s = s & "        ' Primary account number (first in comma-separated list)" & vbCrLf
-  s = s & "        Dim acctNums As String" & vbCrLf
-  s = s & "        acctNums = loanExt.Summary.AccountNumbers" & vbCrLf
-  s = s & "        Dim commaPos As Long" & vbCrLf
-  s = s & "        commaPos = InStr(1, acctNums, "","")" & vbCrLf
-  s = s & "        If commaPos > 0 Then" & vbCrLf
-  s = s & "            results(resultCount).AccountNumber = Trim$(Left$(acctNums, commaPos - 1))" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            results(resultCount).AccountNumber = Trim$(acctNums)" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        results(resultCount).Extraction = loanExt" & vbCrLf
-  s = s & "        resultCount = resultCount + 1" & vbCrLf
-  s = s & "        GoTo NextLoanSection" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "LoanExtractError:" & vbCrLf
-  s = s & "        If warningCount > UBound(warnings) Then ReDim Preserve warnings(0 To warningCount + 15)" & vbCrLf
-  s = s & "        warnings(warningCount) = ""Failed to extract loan section (pages "" & _" & vbCrLf
-  s = s & "            (sections(idx).StartPage + 1) & ""-"" & sections(idx).EndPage & ""): "" & Err.Description" & vbCrLf
-  s = s & "        warningCount = warningCount + 1" & vbCrLf
-  s = s & "        Resume NextLoanSection" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "NextLoanSection:" & vbCrLf
-  s = s & "    Next idx" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Entry points" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ExtractSummaryPdf(pages() As String) As PortfolioExtraction" & vbCrLf
-  s = s & "    Dim result As PortfolioExtraction" & vbCrLf
-  s = s & "    result.AccountCount = 0" & vbCrLf
-  s = s & "    result.LoanAccountCount = 0" & vbCrLf
-  s = s & "    result.WarningCount = 0" & vbCrLf
-  s = s & "    ReDim result.Accounts(0 To 15)" & vbCrLf
-  s = s & "    ReDim result.LoanAccounts(0 To 7)" & vbCrLf
-  s = s & "    ReDim result.Warnings(0 To 15)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find account sections" & vbCrLf
-  s = s & "    Dim sections() As AccountSection" & vbCrLf
-  s = s & "    Dim sectionCount As Long" & vbCrLf
-  s = s & "    FindAccountSections pages, sections, sectionCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Parse summary reference tables" & vbCrLf
-  s = s & "    Dim summaryPageIndices() As Long" & vbCrLf
-  s = s & "    Dim summaryPageCount As Long" & vbCrLf
-  s = s & "    GetSummaryPages pages, summaryPageIndices, summaryPageCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim summaryText As String" & vbCrLf
-  s = s & "    summaryText = BuildPagesText(pages, summaryPageIndices, summaryPageCount)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim summaryAccounts() As SummaryAccountRef" & vbCrLf
-  s = s & "    Dim saCount As Long" & vbCrLf
-  s = s & "    ParseSummaryAccountsTable summaryText, summaryAccounts, saCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim summaryChanges() As SummaryChangeRef" & vbCrLf
-  s = s & "    Dim scCount As Long" & vbCrLf
-  s = s & "    ParseSummaryChangeTable summaryText, summaryChanges, scCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim summaryGains() As SummaryGainsRef" & vbCrLf
-  s = s & "    Dim sgCount As Long" & vbCrLf
-  s = s & "    ParseSummaryGainsTable summaryText, summaryGains, sgCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Extract investment accounts" & vbCrLf
-  s = s & "    ExtractAccountSectionsData pages, sections, sectionCount, _" & vbCrLf
-  s = s & "        result.Accounts, result.AccountCount, result.Warnings, result.WarningCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Extract loan accounts" & vbCrLf
-  s = s & "    Dim loanSections() As AccountSection" & vbCrLf
-  s = s & "    Dim loanSectionCount As Long" & vbCrLf
-  s = s & "    FindLoanSections pages, loanSections, loanSectionCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractLoanSectionsData pages, loanSections, loanSectionCount, _" & vbCrLf
-  s = s & "        result.LoanAccounts, result.LoanAccountCount, result.Warnings, result.WarningCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Tick-and-tie" & vbCrLf
-  s = s & "    If result.AccountCount > 0 Then" & vbCrLf
-  s = s & "        RunTickAndTie result.Accounts, result.AccountCount, _" & vbCrLf
-  s = s & "            summaryAccounts, saCount, summaryChanges, scCount, summaryGains, sgCount" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractSummaryPdf = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ExtractMultiAccountPdf(pages() As String) As PortfolioExtraction" & vbCrLf
-  s = s & "    Dim result As PortfolioExtraction" & vbCrLf
-  s = s & "    result.AccountCount = 0" & vbCrLf
-  s = s & "    result.LoanAccountCount = 0" & vbCrLf
-  s = s & "    result.WarningCount = 0" & vbCrLf
-  s = s & "    ReDim result.Accounts(0 To 15)" & vbCrLf
-  s = s & "    ReDim result.LoanAccounts(0 To 7)" & vbCrLf
-  s = s & "    ReDim result.Warnings(0 To 15)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find investment sections (no summary to skip)" & vbCrLf
-  s = s & "    Dim investSections() As AccountSection" & vbCrLf
-  s = s & "    Dim investCount As Long" & vbCrLf
-  s = s & "    FindAccountSectionsNoSummary pages, investSections, investCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find loan sections" & vbCrLf
-  s = s & "    Dim loanSections() As AccountSection" & vbCrLf
-  s = s & "    Dim loanSectionCount As Long" & vbCrLf
-  s = s & "    FindLoanSections pages, loanSections, loanSectionCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Extract investment accounts" & vbCrLf
-  s = s & "    ExtractAccountSectionsData pages, investSections, investCount, _" & vbCrLf
-  s = s & "        result.Accounts, result.AccountCount, result.Warnings, result.WarningCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Extract loan accounts" & vbCrLf
-  s = s & "    ExtractLoanSectionsData pages, loanSections, loanSectionCount, _" & vbCrLf
-  s = s & "        result.LoanAccounts, result.LoanAccountCount, result.Warnings, result.WarningCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractMultiAccountPdf = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  GetModule_UBSSummary = s
-End Function
+Sub WriteModule_UBSSummary(ts)
+  ts.WriteLine "Attribute VB_Name = ""UBSSummary"""
+  ts.WriteLine "Option Explicit"
+  ts.WriteLine ""
+  ts.WriteLine "' UBSSummary.bas — Summary PDF detection, section splitting, table parsers, tick-and-tie."
+  ts.WriteLine "' Port of web/src/summary.ts to VBA."
+  ts.WriteLine "'"
+  ts.WriteLine "' Provides:"
+  ts.WriteLine "'   Detection:      IsSummaryPdf, IsMultiAccountPdf"
+  ts.WriteLine "'   Splitting:      FindPageBoundaries, FindAccountSections, FindLoanSections, GetSummaryPages"
+  ts.WriteLine "'   Page helpers:   BuildPagesText"
+  ts.WriteLine "'   Table parsers:  ParseSummaryAccountsTable, ParseSummaryChangeTable, ParseSummaryGainsTable"
+  ts.WriteLine "'   Tick-and-tie:   RunTickAndTie"
+  ts.WriteLine "'   Entry points:   ExtractSummaryPdf, ExtractMultiAccountPdf"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Types"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type AccountSection"
+  ts.WriteLine "    StartPage As Long   ' 0-based page index"
+  ts.WriteLine "    EndPage As Long     ' 0-based, exclusive"
+  ts.WriteLine "    PageCount As Long"
+  ts.WriteLine "    Header As String    ' First line of section"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type SummaryAccountRef"
+  ts.WriteLine "    FriendlyName As String"
+  ts.WriteLine "    OpeningValue As Double"
+  ts.WriteLine "    ClosingValue As Double"
+  ts.WriteLine "    Percentage As Double"
+  ts.WriteLine "    AccountNumber As String"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type SummaryChangeRef"
+  ts.WriteLine "    OpeningValue As Double"
+  ts.WriteLine "    Deposits As Double"
+  ts.WriteLine "    Withdrawals As Double"
+  ts.WriteLine "    DividendInterestIncome As Double   ' MONTHLY, not YTD"
+  ts.WriteLine "    OutsideAssets As Double"
+  ts.WriteLine "    ChangeInMarketValue As Double"
+  ts.WriteLine "    ClosingValue As Double"
+  ts.WriteLine "    AccountNumber As String"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type SummaryGainsRef"
+  ts.WriteLine "    ShortTermRealizedMonth As Double"
+  ts.WriteLine "    LongTermRealizedMonth As Double"
+  ts.WriteLine "    ShortTermRealizedYtd As Double"
+  ts.WriteLine "    LongTermRealizedYtd As Double"
+  ts.WriteLine "    ShortTermUnrealized As Double"
+  ts.WriteLine "    LongTermUnrealized As Double"
+  ts.WriteLine "    AccountNumber As String"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type AccountExtractionResult"
+  ts.WriteLine "    AccountNumber As String"
+  ts.WriteLine "    Extraction As UBSExtract.StatementExtraction"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type LoanAccountResult"
+  ts.WriteLine "    AccountNumber As String"
+  ts.WriteLine "    Extraction As UBSLoanExtract.LoanExtraction"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type PortfolioExtraction"
+  ts.WriteLine "    Accounts() As AccountExtractionResult"
+  ts.WriteLine "    AccountCount As Long"
+  ts.WriteLine "    LoanAccounts() As LoanAccountResult"
+  ts.WriteLine "    LoanAccountCount As Long"
+  ts.WriteLine "    Warnings() As String"
+  ts.WriteLine "    WarningCount As Long"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Constants"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Const NUM_PAT As String = ""-?[\d,]+\.\d{2}"""
+  ts.WriteLine "Private Const TOLERANCE_SUMMARY As Double = 0.02"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Regex helper — cached RegExp object"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private mCachedRe As Object"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function CreateRegex(pattern As String, Optional isGlobal As Boolean = False, Optional isMultiline As Boolean = False, Optional ignoreCase As Boolean = False) As Object"
+  ts.WriteLine "    If mCachedRe Is Nothing Then"
+  ts.WriteLine "        Set mCachedRe = CreateObject(""VBScript.RegExp"")"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    mCachedRe.pattern = pattern"
+  ts.WriteLine "    mCachedRe.Global = isGlobal"
+  ts.WriteLine "    mCachedRe.MultiLine = isMultiline"
+  ts.WriteLine "    mCachedRe.ignoreCase = ignoreCase"
+  ts.WriteLine "    Set CreateRegex = mCachedRe"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function RegexMatch(text As String, pattern As String, Optional ignoreCase As Boolean = False, Optional isMultiline As Boolean = False) As Object"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateRegex(pattern, False, isMultiline, ignoreCase)"
+  ts.WriteLine "    Dim matches As Object"
+  ts.WriteLine "    Set matches = re.Execute(text)"
+  ts.WriteLine "    If matches.Count > 0 Then"
+  ts.WriteLine "        Set RegexMatch = matches(0)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        Set RegexMatch = Nothing"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function RegexMatchAll(text As String, pattern As String, Optional ignoreCase As Boolean = False) As Object"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateRegex(pattern, True, False, ignoreCase)"
+  ts.WriteLine "    Set RegexMatchAll = re.Execute(text)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function RegexTest(text As String, pattern As String, Optional ignoreCase As Boolean = False) As Boolean"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateRegex(pattern, False, False, ignoreCase)"
+  ts.WriteLine "    RegexTest = re.Test(text)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function SafeFloat(value As Variant) As Double"
+  ts.WriteLine "    If IsNull(value) Or IsEmpty(value) Then"
+  ts.WriteLine "        SafeFloat = 0#"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    Dim s As String"
+  ts.WriteLine "    s = CStr(value)"
+  ts.WriteLine "    s = Replace(s, "","", """")"
+  ts.WriteLine "    s = Replace(s, ""$"", """")"
+  ts.WriteLine "    s = Replace(s, ""%"", """")"
+  ts.WriteLine "    s = Trim(s)"
+  ts.WriteLine "    If s = """" Then SafeFloat = 0#: Exit Function"
+  ts.WriteLine "    If IsNumeric(s) Then"
+  ts.WriteLine "        SafeFloat = CDbl(s)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        SafeFloat = 0#"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' PDF detection"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function IsSummaryPdf(firstPageText As String) As Boolean"
+  ts.WriteLine "    IsSummaryPdf = (InStr(1, firstPageText, ""Summary of your UBS Portfolio"") > 0)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function IsMultiAccountPdf(pages() As String) As Boolean"
+  ts.WriteLine "    Dim count As Long"
+  ts.WriteLine "    count = 0"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = LBound(pages) To UBound(pages)"
+  ts.WriteLine "        If RegexTest(pages(i), ""Page 1 of (\d+)"") Then"
+  ts.WriteLine "            count = count + 1"
+  ts.WriteLine "            If count >= 2 Then"
+  ts.WriteLine "                IsMultiAccountPdf = True"
+  ts.WriteLine "                Exit Function"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    IsMultiAccountPdf = False"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Household nickname extraction"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ExtractHouseholdNickname(firstPageText As String) As String"
+  ts.WriteLine "    ExtractHouseholdNickname = """""
+  ts.WriteLine "    If InStr(1, firstPageText, ""Summary of your UBS Portfolio"") = 0 Then Exit Function"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim lines() As String"
+  ts.WriteLine "    lines = Split(firstPageText, vbLf)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find the code/barcode line: starts with 3+ uppercase letters followed by digits"
+  ts.WriteLine "    Dim codeLineIdx As Long"
+  ts.WriteLine "    codeLineIdx = -1"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = LBound(lines) To UBound(lines)"
+  ts.WriteLine "        If RegexTest(Trim$(lines(i)), ""^[A-Z]{3}\d{5,}"") Then"
+  ts.WriteLine "            codeLineIdx = i"
+  ts.WriteLine "            Exit For"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    If codeLineIdx < 0 Or codeLineIdx + 2 > UBound(lines) Then Exit Function"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim candidate As String"
+  ts.WriteLine "    candidate = Trim$(lines(codeLineIdx + 1))"
+  ts.WriteLine "    If candidate = """" Then Exit Function"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Check if next line is a street address (starts with a digit)"
+  ts.WriteLine "    Dim nextLine As String"
+  ts.WriteLine "    nextLine = Trim$(lines(codeLineIdx + 2))"
+  ts.WriteLine "    If Not RegexTest(nextLine, ""^\d"") Then Exit Function"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractHouseholdNickname = candidate"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Page boundary detection"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub FindPageBoundaries(pages() As String, ByRef sections() As AccountSection, ByRef sectionCount As Long)"
+  ts.WriteLine "    sectionCount = 0"
+  ts.WriteLine "    ReDim sections(0 To 15)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Track which pages are already boundaries"
+  ts.WriteLine "    Dim boundaryStarts() As Boolean"
+  ts.WriteLine "    ReDim boundaryStarts(LBound(pages) To UBound(pages))"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long, m As Object"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Primary: ""Page 1 of N"" boundaries"
+  ts.WriteLine "    For i = LBound(pages) To UBound(pages)"
+  ts.WriteLine "        Set m = RegexMatch(pages(i), ""Page 1 of (\d+)"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            Dim total As Long"
+  ts.WriteLine "            total = CLng(m.SubMatches(0))"
+  ts.WriteLine "            Dim firstLine As String"
+  ts.WriteLine "            Dim trimmed As String"
+  ts.WriteLine "            trimmed = Trim$(pages(i))"
+  ts.WriteLine "            Dim nlPos As Long"
+  ts.WriteLine "            nlPos = InStr(1, trimmed, vbLf)"
+  ts.WriteLine "            If nlPos > 0 Then"
+  ts.WriteLine "                firstLine = Left$(trimmed, nlPos - 1)"
+  ts.WriteLine "            Else"
+  ts.WriteLine "                firstLine = trimmed"
+  ts.WriteLine "            End If"
+  ts.WriteLine ""
+  ts.WriteLine "            If sectionCount > UBound(sections) Then ReDim Preserve sections(0 To sectionCount + 15)"
+  ts.WriteLine "            sections(sectionCount).StartPage = i"
+  ts.WriteLine "            sections(sectionCount).PageCount = total"
+  ts.WriteLine "            sections(sectionCount).Header = firstLine"
+  ts.WriteLine "            sections(sectionCount).EndPage = 0"
+  ts.WriteLine "            sectionCount = sectionCount + 1"
+  ts.WriteLine "            boundaryStarts(i) = True"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Secondary: ""End of statement"" -> scan forward for next section start"
+  ts.WriteLine "    For i = LBound(pages) To UBound(pages)"
+  ts.WriteLine "        If RegexTest(pages(i), ""End of statement for account number"", True) Then"
+  ts.WriteLine "            Dim j As Long"
+  ts.WriteLine "            For j = i + 1 To UBound(pages)"
+  ts.WriteLine "                If boundaryStarts(j) Then Exit For"
+  ts.WriteLine "                Set m = RegexMatch(pages(j), ""Page \d+ of (\d+)"")"
+  ts.WriteLine "                If Not m Is Nothing Then"
+  ts.WriteLine "                    trimmed = Trim$(pages(j))"
+  ts.WriteLine "                    nlPos = InStr(1, trimmed, vbLf)"
+  ts.WriteLine "                    If nlPos > 0 Then"
+  ts.WriteLine "                        firstLine = Left$(trimmed, nlPos - 1)"
+  ts.WriteLine "                    Else"
+  ts.WriteLine "                        firstLine = trimmed"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                    total = CLng(m.SubMatches(0))"
+  ts.WriteLine ""
+  ts.WriteLine "                    If sectionCount > UBound(sections) Then ReDim Preserve sections(0 To sectionCount + 15)"
+  ts.WriteLine "                    sections(sectionCount).StartPage = j"
+  ts.WriteLine "                    sections(sectionCount).PageCount = total"
+  ts.WriteLine "                    sections(sectionCount).Header = firstLine"
+  ts.WriteLine "                    sections(sectionCount).EndPage = 0"
+  ts.WriteLine "                    sectionCount = sectionCount + 1"
+  ts.WriteLine "                    boundaryStarts(j) = True"
+  ts.WriteLine "                    Exit For"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            Next j"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Sort by start page (simple bubble sort — small arrays)"
+  ts.WriteLine "    Dim k As Long"
+  ts.WriteLine "    Dim tempSection As AccountSection"
+  ts.WriteLine "    For i = 0 To sectionCount - 2"
+  ts.WriteLine "        For k = 0 To sectionCount - 2 - i"
+  ts.WriteLine "            If sections(k).StartPage > sections(k + 1).StartPage Then"
+  ts.WriteLine "                tempSection = sections(k)"
+  ts.WriteLine "                sections(k) = sections(k + 1)"
+  ts.WriteLine "                sections(k + 1) = tempSection"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next k"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Each section ends where the next begins (last section ends at final page)"
+  ts.WriteLine "    For i = 0 To sectionCount - 1"
+  ts.WriteLine "        If i + 1 < sectionCount Then"
+  ts.WriteLine "            sections(i).EndPage = sections(i + 1).StartPage"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            sections(i).EndPage = UBound(pages) + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub FindAccountSections(pages() As String, ByRef sections() As AccountSection, ByRef sectionCount As Long)"
+  ts.WriteLine "    Dim allSections() As AccountSection"
+  ts.WriteLine "    Dim allCount As Long"
+  ts.WriteLine "    FindPageBoundaries pages, allSections, allCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Skip first section (portfolio summary) and loan accounts"
+  ts.WriteLine "    sectionCount = 0"
+  ts.WriteLine "    ReDim sections(0 To 15)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To allCount - 1"
+  ts.WriteLine "        If i > 0 And Left$(allSections(i).Header, 12) <> ""UBS Bank USA"" Then"
+  ts.WriteLine "            If sectionCount > UBound(sections) Then ReDim Preserve sections(0 To sectionCount + 15)"
+  ts.WriteLine "            sections(sectionCount) = allSections(i)"
+  ts.WriteLine "            sectionCount = sectionCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub FindAccountSectionsNoSummary(pages() As String, ByRef sections() As AccountSection, ByRef sectionCount As Long)"
+  ts.WriteLine "    Dim allSections() As AccountSection"
+  ts.WriteLine "    Dim allCount As Long"
+  ts.WriteLine "    FindPageBoundaries pages, allSections, allCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Keep all non-loan sections (no summary to skip)"
+  ts.WriteLine "    sectionCount = 0"
+  ts.WriteLine "    ReDim sections(0 To 15)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To allCount - 1"
+  ts.WriteLine "        If Left$(allSections(i).Header, 12) <> ""UBS Bank USA"" Then"
+  ts.WriteLine "            If sectionCount > UBound(sections) Then ReDim Preserve sections(0 To sectionCount + 15)"
+  ts.WriteLine "            sections(sectionCount) = allSections(i)"
+  ts.WriteLine "            sectionCount = sectionCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub FindLoanSections(pages() As String, ByRef sections() As AccountSection, ByRef sectionCount As Long)"
+  ts.WriteLine "    Dim allSections() As AccountSection"
+  ts.WriteLine "    Dim allCount As Long"
+  ts.WriteLine "    FindPageBoundaries pages, allSections, allCount"
+  ts.WriteLine ""
+  ts.WriteLine "    sectionCount = 0"
+  ts.WriteLine "    ReDim sections(0 To 7)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To allCount - 1"
+  ts.WriteLine "        If Left$(allSections(i).Header, 12) = ""UBS Bank USA"" Then"
+  ts.WriteLine "            If sectionCount > UBound(sections) Then ReDim Preserve sections(0 To sectionCount + 7)"
+  ts.WriteLine "            sections(sectionCount) = allSections(i)"
+  ts.WriteLine "            sectionCount = sectionCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub GetSummaryPages(pages() As String, ByRef pageIndices() As Long, ByRef indexCount As Long)"
+  ts.WriteLine "    indexCount = 0"
+  ts.WriteLine "    ReDim pageIndices(0 To 15)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = LBound(pages) To UBound(pages)"
+  ts.WriteLine "        Dim m As Object"
+  ts.WriteLine "        Set m = RegexMatch(pages(i), ""Page 1 of (\d+)"")"
+  ts.WriteLine "        If Not m Is Nothing Then"
+  ts.WriteLine "            Dim total As Long"
+  ts.WriteLine "            total = CLng(m.SubMatches(0))"
+  ts.WriteLine "            Dim k As Long"
+  ts.WriteLine "            For k = 0 To total - 1"
+  ts.WriteLine "                If indexCount > UBound(pageIndices) Then ReDim Preserve pageIndices(0 To indexCount + 15)"
+  ts.WriteLine "                pageIndices(indexCount) = i + k"
+  ts.WriteLine "                indexCount = indexCount + 1"
+  ts.WriteLine "            Next k"
+  ts.WriteLine "            Exit For"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Page text helpers"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function BuildPagesText(pages() As String, pageIndices() As Long, indexCount As Long) As String"
+  ts.WriteLine "    Dim parts() As String"
+  ts.WriteLine "    Dim partCount As Long"
+  ts.WriteLine "    partCount = 0"
+  ts.WriteLine "    ReDim parts(0 To indexCount)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim k As Long"
+  ts.WriteLine "    For k = 0 To indexCount - 1"
+  ts.WriteLine "        Dim idx As Long"
+  ts.WriteLine "        idx = pageIndices(k)"
+  ts.WriteLine "        If idx < LBound(pages) Or idx > UBound(pages) Then GoTo NextPageIdx"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim text As String"
+  ts.WriteLine "        text = Trim$(pages(idx))"
+  ts.WriteLine "        If text = """" Then GoTo NextPageIdx"
+  ts.WriteLine "        If Left$(text, 43) = ""Important information about your statement"" Then Exit For"
+  ts.WriteLine ""
+  ts.WriteLine "        parts(partCount) = ""=== PAGE "" & (idx + 1) & "" ==="" & vbLf & pages(idx)"
+  ts.WriteLine "        partCount = partCount + 1"
+  ts.WriteLine "NextPageIdx:"
+  ts.WriteLine "    Next k"
+  ts.WriteLine ""
+  ts.WriteLine "    If partCount = 0 Then"
+  ts.WriteLine "        BuildPagesText = """""
+  ts.WriteLine "    Else"
+  ts.WriteLine "        ' Join with double newline"
+  ts.WriteLine "        Dim result As String"
+  ts.WriteLine "        result = parts(0)"
+  ts.WriteLine "        Dim i As Long"
+  ts.WriteLine "        For i = 1 To partCount - 1"
+  ts.WriteLine "            result = result & vbLf & vbLf & parts(i)"
+  ts.WriteLine "        Next i"
+  ts.WriteLine "        BuildPagesText = result"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function IsBoilerplatePage(pageText As String) As Boolean"
+  ts.WriteLine "    If InStr(1, pageText, ""Important information about your statement"", vbTextCompare) > 0 Then"
+  ts.WriteLine "        IsBoilerplatePage = True"
+  ts.WriteLine "    ElseIf InStr(1, pageText, ""For more information about any"", vbTextCompare) > 0 Then"
+  ts.WriteLine "        IsBoilerplatePage = True"
+  ts.WriteLine "    ElseIf InStr(1, pageText, ""UBS Financial Services Inc. is a subsidiary"", vbTextCompare) > 0 Then"
+  ts.WriteLine "        IsBoilerplatePage = True"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        IsBoilerplatePage = False"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Summary table parsers"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub ParseSummaryAccountsTable(summaryText As String, ByRef refs() As SummaryAccountRef, ByRef refCount As Long)"
+  ts.WriteLine "    refCount = 0"
+  ts.WriteLine "    ReDim refs(0 To 15)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim matches As Object"
+  ts.WriteLine "    Set matches = RegexMatchAll(summaryText, ""(?:\*{1,2}|\d+)\s+((?:U2|5V)\s+\S+\s+WM)\s+(.+?)\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+(-?"" & NUM_PAT & "")%"")"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To matches.Count - 1"
+  ts.WriteLine "        If refCount > UBound(refs) Then ReDim Preserve refs(0 To refCount + 15)"
+  ts.WriteLine "        Dim acctNum As String"
+  ts.WriteLine "        acctNum = Trim$(matches(i).SubMatches(0))"
+  ts.WriteLine "        ' Strip trailing "" WM"""
+  ts.WriteLine "        Dim re As Object"
+  ts.WriteLine "        Set re = CreateRegex(""\s+WM$"")"
+  ts.WriteLine "        acctNum = re.Replace(acctNum, """")"
+  ts.WriteLine ""
+  ts.WriteLine "        refs(refCount).AccountNumber = acctNum"
+  ts.WriteLine "        refs(refCount).FriendlyName = Trim$(matches(i).SubMatches(1))"
+  ts.WriteLine "        refs(refCount).OpeningValue = SafeFloat(matches(i).SubMatches(2))"
+  ts.WriteLine "        refs(refCount).ClosingValue = SafeFloat(matches(i).SubMatches(3))"
+  ts.WriteLine "        refs(refCount).Percentage = SafeFloat(matches(i).SubMatches(4))"
+  ts.WriteLine "        refCount = refCount + 1"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub ParseSummaryChangeTable(summaryText As String, ByRef refs() As SummaryChangeRef, ByRef refCount As Long)"
+  ts.WriteLine "    refCount = 0"
+  ts.WriteLine "    ReDim refs(0 To 15)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim matches As Object"
+  ts.WriteLine "    Set matches = RegexMatchAll(summaryText, ""((?:U2|5V)\s+\S+\s+WM)\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+(-?"" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+(-?"" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To matches.Count - 1"
+  ts.WriteLine "        If refCount > UBound(refs) Then ReDim Preserve refs(0 To refCount + 15)"
+  ts.WriteLine "        Dim acctNum As String"
+  ts.WriteLine "        acctNum = Trim$(matches(i).SubMatches(0))"
+  ts.WriteLine "        Dim re As Object"
+  ts.WriteLine "        Set re = CreateRegex(""\s+WM$"")"
+  ts.WriteLine "        acctNum = re.Replace(acctNum, """")"
+  ts.WriteLine ""
+  ts.WriteLine "        refs(refCount).AccountNumber = acctNum"
+  ts.WriteLine "        refs(refCount).OpeningValue = SafeFloat(matches(i).SubMatches(1))"
+  ts.WriteLine "        refs(refCount).Deposits = SafeFloat(matches(i).SubMatches(2))"
+  ts.WriteLine "        refs(refCount).Withdrawals = SafeFloat(matches(i).SubMatches(3))"
+  ts.WriteLine "        refs(refCount).DividendInterestIncome = SafeFloat(matches(i).SubMatches(4))"
+  ts.WriteLine "        refs(refCount).OutsideAssets = SafeFloat(matches(i).SubMatches(5))"
+  ts.WriteLine "        refs(refCount).ChangeInMarketValue = SafeFloat(matches(i).SubMatches(6))"
+  ts.WriteLine "        refs(refCount).ClosingValue = SafeFloat(matches(i).SubMatches(7))"
+  ts.WriteLine "        refCount = refCount + 1"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub ParseSummaryGainsTable(summaryText As String, ByRef refs() As SummaryGainsRef, ByRef refCount As Long)"
+  ts.WriteLine "    refCount = 0"
+  ts.WriteLine "    ReDim refs(0 To 15)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim gainsStart As Long"
+  ts.WriteLine "    gainsStart = InStr(1, summaryText, ""Summary of gains and losses by account"")"
+  ts.WriteLine "    If gainsStart = 0 Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim gainsText As String"
+  ts.WriteLine "    gainsText = Mid$(summaryText, gainsStart)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Account on one line, name + 6 numbers on next (multiline not needed since we use \s* for newline)"
+  ts.WriteLine "    Dim matches As Object"
+  ts.WriteLine "    Set matches = RegexMatchAll(gainsText, ""((?:U2|5V)\s+\S+\s+WM)\s*\n(.+?)\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")\s+("" & NUM_PAT & "")"")"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To matches.Count - 1"
+  ts.WriteLine "        If refCount > UBound(refs) Then ReDim Preserve refs(0 To refCount + 15)"
+  ts.WriteLine "        Dim acctNum As String"
+  ts.WriteLine "        acctNum = Trim$(matches(i).SubMatches(0))"
+  ts.WriteLine "        Dim re As Object"
+  ts.WriteLine "        Set re = CreateRegex(""\s+WM$"")"
+  ts.WriteLine "        acctNum = re.Replace(acctNum, """")"
+  ts.WriteLine ""
+  ts.WriteLine "        refs(refCount).AccountNumber = acctNum"
+  ts.WriteLine "        refs(refCount).ShortTermRealizedMonth = SafeFloat(matches(i).SubMatches(2))"
+  ts.WriteLine "        refs(refCount).LongTermRealizedMonth = SafeFloat(matches(i).SubMatches(3))"
+  ts.WriteLine "        refs(refCount).ShortTermRealizedYtd = SafeFloat(matches(i).SubMatches(4))"
+  ts.WriteLine "        refs(refCount).LongTermRealizedYtd = SafeFloat(matches(i).SubMatches(5))"
+  ts.WriteLine "        refs(refCount).ShortTermUnrealized = SafeFloat(matches(i).SubMatches(6))"
+  ts.WriteLine "        refs(refCount).LongTermUnrealized = SafeFloat(matches(i).SubMatches(7))"
+  ts.WriteLine "        refCount = refCount + 1"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Tick-and-Tie"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "' Investment/income activity sets (match extract-constants.ts)"
+  ts.WriteLine "Private Function IsInvestmentActivity(activity As String) As Boolean"
+  ts.WriteLine "    Select Case activity"
+  ts.WriteLine "        Case ""Sale"", ""Purchase"", ""Reinvestment"", ""Call Redemption"", ""Cash In Lieu"""
+  ts.WriteLine "            IsInvestmentActivity = True"
+  ts.WriteLine "        Case Else"
+  ts.WriteLine "            IsInvestmentActivity = False"
+  ts.WriteLine "    End Select"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function IsIncomeActivity(activity As String) As Boolean"
+  ts.WriteLine "    Select Case activity"
+  ts.WriteLine "        Case ""Dividend"", ""Interest"", ""Distribution"", ""St Cap Gain"", ""Lt Cap Gain"""
+  ts.WriteLine "            IsIncomeActivity = True"
+  ts.WriteLine "        Case Else"
+  ts.WriteLine "            IsIncomeActivity = False"
+  ts.WriteLine "    End Select"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub RunTickAndTie( _"
+  ts.WriteLine "    accounts() As AccountExtractionResult, accountCount As Long, _"
+  ts.WriteLine "    summaryAccounts() As SummaryAccountRef, summaryAccountCount As Long, _"
+  ts.WriteLine "    summaryChanges() As SummaryChangeRef, summaryChangeCount As Long, _"
+  ts.WriteLine "    summaryGains() As SummaryGainsRef, summaryGainsCount As Long)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim ai As Long"
+  ts.WriteLine "    For ai = 0 To accountCount - 1"
+  ts.WriteLine "        Dim acctNum As String"
+  ts.WriteLine "        acctNum = accounts(ai).Extraction.Summary.AccountNumber"
+  ts.WriteLine "        Dim ext As UBSExtract.StatementExtraction"
+  ts.WriteLine "        ext = accounts(ai).Extraction"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Compute holdings sum (+ insurance if not already included)"
+  ts.WriteLine "        Dim holdingsSum As Double"
+  ts.WriteLine "        holdingsSum = 0#"
+  ts.WriteLine "        Dim hi As Long"
+  ts.WriteLine "        For hi = 0 To ext.HoldingCount - 1"
+  ts.WriteLine "            holdingsSum = holdingsSum + ext.Holdings(hi).Value"
+  ts.WriteLine "        Next hi"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Find matching summary account ref"
+  ts.WriteLine "        Dim si As Long"
+  ts.WriteLine "        For si = 0 To summaryAccountCount - 1"
+  ts.WriteLine "            If summaryAccounts(si).AccountNumber = acctNum Then"
+  ts.WriteLine "                AddCheck ext, ""tnt_closing_value"", summaryAccounts(si).ClosingValue, holdingsSum"
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next si"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Find matching summary change ref"
+  ts.WriteLine "        For si = 0 To summaryChangeCount - 1"
+  ts.WriteLine "            If summaryChanges(si).AccountNumber = acctNum Then"
+  ts.WriteLine "                Dim ref As SummaryChangeRef"
+  ts.WriteLine "                ref = summaryChanges(si)"
+  ts.WriteLine ""
+  ts.WriteLine "                AddCheck ext, ""tnt_closing_value_change_table"", ref.ClosingValue, holdingsSum"
+  ts.WriteLine ""
+  ts.WriteLine "                ' Income: sum of positive income transactions + accrued interest received"
+  ts.WriteLine "                Dim incomeTxnSum As Double"
+  ts.WriteLine "                incomeTxnSum = 0#"
+  ts.WriteLine "                Dim ti As Long"
+  ts.WriteLine "                For ti = 0 To ext.TransactionCount - 1"
+  ts.WriteLine "                    If IsIncomeActivity(ext.Transactions(ti).Activity) And ext.Transactions(ti).Amount > 0 Then"
+  ts.WriteLine "                        incomeTxnSum = incomeTxnSum + ext.Transactions(ti).Amount"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                Next ti"
+  ts.WriteLine "                incomeTxnSum = incomeTxnSum + ext.Income.AccruedInterestReceived"
+  ts.WriteLine "                AddCheck ext, ""tnt_income_month"", ref.DividendInterestIncome, incomeTxnSum"
+  ts.WriteLine ""
+  ts.WriteLine "                ' Net deposits/withdrawals: non-investment, non-income transactions"
+  ts.WriteLine "                Dim netDepsWd As Double"
+  ts.WriteLine "                netDepsWd = 0#"
+  ts.WriteLine "                For ti = 0 To ext.TransactionCount - 1"
+  ts.WriteLine "                    If Not IsInvestmentActivity(ext.Transactions(ti).Activity) And _"
+  ts.WriteLine "                       Not IsIncomeActivity(ext.Transactions(ti).Activity) Then"
+  ts.WriteLine "                        netDepsWd = netDepsWd + ext.Transactions(ti).Amount"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                Next ti"
+  ts.WriteLine "                AddCheck ext, ""tnt_net_deposits_withdrawals"", ref.Deposits + ref.Withdrawals, netDepsWd"
+  ts.WriteLine ""
+  ts.WriteLine "                ' Market change: derived from reconciliation equation"
+  ts.WriteLine "                Dim cashActivity As Double"
+  ts.WriteLine "                cashActivity = 0#"
+  ts.WriteLine "                For ti = 0 To ext.TransactionCount - 1"
+  ts.WriteLine "                    If Not IsInvestmentActivity(ext.Transactions(ti).Activity) Then"
+  ts.WriteLine "                        cashActivity = cashActivity + ext.Transactions(ti).Amount"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                Next ti"
+  ts.WriteLine "                Dim derivedMarketChange As Double"
+  ts.WriteLine "                derivedMarketChange = ext.Summary.ClosingValue - ext.Summary.OpeningValue _"
+  ts.WriteLine "                    - cashActivity - ext.Summary.ChangeInAccruedInterest - ext.Income.AccruedInterestReceived"
+  ts.WriteLine "                AddCheck ext, ""tnt_market_change"", ref.ChangeInMarketValue, derivedMarketChange"
+  ts.WriteLine ""
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next si"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Find matching summary gains ref"
+  ts.WriteLine "        For si = 0 To summaryGainsCount - 1"
+  ts.WriteLine "            If summaryGains(si).AccountNumber = acctNum Then"
+  ts.WriteLine "                ' Check if holdings have unrealized data"
+  ts.WriteLine "                Dim hasUnrealized As Boolean"
+  ts.WriteLine "                hasUnrealized = False"
+  ts.WriteLine "                For hi = 0 To ext.HoldingCount - 1"
+  ts.WriteLine "                    If Not IsNull(ext.Holdings(hi).UnrealizedGL) Then"
+  ts.WriteLine "                        hasUnrealized = True"
+  ts.WriteLine "                        Exit For"
+  ts.WriteLine "                    End If"
+  ts.WriteLine "                Next hi"
+  ts.WriteLine ""
+  ts.WriteLine "                If hasUnrealized Then"
+  ts.WriteLine "                    Dim unrealizedSum As Double"
+  ts.WriteLine "                    unrealizedSum = 0#"
+  ts.WriteLine "                    For hi = 0 To ext.HoldingCount - 1"
+  ts.WriteLine "                        If Not IsNull(ext.Holdings(hi).UnrealizedGL) Then"
+  ts.WriteLine "                            unrealizedSum = unrealizedSum + CDbl(ext.Holdings(hi).UnrealizedGL)"
+  ts.WriteLine "                        End If"
+  ts.WriteLine "                    Next hi"
+  ts.WriteLine "                    AddCheck ext, ""tnt_total_unrealized"", _"
+  ts.WriteLine "                        summaryGains(si).ShortTermUnrealized + summaryGains(si).LongTermUnrealized, unrealizedSum"
+  ts.WriteLine "                End If"
+  ts.WriteLine "                Exit For"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next si"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Store updated extraction back"
+  ts.WriteLine "        accounts(ai).Extraction = ext"
+  ts.WriteLine "    Next ai"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub AddCheck(ByRef ext As UBSExtract.StatementExtraction, field As String, Expected As Double, Actual As Double)"
+  ts.WriteLine "    If ext.CheckCount > UBound(ext.Checks) Then"
+  ts.WriteLine "        ReDim Preserve ext.Checks(0 To ext.CheckCount + 15)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    ext.Checks(ext.CheckCount).name = field"
+  ts.WriteLine "    ext.Checks(ext.CheckCount).Expected = Expected"
+  ts.WriteLine "    ext.Checks(ext.CheckCount).Actual = Actual"
+  ts.WriteLine "    ext.Checks(ext.CheckCount).Diff = Expected - Actual"
+  ts.WriteLine "    ext.Checks(ext.CheckCount).Pass = (Abs(Expected - Actual) < TOLERANCE_SUMMARY)"
+  ts.WriteLine "    ext.CheckCount = ext.CheckCount + 1"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Shared extraction helpers"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub ExtractAccountSectionsData( _"
+  ts.WriteLine "    pages() As String, _"
+  ts.WriteLine "    sections() As AccountSection, sectionCount As Long, _"
+  ts.WriteLine "    ByRef results() As AccountExtractionResult, ByRef resultCount As Long, _"
+  ts.WriteLine "    ByRef warnings() As String, ByRef warningCount As Long)"
+  ts.WriteLine ""
+  ts.WriteLine "    resultCount = 0"
+  ts.WriteLine "    ReDim results(0 To 15)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim idx As Long"
+  ts.WriteLine "    For idx = 0 To sectionCount - 1"
+  ts.WriteLine "        ' Build page indices for this section"
+  ts.WriteLine "        Dim pageIndices() As Long"
+  ts.WriteLine "        Dim piCount As Long"
+  ts.WriteLine "        piCount = sections(idx).EndPage - sections(idx).StartPage"
+  ts.WriteLine "        ReDim pageIndices(0 To piCount - 1)"
+  ts.WriteLine "        Dim k As Long"
+  ts.WriteLine "        For k = 0 To piCount - 1"
+  ts.WriteLine "            pageIndices(k) = sections(idx).StartPage + k"
+  ts.WriteLine "        Next k"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim text As String"
+  ts.WriteLine "        text = BuildPagesText(pages, pageIndices, piCount)"
+  ts.WriteLine ""
+  ts.WriteLine "        On Error GoTo ExtractError"
+  ts.WriteLine "        Dim ext As UBSExtract.StatementExtraction"
+  ts.WriteLine "        ext = UBSExtract.ExtractFromText(text)"
+  ts.WriteLine "        On Error GoTo 0"
+  ts.WriteLine ""
+  ts.WriteLine "        If resultCount > UBound(results) Then ReDim Preserve results(0 To resultCount + 15)"
+  ts.WriteLine "        results(resultCount).AccountNumber = ext.Summary.AccountNumber"
+  ts.WriteLine "        results(resultCount).Extraction = ext"
+  ts.WriteLine "        resultCount = resultCount + 1"
+  ts.WriteLine "        GoTo NextSection"
+  ts.WriteLine ""
+  ts.WriteLine "ExtractError:"
+  ts.WriteLine "        If warningCount > UBound(warnings) Then ReDim Preserve warnings(0 To warningCount + 15)"
+  ts.WriteLine "        warnings(warningCount) = ""Failed to extract section "" & (idx + 1) & _"
+  ts.WriteLine "            "" (pages "" & (sections(idx).StartPage + 1) & ""-"" & sections(idx).EndPage & ""): "" & Err.Description"
+  ts.WriteLine "        warningCount = warningCount + 1"
+  ts.WriteLine "        Resume NextSection"
+  ts.WriteLine ""
+  ts.WriteLine "NextSection:"
+  ts.WriteLine "    Next idx"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub ExtractLoanSectionsData( _"
+  ts.WriteLine "    pages() As String, _"
+  ts.WriteLine "    sections() As AccountSection, sectionCount As Long, _"
+  ts.WriteLine "    ByRef results() As LoanAccountResult, ByRef resultCount As Long, _"
+  ts.WriteLine "    ByRef warnings() As String, ByRef warningCount As Long)"
+  ts.WriteLine ""
+  ts.WriteLine "    resultCount = 0"
+  ts.WriteLine "    ReDim results(0 To 7)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim idx As Long"
+  ts.WriteLine "    For idx = 0 To sectionCount - 1"
+  ts.WriteLine "        Dim pageIndices() As Long"
+  ts.WriteLine "        Dim piCount As Long"
+  ts.WriteLine "        piCount = sections(idx).EndPage - sections(idx).StartPage"
+  ts.WriteLine "        ReDim pageIndices(0 To piCount - 1)"
+  ts.WriteLine "        Dim k As Long"
+  ts.WriteLine "        For k = 0 To piCount - 1"
+  ts.WriteLine "            pageIndices(k) = sections(idx).StartPage + k"
+  ts.WriteLine "        Next k"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim loanText As String"
+  ts.WriteLine "        loanText = BuildPagesText(pages, pageIndices, piCount)"
+  ts.WriteLine ""
+  ts.WriteLine "        On Error GoTo LoanExtractError"
+  ts.WriteLine "        Dim loanExt As UBSLoanExtract.LoanExtraction"
+  ts.WriteLine "        loanExt = UBSLoanExtract.ExtractLoanFromText(loanText)"
+  ts.WriteLine "        On Error GoTo 0"
+  ts.WriteLine ""
+  ts.WriteLine "        If resultCount > UBound(results) Then ReDim Preserve results(0 To resultCount + 7)"
+  ts.WriteLine "        ' Primary account number (first in comma-separated list)"
+  ts.WriteLine "        Dim acctNums As String"
+  ts.WriteLine "        acctNums = loanExt.Summary.AccountNumbers"
+  ts.WriteLine "        Dim commaPos As Long"
+  ts.WriteLine "        commaPos = InStr(1, acctNums, "","")"
+  ts.WriteLine "        If commaPos > 0 Then"
+  ts.WriteLine "            results(resultCount).AccountNumber = Trim$(Left$(acctNums, commaPos - 1))"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            results(resultCount).AccountNumber = Trim$(acctNums)"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        results(resultCount).Extraction = loanExt"
+  ts.WriteLine "        resultCount = resultCount + 1"
+  ts.WriteLine "        GoTo NextLoanSection"
+  ts.WriteLine ""
+  ts.WriteLine "LoanExtractError:"
+  ts.WriteLine "        If warningCount > UBound(warnings) Then ReDim Preserve warnings(0 To warningCount + 15)"
+  ts.WriteLine "        warnings(warningCount) = ""Failed to extract loan section (pages "" & _"
+  ts.WriteLine "            (sections(idx).StartPage + 1) & ""-"" & sections(idx).EndPage & ""): "" & Err.Description"
+  ts.WriteLine "        warningCount = warningCount + 1"
+  ts.WriteLine "        Resume NextLoanSection"
+  ts.WriteLine ""
+  ts.WriteLine "NextLoanSection:"
+  ts.WriteLine "    Next idx"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Entry points"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ExtractSummaryPdf(pages() As String) As PortfolioExtraction"
+  ts.WriteLine "    Dim result As PortfolioExtraction"
+  ts.WriteLine "    result.AccountCount = 0"
+  ts.WriteLine "    result.LoanAccountCount = 0"
+  ts.WriteLine "    result.WarningCount = 0"
+  ts.WriteLine "    ReDim result.Accounts(0 To 15)"
+  ts.WriteLine "    ReDim result.LoanAccounts(0 To 7)"
+  ts.WriteLine "    ReDim result.Warnings(0 To 15)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find account sections"
+  ts.WriteLine "    Dim sections() As AccountSection"
+  ts.WriteLine "    Dim sectionCount As Long"
+  ts.WriteLine "    FindAccountSections pages, sections, sectionCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Parse summary reference tables"
+  ts.WriteLine "    Dim summaryPageIndices() As Long"
+  ts.WriteLine "    Dim summaryPageCount As Long"
+  ts.WriteLine "    GetSummaryPages pages, summaryPageIndices, summaryPageCount"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim summaryText As String"
+  ts.WriteLine "    summaryText = BuildPagesText(pages, summaryPageIndices, summaryPageCount)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim summaryAccounts() As SummaryAccountRef"
+  ts.WriteLine "    Dim saCount As Long"
+  ts.WriteLine "    ParseSummaryAccountsTable summaryText, summaryAccounts, saCount"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim summaryChanges() As SummaryChangeRef"
+  ts.WriteLine "    Dim scCount As Long"
+  ts.WriteLine "    ParseSummaryChangeTable summaryText, summaryChanges, scCount"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim summaryGains() As SummaryGainsRef"
+  ts.WriteLine "    Dim sgCount As Long"
+  ts.WriteLine "    ParseSummaryGainsTable summaryText, summaryGains, sgCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Extract investment accounts"
+  ts.WriteLine "    ExtractAccountSectionsData pages, sections, sectionCount, _"
+  ts.WriteLine "        result.Accounts, result.AccountCount, result.Warnings, result.WarningCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Extract loan accounts"
+  ts.WriteLine "    Dim loanSections() As AccountSection"
+  ts.WriteLine "    Dim loanSectionCount As Long"
+  ts.WriteLine "    FindLoanSections pages, loanSections, loanSectionCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractLoanSectionsData pages, loanSections, loanSectionCount, _"
+  ts.WriteLine "        result.LoanAccounts, result.LoanAccountCount, result.Warnings, result.WarningCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Tick-and-tie"
+  ts.WriteLine "    If result.AccountCount > 0 Then"
+  ts.WriteLine "        RunTickAndTie result.Accounts, result.AccountCount, _"
+  ts.WriteLine "            summaryAccounts, saCount, summaryChanges, scCount, summaryGains, sgCount"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractSummaryPdf = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ExtractMultiAccountPdf(pages() As String) As PortfolioExtraction"
+  ts.WriteLine "    Dim result As PortfolioExtraction"
+  ts.WriteLine "    result.AccountCount = 0"
+  ts.WriteLine "    result.LoanAccountCount = 0"
+  ts.WriteLine "    result.WarningCount = 0"
+  ts.WriteLine "    ReDim result.Accounts(0 To 15)"
+  ts.WriteLine "    ReDim result.LoanAccounts(0 To 7)"
+  ts.WriteLine "    ReDim result.Warnings(0 To 15)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find investment sections (no summary to skip)"
+  ts.WriteLine "    Dim investSections() As AccountSection"
+  ts.WriteLine "    Dim investCount As Long"
+  ts.WriteLine "    FindAccountSectionsNoSummary pages, investSections, investCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find loan sections"
+  ts.WriteLine "    Dim loanSections() As AccountSection"
+  ts.WriteLine "    Dim loanSectionCount As Long"
+  ts.WriteLine "    FindLoanSections pages, loanSections, loanSectionCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Extract investment accounts"
+  ts.WriteLine "    ExtractAccountSectionsData pages, investSections, investCount, _"
+  ts.WriteLine "        result.Accounts, result.AccountCount, result.Warnings, result.WarningCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Extract loan accounts"
+  ts.WriteLine "    ExtractLoanSectionsData pages, loanSections, loanSectionCount, _"
+  ts.WriteLine "        result.LoanAccounts, result.LoanAccountCount, result.Warnings, result.WarningCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractMultiAccountPdf = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+End Sub
 
-Function GetModule_QPRWriter()
-  Dim s
-  s = ""
-  s = s & "Attribute VB_Name = ""QPRWriter""" & vbCrLf
-  s = s & "Option Explicit" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' QPRWriter.bas — QPR Excel integration for VBA." & vbCrLf
-  s = s & "' Reads Mapping sheet, resolves holdings/transactions, writes cell values." & vbCrLf
-  s = s & "'" & vbCrLf
-  s = s & "' Unlike the TypeScript version (which uses JSZip for writing)," & vbCrLf
-  s = s & "' VBA can directly write to Excel cells, preserving all formatting." & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Types" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type MappingRow" & vbCrLf
-  s = s & "    Tab As String" & vbCrLf
-  s = s & "    Account As String" & vbCrLf
-  s = s & "    Holdings As String      ' ""all"" | ""cash"" | ""SPY, VXUS"" | asset class name" & vbCrLf
-  s = s & "    Allocation As String    ' Asset class name from Master sheet" & vbCrLf
-  s = s & "    Pct As Double           ' 0-1, default 1.0" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type QprUpdate" & vbCrLf
-  s = s & "    Sheet As String" & vbCrLf
-  s = s & "    Cell As String          ' e.g. ""B345"", ""H23""" & vbCrLf
-  s = s & "    Value As Double" & vbCrLf
-  s = s & "    Description As String" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Type TabContext" & vbCrLf
-  s = s & "    HasAll As Boolean" & vbCrLf
-  s = s & "    HasCash As Boolean" & vbCrLf
-  s = s & "    SecuritySpecs() As String" & vbCrLf
-  s = s & "    SpecCount As Long" & vbCrLf
-  s = s & "    CashSymbols As Object   ' Dictionary of uppercase symbol -> True" & vbCrLf
-  s = s & "End Type" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Constants" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Activities that are fees (routed to H23, not C/D)" & vbCrLf
-  s = s & "Private Function IsFeeActivity(act As String) As Boolean" & vbCrLf
-  s = s & "    IsFeeActivity = (act = ""Fee Charged"" Or act = ""Foreign Tax Withheld"" Or act = ""Refund"")" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Activities that represent external cash movement" & vbCrLf
-  s = s & "Private Function IsExternalCashActivity(act As String) As Boolean" & vbCrLf
-  s = s & "    Select Case act" & vbCrLf
-  s = s & "        Case ""Deposit"", ""Withdrawal"", ""Check"", ""CashConnect"", ""ATM FEE REBATE"", _" & vbCrLf
-  s = s & "             ""Credit Card Payment"", ""Closing"", ""Transfer"", ""Bill Payment"", ""Correction"", _" & vbCrLf
-  s = s & "             ""Correction Of Int. Charge"", ""Bsa Check"", ""Card Purchase""" & vbCrLf
-  s = s & "            IsExternalCashActivity = True" & vbCrLf
-  s = s & "        Case Else" & vbCrLf
-  s = s & "            IsExternalCashActivity = False" & vbCrLf
-  s = s & "    End Select" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Activities whose return stays within cash" & vbCrLf
-  s = s & "Private Function IsCashReturnActivity(act As String) As Boolean" & vbCrLf
-  s = s & "    IsCashReturnActivity = (act = ""Interest"")" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Investment activities (for boundary logic)" & vbCrLf
-  s = s & "Private Function IsInvestmentActivity(act As String) As Boolean" & vbCrLf
-  s = s & "    Select Case act" & vbCrLf
-  s = s & "        Case ""Sale"", ""Purchase"", ""Reinvestment"", ""Call Redemption"", ""Cash In Lieu"", _" & vbCrLf
-  s = s & "             ""Dividend"", ""Distribution"", ""St Cap Gain"", ""Lt Cap Gain"", _" & vbCrLf
-  s = s & "             ""Receive Dtc"", ""Deliver Dtc""" & vbCrLf
-  s = s & "            IsInvestmentActivity = True" & vbCrLf
-  s = s & "        Case Else" & vbCrLf
-  s = s & "            IsInvestmentActivity = False" & vbCrLf
-  s = s & "    End Select" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Holding names for cash" & vbCrLf
-  s = s & "Private Function IsMoneyMarketHolding(name As String) As Boolean" & vbCrLf
-  s = s & "    IsMoneyMarketHolding = (name = ""Cash and money balances"" Or name = ""Money market funds"")" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' Asset class names" & vbCrLf
-  s = s & "Private Function IsAssetClassName(spec As String) As Boolean" & vbCrLf
-  s = s & "    Select Case LCase$(spec)" & vbCrLf
-  s = s & "        Case ""cash and money balances"", ""cash alternatives"", ""equities"", _" & vbCrLf
-  s = s & "             ""fixed income"", ""non-traditional"", ""commodities"", ""other""" & vbCrLf
-  s = s & "            IsAssetClassName = True" & vbCrLf
-  s = s & "        Case Else" & vbCrLf
-  s = s & "            IsAssetClassName = False" & vbCrLf
-  s = s & "    End Select" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function IsCashAssetClass(spec As String) As Boolean" & vbCrLf
-  s = s & "    Dim lc As String" & vbCrLf
-  s = s & "    lc = LCase$(spec)" & vbCrLf
-  s = s & "    IsCashAssetClass = (lc = ""cash and money balances"" Or lc = ""cash alternatives"")" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function NormalizeAssetClass(name As String) As String" & vbCrLf
-  s = s & "    Dim lc As String" & vbCrLf
-  s = s & "    lc = LCase$(name)" & vbCrLf
-  s = s & "    If lc = ""other"" Then" & vbCrLf
-  s = s & "        NormalizeAssetClass = ""non-traditional""" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        NormalizeAssetClass = lc" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Mapping sheet reader" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ReadMappingSheet(wb As Workbook) As MappingRow()" & vbCrLf
-  s = s & "    Dim mappings() As MappingRow" & vbCrLf
-  s = s & "    Dim mapCount As Long" & vbCrLf
-  s = s & "    mapCount = 0" & vbCrLf
-  s = s & "    ReDim mappings(0 To 50)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find Mapping sheet (case-insensitive)" & vbCrLf
-  s = s & "    Dim ws As Worksheet" & vbCrLf
-  s = s & "    Dim found As Boolean" & vbCrLf
-  s = s & "    Dim sh As Worksheet" & vbCrLf
-  s = s & "    For Each sh In wb.Worksheets" & vbCrLf
-  s = s & "        If LCase$(Trim$(sh.name)) = ""mapping"" Then" & vbCrLf
-  s = s & "            Set ws = sh" & vbCrLf
-  s = s & "            found = True" & vbCrLf
-  s = s & "            Exit For" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next sh" & vbCrLf
-  s = s & "    If Not found Then" & vbCrLf
-  s = s & "        ReDim mappings(0 To 0)" & vbCrLf
-  s = s & "        ReadMappingSheet = mappings" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Find header row columns" & vbCrLf
-  s = s & "    Dim headerRow As Long" & vbCrLf
-  s = s & "    headerRow = 1" & vbCrLf
-  s = s & "    Dim tabCol As Long, acctCol As Long, holdCol As Long, allocCol As Long, pctCol As Long" & vbCrLf
-  s = s & "    tabCol = 0: acctCol = 0: holdCol = 0: allocCol = 0: pctCol = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim c As Long" & vbCrLf
-  s = s & "    For c = 1 To 20" & vbCrLf
-  s = s & "        Dim hdr As String" & vbCrLf
-  s = s & "        hdr = LCase$(Trim$(CStr(ws.Cells(headerRow, c).Value)))" & vbCrLf
-  s = s & "        Select Case hdr" & vbCrLf
-  s = s & "            Case ""tab"": tabCol = c" & vbCrLf
-  s = s & "            Case ""account"": acctCol = c" & vbCrLf
-  s = s & "            Case ""holdings"": holdCol = c" & vbCrLf
-  s = s & "            Case ""allocation"": allocCol = c" & vbCrLf
-  s = s & "            Case ""pct"": pctCol = c" & vbCrLf
-  s = s & "        End Select" & vbCrLf
-  s = s & "    Next c" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If tabCol = 0 Or acctCol = 0 Then" & vbCrLf
-  s = s & "        ReDim mappings(0 To 0)" & vbCrLf
-  s = s & "        ReadMappingSheet = mappings" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Create regex once for WM suffix stripping" & vbCrLf
-  s = s & "    Dim reWM As Object" & vbCrLf
-  s = s & "    Set reWM = CreateObject(""VBScript.RegExp"")" & vbCrLf
-  s = s & "    reWM.pattern = ""\s+WM$""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Read data rows" & vbCrLf
-  s = s & "    Dim r As Long" & vbCrLf
-  s = s & "    For r = 2 To 200" & vbCrLf
-  s = s & "        Dim tabVal As String" & vbCrLf
-  s = s & "        tabVal = Trim$(CStr(ws.Cells(r, tabCol).Value))" & vbCrLf
-  s = s & "        Dim acctVal As String" & vbCrLf
-  s = s & "        acctVal = Trim$(CStr(ws.Cells(r, acctCol).Value))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If tabVal = """" Or acctVal = """" Then GoTo NextMapRow" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Strip "" WM"" suffix from account" & vbCrLf
-  s = s & "        acctVal = reWM.Replace(acctVal, """")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim holdVal As String" & vbCrLf
-  s = s & "        holdVal = """"" & vbCrLf
-  s = s & "        If holdCol > 0 Then holdVal = Trim$(CStr(ws.Cells(r, holdCol).Value))" & vbCrLf
-  s = s & "        If holdVal = """" Then holdVal = ""all""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim allocVal As String" & vbCrLf
-  s = s & "        allocVal = """"" & vbCrLf
-  s = s & "        If allocCol > 0 Then allocVal = Trim$(CStr(ws.Cells(r, allocCol).Value))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim pctVal As Double" & vbCrLf
-  s = s & "        pctVal = 1#" & vbCrLf
-  s = s & "        If pctCol > 0 Then" & vbCrLf
-  s = s & "            Dim pctRaw As String" & vbCrLf
-  s = s & "            pctRaw = Trim$(CStr(ws.Cells(r, pctCol).Value))" & vbCrLf
-  s = s & "            If pctRaw <> """" Then" & vbCrLf
-  s = s & "                pctRaw = Replace(pctRaw, ""%"", """")" & vbCrLf
-  s = s & "                If IsNumeric(pctRaw) Then" & vbCrLf
-  s = s & "                    pctVal = CDbl(pctRaw)" & vbCrLf
-  s = s & "                    If pctVal > 1 Then pctVal = pctVal / 100" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If mapCount > UBound(mappings) Then ReDim Preserve mappings(0 To mapCount + 20)" & vbCrLf
-  s = s & "        mappings(mapCount).Tab = tabVal" & vbCrLf
-  s = s & "        mappings(mapCount).Account = acctVal" & vbCrLf
-  s = s & "        mappings(mapCount).Holdings = holdVal" & vbCrLf
-  s = s & "        mappings(mapCount).Allocation = allocVal" & vbCrLf
-  s = s & "        mappings(mapCount).Pct = pctVal" & vbCrLf
-  s = s & "        mapCount = mapCount + 1" & vbCrLf
-  s = s & "NextMapRow:" & vbCrLf
-  s = s & "    Next r" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ReDim Preserve mappings(0 To IIf(mapCount > 0, mapCount - 1, 0))" & vbCrLf
-  s = s & "    ReadMappingSheet = mappings" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Master sheet: asset class -> column mapping" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ReadMasterAssetClasses(wb As Workbook) As Object" & vbCrLf
-  s = s & "    ' Returns Dictionary: lowercase class name -> column letter" & vbCrLf
-  s = s & "    Dim map As Object" & vbCrLf
-  s = s & "    Set map = CreateObject(""Scripting.Dictionary"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim ws As Worksheet" & vbCrLf
-  s = s & "    On Error Resume Next" & vbCrLf
-  s = s & "    Set ws = wb.Worksheets(""Master"")" & vbCrLf
-  s = s & "    On Error GoTo 0" & vbCrLf
-  s = s & "    If ws Is Nothing Then" & vbCrLf
-  s = s & "        Set ReadMasterAssetClasses = map" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Const START_ROW As Long = 5" & vbCrLf
-  s = s & "    Const END_ROW As Long = 26" & vbCrLf
-  s = s & "    Const NAME_COL As Long = 4      ' Column D" & vbCrLf
-  s = s & "    Const ALLOC_START_COL As Long = 8  ' Column H" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim r As Long" & vbCrLf
-  s = s & "    For r = START_ROW To END_ROW" & vbCrLf
-  s = s & "        Dim name As String" & vbCrLf
-  s = s & "        name = Trim$(CStr(ws.Cells(r, NAME_COL).Value))" & vbCrLf
-  s = s & "        If name <> """" Then" & vbCrLf
-  s = s & "            Dim colIdx As Long" & vbCrLf
-  s = s & "            colIdx = ALLOC_START_COL + (r - START_ROW)" & vbCrLf
-  s = s & "            ' Convert column number to letter(s)" & vbCrLf
-  s = s & "            Dim colLetter As String" & vbCrLf
-  s = s & "            colLetter = ColNumToLetter(colIdx)" & vbCrLf
-  s = s & "            map(LCase$(name)) = colLetter" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next r" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Set ReadMasterAssetClasses = map" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ColNumToLetter(colNum As Long) As String" & vbCrLf
-  s = s & "    Dim result As String" & vbCrLf
-  s = s & "    Dim n As Long" & vbCrLf
-  s = s & "    n = colNum" & vbCrLf
-  s = s & "    Do While n > 0" & vbCrLf
-  s = s & "        Dim remainder As Long" & vbCrLf
-  s = s & "        remainder = ((n - 1) Mod 26)" & vbCrLf
-  s = s & "        result = Chr$(65 + remainder) & result" & vbCrLf
-  s = s & "        n = (n - 1) \ 26" & vbCrLf
-  s = s & "    Loop" & vbCrLf
-  s = s & "    ColNumToLetter = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Find month row" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function FindMonthRow(wb As Workbook, sheetName As String, targetMonth As Long, targetYear As Long) As Long" & vbCrLf
-  s = s & "    ' Returns row number or 0 if not found" & vbCrLf
-  s = s & "    Dim ws As Worksheet" & vbCrLf
-  s = s & "    On Error Resume Next" & vbCrLf
-  s = s & "    Set ws = wb.Worksheets(sheetName)" & vbCrLf
-  s = s & "    On Error GoTo 0" & vbCrLf
-  s = s & "    If ws Is Nothing Then" & vbCrLf
-  s = s & "        FindMonthRow = 0" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim r As Long" & vbCrLf
-  s = s & "    For r = 32 To 600" & vbCrLf
-  s = s & "        Dim cellVal As Variant" & vbCrLf
-  s = s & "        cellVal = ws.Cells(r, 1).Value" & vbCrLf
-  s = s & "        If IsEmpty(cellVal) Then GoTo NextRow" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim cellDate As Date" & vbCrLf
-  s = s & "        Dim hasDate As Boolean" & vbCrLf
-  s = s & "        hasDate = False" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If IsDate(cellVal) Then" & vbCrLf
-  s = s & "            cellDate = CDate(cellVal)" & vbCrLf
-  s = s & "            hasDate = True" & vbCrLf
-  s = s & "        ElseIf IsNumeric(cellVal) Then" & vbCrLf
-  s = s & "            ' Excel serial date" & vbCrLf
-  s = s & "            cellDate = CDate(cellVal)" & vbCrLf
-  s = s & "            hasDate = True" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If hasDate Then" & vbCrLf
-  s = s & "            If Month(cellDate) = targetMonth And Year(cellDate) = targetYear Then" & vbCrLf
-  s = s & "                FindMonthRow = r" & vbCrLf
-  s = s & "                Exit Function" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextRow:" & vbCrLf
-  s = s & "    Next r" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    FindMonthRow = 0" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Holdings value resolution" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ResolveHoldingsValue(ext As UBSExtract.StatementExtraction, holdingsSpec As String) As Double" & vbCrLf
-  s = s & "    Dim spec As String" & vbCrLf
-  s = s & "    spec = LCase$(Trim$(holdingsSpec))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If spec = ""all"" Then" & vbCrLf
-  s = s & "        ResolveHoldingsValue = ext.Summary.ClosingValue" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If spec = ""cash"" Then" & vbCrLf
-  s = s & "        Dim cashTotal As Double" & vbCrLf
-  s = s & "        Dim i As Long" & vbCrLf
-  s = s & "        For i = 0 To ext.HoldingCount - 1" & vbCrLf
-  s = s & "            If IsMoneyMarketHolding(ext.Holdings(i).name) Then" & vbCrLf
-  s = s & "                cashTotal = cashTotal + ext.Holdings(i).Value" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next i" & vbCrLf
-  s = s & "        ResolveHoldingsValue = cashTotal" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If IsAssetClassName(spec) Then" & vbCrLf
-  s = s & "        Dim classTotal As Double" & vbCrLf
-  s = s & "        For i = 0 To ext.HoldingCount - 1" & vbCrLf
-  s = s & "            If ext.Holdings(i).AssetType <> """" Then" & vbCrLf
-  s = s & "                If NormalizeAssetClass(ext.Holdings(i).AssetType) = NormalizeAssetClass(spec) Then" & vbCrLf
-  s = s & "                    classTotal = classTotal + ext.Holdings(i).Value" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next i" & vbCrLf
-  s = s & "        ResolveHoldingsValue = classTotal" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Symbol list — not supported without detailed securities" & vbCrLf
-  s = s & "    ' For now, return 0 (would need securities data from extract-securities.ts)" & vbCrLf
-  s = s & "    ResolveHoldingsValue = 0#" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Transaction classification (cash flow boundary logic)" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ClassifyTransaction(tx As UBSExtract.Transaction, ctx As TabContext) As Variant" & vbCrLf
-  s = s & "    ' Returns effective amount (Double) or Null to exclude" & vbCrLf
-  s = s & "    Dim act As String" & vbCrLf
-  s = s & "    act = tx.Activity" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Fees handled by caller" & vbCrLf
-  s = s & "    If IsFeeActivity(act) Then" & vbCrLf
-  s = s & "        ClassifyTransaction = Null" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' External cash activities" & vbCrLf
-  s = s & "    If IsExternalCashActivity(act) Then" & vbCrLf
-  s = s & "        If ctx.HasCash Then" & vbCrLf
-  s = s & "            ClassifyTransaction = tx.Amount" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            ClassifyTransaction = Null" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Interest = cash-internal return" & vbCrLf
-  s = s & "    If IsCashReturnActivity(act) Then" & vbCrLf
-  s = s & "        ClassifyTransaction = Null" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Cash security transactions are cash-internal" & vbCrLf
-  s = s & "    If IsCashSecurityTx(tx, ctx.CashSymbols) Then" & vbCrLf
-  s = s & "        ClassifyTransaction = Null" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Investment transactions: boundary logic" & vbCrLf
-  s = s & "    Dim secInTab As Boolean" & vbCrLf
-  s = s & "    secInTab = IsSecurityInTab(tx, ctx)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If ctx.HasCash And secInTab Then" & vbCrLf
-  s = s & "        ClassifyTransaction = Null  ' internal transfer" & vbCrLf
-  s = s & "    ElseIf ctx.HasCash And Not secInTab Then" & vbCrLf
-  s = s & "        ClassifyTransaction = tx.Amount  ' cash perspective" & vbCrLf
-  s = s & "    ElseIf Not ctx.HasCash And secInTab Then" & vbCrLf
-  s = s & "        ClassifyTransaction = -tx.Amount  ' security perspective (negated)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        ClassifyTransaction = Null  ' neither in tab" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function IsCashSecurityTx(tx As UBSExtract.Transaction, cashSymbols As Object) As Boolean" & vbCrLf
-  s = s & "    If cashSymbols Is Nothing Then" & vbCrLf
-  s = s & "        IsCashSecurityTx = False" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If tx.Symbol <> """" And cashSymbols.Exists(UCase$(tx.Symbol)) Then" & vbCrLf
-  s = s & "        IsCashSecurityTx = True" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If tx.Cusip <> """" And cashSymbols.Exists(UCase$(tx.Cusip)) Then" & vbCrLf
-  s = s & "        IsCashSecurityTx = True" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim descUpper As String" & vbCrLf
-  s = s & "    descUpper = UCase$(tx.Description)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Check description against cash symbols" & vbCrLf
-  s = s & "    Dim key As Variant" & vbCrLf
-  s = s & "    For Each key In cashSymbols.Keys" & vbCrLf
-  s = s & "        If InStr(1, descUpper, CStr(key)) > 0 Then" & vbCrLf
-  s = s & "            IsCashSecurityTx = True" & vbCrLf
-  s = s & "            Exit Function" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next key" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Fallback: known money market patterns" & vbCrLf
-  s = s & "    If InStr(1, tx.Description, ""UBS SELECT GOVERNMENT"", vbTextCompare) > 0 Then" & vbCrLf
-  s = s & "        IsCashSecurityTx = True" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    If InStr(1, tx.Description, ""MONEY MARKET"", vbTextCompare) > 0 Then" & vbCrLf
-  s = s & "        IsCashSecurityTx = True" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    IsCashSecurityTx = False" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function IsSecurityInTab(tx As UBSExtract.Transaction, ctx As TabContext) As Boolean" & vbCrLf
-  s = s & "    If ctx.HasAll Then" & vbCrLf
-  s = s & "        IsSecurityInTab = True" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If ctx.SpecCount = 0 Then" & vbCrLf
-  s = s & "        IsSecurityInTab = False" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Check symbol" & vbCrLf
-  s = s & "    If tx.Symbol <> """" Then" & vbCrLf
-  s = s & "        Dim i As Long" & vbCrLf
-  s = s & "        For i = 0 To ctx.SpecCount - 1" & vbCrLf
-  s = s & "            If UCase$(tx.Symbol) = ctx.SecuritySpecs(i) Then" & vbCrLf
-  s = s & "                IsSecurityInTab = True" & vbCrLf
-  s = s & "                Exit Function" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next i" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Check description" & vbCrLf
-  s = s & "    Dim descUpper As String" & vbCrLf
-  s = s & "    descUpper = UCase$(tx.Description)" & vbCrLf
-  s = s & "    For i = 0 To ctx.SpecCount - 1" & vbCrLf
-  s = s & "        If InStr(1, descUpper, ctx.SecuritySpecs(i)) > 0 Then" & vbCrLf
-  s = s & "            IsSecurityInTab = True" & vbCrLf
-  s = s & "            Exit Function" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    IsSecurityInTab = False" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Transaction resolution (Modified Dietz time-weighting)" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub ResolveTransactions(ext As UBSExtract.StatementExtraction, holdingsSpec As String, _" & vbCrLf
-  s = s & "    ctx As TabContext, daysInMonth As Long, _" & vbCrLf
-  s = s & "    ByRef colC As Double, ByRef colD As Double, ByRef fees As Double)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    colC = 0#: colD = 0#: fees = 0#" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim spec As String" & vbCrLf
-  s = s & "    spec = LCase$(Trim$(holdingsSpec))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To ext.TransactionCount - 1" & vbCrLf
-  s = s & "        Dim tx As UBSExtract.Transaction" & vbCrLf
-  s = s & "        tx = ext.Transactions(i)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' For symbol-list specs, filter to matching transactions only" & vbCrLf
-  s = s & "        If spec <> ""all"" And spec <> ""cash"" And Not IsAssetClassName(spec) Then" & vbCrLf
-  s = s & "            If Not MatchesTxToSpec(tx, holdingsSpec) Then GoTo NextTx" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Fees" & vbCrLf
-  s = s & "        If IsFeeActivity(tx.Activity) Then" & vbCrLf
-  s = s & "            fees = fees + tx.Amount" & vbCrLf
-  s = s & "            GoTo NextTx" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Classify" & vbCrLf
-  s = s & "        Dim effective As Variant" & vbCrLf
-  s = s & "        effective = ClassifyTransaction(tx, ctx)" & vbCrLf
-  s = s & "        If IsNull(effective) Then GoTo NextTx" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Time-weight" & vbCrLf
-  s = s & "        Dim day As Long" & vbCrLf
-  s = s & "        day = ParseTxDay(tx.TxDate)" & vbCrLf
-  s = s & "        If day > 0 And daysInMonth > 0 Then" & vbCrLf
-  s = s & "            colC = colC + CDbl(effective) * day / daysInMonth" & vbCrLf
-  s = s & "            colD = colD + (-CDbl(effective)) * (daysInMonth - day) / daysInMonth" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextTx:" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function ParseTxDay(dateStr As String) As Long" & vbCrLf
-  s = s & "    ' Extract day number from ""Mar 15"" format" & vbCrLf
-  s = s & "    ' Use simple string parsing instead of regex for performance" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    Dim numStr As String" & vbCrLf
-  s = s & "    For i = 1 To Len(dateStr)" & vbCrLf
-  s = s & "        Dim c As String" & vbCrLf
-  s = s & "        c = Mid$(dateStr, i, 1)" & vbCrLf
-  s = s & "        If c >= ""0"" And c <= ""9"" Then" & vbCrLf
-  s = s & "            numStr = numStr & c" & vbCrLf
-  s = s & "        ElseIf numStr <> """" Then" & vbCrLf
-  s = s & "            Exit For" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    If numStr <> """" Then" & vbCrLf
-  s = s & "        ParseTxDay = CLng(numStr)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        ParseTxDay = 0" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function MatchesTxToSpec(tx As UBSExtract.Transaction, holdingsSpec As String) As Boolean" & vbCrLf
-  s = s & "    Dim specs() As String" & vbCrLf
-  s = s & "    specs = Split(holdingsSpec, "","")" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = LBound(specs) To UBound(specs)" & vbCrLf
-  s = s & "        Dim spec As String" & vbCrLf
-  s = s & "        spec = UCase$(Trim$(specs(i)))" & vbCrLf
-  s = s & "        If spec = """" Then GoTo NextSpec" & vbCrLf
-  s = s & "        If tx.Symbol <> """" And UCase$(tx.Symbol) = spec Then" & vbCrLf
-  s = s & "            MatchesTxToSpec = True" & vbCrLf
-  s = s & "            Exit Function" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        If InStr(1, UCase$(tx.Description), spec) > 0 Then" & vbCrLf
-  s = s & "            MatchesTxToSpec = True" & vbCrLf
-  s = s & "            Exit Function" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextSpec:" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "    MatchesTxToSpec = False" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Build cash symbols set" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function BuildCashSymbols(ext As UBSExtract.StatementExtraction) As Object" & vbCrLf
-  s = s & "    Dim dict As Object" & vbCrLf
-  s = s & "    Set dict = CreateObject(""Scripting.Dictionary"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Note: without detailed securities, we can only add known cash patterns" & vbCrLf
-  s = s & "    ' In the full version, this would scan holding.securities for money market funds" & vbCrLf
-  s = s & "    dict(""SEGXX"") = True  ' UBS Select Government" & vbCrLf
-  s = s & "    dict(""UBS SELECT GOVERNMENT"") = True" & vbCrLf
-  s = s & "    dict(""UBS SELECT GOVERNMENTINSTITUTIONAL FUND"") = True" & vbCrLf
-  s = s & "    dict(""UBS FDIC INSURED DEPOSIT"") = True" & vbCrLf
-  s = s & "    dict(""UBS FDIC-INSURED DEPOSIT"") = True" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Set BuildCashSymbols = dict" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Build row context" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function BuildRowContext(row As MappingRow, ext As UBSExtract.StatementExtraction, cashSymbols As Object) As TabContext" & vbCrLf
-  s = s & "    Dim ctx As TabContext" & vbCrLf
-  s = s & "    Set ctx.CashSymbols = cashSymbols" & vbCrLf
-  s = s & "    ReDim ctx.SecuritySpecs(0 To 50)" & vbCrLf
-  s = s & "    ctx.SpecCount = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim spec As String" & vbCrLf
-  s = s & "    spec = LCase$(Trim$(row.Holdings))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If spec = ""all"" Then" & vbCrLf
-  s = s & "        ctx.HasAll = True" & vbCrLf
-  s = s & "        ctx.HasCash = True" & vbCrLf
-  s = s & "    ElseIf spec = ""cash"" Then" & vbCrLf
-  s = s & "        ctx.HasCash = True" & vbCrLf
-  s = s & "    ElseIf IsAssetClassName(spec) Then" & vbCrLf
-  s = s & "        If IsCashAssetClass(spec) Then ctx.HasCash = True" & vbCrLf
-  s = s & "        ' Add securities from matching holdings" & vbCrLf
-  s = s & "        Dim i As Long" & vbCrLf
-  s = s & "        For i = 0 To ext.HoldingCount - 1" & vbCrLf
-  s = s & "            If ext.Holdings(i).AssetType <> """" Then" & vbCrLf
-  s = s & "                If NormalizeAssetClass(ext.Holdings(i).AssetType) = NormalizeAssetClass(spec) Then" & vbCrLf
-  s = s & "                    ' Without detailed securities, add holding name" & vbCrLf
-  s = s & "                    If ctx.SpecCount > UBound(ctx.SecuritySpecs) Then ReDim Preserve ctx.SecuritySpecs(0 To ctx.SpecCount + 20)" & vbCrLf
-  s = s & "                    ctx.SecuritySpecs(ctx.SpecCount) = UCase$(ext.Holdings(i).name)" & vbCrLf
-  s = s & "                    ctx.SpecCount = ctx.SpecCount + 1" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next i" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        ' Symbol list" & vbCrLf
-  s = s & "        Dim parts() As String" & vbCrLf
-  s = s & "        parts = Split(row.Holdings, "","")" & vbCrLf
-  s = s & "        For i = LBound(parts) To UBound(parts)" & vbCrLf
-  s = s & "            Dim trimmed As String" & vbCrLf
-  s = s & "            trimmed = UCase$(Trim$(parts(i)))" & vbCrLf
-  s = s & "            If trimmed <> """" Then" & vbCrLf
-  s = s & "                If ctx.SpecCount > UBound(ctx.SecuritySpecs) Then ReDim Preserve ctx.SecuritySpecs(0 To ctx.SpecCount + 20)" & vbCrLf
-  s = s & "                ctx.SecuritySpecs(ctx.SpecCount) = trimmed" & vbCrLf
-  s = s & "                ctx.SpecCount = ctx.SpecCount + 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next i" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    BuildRowContext = ctx" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Parse statement date" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ParseStatementPeriod(period As String) As Variant" & vbCrLf
-  s = s & "    ' Returns array: (0)=month, (1)=year, (2)=daysInMonth, or Null" & vbCrLf
-  s = s & "    Dim re As Object" & vbCrLf
-  s = s & "    Set re = CreateObject(""VBScript.RegExp"")" & vbCrLf
-  s = s & "    re.pattern = ""(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})""" & vbCrLf
-  s = s & "    Dim matches As Object" & vbCrLf
-  s = s & "    Set matches = re.Execute(period)" & vbCrLf
-  s = s & "    If matches.Count = 0 Then" & vbCrLf
-  s = s & "        ParseStatementPeriod = Null" & vbCrLf
-  s = s & "        Exit Function" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim monthName As String" & vbCrLf
-  s = s & "    monthName = matches(0).SubMatches(0)" & vbCrLf
-  s = s & "    Dim yr As Long" & vbCrLf
-  s = s & "    yr = CLng(matches(0).SubMatches(1))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim mo As Long" & vbCrLf
-  s = s & "    Select Case monthName" & vbCrLf
-  s = s & "        Case ""January"": mo = 1: Case ""February"": mo = 2: Case ""March"": mo = 3" & vbCrLf
-  s = s & "        Case ""April"": mo = 4: Case ""May"": mo = 5: Case ""June"": mo = 6" & vbCrLf
-  s = s & "        Case ""July"": mo = 7: Case ""August"": mo = 8: Case ""September"": mo = 9" & vbCrLf
-  s = s & "        Case ""October"": mo = 10: Case ""November"": mo = 11: Case ""December"": mo = 12" & vbCrLf
-  s = s & "    End Select" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Days in month = last day of month" & vbCrLf
-  s = s & "    Dim lastDay As Long" & vbCrLf
-  s = s & "    lastDay = Day(DateSerial(yr, mo + 1, 0))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim result(0 To 2) As Long" & vbCrLf
-  s = s & "    result(0) = mo" & vbCrLf
-  s = s & "    result(1) = yr" & vbCrLf
-  s = s & "    result(2) = lastDay" & vbCrLf
-  s = s & "    ParseStatementPeriod = result" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Main entry point: build and apply QPR updates" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub WriteQPR(ext As UBSExtract.StatementExtraction, qprWb As Workbook)" & vbCrLf
-  s = s & "    ' Read mapping" & vbCrLf
-  s = s & "    Dim mappings() As MappingRow" & vbCrLf
-  s = s & "    mappings = ReadMappingSheet(qprWb)" & vbCrLf
-  s = s & "    If mappings(0).Tab = """" Then" & vbCrLf
-  s = s & "        MsgBox ""No Mapping sheet found in QPR workbook."", vbExclamation" & vbCrLf
-  s = s & "        Exit Sub" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim prevCalc As Long" & vbCrLf
-  s = s & "    prevCalc = Application.Calculation" & vbCrLf
-  s = s & "    Application.Calculation = xlCalculationManual" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Parse statement date" & vbCrLf
-  s = s & "    Dim dateInfo As Variant" & vbCrLf
-  s = s & "    dateInfo = ParseStatementPeriod(ext.Summary.StatementPeriod)" & vbCrLf
-  s = s & "    If IsNull(dateInfo) Then" & vbCrLf
-  s = s & "        Application.Calculation = prevCalc" & vbCrLf
-  s = s & "        MsgBox ""Could not parse statement period: "" & ext.Summary.StatementPeriod, vbExclamation" & vbCrLf
-  s = s & "        Exit Sub" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim targetMonth As Long: targetMonth = dateInfo(0)" & vbCrLf
-  s = s & "    Dim targetYear As Long: targetYear = dateInfo(1)" & vbCrLf
-  s = s & "    Dim daysInMonth As Long: daysInMonth = dateInfo(2)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Read asset class mapping from Master sheet" & vbCrLf
-  s = s & "    Dim assetClassMap As Object" & vbCrLf
-  s = s & "    Set assetClassMap = ReadMasterAssetClasses(qprWb)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Build cash symbols" & vbCrLf
-  s = s & "    Dim cashSymbols As Object" & vbCrLf
-  s = s & "    Set cashSymbols = BuildCashSymbols(ext)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Group mappings by tab" & vbCrLf
-  s = s & "    Dim tabGroups As Object" & vbCrLf
-  s = s & "    Set tabGroups = CreateObject(""Scripting.Dictionary"")" & vbCrLf
-  s = s & "    Dim mi As Long" & vbCrLf
-  s = s & "    For mi = 0 To UBound(mappings)" & vbCrLf
-  s = s & "        If mappings(mi).Tab = """" Then GoTo NextMapping" & vbCrLf
-  s = s & "        Dim tabKey As String" & vbCrLf
-  s = s & "        tabKey = mappings(mi).Tab" & vbCrLf
-  s = s & "        If Not tabGroups.Exists(tabKey) Then" & vbCrLf
-  s = s & "            tabGroups(tabKey) = mi & """"  ' Store indices as comma-separated string" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            tabGroups(tabKey) = tabGroups(tabKey) & "","" & mi" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "NextMapping:" & vbCrLf
-  s = s & "    Next mi" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Process each tab" & vbCrLf
-  s = s & "    Dim updateCount As Long" & vbCrLf
-  s = s & "    updateCount = 0" & vbCrLf
-  s = s & "    Dim warningMsg As String" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim tabName As Variant" & vbCrLf
-  s = s & "    For Each tabName In tabGroups.Keys" & vbCrLf
-  s = s & "        ' Find month row" & vbCrLf
-  s = s & "        Dim monthRow As Long" & vbCrLf
-  s = s & "        monthRow = FindMonthRow(qprWb, CStr(tabName), targetMonth, targetYear)" & vbCrLf
-  s = s & "        If monthRow = 0 Then" & vbCrLf
-  s = s & "            warningMsg = warningMsg & ""Could not find month row in sheet '"" & tabName & ""'"" & vbCrLf" & vbCrLf
-  s = s & "            GoTo NextTab" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Process mapping rows for this tab" & vbCrLf
-  s = s & "        Dim indices() As String" & vbCrLf
-  s = s & "        indices = Split(tabGroups(tabName), "","")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim totalValue As Double: totalValue = 0#" & vbCrLf
-  s = s & "        Dim totalColC As Double: totalColC = 0#" & vbCrLf
-  s = s & "        Dim totalColD As Double: totalColD = 0#" & vbCrLf
-  s = s & "        Dim totalFees As Double: totalFees = 0#" & vbCrLf
-  s = s & "        Dim feesAccountDone As Object" & vbCrLf
-  s = s & "        Set feesAccountDone = CreateObject(""Scripting.Dictionary"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Allocation values: Dict of lowercase class name -> total value" & vbCrLf
-  s = s & "        Dim allocValues As Object" & vbCrLf
-  s = s & "        Set allocValues = CreateObject(""Scripting.Dictionary"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim ii As Long" & vbCrLf
-  s = s & "        For ii = LBound(indices) To UBound(indices)" & vbCrLf
-  s = s & "            Dim rowIdx As Long" & vbCrLf
-  s = s & "            rowIdx = CLng(indices(ii))" & vbCrLf
-  s = s & "            Dim row As MappingRow" & vbCrLf
-  s = s & "            row = mappings(rowIdx)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Check account matches" & vbCrLf
-  s = s & "            If row.Account <> ext.Summary.AccountNumber Then GoTo NextRow" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Holdings value" & vbCrLf
-  s = s & "            Dim holdValue As Double" & vbCrLf
-  s = s & "            holdValue = ResolveHoldingsValue(ext, row.Holdings)" & vbCrLf
-  s = s & "            totalValue = totalValue + holdValue * row.Pct" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Transaction resolution" & vbCrLf
-  s = s & "            Dim ctx As TabContext" & vbCrLf
-  s = s & "            ctx = BuildRowContext(row, ext, cashSymbols)" & vbCrLf
-  s = s & "            Dim rowColC As Double, rowColD As Double, rowFees As Double" & vbCrLf
-  s = s & "            ResolveTransactions ext, row.Holdings, ctx, daysInMonth, rowColC, rowColD, rowFees" & vbCrLf
-  s = s & "            totalColC = totalColC + rowColC * row.Pct" & vbCrLf
-  s = s & "            totalColD = totalColD + rowColD * row.Pct" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Only count fees once per account" & vbCrLf
-  s = s & "            If Not feesAccountDone.Exists(row.Account) Then" & vbCrLf
-  s = s & "                totalFees = totalFees + rowFees" & vbCrLf
-  s = s & "                feesAccountDone(row.Account) = True" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ' Allocation" & vbCrLf
-  s = s & "            If row.Allocation <> """" Then" & vbCrLf
-  s = s & "                Dim allocKey As String" & vbCrLf
-  s = s & "                allocKey = LCase$(row.Allocation)" & vbCrLf
-  s = s & "                If Not allocValues.Exists(allocKey) Then allocValues(allocKey) = 0#" & vbCrLf
-  s = s & "                allocValues(allocKey) = allocValues(allocKey) + holdValue * row.Pct" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "NextRow:" & vbCrLf
-  s = s & "        Next ii" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Write to cells" & vbCrLf
-  s = s & "        Dim ws As Worksheet" & vbCrLf
-  s = s & "        On Error Resume Next" & vbCrLf
-  s = s & "        Set ws = qprWb.Worksheets(CStr(tabName))" & vbCrLf
-  s = s & "        On Error GoTo 0" & vbCrLf
-  s = s & "        If ws Is Nothing Then" & vbCrLf
-  s = s & "            warningMsg = warningMsg & ""Sheet '"" & tabName & ""' not found"" & vbCrLf" & vbCrLf
-  s = s & "            GoTo NextTab" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' B column: month-end value" & vbCrLf
-  s = s & "        ws.Range(""B"" & monthRow).Value = Round(totalValue, 2)" & vbCrLf
-  s = s & "        updateCount = updateCount + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' C column: time-weighted cash flows" & vbCrLf
-  s = s & "        If Round(totalColC, 2) <> 0 Then" & vbCrLf
-  s = s & "            ws.Range(""C"" & monthRow).Value = Round(totalColC, 2)" & vbCrLf
-  s = s & "            updateCount = updateCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' D column: time-weighted cash flows" & vbCrLf
-  s = s & "        If Round(totalColD, 2) <> 0 Then" & vbCrLf
-  s = s & "            ws.Range(""D"" & monthRow).Value = Round(totalColD, 2)" & vbCrLf
-  s = s & "            updateCount = updateCount + 1" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' H23: advisory fees (always write, even if 0)" & vbCrLf
-  s = s & "        ws.Range(""H23"").Value = Round(totalFees, 2)" & vbCrLf
-  s = s & "        updateCount = updateCount + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Allocation columns" & vbCrLf
-  s = s & "        Dim allocName As Variant" & vbCrLf
-  s = s & "        For Each allocName In allocValues.Keys" & vbCrLf
-  s = s & "            If assetClassMap.Exists(allocName) Then" & vbCrLf
-  s = s & "                Dim allocCol As String" & vbCrLf
-  s = s & "                allocCol = assetClassMap(allocName)" & vbCrLf
-  s = s & "                Dim allocAmt As Double" & vbCrLf
-  s = s & "                allocAmt = Round(CDbl(allocValues(allocName)), 2)" & vbCrLf
-  s = s & "                If allocAmt <> 0 Then" & vbCrLf
-  s = s & "                    ws.Range(allocCol & monthRow).Value = allocAmt" & vbCrLf
-  s = s & "                    updateCount = updateCount + 1" & vbCrLf
-  s = s & "                End If" & vbCrLf
-  s = s & "            Else" & vbCrLf
-  s = s & "                warningMsg = warningMsg & ""Unknown asset class '"" & allocName & ""' in tab '"" & tabName & ""'"" & vbCrLf" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "        Next allocName" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "NextTab:" & vbCrLf
-  s = s & "    Next tabName" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.Calculation = prevCalc" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Show results" & vbCrLf
-  s = s & "    Dim resultMsg As String" & vbCrLf
-  s = s & "    resultMsg = ""QPR updated: "" & updateCount & "" cells written.""" & vbCrLf
-  s = s & "    If warningMsg <> """" Then" & vbCrLf
-  s = s & "        resultMsg = resultMsg & vbCrLf & vbCrLf & ""Warnings:"" & vbCrLf & warningMsg" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "    MsgBox resultMsg, vbInformation, ""QPR Writer""" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' NOTE: WriteQPRMulti was removed because VBA cannot store UDTs in a Dictionary." & vbCrLf
-  s = s & "' For multi-account processing, use BatchExtractToQPR (calls WriteQPR per file)." & vbCrLf
-  s = s & "" & vbCrLf
-  GetModule_QPRWriter = s
-End Function
+Sub WriteModule_QPRWriter(ts)
+  ts.WriteLine "Attribute VB_Name = ""QPRWriter"""
+  ts.WriteLine "Option Explicit"
+  ts.WriteLine ""
+  ts.WriteLine "' QPRWriter.bas — QPR Excel integration for VBA."
+  ts.WriteLine "' Reads Mapping sheet, resolves holdings/transactions, writes cell values."
+  ts.WriteLine "'"
+  ts.WriteLine "' Unlike the TypeScript version (which uses JSZip for writing),"
+  ts.WriteLine "' VBA can directly write to Excel cells, preserving all formatting."
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Types"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type MappingRow"
+  ts.WriteLine "    Tab As String"
+  ts.WriteLine "    Account As String"
+  ts.WriteLine "    Holdings As String      ' ""all"" | ""cash"" | ""SPY, VXUS"" | asset class name"
+  ts.WriteLine "    Allocation As String    ' Asset class name from Master sheet"
+  ts.WriteLine "    Pct As Double           ' 0-1, default 1.0"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type QprUpdate"
+  ts.WriteLine "    Sheet As String"
+  ts.WriteLine "    Cell As String          ' e.g. ""B345"", ""H23"""
+  ts.WriteLine "    Value As Double"
+  ts.WriteLine "    Description As String"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "Public Type TabContext"
+  ts.WriteLine "    HasAll As Boolean"
+  ts.WriteLine "    HasCash As Boolean"
+  ts.WriteLine "    SecuritySpecs() As String"
+  ts.WriteLine "    SpecCount As Long"
+  ts.WriteLine "    CashSymbols As Object   ' Dictionary of uppercase symbol -> True"
+  ts.WriteLine "End Type"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Constants"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "' Activities that are fees (routed to H23, not C/D)"
+  ts.WriteLine "Private Function IsFeeActivity(act As String) As Boolean"
+  ts.WriteLine "    IsFeeActivity = (act = ""Fee Charged"" Or act = ""Foreign Tax Withheld"" Or act = ""Refund"")"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Activities that represent external cash movement"
+  ts.WriteLine "Private Function IsExternalCashActivity(act As String) As Boolean"
+  ts.WriteLine "    Select Case act"
+  ts.WriteLine "        Case ""Deposit"", ""Withdrawal"", ""Check"", ""CashConnect"", ""ATM FEE REBATE"", _"
+  ts.WriteLine "             ""Credit Card Payment"", ""Closing"", ""Transfer"", ""Bill Payment"", ""Correction"", _"
+  ts.WriteLine "             ""Correction Of Int. Charge"", ""Bsa Check"", ""Card Purchase"""
+  ts.WriteLine "            IsExternalCashActivity = True"
+  ts.WriteLine "        Case Else"
+  ts.WriteLine "            IsExternalCashActivity = False"
+  ts.WriteLine "    End Select"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Activities whose return stays within cash"
+  ts.WriteLine "Private Function IsCashReturnActivity(act As String) As Boolean"
+  ts.WriteLine "    IsCashReturnActivity = (act = ""Interest"")"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Investment activities (for boundary logic)"
+  ts.WriteLine "Private Function IsInvestmentActivity(act As String) As Boolean"
+  ts.WriteLine "    Select Case act"
+  ts.WriteLine "        Case ""Sale"", ""Purchase"", ""Reinvestment"", ""Call Redemption"", ""Cash In Lieu"", _"
+  ts.WriteLine "             ""Dividend"", ""Distribution"", ""St Cap Gain"", ""Lt Cap Gain"", _"
+  ts.WriteLine "             ""Receive Dtc"", ""Deliver Dtc"""
+  ts.WriteLine "            IsInvestmentActivity = True"
+  ts.WriteLine "        Case Else"
+  ts.WriteLine "            IsInvestmentActivity = False"
+  ts.WriteLine "    End Select"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Holding names for cash"
+  ts.WriteLine "Private Function IsMoneyMarketHolding(name As String) As Boolean"
+  ts.WriteLine "    IsMoneyMarketHolding = (name = ""Cash and money balances"" Or name = ""Money market funds"")"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' Asset class names"
+  ts.WriteLine "Private Function IsAssetClassName(spec As String) As Boolean"
+  ts.WriteLine "    Select Case LCase$(spec)"
+  ts.WriteLine "        Case ""cash and money balances"", ""cash alternatives"", ""equities"", _"
+  ts.WriteLine "             ""fixed income"", ""non-traditional"", ""commodities"", ""other"""
+  ts.WriteLine "            IsAssetClassName = True"
+  ts.WriteLine "        Case Else"
+  ts.WriteLine "            IsAssetClassName = False"
+  ts.WriteLine "    End Select"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function IsCashAssetClass(spec As String) As Boolean"
+  ts.WriteLine "    Dim lc As String"
+  ts.WriteLine "    lc = LCase$(spec)"
+  ts.WriteLine "    IsCashAssetClass = (lc = ""cash and money balances"" Or lc = ""cash alternatives"")"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function NormalizeAssetClass(name As String) As String"
+  ts.WriteLine "    Dim lc As String"
+  ts.WriteLine "    lc = LCase$(name)"
+  ts.WriteLine "    If lc = ""other"" Then"
+  ts.WriteLine "        NormalizeAssetClass = ""non-traditional"""
+  ts.WriteLine "    Else"
+  ts.WriteLine "        NormalizeAssetClass = lc"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Mapping sheet reader"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ReadMappingSheet(wb As Workbook) As MappingRow()"
+  ts.WriteLine "    Dim mappings() As MappingRow"
+  ts.WriteLine "    Dim mapCount As Long"
+  ts.WriteLine "    mapCount = 0"
+  ts.WriteLine "    ReDim mappings(0 To 50)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find Mapping sheet (case-insensitive)"
+  ts.WriteLine "    Dim ws As Worksheet"
+  ts.WriteLine "    Dim found As Boolean"
+  ts.WriteLine "    Dim sh As Worksheet"
+  ts.WriteLine "    For Each sh In wb.Worksheets"
+  ts.WriteLine "        If LCase$(Trim$(sh.name)) = ""mapping"" Then"
+  ts.WriteLine "            Set ws = sh"
+  ts.WriteLine "            found = True"
+  ts.WriteLine "            Exit For"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next sh"
+  ts.WriteLine "    If Not found Then"
+  ts.WriteLine "        ReDim mappings(0 To 0)"
+  ts.WriteLine "        ReadMappingSheet = mappings"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Find header row columns"
+  ts.WriteLine "    Dim headerRow As Long"
+  ts.WriteLine "    headerRow = 1"
+  ts.WriteLine "    Dim tabCol As Long, acctCol As Long, holdCol As Long, allocCol As Long, pctCol As Long"
+  ts.WriteLine "    tabCol = 0: acctCol = 0: holdCol = 0: allocCol = 0: pctCol = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim c As Long"
+  ts.WriteLine "    For c = 1 To 20"
+  ts.WriteLine "        Dim hdr As String"
+  ts.WriteLine "        hdr = LCase$(Trim$(CStr(ws.Cells(headerRow, c).Value)))"
+  ts.WriteLine "        Select Case hdr"
+  ts.WriteLine "            Case ""tab"": tabCol = c"
+  ts.WriteLine "            Case ""account"": acctCol = c"
+  ts.WriteLine "            Case ""holdings"": holdCol = c"
+  ts.WriteLine "            Case ""allocation"": allocCol = c"
+  ts.WriteLine "            Case ""pct"": pctCol = c"
+  ts.WriteLine "        End Select"
+  ts.WriteLine "    Next c"
+  ts.WriteLine ""
+  ts.WriteLine "    If tabCol = 0 Or acctCol = 0 Then"
+  ts.WriteLine "        ReDim mappings(0 To 0)"
+  ts.WriteLine "        ReadMappingSheet = mappings"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Create regex once for WM suffix stripping"
+  ts.WriteLine "    Dim reWM As Object"
+  ts.WriteLine "    Set reWM = CreateObject(""VBScript.RegExp"")"
+  ts.WriteLine "    reWM.pattern = ""\s+WM$"""
+  ts.WriteLine ""
+  ts.WriteLine "    ' Read data rows"
+  ts.WriteLine "    Dim r As Long"
+  ts.WriteLine "    For r = 2 To 200"
+  ts.WriteLine "        Dim tabVal As String"
+  ts.WriteLine "        tabVal = Trim$(CStr(ws.Cells(r, tabCol).Value))"
+  ts.WriteLine "        Dim acctVal As String"
+  ts.WriteLine "        acctVal = Trim$(CStr(ws.Cells(r, acctCol).Value))"
+  ts.WriteLine ""
+  ts.WriteLine "        If tabVal = """" Or acctVal = """" Then GoTo NextMapRow"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Strip "" WM"" suffix from account"
+  ts.WriteLine "        acctVal = reWM.Replace(acctVal, """")"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim holdVal As String"
+  ts.WriteLine "        holdVal = """""
+  ts.WriteLine "        If holdCol > 0 Then holdVal = Trim$(CStr(ws.Cells(r, holdCol).Value))"
+  ts.WriteLine "        If holdVal = """" Then holdVal = ""all"""
+  ts.WriteLine ""
+  ts.WriteLine "        Dim allocVal As String"
+  ts.WriteLine "        allocVal = """""
+  ts.WriteLine "        If allocCol > 0 Then allocVal = Trim$(CStr(ws.Cells(r, allocCol).Value))"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim pctVal As Double"
+  ts.WriteLine "        pctVal = 1#"
+  ts.WriteLine "        If pctCol > 0 Then"
+  ts.WriteLine "            Dim pctRaw As String"
+  ts.WriteLine "            pctRaw = Trim$(CStr(ws.Cells(r, pctCol).Value))"
+  ts.WriteLine "            If pctRaw <> """" Then"
+  ts.WriteLine "                pctRaw = Replace(pctRaw, ""%"", """")"
+  ts.WriteLine "                If IsNumeric(pctRaw) Then"
+  ts.WriteLine "                    pctVal = CDbl(pctRaw)"
+  ts.WriteLine "                    If pctVal > 1 Then pctVal = pctVal / 100"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        If mapCount > UBound(mappings) Then ReDim Preserve mappings(0 To mapCount + 20)"
+  ts.WriteLine "        mappings(mapCount).Tab = tabVal"
+  ts.WriteLine "        mappings(mapCount).Account = acctVal"
+  ts.WriteLine "        mappings(mapCount).Holdings = holdVal"
+  ts.WriteLine "        mappings(mapCount).Allocation = allocVal"
+  ts.WriteLine "        mappings(mapCount).Pct = pctVal"
+  ts.WriteLine "        mapCount = mapCount + 1"
+  ts.WriteLine "NextMapRow:"
+  ts.WriteLine "    Next r"
+  ts.WriteLine ""
+  ts.WriteLine "    ReDim Preserve mappings(0 To IIf(mapCount > 0, mapCount - 1, 0))"
+  ts.WriteLine "    ReadMappingSheet = mappings"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Master sheet: asset class -> column mapping"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ReadMasterAssetClasses(wb As Workbook) As Object"
+  ts.WriteLine "    ' Returns Dictionary: lowercase class name -> column letter"
+  ts.WriteLine "    Dim map As Object"
+  ts.WriteLine "    Set map = CreateObject(""Scripting.Dictionary"")"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim ws As Worksheet"
+  ts.WriteLine "    On Error Resume Next"
+  ts.WriteLine "    Set ws = wb.Worksheets(""Master"")"
+  ts.WriteLine "    On Error GoTo 0"
+  ts.WriteLine "    If ws Is Nothing Then"
+  ts.WriteLine "        Set ReadMasterAssetClasses = map"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Const START_ROW As Long = 5"
+  ts.WriteLine "    Const END_ROW As Long = 26"
+  ts.WriteLine "    Const NAME_COL As Long = 4      ' Column D"
+  ts.WriteLine "    Const ALLOC_START_COL As Long = 8  ' Column H"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim r As Long"
+  ts.WriteLine "    For r = START_ROW To END_ROW"
+  ts.WriteLine "        Dim name As String"
+  ts.WriteLine "        name = Trim$(CStr(ws.Cells(r, NAME_COL).Value))"
+  ts.WriteLine "        If name <> """" Then"
+  ts.WriteLine "            Dim colIdx As Long"
+  ts.WriteLine "            colIdx = ALLOC_START_COL + (r - START_ROW)"
+  ts.WriteLine "            ' Convert column number to letter(s)"
+  ts.WriteLine "            Dim colLetter As String"
+  ts.WriteLine "            colLetter = ColNumToLetter(colIdx)"
+  ts.WriteLine "            map(LCase$(name)) = colLetter"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next r"
+  ts.WriteLine ""
+  ts.WriteLine "    Set ReadMasterAssetClasses = map"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ColNumToLetter(colNum As Long) As String"
+  ts.WriteLine "    Dim result As String"
+  ts.WriteLine "    Dim n As Long"
+  ts.WriteLine "    n = colNum"
+  ts.WriteLine "    Do While n > 0"
+  ts.WriteLine "        Dim remainder As Long"
+  ts.WriteLine "        remainder = ((n - 1) Mod 26)"
+  ts.WriteLine "        result = Chr$(65 + remainder) & result"
+  ts.WriteLine "        n = (n - 1) \ 26"
+  ts.WriteLine "    Loop"
+  ts.WriteLine "    ColNumToLetter = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Find month row"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function FindMonthRow(wb As Workbook, sheetName As String, targetMonth As Long, targetYear As Long) As Long"
+  ts.WriteLine "    ' Returns row number or 0 if not found"
+  ts.WriteLine "    Dim ws As Worksheet"
+  ts.WriteLine "    On Error Resume Next"
+  ts.WriteLine "    Set ws = wb.Worksheets(sheetName)"
+  ts.WriteLine "    On Error GoTo 0"
+  ts.WriteLine "    If ws Is Nothing Then"
+  ts.WriteLine "        FindMonthRow = 0"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim r As Long"
+  ts.WriteLine "    For r = 32 To 600"
+  ts.WriteLine "        Dim cellVal As Variant"
+  ts.WriteLine "        cellVal = ws.Cells(r, 1).Value"
+  ts.WriteLine "        If IsEmpty(cellVal) Then GoTo NextRow"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim cellDate As Date"
+  ts.WriteLine "        Dim hasDate As Boolean"
+  ts.WriteLine "        hasDate = False"
+  ts.WriteLine ""
+  ts.WriteLine "        If IsDate(cellVal) Then"
+  ts.WriteLine "            cellDate = CDate(cellVal)"
+  ts.WriteLine "            hasDate = True"
+  ts.WriteLine "        ElseIf IsNumeric(cellVal) Then"
+  ts.WriteLine "            ' Excel serial date"
+  ts.WriteLine "            cellDate = CDate(cellVal)"
+  ts.WriteLine "            hasDate = True"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        If hasDate Then"
+  ts.WriteLine "            If Month(cellDate) = targetMonth And Year(cellDate) = targetYear Then"
+  ts.WriteLine "                FindMonthRow = r"
+  ts.WriteLine "                Exit Function"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextRow:"
+  ts.WriteLine "    Next r"
+  ts.WriteLine ""
+  ts.WriteLine "    FindMonthRow = 0"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Holdings value resolution"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ResolveHoldingsValue(ext As UBSExtract.StatementExtraction, holdingsSpec As String) As Double"
+  ts.WriteLine "    Dim spec As String"
+  ts.WriteLine "    spec = LCase$(Trim$(holdingsSpec))"
+  ts.WriteLine ""
+  ts.WriteLine "    If spec = ""all"" Then"
+  ts.WriteLine "        ResolveHoldingsValue = ext.Summary.ClosingValue"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    If spec = ""cash"" Then"
+  ts.WriteLine "        Dim cashTotal As Double"
+  ts.WriteLine "        Dim i As Long"
+  ts.WriteLine "        For i = 0 To ext.HoldingCount - 1"
+  ts.WriteLine "            If IsMoneyMarketHolding(ext.Holdings(i).name) Then"
+  ts.WriteLine "                cashTotal = cashTotal + ext.Holdings(i).Value"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next i"
+  ts.WriteLine "        ResolveHoldingsValue = cashTotal"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    If IsAssetClassName(spec) Then"
+  ts.WriteLine "        Dim classTotal As Double"
+  ts.WriteLine "        For i = 0 To ext.HoldingCount - 1"
+  ts.WriteLine "            If ext.Holdings(i).AssetType <> """" Then"
+  ts.WriteLine "                If NormalizeAssetClass(ext.Holdings(i).AssetType) = NormalizeAssetClass(spec) Then"
+  ts.WriteLine "                    classTotal = classTotal + ext.Holdings(i).Value"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next i"
+  ts.WriteLine "        ResolveHoldingsValue = classTotal"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Symbol list — not supported without detailed securities"
+  ts.WriteLine "    ' For now, return 0 (would need securities data from extract-securities.ts)"
+  ts.WriteLine "    ResolveHoldingsValue = 0#"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Transaction classification (cash flow boundary logic)"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ClassifyTransaction(tx As UBSExtract.Transaction, ctx As TabContext) As Variant"
+  ts.WriteLine "    ' Returns effective amount (Double) or Null to exclude"
+  ts.WriteLine "    Dim act As String"
+  ts.WriteLine "    act = tx.Activity"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Fees handled by caller"
+  ts.WriteLine "    If IsFeeActivity(act) Then"
+  ts.WriteLine "        ClassifyTransaction = Null"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' External cash activities"
+  ts.WriteLine "    If IsExternalCashActivity(act) Then"
+  ts.WriteLine "        If ctx.HasCash Then"
+  ts.WriteLine "            ClassifyTransaction = tx.Amount"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            ClassifyTransaction = Null"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Interest = cash-internal return"
+  ts.WriteLine "    If IsCashReturnActivity(act) Then"
+  ts.WriteLine "        ClassifyTransaction = Null"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Cash security transactions are cash-internal"
+  ts.WriteLine "    If IsCashSecurityTx(tx, ctx.CashSymbols) Then"
+  ts.WriteLine "        ClassifyTransaction = Null"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Investment transactions: boundary logic"
+  ts.WriteLine "    Dim secInTab As Boolean"
+  ts.WriteLine "    secInTab = IsSecurityInTab(tx, ctx)"
+  ts.WriteLine ""
+  ts.WriteLine "    If ctx.HasCash And secInTab Then"
+  ts.WriteLine "        ClassifyTransaction = Null  ' internal transfer"
+  ts.WriteLine "    ElseIf ctx.HasCash And Not secInTab Then"
+  ts.WriteLine "        ClassifyTransaction = tx.Amount  ' cash perspective"
+  ts.WriteLine "    ElseIf Not ctx.HasCash And secInTab Then"
+  ts.WriteLine "        ClassifyTransaction = -tx.Amount  ' security perspective (negated)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        ClassifyTransaction = Null  ' neither in tab"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function IsCashSecurityTx(tx As UBSExtract.Transaction, cashSymbols As Object) As Boolean"
+  ts.WriteLine "    If cashSymbols Is Nothing Then"
+  ts.WriteLine "        IsCashSecurityTx = False"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    If tx.Symbol <> """" And cashSymbols.Exists(UCase$(tx.Symbol)) Then"
+  ts.WriteLine "        IsCashSecurityTx = True"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If tx.Cusip <> """" And cashSymbols.Exists(UCase$(tx.Cusip)) Then"
+  ts.WriteLine "        IsCashSecurityTx = True"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim descUpper As String"
+  ts.WriteLine "    descUpper = UCase$(tx.Description)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Check description against cash symbols"
+  ts.WriteLine "    Dim key As Variant"
+  ts.WriteLine "    For Each key In cashSymbols.Keys"
+  ts.WriteLine "        If InStr(1, descUpper, CStr(key)) > 0 Then"
+  ts.WriteLine "            IsCashSecurityTx = True"
+  ts.WriteLine "            Exit Function"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next key"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Fallback: known money market patterns"
+  ts.WriteLine "    If InStr(1, tx.Description, ""UBS SELECT GOVERNMENT"", vbTextCompare) > 0 Then"
+  ts.WriteLine "        IsCashSecurityTx = True"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    If InStr(1, tx.Description, ""MONEY MARKET"", vbTextCompare) > 0 Then"
+  ts.WriteLine "        IsCashSecurityTx = True"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    IsCashSecurityTx = False"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function IsSecurityInTab(tx As UBSExtract.Transaction, ctx As TabContext) As Boolean"
+  ts.WriteLine "    If ctx.HasAll Then"
+  ts.WriteLine "        IsSecurityInTab = True"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    If ctx.SpecCount = 0 Then"
+  ts.WriteLine "        IsSecurityInTab = False"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Check symbol"
+  ts.WriteLine "    If tx.Symbol <> """" Then"
+  ts.WriteLine "        Dim i As Long"
+  ts.WriteLine "        For i = 0 To ctx.SpecCount - 1"
+  ts.WriteLine "            If UCase$(tx.Symbol) = ctx.SecuritySpecs(i) Then"
+  ts.WriteLine "                IsSecurityInTab = True"
+  ts.WriteLine "                Exit Function"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next i"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Check description"
+  ts.WriteLine "    Dim descUpper As String"
+  ts.WriteLine "    descUpper = UCase$(tx.Description)"
+  ts.WriteLine "    For i = 0 To ctx.SpecCount - 1"
+  ts.WriteLine "        If InStr(1, descUpper, ctx.SecuritySpecs(i)) > 0 Then"
+  ts.WriteLine "            IsSecurityInTab = True"
+  ts.WriteLine "            Exit Function"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    IsSecurityInTab = False"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Transaction resolution (Modified Dietz time-weighting)"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub ResolveTransactions(ext As UBSExtract.StatementExtraction, holdingsSpec As String, _"
+  ts.WriteLine "    ctx As TabContext, daysInMonth As Long, _"
+  ts.WriteLine "    ByRef colC As Double, ByRef colD As Double, ByRef fees As Double)"
+  ts.WriteLine ""
+  ts.WriteLine "    colC = 0#: colD = 0#: fees = 0#"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim spec As String"
+  ts.WriteLine "    spec = LCase$(Trim$(holdingsSpec))"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To ext.TransactionCount - 1"
+  ts.WriteLine "        Dim tx As UBSExtract.Transaction"
+  ts.WriteLine "        tx = ext.Transactions(i)"
+  ts.WriteLine ""
+  ts.WriteLine "        ' For symbol-list specs, filter to matching transactions only"
+  ts.WriteLine "        If spec <> ""all"" And spec <> ""cash"" And Not IsAssetClassName(spec) Then"
+  ts.WriteLine "            If Not MatchesTxToSpec(tx, holdingsSpec) Then GoTo NextTx"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Fees"
+  ts.WriteLine "        If IsFeeActivity(tx.Activity) Then"
+  ts.WriteLine "            fees = fees + tx.Amount"
+  ts.WriteLine "            GoTo NextTx"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Classify"
+  ts.WriteLine "        Dim effective As Variant"
+  ts.WriteLine "        effective = ClassifyTransaction(tx, ctx)"
+  ts.WriteLine "        If IsNull(effective) Then GoTo NextTx"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Time-weight"
+  ts.WriteLine "        Dim day As Long"
+  ts.WriteLine "        day = ParseTxDay(tx.TxDate)"
+  ts.WriteLine "        If day > 0 And daysInMonth > 0 Then"
+  ts.WriteLine "            colC = colC + CDbl(effective) * day / daysInMonth"
+  ts.WriteLine "            colD = colD + (-CDbl(effective)) * (daysInMonth - day) / daysInMonth"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextTx:"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function ParseTxDay(dateStr As String) As Long"
+  ts.WriteLine "    ' Extract day number from ""Mar 15"" format"
+  ts.WriteLine "    ' Use simple string parsing instead of regex for performance"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    Dim numStr As String"
+  ts.WriteLine "    For i = 1 To Len(dateStr)"
+  ts.WriteLine "        Dim c As String"
+  ts.WriteLine "        c = Mid$(dateStr, i, 1)"
+  ts.WriteLine "        If c >= ""0"" And c <= ""9"" Then"
+  ts.WriteLine "            numStr = numStr & c"
+  ts.WriteLine "        ElseIf numStr <> """" Then"
+  ts.WriteLine "            Exit For"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    If numStr <> """" Then"
+  ts.WriteLine "        ParseTxDay = CLng(numStr)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        ParseTxDay = 0"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function MatchesTxToSpec(tx As UBSExtract.Transaction, holdingsSpec As String) As Boolean"
+  ts.WriteLine "    Dim specs() As String"
+  ts.WriteLine "    specs = Split(holdingsSpec, "","")"
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = LBound(specs) To UBound(specs)"
+  ts.WriteLine "        Dim spec As String"
+  ts.WriteLine "        spec = UCase$(Trim$(specs(i)))"
+  ts.WriteLine "        If spec = """" Then GoTo NextSpec"
+  ts.WriteLine "        If tx.Symbol <> """" And UCase$(tx.Symbol) = spec Then"
+  ts.WriteLine "            MatchesTxToSpec = True"
+  ts.WriteLine "            Exit Function"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        If InStr(1, UCase$(tx.Description), spec) > 0 Then"
+  ts.WriteLine "            MatchesTxToSpec = True"
+  ts.WriteLine "            Exit Function"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextSpec:"
+  ts.WriteLine "    Next i"
+  ts.WriteLine "    MatchesTxToSpec = False"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Build cash symbols set"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function BuildCashSymbols(ext As UBSExtract.StatementExtraction) As Object"
+  ts.WriteLine "    Dim dict As Object"
+  ts.WriteLine "    Set dict = CreateObject(""Scripting.Dictionary"")"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Note: without detailed securities, we can only add known cash patterns"
+  ts.WriteLine "    ' In the full version, this would scan holding.securities for money market funds"
+  ts.WriteLine "    dict(""SEGXX"") = True  ' UBS Select Government"
+  ts.WriteLine "    dict(""UBS SELECT GOVERNMENT"") = True"
+  ts.WriteLine "    dict(""UBS SELECT GOVERNMENTINSTITUTIONAL FUND"") = True"
+  ts.WriteLine "    dict(""UBS FDIC INSURED DEPOSIT"") = True"
+  ts.WriteLine "    dict(""UBS FDIC-INSURED DEPOSIT"") = True"
+  ts.WriteLine ""
+  ts.WriteLine "    Set BuildCashSymbols = dict"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Build row context"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function BuildRowContext(row As MappingRow, ext As UBSExtract.StatementExtraction, cashSymbols As Object) As TabContext"
+  ts.WriteLine "    Dim ctx As TabContext"
+  ts.WriteLine "    Set ctx.CashSymbols = cashSymbols"
+  ts.WriteLine "    ReDim ctx.SecuritySpecs(0 To 50)"
+  ts.WriteLine "    ctx.SpecCount = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim spec As String"
+  ts.WriteLine "    spec = LCase$(Trim$(row.Holdings))"
+  ts.WriteLine ""
+  ts.WriteLine "    If spec = ""all"" Then"
+  ts.WriteLine "        ctx.HasAll = True"
+  ts.WriteLine "        ctx.HasCash = True"
+  ts.WriteLine "    ElseIf spec = ""cash"" Then"
+  ts.WriteLine "        ctx.HasCash = True"
+  ts.WriteLine "    ElseIf IsAssetClassName(spec) Then"
+  ts.WriteLine "        If IsCashAssetClass(spec) Then ctx.HasCash = True"
+  ts.WriteLine "        ' Add securities from matching holdings"
+  ts.WriteLine "        Dim i As Long"
+  ts.WriteLine "        For i = 0 To ext.HoldingCount - 1"
+  ts.WriteLine "            If ext.Holdings(i).AssetType <> """" Then"
+  ts.WriteLine "                If NormalizeAssetClass(ext.Holdings(i).AssetType) = NormalizeAssetClass(spec) Then"
+  ts.WriteLine "                    ' Without detailed securities, add holding name"
+  ts.WriteLine "                    If ctx.SpecCount > UBound(ctx.SecuritySpecs) Then ReDim Preserve ctx.SecuritySpecs(0 To ctx.SpecCount + 20)"
+  ts.WriteLine "                    ctx.SecuritySpecs(ctx.SpecCount) = UCase$(ext.Holdings(i).name)"
+  ts.WriteLine "                    ctx.SpecCount = ctx.SpecCount + 1"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next i"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        ' Symbol list"
+  ts.WriteLine "        Dim parts() As String"
+  ts.WriteLine "        parts = Split(row.Holdings, "","")"
+  ts.WriteLine "        For i = LBound(parts) To UBound(parts)"
+  ts.WriteLine "            Dim trimmed As String"
+  ts.WriteLine "            trimmed = UCase$(Trim$(parts(i)))"
+  ts.WriteLine "            If trimmed <> """" Then"
+  ts.WriteLine "                If ctx.SpecCount > UBound(ctx.SecuritySpecs) Then ReDim Preserve ctx.SecuritySpecs(0 To ctx.SpecCount + 20)"
+  ts.WriteLine "                ctx.SecuritySpecs(ctx.SpecCount) = trimmed"
+  ts.WriteLine "                ctx.SpecCount = ctx.SpecCount + 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next i"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    BuildRowContext = ctx"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Parse statement date"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ParseStatementPeriod(period As String) As Variant"
+  ts.WriteLine "    ' Returns array: (0)=month, (1)=year, (2)=daysInMonth, or Null"
+  ts.WriteLine "    Dim re As Object"
+  ts.WriteLine "    Set re = CreateObject(""VBScript.RegExp"")"
+  ts.WriteLine "    re.pattern = ""(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})"""
+  ts.WriteLine "    Dim matches As Object"
+  ts.WriteLine "    Set matches = re.Execute(period)"
+  ts.WriteLine "    If matches.Count = 0 Then"
+  ts.WriteLine "        ParseStatementPeriod = Null"
+  ts.WriteLine "        Exit Function"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim monthName As String"
+  ts.WriteLine "    monthName = matches(0).SubMatches(0)"
+  ts.WriteLine "    Dim yr As Long"
+  ts.WriteLine "    yr = CLng(matches(0).SubMatches(1))"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim mo As Long"
+  ts.WriteLine "    Select Case monthName"
+  ts.WriteLine "        Case ""January"": mo = 1: Case ""February"": mo = 2: Case ""March"": mo = 3"
+  ts.WriteLine "        Case ""April"": mo = 4: Case ""May"": mo = 5: Case ""June"": mo = 6"
+  ts.WriteLine "        Case ""July"": mo = 7: Case ""August"": mo = 8: Case ""September"": mo = 9"
+  ts.WriteLine "        Case ""October"": mo = 10: Case ""November"": mo = 11: Case ""December"": mo = 12"
+  ts.WriteLine "    End Select"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Days in month = last day of month"
+  ts.WriteLine "    Dim lastDay As Long"
+  ts.WriteLine "    lastDay = Day(DateSerial(yr, mo + 1, 0))"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim result(0 To 2) As Long"
+  ts.WriteLine "    result(0) = mo"
+  ts.WriteLine "    result(1) = yr"
+  ts.WriteLine "    result(2) = lastDay"
+  ts.WriteLine "    ParseStatementPeriod = result"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Main entry point: build and apply QPR updates"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub WriteQPR(ext As UBSExtract.StatementExtraction, qprWb As Workbook)"
+  ts.WriteLine "    ' Read mapping"
+  ts.WriteLine "    Dim mappings() As MappingRow"
+  ts.WriteLine "    mappings = ReadMappingSheet(qprWb)"
+  ts.WriteLine "    If mappings(0).Tab = """" Then"
+  ts.WriteLine "        MsgBox ""No Mapping sheet found in QPR workbook."", vbExclamation"
+  ts.WriteLine "        Exit Sub"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim prevCalc As Long"
+  ts.WriteLine "    prevCalc = Application.Calculation"
+  ts.WriteLine "    Application.Calculation = xlCalculationManual"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Parse statement date"
+  ts.WriteLine "    Dim dateInfo As Variant"
+  ts.WriteLine "    dateInfo = ParseStatementPeriod(ext.Summary.StatementPeriod)"
+  ts.WriteLine "    If IsNull(dateInfo) Then"
+  ts.WriteLine "        Application.Calculation = prevCalc"
+  ts.WriteLine "        MsgBox ""Could not parse statement period: "" & ext.Summary.StatementPeriod, vbExclamation"
+  ts.WriteLine "        Exit Sub"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim targetMonth As Long: targetMonth = dateInfo(0)"
+  ts.WriteLine "    Dim targetYear As Long: targetYear = dateInfo(1)"
+  ts.WriteLine "    Dim daysInMonth As Long: daysInMonth = dateInfo(2)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Read asset class mapping from Master sheet"
+  ts.WriteLine "    Dim assetClassMap As Object"
+  ts.WriteLine "    Set assetClassMap = ReadMasterAssetClasses(qprWb)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Build cash symbols"
+  ts.WriteLine "    Dim cashSymbols As Object"
+  ts.WriteLine "    Set cashSymbols = BuildCashSymbols(ext)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Group mappings by tab"
+  ts.WriteLine "    Dim tabGroups As Object"
+  ts.WriteLine "    Set tabGroups = CreateObject(""Scripting.Dictionary"")"
+  ts.WriteLine "    Dim mi As Long"
+  ts.WriteLine "    For mi = 0 To UBound(mappings)"
+  ts.WriteLine "        If mappings(mi).Tab = """" Then GoTo NextMapping"
+  ts.WriteLine "        Dim tabKey As String"
+  ts.WriteLine "        tabKey = mappings(mi).Tab"
+  ts.WriteLine "        If Not tabGroups.Exists(tabKey) Then"
+  ts.WriteLine "            tabGroups(tabKey) = mi & """"  ' Store indices as comma-separated string"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            tabGroups(tabKey) = tabGroups(tabKey) & "","" & mi"
+  ts.WriteLine "        End If"
+  ts.WriteLine "NextMapping:"
+  ts.WriteLine "    Next mi"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Process each tab"
+  ts.WriteLine "    Dim updateCount As Long"
+  ts.WriteLine "    updateCount = 0"
+  ts.WriteLine "    Dim warningMsg As String"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim tabName As Variant"
+  ts.WriteLine "    For Each tabName In tabGroups.Keys"
+  ts.WriteLine "        ' Find month row"
+  ts.WriteLine "        Dim monthRow As Long"
+  ts.WriteLine "        monthRow = FindMonthRow(qprWb, CStr(tabName), targetMonth, targetYear)"
+  ts.WriteLine "        If monthRow = 0 Then"
+  ts.WriteLine "            warningMsg = warningMsg & ""Could not find month row in sheet '"" & tabName & ""'"" & vbCrLf"
+  ts.WriteLine "            GoTo NextTab"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Process mapping rows for this tab"
+  ts.WriteLine "        Dim indices() As String"
+  ts.WriteLine "        indices = Split(tabGroups(tabName), "","")"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim totalValue As Double: totalValue = 0#"
+  ts.WriteLine "        Dim totalColC As Double: totalColC = 0#"
+  ts.WriteLine "        Dim totalColD As Double: totalColD = 0#"
+  ts.WriteLine "        Dim totalFees As Double: totalFees = 0#"
+  ts.WriteLine "        Dim feesAccountDone As Object"
+  ts.WriteLine "        Set feesAccountDone = CreateObject(""Scripting.Dictionary"")"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Allocation values: Dict of lowercase class name -> total value"
+  ts.WriteLine "        Dim allocValues As Object"
+  ts.WriteLine "        Set allocValues = CreateObject(""Scripting.Dictionary"")"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim ii As Long"
+  ts.WriteLine "        For ii = LBound(indices) To UBound(indices)"
+  ts.WriteLine "            Dim rowIdx As Long"
+  ts.WriteLine "            rowIdx = CLng(indices(ii))"
+  ts.WriteLine "            Dim row As MappingRow"
+  ts.WriteLine "            row = mappings(rowIdx)"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Check account matches"
+  ts.WriteLine "            If row.Account <> ext.Summary.AccountNumber Then GoTo NextRow"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Holdings value"
+  ts.WriteLine "            Dim holdValue As Double"
+  ts.WriteLine "            holdValue = ResolveHoldingsValue(ext, row.Holdings)"
+  ts.WriteLine "            totalValue = totalValue + holdValue * row.Pct"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Transaction resolution"
+  ts.WriteLine "            Dim ctx As TabContext"
+  ts.WriteLine "            ctx = BuildRowContext(row, ext, cashSymbols)"
+  ts.WriteLine "            Dim rowColC As Double, rowColD As Double, rowFees As Double"
+  ts.WriteLine "            ResolveTransactions ext, row.Holdings, ctx, daysInMonth, rowColC, rowColD, rowFees"
+  ts.WriteLine "            totalColC = totalColC + rowColC * row.Pct"
+  ts.WriteLine "            totalColD = totalColD + rowColD * row.Pct"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Only count fees once per account"
+  ts.WriteLine "            If Not feesAccountDone.Exists(row.Account) Then"
+  ts.WriteLine "                totalFees = totalFees + rowFees"
+  ts.WriteLine "                feesAccountDone(row.Account) = True"
+  ts.WriteLine "            End If"
+  ts.WriteLine ""
+  ts.WriteLine "            ' Allocation"
+  ts.WriteLine "            If row.Allocation <> """" Then"
+  ts.WriteLine "                Dim allocKey As String"
+  ts.WriteLine "                allocKey = LCase$(row.Allocation)"
+  ts.WriteLine "                If Not allocValues.Exists(allocKey) Then allocValues(allocKey) = 0#"
+  ts.WriteLine "                allocValues(allocKey) = allocValues(allocKey) + holdValue * row.Pct"
+  ts.WriteLine "            End If"
+  ts.WriteLine "NextRow:"
+  ts.WriteLine "        Next ii"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Write to cells"
+  ts.WriteLine "        Dim ws As Worksheet"
+  ts.WriteLine "        On Error Resume Next"
+  ts.WriteLine "        Set ws = qprWb.Worksheets(CStr(tabName))"
+  ts.WriteLine "        On Error GoTo 0"
+  ts.WriteLine "        If ws Is Nothing Then"
+  ts.WriteLine "            warningMsg = warningMsg & ""Sheet '"" & tabName & ""' not found"" & vbCrLf"
+  ts.WriteLine "            GoTo NextTab"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' B column: month-end value"
+  ts.WriteLine "        ws.Range(""B"" & monthRow).Value = Round(totalValue, 2)"
+  ts.WriteLine "        updateCount = updateCount + 1"
+  ts.WriteLine ""
+  ts.WriteLine "        ' C column: time-weighted cash flows"
+  ts.WriteLine "        If Round(totalColC, 2) <> 0 Then"
+  ts.WriteLine "            ws.Range(""C"" & monthRow).Value = Round(totalColC, 2)"
+  ts.WriteLine "            updateCount = updateCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' D column: time-weighted cash flows"
+  ts.WriteLine "        If Round(totalColD, 2) <> 0 Then"
+  ts.WriteLine "            ws.Range(""D"" & monthRow).Value = Round(totalColD, 2)"
+  ts.WriteLine "            updateCount = updateCount + 1"
+  ts.WriteLine "        End If"
+  ts.WriteLine ""
+  ts.WriteLine "        ' H23: advisory fees (always write, even if 0)"
+  ts.WriteLine "        ws.Range(""H23"").Value = Round(totalFees, 2)"
+  ts.WriteLine "        updateCount = updateCount + 1"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Allocation columns"
+  ts.WriteLine "        Dim allocName As Variant"
+  ts.WriteLine "        For Each allocName In allocValues.Keys"
+  ts.WriteLine "            If assetClassMap.Exists(allocName) Then"
+  ts.WriteLine "                Dim allocCol As String"
+  ts.WriteLine "                allocCol = assetClassMap(allocName)"
+  ts.WriteLine "                Dim allocAmt As Double"
+  ts.WriteLine "                allocAmt = Round(CDbl(allocValues(allocName)), 2)"
+  ts.WriteLine "                If allocAmt <> 0 Then"
+  ts.WriteLine "                    ws.Range(allocCol & monthRow).Value = allocAmt"
+  ts.WriteLine "                    updateCount = updateCount + 1"
+  ts.WriteLine "                End If"
+  ts.WriteLine "            Else"
+  ts.WriteLine "                warningMsg = warningMsg & ""Unknown asset class '"" & allocName & ""' in tab '"" & tabName & ""'"" & vbCrLf"
+  ts.WriteLine "            End If"
+  ts.WriteLine "        Next allocName"
+  ts.WriteLine ""
+  ts.WriteLine "NextTab:"
+  ts.WriteLine "    Next tabName"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.Calculation = prevCalc"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Show results"
+  ts.WriteLine "    Dim resultMsg As String"
+  ts.WriteLine "    resultMsg = ""QPR updated: "" & updateCount & "" cells written."""
+  ts.WriteLine "    If warningMsg <> """" Then"
+  ts.WriteLine "        resultMsg = resultMsg & vbCrLf & vbCrLf & ""Warnings:"" & vbCrLf & warningMsg"
+  ts.WriteLine "    End If"
+  ts.WriteLine "    MsgBox resultMsg, vbInformation, ""QPR Writer"""
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' NOTE: WriteQPRMulti was removed because VBA cannot store UDTs in a Dictionary."
+  ts.WriteLine "' For multi-account processing, use BatchExtractToQPR (calls WriteQPR per file)."
+  ts.WriteLine ""
+End Sub
 
-Function GetModule_PDFExtractorMain()
-  Dim s
-  s = ""
-  s = s & "Attribute VB_Name = ""PDFExtractorMain""" & vbCrLf
-  s = s & "Option Explicit" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' PDFExtractorMain.bas — User-facing macros for the VBA PDF Extractor." & vbCrLf
-  s = s & "' Ties together: PDFReader + PDFTextExtract + UBSExtract + QPRWriter" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Helper: build combined text from page array (matches reference format)" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function BuildFullText(pages() As String) As String" & vbCrLf
-  s = s & "    Dim parts() As String" & vbCrLf
-  s = s & "    Dim count As Long" & vbCrLf
-  s = s & "    count = 0" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim pageIdx As Long" & vbCrLf
-  s = s & "    For pageIdx = LBound(pages) To UBound(pages)" & vbCrLf
-  s = s & "        ' Skip boilerplate pages" & vbCrLf
-  s = s & "        If IsBoilerplatePage(pages(pageIdx)) Then GoTo NextPage" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        count = count + 1" & vbCrLf
-  s = s & "        ReDim Preserve parts(1 To count)" & vbCrLf
-  s = s & "        parts(count) = ""=== PAGE "" & count & "" ==="" & vbLf & pages(pageIdx)" & vbCrLf
-  s = s & "NextPage:" & vbCrLf
-  s = s & "    Next pageIdx" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If count = 0 Then" & vbCrLf
-  s = s & "        BuildFullText = """"" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        BuildFullText = Join(parts, vbLf & vbLf)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Function IsBoilerplatePage(pageText As String) As Boolean" & vbCrLf
-  s = s & "    ' Match the same boilerplate detection as extract.ts" & vbCrLf
-  s = s & "    If InStr(1, pageText, ""Important information about your statement"", vbTextCompare) > 0 Then" & vbCrLf
-  s = s & "        IsBoilerplatePage = True" & vbCrLf
-  s = s & "    ElseIf InStr(1, pageText, ""For more information about any"", vbTextCompare) > 0 Then" & vbCrLf
-  s = s & "        IsBoilerplatePage = True" & vbCrLf
-  s = s & "    ElseIf InStr(1, pageText, ""UBS Financial Services Inc. is a subsidiary"", vbTextCompare) > 0 Then" & vbCrLf
-  s = s & "        IsBoilerplatePage = True" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        IsBoilerplatePage = False" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' 1. Extract raw PDF text to worksheet" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub ExtractPDFText()" & vbCrLf
-  s = s & "    Dim filePath As String" & vbCrLf
-  s = s & "    filePath = Application.GetOpenFilename( _" & vbCrLf
-  s = s & "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _" & vbCrLf
-  s = s & "        Title:=""Select a UBS Statement PDF"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If filePath = ""False"" Or filePath = """" Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = ""Opening PDF...""" & vbCrLf
-  s = s & "    Application.ScreenUpdating = False" & vbCrLf
-  s = s & "    Dim prevCalcText As Long" & vbCrLf
-  s = s & "    prevCalcText = Application.Calculation" & vbCrLf
-  s = s & "    Application.Calculation = xlCalculationManual" & vbCrLf
-  s = s & "    On Error GoTo ErrorHandler" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim doc As PDFReader.PDFDocument" & vbCrLf
-  s = s & "    doc = PDFReader.OpenPDF(filePath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = ""Extracting text from "" & doc.pageCount & "" pages...""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim pages() As String" & vbCrLf
-  s = s & "    pages = PDFTextExtract.ExtractAllPagesText(doc)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Output to worksheet" & vbCrLf
-  s = s & "    Dim wsName As String" & vbCrLf
-  s = s & "    wsName = ""PDF Text""" & vbCrLf
-  s = s & "    DeleteSheetIfExists wsName" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim ws As Worksheet" & vbCrLf
-  s = s & "    Set ws = ThisWorkbook.Worksheets.Add" & vbCrLf
-  s = s & "    ws.name = wsName" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim r As Long" & vbCrLf
-  s = s & "    r = 1" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""PDF Text Extraction""" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Size = 14" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Source: "" & filePath" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Italic = True" & vbCrLf
-  s = s & "    r = r + 2" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim pageIdx As Long" & vbCrLf
-  s = s & "    For pageIdx = LBound(pages) To UBound(pages)" & vbCrLf
-  s = s & "        Application.StatusBar = ""Writing page "" & (pageIdx + 1) & "" of "" & doc.pageCount & ""...""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Value = ""=== Page "" & (pageIdx + 1) & "" ===""" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "        r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim pageLines() As String" & vbCrLf
-  s = s & "        pageLines = Split(pages(pageIdx), vbLf)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim lineIdx As Long" & vbCrLf
-  s = s & "        For lineIdx = LBound(pageLines) To UBound(pageLines)" & vbCrLf
-  s = s & "            ws.Cells(r, 1).Value = pageLines(lineIdx)" & vbCrLf
-  s = s & "            r = r + 1" & vbCrLf
-  s = s & "        Next lineIdx" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        r = r + 1" & vbCrLf
-  s = s & "    Next pageIdx" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ws.Columns(""A"").ColumnWidth = 120" & vbCrLf
-  s = s & "    Application.Calculation = prevCalcText" & vbCrLf
-  s = s & "    Application.StatusBar = ""Done! Extracted "" & doc.pageCount & "" pages.""" & vbCrLf
-  s = s & "    Application.ScreenUpdating = True" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    MsgBox ""Text extracted from "" & doc.pageCount & "" pages."" & vbCrLf & _" & vbCrLf
-  s = s & "           ""Output on '"" & wsName & ""' sheet."", vbInformation, ""PDF Extractor""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "    Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "ErrorHandler:" & vbCrLf
-  s = s & "    Application.StatusBar = """"" & vbCrLf
-  s = s & "    Application.Calculation = prevCalcText" & vbCrLf
-  s = s & "    Application.ScreenUpdating = True" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "    MsgBox ""Error: "" & Err.Description, vbCritical, ""PDF Extractor Error""" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' 2. Extract UBS statement data to worksheet" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub ExtractUBSStatement()" & vbCrLf
-  s = s & "    Dim filePath As String" & vbCrLf
-  s = s & "    filePath = Application.GetOpenFilename( _" & vbCrLf
-  s = s & "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _" & vbCrLf
-  s = s & "        Title:=""Select a UBS Statement PDF"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If filePath = ""False"" Or filePath = """" Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = ""Opening PDF...""" & vbCrLf
-  s = s & "    Application.ScreenUpdating = False" & vbCrLf
-  s = s & "    On Error GoTo ErrorHandler" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' PDF -> text" & vbCrLf
-  s = s & "    Dim doc As PDFReader.PDFDocument" & vbCrLf
-  s = s & "    doc = PDFReader.OpenPDF(filePath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = ""Extracting text from "" & doc.pageCount & "" pages...""" & vbCrLf
-  s = s & "    Dim pages() As String" & vbCrLf
-  s = s & "    pages = PDFTextExtract.ExtractAllPagesText(doc)" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' text -> combined string (with boilerplate filtering + page markers)" & vbCrLf
-  s = s & "    Application.StatusBar = ""Parsing statement data...""" & vbCrLf
-  s = s & "    Dim fullText As String" & vbCrLf
-  s = s & "    fullText = BuildFullText(pages)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Extract structured data" & vbCrLf
-  s = s & "    Dim ext As UBSExtract.StatementExtraction" & vbCrLf
-  s = s & "    ext = UBSExtract.ExtractFromText(fullText)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Output to worksheet" & vbCrLf
-  s = s & "    WriteExtractionToSheet ext, filePath" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = ""Done! Extracted "" & ext.TransactionCount & "" transactions.""" & vbCrLf
-  s = s & "    Application.ScreenUpdating = True" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim msg As String" & vbCrLf
-  s = s & "    msg = ""UBS Statement Extracted"" & vbCrLf & vbCrLf & _" & vbCrLf
-  s = s & "          ""Account: "" & ext.Summary.AccountNumber & vbCrLf & _" & vbCrLf
-  s = s & "          ""Period: "" & ext.Summary.StatementPeriod & vbCrLf & _" & vbCrLf
-  s = s & "          ""Closing Value: "" & Format$(ext.Summary.ClosingValue, ""#,##0.00"") & vbCrLf & _" & vbCrLf
-  s = s & "          ""Transactions: "" & ext.TransactionCount & vbCrLf & _" & vbCrLf
-  s = s & "          ""Holdings: "" & ext.HoldingCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Reconciliation (checks are already in ext.Checks from ExtractFromText)" & vbCrLf
-  s = s & "    Dim checkIdx As Long" & vbCrLf
-  s = s & "    Dim allPass As Boolean" & vbCrLf
-  s = s & "    allPass = True" & vbCrLf
-  s = s & "    For checkIdx = 0 To ext.CheckCount - 1" & vbCrLf
-  s = s & "        If Not ext.Checks(checkIdx).Pass Then allPass = False" & vbCrLf
-  s = s & "    Next checkIdx" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If allPass Then" & vbCrLf
-  s = s & "        msg = msg & vbCrLf & vbCrLf & ""Reconciliation: ALL PASS""" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        msg = msg & vbCrLf & vbCrLf & ""Reconciliation: SOME CHECKS FAILED (see sheet)""" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    MsgBox msg, vbInformation, ""UBS Extractor""" & vbCrLf
-  s = s & "    Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "ErrorHandler:" & vbCrLf
-  s = s & "    Application.StatusBar = """"" & vbCrLf
-  s = s & "    Application.ScreenUpdating = True" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "    MsgBox ""Error: "" & Err.Description, vbCritical, ""UBS Extractor Error""" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' 3. Extract UBS statement and write to QPR" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub ExtractAndWriteQPR()" & vbCrLf
-  s = s & "    ' Step 1: Select PDF" & vbCrLf
-  s = s & "    Dim filePath As String" & vbCrLf
-  s = s & "    filePath = Application.GetOpenFilename( _" & vbCrLf
-  s = s & "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _" & vbCrLf
-  s = s & "        Title:=""Select a UBS Statement PDF"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If filePath = ""False"" Or filePath = """" Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Step 2: Select QPR workbook" & vbCrLf
-  s = s & "    Dim qprPath As String" & vbCrLf
-  s = s & "    qprPath = Application.GetOpenFilename( _" & vbCrLf
-  s = s & "        FileFilter:=""Excel Files (*.xls*), *.xls*"", _" & vbCrLf
-  s = s & "        Title:=""Select the QPR Workbook"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If qprPath = ""False"" Or qprPath = """" Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = ""Opening PDF...""" & vbCrLf
-  s = s & "    Application.ScreenUpdating = False" & vbCrLf
-  s = s & "    On Error GoTo ErrorHandler" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' PDF -> text -> extraction" & vbCrLf
-  s = s & "    Dim doc As PDFReader.PDFDocument" & vbCrLf
-  s = s & "    doc = PDFReader.OpenPDF(filePath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = ""Extracting text...""" & vbCrLf
-  s = s & "    Dim pages() As String" & vbCrLf
-  s = s & "    pages = PDFTextExtract.ExtractAllPagesText(doc)" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = ""Parsing statement data...""" & vbCrLf
-  s = s & "    Dim fullText As String" & vbCrLf
-  s = s & "    fullText = BuildFullText(pages)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim ext As UBSExtract.StatementExtraction" & vbCrLf
-  s = s & "    ext = UBSExtract.ExtractFromText(fullText)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Open QPR workbook" & vbCrLf
-  s = s & "    Application.StatusBar = ""Writing to QPR...""" & vbCrLf
-  s = s & "    Dim qprWb As Workbook" & vbCrLf
-  s = s & "    Set qprWb = Workbooks.Open(qprPath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Write QPR" & vbCrLf
-  s = s & "    QPRWriter.WriteQPR ext, qprWb" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = """"" & vbCrLf
-  s = s & "    Application.ScreenUpdating = True" & vbCrLf
-  s = s & "    Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "ErrorHandler:" & vbCrLf
-  s = s & "    Application.StatusBar = """"" & vbCrLf
-  s = s & "    Application.ScreenUpdating = True" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "    MsgBox ""Error: "" & Err.Description, vbCritical, ""QPR Writer Error""" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' 4. Batch: multiple PDFs to QPR" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub BatchExtractToQPR()" & vbCrLf
-  s = s & "    ' Select multiple PDFs" & vbCrLf
-  s = s & "    Dim fileList As Variant" & vbCrLf
-  s = s & "    fileList = Application.GetOpenFilename( _" & vbCrLf
-  s = s & "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _" & vbCrLf
-  s = s & "        Title:=""Select UBS Statement PDF(s)"", _" & vbCrLf
-  s = s & "        MultiSelect:=True)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If Not IsArray(fileList) Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Select QPR workbook" & vbCrLf
-  s = s & "    Dim qprPath As String" & vbCrLf
-  s = s & "    qprPath = Application.GetOpenFilename( _" & vbCrLf
-  s = s & "        FileFilter:=""Excel Files (*.xls*), *.xls*"", _" & vbCrLf
-  s = s & "        Title:=""Select the QPR Workbook"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If qprPath = ""False"" Or qprPath = """" Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.ScreenUpdating = False" & vbCrLf
-  s = s & "    On Error GoTo ErrorHandler" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Open QPR workbook first" & vbCrLf
-  s = s & "    Application.StatusBar = ""Opening QPR...""" & vbCrLf
-  s = s & "    Dim qprWb As Workbook" & vbCrLf
-  s = s & "    Set qprWb = Workbooks.Open(qprPath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Process each PDF and write to QPR immediately" & vbCrLf
-  s = s & "    ' (avoids needing to store UDTs in a Dictionary)" & vbCrLf
-  s = s & "    Dim fileIdx As Long" & vbCrLf
-  s = s & "    For fileIdx = LBound(fileList) To UBound(fileList)" & vbCrLf
-  s = s & "        Dim filePath As String" & vbCrLf
-  s = s & "        filePath = CStr(fileList(fileIdx))" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Application.StatusBar = ""Processing "" & fileIdx & "" of "" & UBound(fileList) & "": "" & Dir(filePath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' PDF -> text" & vbCrLf
-  s = s & "        Dim doc As PDFReader.PDFDocument" & vbCrLf
-  s = s & "        doc = PDFReader.OpenPDF(filePath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim pages() As String" & vbCrLf
-  s = s & "        pages = PDFTextExtract.ExtractAllPagesText(doc)" & vbCrLf
-  s = s & "        PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim fullText As String" & vbCrLf
-  s = s & "        fullText = BuildFullText(pages)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Extract and write" & vbCrLf
-  s = s & "        Dim ext As UBSExtract.StatementExtraction" & vbCrLf
-  s = s & "        ext = UBSExtract.ExtractFromText(fullText)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If ext.Summary.AccountNumber <> """" Then" & vbCrLf
-  s = s & "            QPRWriter.WriteQPR ext, qprWb" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next fileIdx" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = """"" & vbCrLf
-  s = s & "    Application.ScreenUpdating = True" & vbCrLf
-  s = s & "    Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "ErrorHandler:" & vbCrLf
-  s = s & "    Application.StatusBar = """"" & vbCrLf
-  s = s & "    Application.ScreenUpdating = True" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "    MsgBox ""Error: "" & Err.Description, vbCritical, ""Batch QPR Error""" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Helper: write extraction data to a worksheet" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub WriteExtractionToSheet(ext As UBSExtract.StatementExtraction, filePath As String)" & vbCrLf
-  s = s & "    Dim wsName As String" & vbCrLf
-  s = s & "    wsName = ""UBS Extract""" & vbCrLf
-  s = s & "    DeleteSheetIfExists wsName" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim prevCalc As Long" & vbCrLf
-  s = s & "    prevCalc = Application.Calculation" & vbCrLf
-  s = s & "    Application.Calculation = xlCalculationManual" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim ws As Worksheet" & vbCrLf
-  s = s & "    Set ws = ThisWorkbook.Worksheets.Add" & vbCrLf
-  s = s & "    ws.name = wsName" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim r As Long" & vbCrLf
-  s = s & "    r = 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' === Header ===" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""UBS Statement Extraction""" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Size = 14" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Source: "" & filePath" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Italic = True" & vbCrLf
-  s = s & "    r = r + 2" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' === Account Summary ===" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Account Summary""" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Size = 12" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    WriteKV ws, r, ""Account Name"", ext.Summary.AccountName: r = r + 1" & vbCrLf
-  s = s & "    WriteKV ws, r, ""Account Number"", ext.Summary.AccountNumber: r = r + 1" & vbCrLf
-  s = s & "    WriteKV ws, r, ""Statement Period"", ext.Summary.StatementPeriod: r = r + 1" & vbCrLf
-  s = s & "    WriteKV ws, r, ""Financial Advisor"", ext.Summary.FinancialAdvisor: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Opening Value"", ext.Summary.OpeningValue: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Closing Value"", ext.Summary.ClosingValue: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Net Deposits/Withdrawals"", ext.Summary.NetDepositsWithdrawals: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Deposits/Transferred In"", ext.Summary.DepositsTransferredIn: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Dividend/Interest Income"", ext.Summary.DividendInterestIncome: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Change in Market Value"", ext.Summary.ChangeInMarketValue: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Change in Accrued Interest"", ext.Summary.ChangeInAccruedInterest: r = r + 1" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' === Asset Allocation ===" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Asset Allocation""" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Size = 12" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Category""" & vbCrLf
-  s = s & "    ws.Cells(r, 2).Value = ""Value""" & vbCrLf
-  s = s & "    ws.Cells(r, 3).Value = ""Pct""" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 2).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 3).Font.Bold = True" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim ai As Long" & vbCrLf
-  s = s & "    For ai = 0 To ext.AllocationCount - 1" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Value = ext.Allocations(ai).Category" & vbCrLf
-  s = s & "        ws.Cells(r, 2).Value = ext.Allocations(ai).Value" & vbCrLf
-  s = s & "        ws.Cells(r, 2).NumberFormat = ""#,##0.00""" & vbCrLf
-  s = s & "        ws.Cells(r, 3).Value = ext.Allocations(ai).Percentage / 100" & vbCrLf
-  s = s & "        ws.Cells(r, 3).NumberFormat = ""0.00%""" & vbCrLf
-  s = s & "        r = r + 1" & vbCrLf
-  s = s & "    Next ai" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' === Holdings ===" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Holdings""" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Size = 12" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Name""" & vbCrLf
-  s = s & "    ws.Cells(r, 2).Value = ""Asset Type""" & vbCrLf
-  s = s & "    ws.Cells(r, 3).Value = ""Value""" & vbCrLf
-  s = s & "    ws.Cells(r, 4).Value = ""Cost Basis""" & vbCrLf
-  s = s & "    ws.Cells(r, 5).Value = ""Unrealized G/L""" & vbCrLf
-  s = s & "    Dim hc As Long" & vbCrLf
-  s = s & "    For hc = 1 To 5: ws.Cells(r, hc).Font.Bold = True: Next hc" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim hi As Long" & vbCrLf
-  s = s & "    For hi = 0 To ext.HoldingCount - 1" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Value = ext.Holdings(hi).name" & vbCrLf
-  s = s & "        ws.Cells(r, 2).Value = ext.Holdings(hi).AssetType" & vbCrLf
-  s = s & "        ws.Cells(r, 3).Value = ext.Holdings(hi).Value" & vbCrLf
-  s = s & "        ws.Cells(r, 3).NumberFormat = ""#,##0.00""" & vbCrLf
-  s = s & "        If Not IsNull(ext.Holdings(hi).CostBasis) Then" & vbCrLf
-  s = s & "            ws.Cells(r, 4).Value = ext.Holdings(hi).CostBasis" & vbCrLf
-  s = s & "            ws.Cells(r, 4).NumberFormat = ""#,##0.00""" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        If Not IsNull(ext.Holdings(hi).UnrealizedGL) Then" & vbCrLf
-  s = s & "            ws.Cells(r, 5).Value = ext.Holdings(hi).UnrealizedGL" & vbCrLf
-  s = s & "            ws.Cells(r, 5).NumberFormat = ""#,##0.00""" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        r = r + 1" & vbCrLf
-  s = s & "    Next hi" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' === Transactions ===" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Transactions""" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Size = 12" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Date""" & vbCrLf
-  s = s & "    ws.Cells(r, 2).Value = ""Activity""" & vbCrLf
-  s = s & "    ws.Cells(r, 3).Value = ""Description""" & vbCrLf
-  s = s & "    ws.Cells(r, 4).Value = ""Amount""" & vbCrLf
-  s = s & "    ws.Cells(r, 5).Value = ""Quantity""" & vbCrLf
-  s = s & "    ws.Cells(r, 6).Value = ""Price""" & vbCrLf
-  s = s & "    ws.Cells(r, 7).Value = ""Symbol""" & vbCrLf
-  s = s & "    ws.Cells(r, 8).Value = ""CUSIP""" & vbCrLf
-  s = s & "    ws.Cells(r, 9).Value = ""Ref#""" & vbCrLf
-  s = s & "    Dim tc As Long" & vbCrLf
-  s = s & "    For tc = 1 To 9: ws.Cells(r, tc).Font.Bold = True: Next tc" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim ti As Long" & vbCrLf
-  s = s & "    For ti = 0 To ext.TransactionCount - 1" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Value = ext.Transactions(ti).TxDate" & vbCrLf
-  s = s & "        ws.Cells(r, 2).Value = ext.Transactions(ti).Activity" & vbCrLf
-  s = s & "        ws.Cells(r, 3).Value = ext.Transactions(ti).Description" & vbCrLf
-  s = s & "        ws.Cells(r, 4).Value = ext.Transactions(ti).Amount" & vbCrLf
-  s = s & "        ws.Cells(r, 4).NumberFormat = ""#,##0.00""" & vbCrLf
-  s = s & "        If Not IsNull(ext.Transactions(ti).Quantity) Then" & vbCrLf
-  s = s & "            ws.Cells(r, 5).Value = ext.Transactions(ti).Quantity" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        If Not IsNull(ext.Transactions(ti).Price) Then" & vbCrLf
-  s = s & "            ws.Cells(r, 6).Value = ext.Transactions(ti).Price" & vbCrLf
-  s = s & "            ws.Cells(r, 6).NumberFormat = ""#,##0.000000""" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        ws.Cells(r, 7).Value = ext.Transactions(ti).Symbol" & vbCrLf
-  s = s & "        ws.Cells(r, 8).Value = ext.Transactions(ti).Cusip" & vbCrLf
-  s = s & "        ws.Cells(r, 9).Value = ext.Transactions(ti).RefNumber" & vbCrLf
-  s = s & "        r = r + 1" & vbCrLf
-  s = s & "    Next ti" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' === Income ===" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Income""" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Size = 12" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Total Month"", ext.Income.TotalMonth: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Taxable Dividends"", ext.Income.TaxableDividendsMonth: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Tax-Exempt Dividends"", ext.Income.TaxExemptDividendsMonth: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Taxable Interest"", ext.Income.TaxableInterestMonth: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Tax-Exempt Interest"", ext.Income.TaxExemptInterestMonth: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Miscellaneous"", ext.Income.MiscellaneousMonth: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Accrued Interest Received"", ext.Income.AccruedInterestReceived: r = r + 1" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' === Gains & Losses ===" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Realized Gains & Losses""" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Size = 12" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Short Term (Month)"", ext.Gains.ShortTermRealizedMonth: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Long Term (Month)"", ext.Gains.LongTermRealizedMonth: r = r + 1" & vbCrLf
-  s = s & "    WriteNum ws, r, ""Total Unrealized"", ext.Gains.TotalUnrealized: r = r + 1" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' === Reconciliation ===" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Reconciliation""" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Size = 12" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Checks are already computed by ExtractFromText -> RunReconciliation" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Check""" & vbCrLf
-  s = s & "    ws.Cells(r, 2).Value = ""Expected""" & vbCrLf
-  s = s & "    ws.Cells(r, 3).Value = ""Actual""" & vbCrLf
-  s = s & "    ws.Cells(r, 4).Value = ""Diff""" & vbCrLf
-  s = s & "    ws.Cells(r, 5).Value = ""Pass""" & vbCrLf
-  s = s & "    Dim rc As Long" & vbCrLf
-  s = s & "    For rc = 1 To 5: ws.Cells(r, rc).Font.Bold = True: Next rc" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim ci As Long" & vbCrLf
-  s = s & "    For ci = 0 To ext.CheckCount - 1" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Value = ext.Checks(ci).name" & vbCrLf
-  s = s & "        ws.Cells(r, 2).Value = ext.Checks(ci).Expected" & vbCrLf
-  s = s & "        ws.Cells(r, 2).NumberFormat = ""#,##0.00""" & vbCrLf
-  s = s & "        ws.Cells(r, 3).Value = ext.Checks(ci).Actual" & vbCrLf
-  s = s & "        ws.Cells(r, 3).NumberFormat = ""#,##0.00""" & vbCrLf
-  s = s & "        ws.Cells(r, 4).Value = ext.Checks(ci).Diff" & vbCrLf
-  s = s & "        ws.Cells(r, 4).NumberFormat = ""#,##0.00""" & vbCrLf
-  s = s & "        If ext.Checks(ci).Pass Then" & vbCrLf
-  s = s & "            ws.Cells(r, 5).Value = ""PASS""" & vbCrLf
-  s = s & "            ws.Cells(r, 5).Font.Color = RGB(0, 128, 0)" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            ws.Cells(r, 5).Value = ""FAIL""" & vbCrLf
-  s = s & "            ws.Cells(r, 5).Font.Color = RGB(255, 0, 0)" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        r = r + 1" & vbCrLf
-  s = s & "    Next ci" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Format columns" & vbCrLf
-  s = s & "    ws.Columns(""A"").ColumnWidth = 30" & vbCrLf
-  s = s & "    ws.Columns(""B"").ColumnWidth = 20" & vbCrLf
-  s = s & "    ws.Columns(""C"").ColumnWidth = 50" & vbCrLf
-  s = s & "    ws.Columns(""D"").ColumnWidth = 15" & vbCrLf
-  s = s & "    ws.Columns(""E"").ColumnWidth = 15" & vbCrLf
-  s = s & "    ws.Columns(""F"").ColumnWidth = 15" & vbCrLf
-  s = s & "    ws.Columns(""G"").ColumnWidth = 12" & vbCrLf
-  s = s & "    ws.Columns(""H"").ColumnWidth = 12" & vbCrLf
-  s = s & "    ws.Columns(""I"").ColumnWidth = 15" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.Calculation = prevCalc" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub WriteKV(ws As Worksheet, r As Long, label As String, val As String)" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = label" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 2).Value = val" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub WriteNum(ws As Worksheet, r As Long, label As String, val As Double)" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = label" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 2).Value = val" & vbCrLf
-  s = s & "    ws.Cells(r, 2).NumberFormat = ""#,##0.00""" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub DeleteSheetIfExists(wsName As String)" & vbCrLf
-  s = s & "    Application.DisplayAlerts = False" & vbCrLf
-  s = s & "    On Error Resume Next" & vbCrLf
-  s = s & "    ThisWorkbook.Worksheets(wsName).Delete" & vbCrLf
-  s = s & "    On Error GoTo 0" & vbCrLf
-  s = s & "    Application.DisplayAlerts = True" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Quick test: extract first page to Immediate window" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub TestPDFExtract()" & vbCrLf
-  s = s & "    Dim filePath As String" & vbCrLf
-  s = s & "    filePath = Application.GetOpenFilename( _" & vbCrLf
-  s = s & "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _" & vbCrLf
-  s = s & "        Title:=""Select a PDF to test"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If filePath = ""False"" Or filePath = """" Then Exit Sub" & vbCrLf
-  s = s & "    On Error GoTo ErrorHandler" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Debug.Print ""Opening: "" & filePath" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim doc As PDFReader.PDFDocument" & vbCrLf
-  s = s & "    doc = PDFReader.OpenPDF(filePath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Debug.Print ""Pages: "" & doc.pageCount" & vbCrLf
-  s = s & "    Debug.Print ""Encrypted: "" & doc.isEncrypted" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim text As String" & vbCrLf
-  s = s & "    text = PDFTextExtract.ExtractPageText(doc, 0)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Debug.Print ""=== Page 1 Text ("" & Len(text) & "" chars) ===""" & vbCrLf
-  s = s & "    Debug.Print Left$(text, 2000)" & vbCrLf
-  s = s & "    Debug.Print ""=== End ===""" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "    Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "ErrorHandler:" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "    Debug.Print ""ERROR: "" & Err.Description" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Programmatic API" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ExtractPDFToArray(filePath As String) As String()" & vbCrLf
-  s = s & "    Dim doc As PDFReader.PDFDocument" & vbCrLf
-  s = s & "    doc = PDFReader.OpenPDF(filePath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim pages() As String" & vbCrLf
-  s = s & "    pages = PDFTextExtract.ExtractAllPagesText(doc)" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractPDFToArray = pages" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ExtractPDFToData(filePath As String) As UBSExtract.StatementExtraction" & vbCrLf
-  s = s & "    Dim doc As PDFReader.PDFDocument" & vbCrLf
-  s = s & "    doc = PDFReader.OpenPDF(filePath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim pages() As String" & vbCrLf
-  s = s & "    pages = PDFTextExtract.ExtractAllPagesText(doc)" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim fullText As String" & vbCrLf
-  s = s & "    fullText = BuildFullText(pages)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ExtractPDFToData = UBSExtract.ExtractFromText(fullText)" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' 5. Extract summary/multi-account PDF" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub ExtractSummaryOrMultiPdf()" & vbCrLf
-  s = s & "    Dim filePath As String" & vbCrLf
-  s = s & "    filePath = Application.GetOpenFilename( _" & vbCrLf
-  s = s & "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _" & vbCrLf
-  s = s & "        Title:=""Select a UBS Summary/Multi-Account PDF"")" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If filePath = ""False"" Or filePath = """" Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = ""Opening PDF...""" & vbCrLf
-  s = s & "    Application.ScreenUpdating = False" & vbCrLf
-  s = s & "    On Error GoTo SummaryErrorHandler" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' PDF -> pages" & vbCrLf
-  s = s & "    Dim doc As PDFReader.PDFDocument" & vbCrLf
-  s = s & "    doc = PDFReader.OpenPDF(filePath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = ""Extracting text from "" & doc.pageCount & "" pages...""" & vbCrLf
-  s = s & "    Dim pages() As String" & vbCrLf
-  s = s & "    pages = PDFTextExtract.ExtractAllPagesText(doc)" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Detect PDF type and extract" & vbCrLf
-  s = s & "    Dim portfolio As UBSSummary.PortfolioExtraction" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If UBSSummary.IsSummaryPdf(pages(LBound(pages))) Then" & vbCrLf
-  s = s & "        Application.StatusBar = ""Extracting summary PDF...""" & vbCrLf
-  s = s & "        portfolio = UBSSummary.ExtractSummaryPdf(pages)" & vbCrLf
-  s = s & "    ElseIf UBSSummary.IsMultiAccountPdf(pages) Then" & vbCrLf
-  s = s & "        Application.StatusBar = ""Extracting multi-account PDF...""" & vbCrLf
-  s = s & "        portfolio = UBSSummary.ExtractMultiAccountPdf(pages)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        ' Single account — wrap in portfolio structure" & vbCrLf
-  s = s & "        Application.StatusBar = ""Extracting single-account PDF...""" & vbCrLf
-  s = s & "        Dim fullText As String" & vbCrLf
-  s = s & "        fullText = BuildFullText(pages)" & vbCrLf
-  s = s & "        Dim ext As UBSExtract.StatementExtraction" & vbCrLf
-  s = s & "        ext = UBSExtract.ExtractFromText(fullText)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        portfolio.AccountCount = 1" & vbCrLf
-  s = s & "        ReDim portfolio.Accounts(0 To 0)" & vbCrLf
-  s = s & "        portfolio.Accounts(0).AccountNumber = ext.Summary.AccountNumber" & vbCrLf
-  s = s & "        portfolio.Accounts(0).Extraction = ext" & vbCrLf
-  s = s & "        portfolio.LoanAccountCount = 0" & vbCrLf
-  s = s & "        ReDim portfolio.LoanAccounts(0 To 0)" & vbCrLf
-  s = s & "        portfolio.WarningCount = 0" & vbCrLf
-  s = s & "        ReDim portfolio.Warnings(0 To 0)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Output to worksheet" & vbCrLf
-  s = s & "    WritePortfolioToSheet portfolio, filePath" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = """"" & vbCrLf
-  s = s & "    Application.ScreenUpdating = True" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim msg As String" & vbCrLf
-  s = s & "    msg = ""Portfolio Extraction Complete"" & vbCrLf & vbCrLf & _" & vbCrLf
-  s = s & "          ""Investment Accounts: "" & portfolio.AccountCount & vbCrLf & _" & vbCrLf
-  s = s & "          ""Loan Accounts: "" & portfolio.LoanAccountCount" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If portfolio.WarningCount > 0 Then" & vbCrLf
-  s = s & "        msg = msg & vbCrLf & vbCrLf & ""Warnings: "" & portfolio.WarningCount" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    MsgBox msg, vbInformation, ""UBS Portfolio Extractor""" & vbCrLf
-  s = s & "    Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "SummaryErrorHandler:" & vbCrLf
-  s = s & "    Application.StatusBar = """"" & vbCrLf
-  s = s & "    Application.ScreenUpdating = True" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "    MsgBox ""Error: "" & Err.Description, vbCritical, ""Portfolio Extractor Error""" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' 6. Extract summary/multi-account PDF and write to QPR" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Sub ExtractPortfolioToQPR()" & vbCrLf
-  s = s & "    ' Select PDF" & vbCrLf
-  s = s & "    Dim filePath As String" & vbCrLf
-  s = s & "    filePath = Application.GetOpenFilename( _" & vbCrLf
-  s = s & "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _" & vbCrLf
-  s = s & "        Title:=""Select a UBS Summary/Multi-Account PDF"")" & vbCrLf
-  s = s & "    If filePath = ""False"" Or filePath = """" Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Select QPR workbook" & vbCrLf
-  s = s & "    Dim qprPath As String" & vbCrLf
-  s = s & "    qprPath = Application.GetOpenFilename( _" & vbCrLf
-  s = s & "        FileFilter:=""Excel Files (*.xls*), *.xls*"", _" & vbCrLf
-  s = s & "        Title:=""Select the QPR Workbook"")" & vbCrLf
-  s = s & "    If qprPath = ""False"" Or qprPath = """" Then Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = ""Opening PDF...""" & vbCrLf
-  s = s & "    Application.ScreenUpdating = False" & vbCrLf
-  s = s & "    On Error GoTo PortfolioQPRError" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' PDF -> pages" & vbCrLf
-  s = s & "    Dim doc As PDFReader.PDFDocument" & vbCrLf
-  s = s & "    doc = PDFReader.OpenPDF(filePath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = ""Extracting text...""" & vbCrLf
-  s = s & "    Dim pages() As String" & vbCrLf
-  s = s & "    pages = PDFTextExtract.ExtractAllPagesText(doc)" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Detect PDF type and extract" & vbCrLf
-  s = s & "    Dim portfolio As UBSSummary.PortfolioExtraction" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If UBSSummary.IsSummaryPdf(pages(LBound(pages))) Then" & vbCrLf
-  s = s & "        Application.StatusBar = ""Extracting summary PDF...""" & vbCrLf
-  s = s & "        portfolio = UBSSummary.ExtractSummaryPdf(pages)" & vbCrLf
-  s = s & "    ElseIf UBSSummary.IsMultiAccountPdf(pages) Then" & vbCrLf
-  s = s & "        Application.StatusBar = ""Extracting multi-account PDF...""" & vbCrLf
-  s = s & "        portfolio = UBSSummary.ExtractMultiAccountPdf(pages)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        Application.StatusBar = ""Extracting single-account PDF...""" & vbCrLf
-  s = s & "        Dim fullText As String" & vbCrLf
-  s = s & "        fullText = BuildFullText(pages)" & vbCrLf
-  s = s & "        Dim ext As UBSExtract.StatementExtraction" & vbCrLf
-  s = s & "        ext = UBSExtract.ExtractFromText(fullText)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        portfolio.AccountCount = 1" & vbCrLf
-  s = s & "        ReDim portfolio.Accounts(0 To 0)" & vbCrLf
-  s = s & "        portfolio.Accounts(0).AccountNumber = ext.Summary.AccountNumber" & vbCrLf
-  s = s & "        portfolio.Accounts(0).Extraction = ext" & vbCrLf
-  s = s & "        portfolio.LoanAccountCount = 0" & vbCrLf
-  s = s & "        ReDim portfolio.LoanAccounts(0 To 0)" & vbCrLf
-  s = s & "        portfolio.WarningCount = 0" & vbCrLf
-  s = s & "        ReDim portfolio.Warnings(0 To 0)" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Open QPR workbook and write each account" & vbCrLf
-  s = s & "    Application.StatusBar = ""Writing to QPR...""" & vbCrLf
-  s = s & "    Dim qprWb As Workbook" & vbCrLf
-  s = s & "    Set qprWb = Workbooks.Open(qprPath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim i As Long" & vbCrLf
-  s = s & "    For i = 0 To portfolio.AccountCount - 1" & vbCrLf
-  s = s & "        If portfolio.Accounts(i).AccountNumber <> """" Then" & vbCrLf
-  s = s & "            Application.StatusBar = ""Writing account "" & portfolio.Accounts(i).AccountNumber & "" to QPR...""" & vbCrLf
-  s = s & "            QPRWriter.WriteQPR portfolio.Accounts(i).Extraction, qprWb" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "    Next i" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Application.StatusBar = """"" & vbCrLf
-  s = s & "    Application.ScreenUpdating = True" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    MsgBox ""Wrote "" & portfolio.AccountCount & "" account(s) to QPR."", vbInformation, ""QPR Writer""" & vbCrLf
-  s = s & "    Exit Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "PortfolioQPRError:" & vbCrLf
-  s = s & "    Application.StatusBar = """"" & vbCrLf
-  s = s & "    Application.ScreenUpdating = True" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "    MsgBox ""Error: "" & Err.Description, vbCritical, ""Portfolio QPR Error""" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Helper: write portfolio data to worksheet" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Private Sub WritePortfolioToSheet(portfolio As UBSSummary.PortfolioExtraction, filePath As String)" & vbCrLf
-  s = s & "    Dim wsName As String" & vbCrLf
-  s = s & "    wsName = ""Portfolio Extract""" & vbCrLf
-  s = s & "    DeleteSheetIfExists wsName" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim prevCalc As Long" & vbCrLf
-  s = s & "    prevCalc = Application.Calculation" & vbCrLf
-  s = s & "    Application.Calculation = xlCalculationManual" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim ws As Worksheet" & vbCrLf
-  s = s & "    Set ws = ThisWorkbook.Worksheets.Add" & vbCrLf
-  s = s & "    ws.name = wsName" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim r As Long" & vbCrLf
-  s = s & "    r = 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""UBS Portfolio Extraction""" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Size = 14" & vbCrLf
-  s = s & "    r = r + 1" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Value = ""Source: "" & filePath" & vbCrLf
-  s = s & "    ws.Cells(r, 1).Font.Italic = True" & vbCrLf
-  s = s & "    r = r + 2" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Investment accounts" & vbCrLf
-  s = s & "    Dim ai As Long" & vbCrLf
-  s = s & "    For ai = 0 To portfolio.AccountCount - 1" & vbCrLf
-  s = s & "        Dim ext As UBSExtract.StatementExtraction" & vbCrLf
-  s = s & "        ext = portfolio.Accounts(ai).Extraction" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Value = ""Account: "" & ext.Summary.AccountNumber & "" — "" & ext.Summary.AccountName" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Font.Size = 12" & vbCrLf
-  s = s & "        r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        WriteKV ws, r, ""Period"", ext.Summary.StatementPeriod: r = r + 1" & vbCrLf
-  s = s & "        WriteNum ws, r, ""Opening Value"", ext.Summary.OpeningValue: r = r + 1" & vbCrLf
-  s = s & "        WriteNum ws, r, ""Closing Value"", ext.Summary.ClosingValue: r = r + 1" & vbCrLf
-  s = s & "        WriteKV ws, r, ""Transactions"", CStr(ext.TransactionCount): r = r + 1" & vbCrLf
-  s = s & "        WriteKV ws, r, ""Holdings"", CStr(ext.HoldingCount): r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        ' Reconciliation checks" & vbCrLf
-  s = s & "        Dim allPass As Boolean" & vbCrLf
-  s = s & "        allPass = True" & vbCrLf
-  s = s & "        Dim ci As Long" & vbCrLf
-  s = s & "        For ci = 0 To ext.CheckCount - 1" & vbCrLf
-  s = s & "            If Not ext.Checks(ci).Pass Then allPass = False" & vbCrLf
-  s = s & "        Next ci" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        If allPass Then" & vbCrLf
-  s = s & "            ws.Cells(r, 1).Value = ""Reconciliation: ALL PASS ("" & ext.CheckCount & "" checks)""" & vbCrLf
-  s = s & "            ws.Cells(r, 1).Font.Color = RGB(0, 128, 0)" & vbCrLf
-  s = s & "        Else" & vbCrLf
-  s = s & "            ws.Cells(r, 1).Value = ""Reconciliation: SOME CHECKS FAILED""" & vbCrLf
-  s = s & "            ws.Cells(r, 1).Font.Color = RGB(255, 0, 0)" & vbCrLf
-  s = s & "        End If" & vbCrLf
-  s = s & "        r = r + 2" & vbCrLf
-  s = s & "    Next ai" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Loan accounts" & vbCrLf
-  s = s & "    If portfolio.LoanAccountCount > 0 Then" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Value = ""Loan Accounts""" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Font.Size = 12" & vbCrLf
-  s = s & "        r = r + 1" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim li As Long" & vbCrLf
-  s = s & "        For li = 0 To portfolio.LoanAccountCount - 1" & vbCrLf
-  s = s & "            Dim loan As UBSLoanExtract.LoanExtraction" & vbCrLf
-  s = s & "            loan = portfolio.LoanAccounts(li).Extraction" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "            ws.Cells(r, 1).Value = ""Loan: "" & loan.Summary.AccountNumbers & "" — "" & loan.Summary.LoanType" & vbCrLf
-  s = s & "            ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "            r = r + 1" & vbCrLf
-  s = s & "            WriteNum ws, r, ""Opening Balance"", loan.Summary.OpeningBalance: r = r + 1" & vbCrLf
-  s = s & "            WriteNum ws, r, ""Closing Balance"", loan.Summary.ClosingBalance: r = r + 1" & vbCrLf
-  s = s & "            WriteNum ws, r, ""Available Credit"", loan.Summary.AvailableCredit: r = r + 1" & vbCrLf
-  s = s & "            If loan.Summary.VariableRate > 0 Then" & vbCrLf
-  s = s & "                ws.Cells(r, 1).Value = ""Variable Rate""" & vbCrLf
-  s = s & "                ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "                ws.Cells(r, 2).Value = loan.Summary.VariableRate & ""%""" & vbCrLf
-  s = s & "                r = r + 1" & vbCrLf
-  s = s & "            End If" & vbCrLf
-  s = s & "            WriteKV ws, r, ""Transactions"", CStr(loan.TransactionCount): r = r + 1" & vbCrLf
-  s = s & "            WriteKV ws, r, ""Fixed Contracts"", CStr(loan.ContractCount): r = r + 1" & vbCrLf
-  s = s & "            r = r + 1" & vbCrLf
-  s = s & "        Next li" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ' Warnings" & vbCrLf
-  s = s & "    If portfolio.WarningCount > 0 Then" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Value = ""Warnings""" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Font.Bold = True" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Font.Size = 12" & vbCrLf
-  s = s & "        ws.Cells(r, 1).Font.Color = RGB(255, 128, 0)" & vbCrLf
-  s = s & "        r = r + 1" & vbCrLf
-  s = s & "        Dim wi As Long" & vbCrLf
-  s = s & "        For wi = 0 To portfolio.WarningCount - 1" & vbCrLf
-  s = s & "            ws.Cells(r, 1).Value = portfolio.Warnings(wi)" & vbCrLf
-  s = s & "            r = r + 1" & vbCrLf
-  s = s & "        Next wi" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    ws.Columns(""A"").ColumnWidth = 50" & vbCrLf
-  s = s & "    ws.Columns(""B"").ColumnWidth = 20" & vbCrLf
-  s = s & "    Application.Calculation = prevCalc" & vbCrLf
-  s = s & "End Sub" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "' Programmatic API: extract portfolio from PDF file" & vbCrLf
-  s = s & "' ============================================================================" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "Public Function ExtractPDFToPortfolio(filePath As String) As UBSSummary.PortfolioExtraction" & vbCrLf
-  s = s & "    Dim doc As PDFReader.PDFDocument" & vbCrLf
-  s = s & "    doc = PDFReader.OpenPDF(filePath)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    Dim pages() As String" & vbCrLf
-  s = s & "    pages = PDFTextExtract.ExtractAllPagesText(doc)" & vbCrLf
-  s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "    If UBSSummary.IsSummaryPdf(pages(LBound(pages))) Then" & vbCrLf
-  s = s & "        ExtractPDFToPortfolio = UBSSummary.ExtractSummaryPdf(pages)" & vbCrLf
-  s = s & "    ElseIf UBSSummary.IsMultiAccountPdf(pages) Then" & vbCrLf
-  s = s & "        ExtractPDFToPortfolio = UBSSummary.ExtractMultiAccountPdf(pages)" & vbCrLf
-  s = s & "    Else" & vbCrLf
-  s = s & "        ' Single account — wrap" & vbCrLf
-  s = s & "        Dim fullText As String" & vbCrLf
-  s = s & "        fullText = BuildFullText(pages)" & vbCrLf
-  s = s & "        Dim ext As UBSExtract.StatementExtraction" & vbCrLf
-  s = s & "        ext = UBSExtract.ExtractFromText(fullText)" & vbCrLf
-  s = s & "" & vbCrLf
-  s = s & "        Dim result As UBSSummary.PortfolioExtraction" & vbCrLf
-  s = s & "        result.AccountCount = 1" & vbCrLf
-  s = s & "        ReDim result.Accounts(0 To 0)" & vbCrLf
-  s = s & "        result.Accounts(0).AccountNumber = ext.Summary.AccountNumber" & vbCrLf
-  s = s & "        result.Accounts(0).Extraction = ext" & vbCrLf
-  s = s & "        result.LoanAccountCount = 0" & vbCrLf
-  s = s & "        ReDim result.LoanAccounts(0 To 0)" & vbCrLf
-  s = s & "        result.WarningCount = 0" & vbCrLf
-  s = s & "        ReDim result.Warnings(0 To 0)" & vbCrLf
-  s = s & "        ExtractPDFToPortfolio = result" & vbCrLf
-  s = s & "    End If" & vbCrLf
-  s = s & "End Function" & vbCrLf
-  s = s & "" & vbCrLf
-  GetModule_PDFExtractorMain = s
-End Function
+Sub WriteModule_PDFExtractorMain(ts)
+  ts.WriteLine "Attribute VB_Name = ""PDFExtractorMain"""
+  ts.WriteLine "Option Explicit"
+  ts.WriteLine ""
+  ts.WriteLine "' PDFExtractorMain.bas — User-facing macros for the VBA PDF Extractor."
+  ts.WriteLine "' Ties together: PDFReader + PDFTextExtract + UBSExtract + QPRWriter"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Helper: build combined text from page array (matches reference format)"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function BuildFullText(pages() As String) As String"
+  ts.WriteLine "    Dim parts() As String"
+  ts.WriteLine "    Dim count As Long"
+  ts.WriteLine "    count = 0"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim pageIdx As Long"
+  ts.WriteLine "    For pageIdx = LBound(pages) To UBound(pages)"
+  ts.WriteLine "        ' Skip boilerplate pages"
+  ts.WriteLine "        If IsBoilerplatePage(pages(pageIdx)) Then GoTo NextPage"
+  ts.WriteLine ""
+  ts.WriteLine "        count = count + 1"
+  ts.WriteLine "        ReDim Preserve parts(1 To count)"
+  ts.WriteLine "        parts(count) = ""=== PAGE "" & count & "" ==="" & vbLf & pages(pageIdx)"
+  ts.WriteLine "NextPage:"
+  ts.WriteLine "    Next pageIdx"
+  ts.WriteLine ""
+  ts.WriteLine "    If count = 0 Then"
+  ts.WriteLine "        BuildFullText = """""
+  ts.WriteLine "    Else"
+  ts.WriteLine "        BuildFullText = Join(parts, vbLf & vbLf)"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Private Function IsBoilerplatePage(pageText As String) As Boolean"
+  ts.WriteLine "    ' Match the same boilerplate detection as extract.ts"
+  ts.WriteLine "    If InStr(1, pageText, ""Important information about your statement"", vbTextCompare) > 0 Then"
+  ts.WriteLine "        IsBoilerplatePage = True"
+  ts.WriteLine "    ElseIf InStr(1, pageText, ""For more information about any"", vbTextCompare) > 0 Then"
+  ts.WriteLine "        IsBoilerplatePage = True"
+  ts.WriteLine "    ElseIf InStr(1, pageText, ""UBS Financial Services Inc. is a subsidiary"", vbTextCompare) > 0 Then"
+  ts.WriteLine "        IsBoilerplatePage = True"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        IsBoilerplatePage = False"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' 1. Extract raw PDF text to worksheet"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub ExtractPDFText()"
+  ts.WriteLine "    Dim filePath As String"
+  ts.WriteLine "    filePath = Application.GetOpenFilename( _"
+  ts.WriteLine "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _"
+  ts.WriteLine "        Title:=""Select a UBS Statement PDF"")"
+  ts.WriteLine ""
+  ts.WriteLine "    If filePath = ""False"" Or filePath = """" Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = ""Opening PDF..."""
+  ts.WriteLine "    Application.ScreenUpdating = False"
+  ts.WriteLine "    Dim prevCalcText As Long"
+  ts.WriteLine "    prevCalcText = Application.Calculation"
+  ts.WriteLine "    Application.Calculation = xlCalculationManual"
+  ts.WriteLine "    On Error GoTo ErrorHandler"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim doc As PDFReader.PDFDocument"
+  ts.WriteLine "    doc = PDFReader.OpenPDF(filePath)"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = ""Extracting text from "" & doc.pageCount & "" pages..."""
+  ts.WriteLine ""
+  ts.WriteLine "    Dim pages() As String"
+  ts.WriteLine "    pages = PDFTextExtract.ExtractAllPagesText(doc)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Output to worksheet"
+  ts.WriteLine "    Dim wsName As String"
+  ts.WriteLine "    wsName = ""PDF Text"""
+  ts.WriteLine "    DeleteSheetIfExists wsName"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim ws As Worksheet"
+  ts.WriteLine "    Set ws = ThisWorkbook.Worksheets.Add"
+  ts.WriteLine "    ws.name = wsName"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim r As Long"
+  ts.WriteLine "    r = 1"
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""PDF Text Extraction"""
+  ts.WriteLine "    ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Size = 14"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Source: "" & filePath"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Italic = True"
+  ts.WriteLine "    r = r + 2"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim pageIdx As Long"
+  ts.WriteLine "    For pageIdx = LBound(pages) To UBound(pages)"
+  ts.WriteLine "        Application.StatusBar = ""Writing page "" & (pageIdx + 1) & "" of "" & doc.pageCount & ""..."""
+  ts.WriteLine ""
+  ts.WriteLine "        ws.Cells(r, 1).Value = ""=== Page "" & (pageIdx + 1) & "" ==="""
+  ts.WriteLine "        ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "        r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim pageLines() As String"
+  ts.WriteLine "        pageLines = Split(pages(pageIdx), vbLf)"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim lineIdx As Long"
+  ts.WriteLine "        For lineIdx = LBound(pageLines) To UBound(pageLines)"
+  ts.WriteLine "            ws.Cells(r, 1).Value = pageLines(lineIdx)"
+  ts.WriteLine "            r = r + 1"
+  ts.WriteLine "        Next lineIdx"
+  ts.WriteLine ""
+  ts.WriteLine "        r = r + 1"
+  ts.WriteLine "    Next pageIdx"
+  ts.WriteLine ""
+  ts.WriteLine "    ws.Columns(""A"").ColumnWidth = 120"
+  ts.WriteLine "    Application.Calculation = prevCalcText"
+  ts.WriteLine "    Application.StatusBar = ""Done! Extracted "" & doc.pageCount & "" pages."""
+  ts.WriteLine "    Application.ScreenUpdating = True"
+  ts.WriteLine ""
+  ts.WriteLine "    MsgBox ""Text extracted from "" & doc.pageCount & "" pages."" & vbCrLf & _"
+  ts.WriteLine "           ""Output on '"" & wsName & ""' sheet."", vbInformation, ""PDF Extractor"""
+  ts.WriteLine ""
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine "    Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "ErrorHandler:"
+  ts.WriteLine "    Application.StatusBar = """""
+  ts.WriteLine "    Application.Calculation = prevCalcText"
+  ts.WriteLine "    Application.ScreenUpdating = True"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine "    MsgBox ""Error: "" & Err.Description, vbCritical, ""PDF Extractor Error"""
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' 2. Extract UBS statement data to worksheet"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub ExtractUBSStatement()"
+  ts.WriteLine "    Dim filePath As String"
+  ts.WriteLine "    filePath = Application.GetOpenFilename( _"
+  ts.WriteLine "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _"
+  ts.WriteLine "        Title:=""Select a UBS Statement PDF"")"
+  ts.WriteLine ""
+  ts.WriteLine "    If filePath = ""False"" Or filePath = """" Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = ""Opening PDF..."""
+  ts.WriteLine "    Application.ScreenUpdating = False"
+  ts.WriteLine "    On Error GoTo ErrorHandler"
+  ts.WriteLine ""
+  ts.WriteLine "    ' PDF -> text"
+  ts.WriteLine "    Dim doc As PDFReader.PDFDocument"
+  ts.WriteLine "    doc = PDFReader.OpenPDF(filePath)"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = ""Extracting text from "" & doc.pageCount & "" pages..."""
+  ts.WriteLine "    Dim pages() As String"
+  ts.WriteLine "    pages = PDFTextExtract.ExtractAllPagesText(doc)"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine ""
+  ts.WriteLine "    ' text -> combined string (with boilerplate filtering + page markers)"
+  ts.WriteLine "    Application.StatusBar = ""Parsing statement data..."""
+  ts.WriteLine "    Dim fullText As String"
+  ts.WriteLine "    fullText = BuildFullText(pages)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Extract structured data"
+  ts.WriteLine "    Dim ext As UBSExtract.StatementExtraction"
+  ts.WriteLine "    ext = UBSExtract.ExtractFromText(fullText)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Output to worksheet"
+  ts.WriteLine "    WriteExtractionToSheet ext, filePath"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = ""Done! Extracted "" & ext.TransactionCount & "" transactions."""
+  ts.WriteLine "    Application.ScreenUpdating = True"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim msg As String"
+  ts.WriteLine "    msg = ""UBS Statement Extracted"" & vbCrLf & vbCrLf & _"
+  ts.WriteLine "          ""Account: "" & ext.Summary.AccountNumber & vbCrLf & _"
+  ts.WriteLine "          ""Period: "" & ext.Summary.StatementPeriod & vbCrLf & _"
+  ts.WriteLine "          ""Closing Value: "" & Format$(ext.Summary.ClosingValue, ""#,##0.00"") & vbCrLf & _"
+  ts.WriteLine "          ""Transactions: "" & ext.TransactionCount & vbCrLf & _"
+  ts.WriteLine "          ""Holdings: "" & ext.HoldingCount"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Reconciliation (checks are already in ext.Checks from ExtractFromText)"
+  ts.WriteLine "    Dim checkIdx As Long"
+  ts.WriteLine "    Dim allPass As Boolean"
+  ts.WriteLine "    allPass = True"
+  ts.WriteLine "    For checkIdx = 0 To ext.CheckCount - 1"
+  ts.WriteLine "        If Not ext.Checks(checkIdx).Pass Then allPass = False"
+  ts.WriteLine "    Next checkIdx"
+  ts.WriteLine ""
+  ts.WriteLine "    If allPass Then"
+  ts.WriteLine "        msg = msg & vbCrLf & vbCrLf & ""Reconciliation: ALL PASS"""
+  ts.WriteLine "    Else"
+  ts.WriteLine "        msg = msg & vbCrLf & vbCrLf & ""Reconciliation: SOME CHECKS FAILED (see sheet)"""
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    MsgBox msg, vbInformation, ""UBS Extractor"""
+  ts.WriteLine "    Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "ErrorHandler:"
+  ts.WriteLine "    Application.StatusBar = """""
+  ts.WriteLine "    Application.ScreenUpdating = True"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine "    MsgBox ""Error: "" & Err.Description, vbCritical, ""UBS Extractor Error"""
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' 3. Extract UBS statement and write to QPR"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub ExtractAndWriteQPR()"
+  ts.WriteLine "    ' Step 1: Select PDF"
+  ts.WriteLine "    Dim filePath As String"
+  ts.WriteLine "    filePath = Application.GetOpenFilename( _"
+  ts.WriteLine "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _"
+  ts.WriteLine "        Title:=""Select a UBS Statement PDF"")"
+  ts.WriteLine ""
+  ts.WriteLine "    If filePath = ""False"" Or filePath = """" Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Step 2: Select QPR workbook"
+  ts.WriteLine "    Dim qprPath As String"
+  ts.WriteLine "    qprPath = Application.GetOpenFilename( _"
+  ts.WriteLine "        FileFilter:=""Excel Files (*.xls*), *.xls*"", _"
+  ts.WriteLine "        Title:=""Select the QPR Workbook"")"
+  ts.WriteLine ""
+  ts.WriteLine "    If qprPath = ""False"" Or qprPath = """" Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = ""Opening PDF..."""
+  ts.WriteLine "    Application.ScreenUpdating = False"
+  ts.WriteLine "    On Error GoTo ErrorHandler"
+  ts.WriteLine ""
+  ts.WriteLine "    ' PDF -> text -> extraction"
+  ts.WriteLine "    Dim doc As PDFReader.PDFDocument"
+  ts.WriteLine "    doc = PDFReader.OpenPDF(filePath)"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = ""Extracting text..."""
+  ts.WriteLine "    Dim pages() As String"
+  ts.WriteLine "    pages = PDFTextExtract.ExtractAllPagesText(doc)"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = ""Parsing statement data..."""
+  ts.WriteLine "    Dim fullText As String"
+  ts.WriteLine "    fullText = BuildFullText(pages)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim ext As UBSExtract.StatementExtraction"
+  ts.WriteLine "    ext = UBSExtract.ExtractFromText(fullText)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Open QPR workbook"
+  ts.WriteLine "    Application.StatusBar = ""Writing to QPR..."""
+  ts.WriteLine "    Dim qprWb As Workbook"
+  ts.WriteLine "    Set qprWb = Workbooks.Open(qprPath)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Write QPR"
+  ts.WriteLine "    QPRWriter.WriteQPR ext, qprWb"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = """""
+  ts.WriteLine "    Application.ScreenUpdating = True"
+  ts.WriteLine "    Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "ErrorHandler:"
+  ts.WriteLine "    Application.StatusBar = """""
+  ts.WriteLine "    Application.ScreenUpdating = True"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine "    MsgBox ""Error: "" & Err.Description, vbCritical, ""QPR Writer Error"""
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' 4. Batch: multiple PDFs to QPR"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub BatchExtractToQPR()"
+  ts.WriteLine "    ' Select multiple PDFs"
+  ts.WriteLine "    Dim fileList As Variant"
+  ts.WriteLine "    fileList = Application.GetOpenFilename( _"
+  ts.WriteLine "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _"
+  ts.WriteLine "        Title:=""Select UBS Statement PDF(s)"", _"
+  ts.WriteLine "        MultiSelect:=True)"
+  ts.WriteLine ""
+  ts.WriteLine "    If Not IsArray(fileList) Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Select QPR workbook"
+  ts.WriteLine "    Dim qprPath As String"
+  ts.WriteLine "    qprPath = Application.GetOpenFilename( _"
+  ts.WriteLine "        FileFilter:=""Excel Files (*.xls*), *.xls*"", _"
+  ts.WriteLine "        Title:=""Select the QPR Workbook"")"
+  ts.WriteLine ""
+  ts.WriteLine "    If qprPath = ""False"" Or qprPath = """" Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.ScreenUpdating = False"
+  ts.WriteLine "    On Error GoTo ErrorHandler"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Open QPR workbook first"
+  ts.WriteLine "    Application.StatusBar = ""Opening QPR..."""
+  ts.WriteLine "    Dim qprWb As Workbook"
+  ts.WriteLine "    Set qprWb = Workbooks.Open(qprPath)"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Process each PDF and write to QPR immediately"
+  ts.WriteLine "    ' (avoids needing to store UDTs in a Dictionary)"
+  ts.WriteLine "    Dim fileIdx As Long"
+  ts.WriteLine "    For fileIdx = LBound(fileList) To UBound(fileList)"
+  ts.WriteLine "        Dim filePath As String"
+  ts.WriteLine "        filePath = CStr(fileList(fileIdx))"
+  ts.WriteLine ""
+  ts.WriteLine "        Application.StatusBar = ""Processing "" & fileIdx & "" of "" & UBound(fileList) & "": "" & Dir(filePath)"
+  ts.WriteLine ""
+  ts.WriteLine "        ' PDF -> text"
+  ts.WriteLine "        Dim doc As PDFReader.PDFDocument"
+  ts.WriteLine "        doc = PDFReader.OpenPDF(filePath)"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim pages() As String"
+  ts.WriteLine "        pages = PDFTextExtract.ExtractAllPagesText(doc)"
+  ts.WriteLine "        PDFCrypto.ReleaseCrypto"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim fullText As String"
+  ts.WriteLine "        fullText = BuildFullText(pages)"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Extract and write"
+  ts.WriteLine "        Dim ext As UBSExtract.StatementExtraction"
+  ts.WriteLine "        ext = UBSExtract.ExtractFromText(fullText)"
+  ts.WriteLine ""
+  ts.WriteLine "        If ext.Summary.AccountNumber <> """" Then"
+  ts.WriteLine "            QPRWriter.WriteQPR ext, qprWb"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next fileIdx"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = """""
+  ts.WriteLine "    Application.ScreenUpdating = True"
+  ts.WriteLine "    Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "ErrorHandler:"
+  ts.WriteLine "    Application.StatusBar = """""
+  ts.WriteLine "    Application.ScreenUpdating = True"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine "    MsgBox ""Error: "" & Err.Description, vbCritical, ""Batch QPR Error"""
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Helper: write extraction data to a worksheet"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub WriteExtractionToSheet(ext As UBSExtract.StatementExtraction, filePath As String)"
+  ts.WriteLine "    Dim wsName As String"
+  ts.WriteLine "    wsName = ""UBS Extract"""
+  ts.WriteLine "    DeleteSheetIfExists wsName"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim prevCalc As Long"
+  ts.WriteLine "    prevCalc = Application.Calculation"
+  ts.WriteLine "    Application.Calculation = xlCalculationManual"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim ws As Worksheet"
+  ts.WriteLine "    Set ws = ThisWorkbook.Worksheets.Add"
+  ts.WriteLine "    ws.name = wsName"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim r As Long"
+  ts.WriteLine "    r = 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ' === Header ==="
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""UBS Statement Extraction"""
+  ts.WriteLine "    ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Size = 14"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Source: "" & filePath"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Italic = True"
+  ts.WriteLine "    r = r + 2"
+  ts.WriteLine ""
+  ts.WriteLine "    ' === Account Summary ==="
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Account Summary"""
+  ts.WriteLine "    ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Size = 12"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    WriteKV ws, r, ""Account Name"", ext.Summary.AccountName: r = r + 1"
+  ts.WriteLine "    WriteKV ws, r, ""Account Number"", ext.Summary.AccountNumber: r = r + 1"
+  ts.WriteLine "    WriteKV ws, r, ""Statement Period"", ext.Summary.StatementPeriod: r = r + 1"
+  ts.WriteLine "    WriteKV ws, r, ""Financial Advisor"", ext.Summary.FinancialAdvisor: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Opening Value"", ext.Summary.OpeningValue: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Closing Value"", ext.Summary.ClosingValue: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Net Deposits/Withdrawals"", ext.Summary.NetDepositsWithdrawals: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Deposits/Transferred In"", ext.Summary.DepositsTransferredIn: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Dividend/Interest Income"", ext.Summary.DividendInterestIncome: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Change in Market Value"", ext.Summary.ChangeInMarketValue: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Change in Accrued Interest"", ext.Summary.ChangeInAccruedInterest: r = r + 1"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ' === Asset Allocation ==="
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Asset Allocation"""
+  ts.WriteLine "    ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Size = 12"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Category"""
+  ts.WriteLine "    ws.Cells(r, 2).Value = ""Value"""
+  ts.WriteLine "    ws.Cells(r, 3).Value = ""Pct"""
+  ts.WriteLine "    ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 2).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 3).Font.Bold = True"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim ai As Long"
+  ts.WriteLine "    For ai = 0 To ext.AllocationCount - 1"
+  ts.WriteLine "        ws.Cells(r, 1).Value = ext.Allocations(ai).Category"
+  ts.WriteLine "        ws.Cells(r, 2).Value = ext.Allocations(ai).Value"
+  ts.WriteLine "        ws.Cells(r, 2).NumberFormat = ""#,##0.00"""
+  ts.WriteLine "        ws.Cells(r, 3).Value = ext.Allocations(ai).Percentage / 100"
+  ts.WriteLine "        ws.Cells(r, 3).NumberFormat = ""0.00%"""
+  ts.WriteLine "        r = r + 1"
+  ts.WriteLine "    Next ai"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ' === Holdings ==="
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Holdings"""
+  ts.WriteLine "    ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Size = 12"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Name"""
+  ts.WriteLine "    ws.Cells(r, 2).Value = ""Asset Type"""
+  ts.WriteLine "    ws.Cells(r, 3).Value = ""Value"""
+  ts.WriteLine "    ws.Cells(r, 4).Value = ""Cost Basis"""
+  ts.WriteLine "    ws.Cells(r, 5).Value = ""Unrealized G/L"""
+  ts.WriteLine "    Dim hc As Long"
+  ts.WriteLine "    For hc = 1 To 5: ws.Cells(r, hc).Font.Bold = True: Next hc"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim hi As Long"
+  ts.WriteLine "    For hi = 0 To ext.HoldingCount - 1"
+  ts.WriteLine "        ws.Cells(r, 1).Value = ext.Holdings(hi).name"
+  ts.WriteLine "        ws.Cells(r, 2).Value = ext.Holdings(hi).AssetType"
+  ts.WriteLine "        ws.Cells(r, 3).Value = ext.Holdings(hi).Value"
+  ts.WriteLine "        ws.Cells(r, 3).NumberFormat = ""#,##0.00"""
+  ts.WriteLine "        If Not IsNull(ext.Holdings(hi).CostBasis) Then"
+  ts.WriteLine "            ws.Cells(r, 4).Value = ext.Holdings(hi).CostBasis"
+  ts.WriteLine "            ws.Cells(r, 4).NumberFormat = ""#,##0.00"""
+  ts.WriteLine "        End If"
+  ts.WriteLine "        If Not IsNull(ext.Holdings(hi).UnrealizedGL) Then"
+  ts.WriteLine "            ws.Cells(r, 5).Value = ext.Holdings(hi).UnrealizedGL"
+  ts.WriteLine "            ws.Cells(r, 5).NumberFormat = ""#,##0.00"""
+  ts.WriteLine "        End If"
+  ts.WriteLine "        r = r + 1"
+  ts.WriteLine "    Next hi"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ' === Transactions ==="
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Transactions"""
+  ts.WriteLine "    ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Size = 12"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Date"""
+  ts.WriteLine "    ws.Cells(r, 2).Value = ""Activity"""
+  ts.WriteLine "    ws.Cells(r, 3).Value = ""Description"""
+  ts.WriteLine "    ws.Cells(r, 4).Value = ""Amount"""
+  ts.WriteLine "    ws.Cells(r, 5).Value = ""Quantity"""
+  ts.WriteLine "    ws.Cells(r, 6).Value = ""Price"""
+  ts.WriteLine "    ws.Cells(r, 7).Value = ""Symbol"""
+  ts.WriteLine "    ws.Cells(r, 8).Value = ""CUSIP"""
+  ts.WriteLine "    ws.Cells(r, 9).Value = ""Ref#"""
+  ts.WriteLine "    Dim tc As Long"
+  ts.WriteLine "    For tc = 1 To 9: ws.Cells(r, tc).Font.Bold = True: Next tc"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim ti As Long"
+  ts.WriteLine "    For ti = 0 To ext.TransactionCount - 1"
+  ts.WriteLine "        ws.Cells(r, 1).Value = ext.Transactions(ti).TxDate"
+  ts.WriteLine "        ws.Cells(r, 2).Value = ext.Transactions(ti).Activity"
+  ts.WriteLine "        ws.Cells(r, 3).Value = ext.Transactions(ti).Description"
+  ts.WriteLine "        ws.Cells(r, 4).Value = ext.Transactions(ti).Amount"
+  ts.WriteLine "        ws.Cells(r, 4).NumberFormat = ""#,##0.00"""
+  ts.WriteLine "        If Not IsNull(ext.Transactions(ti).Quantity) Then"
+  ts.WriteLine "            ws.Cells(r, 5).Value = ext.Transactions(ti).Quantity"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        If Not IsNull(ext.Transactions(ti).Price) Then"
+  ts.WriteLine "            ws.Cells(r, 6).Value = ext.Transactions(ti).Price"
+  ts.WriteLine "            ws.Cells(r, 6).NumberFormat = ""#,##0.000000"""
+  ts.WriteLine "        End If"
+  ts.WriteLine "        ws.Cells(r, 7).Value = ext.Transactions(ti).Symbol"
+  ts.WriteLine "        ws.Cells(r, 8).Value = ext.Transactions(ti).Cusip"
+  ts.WriteLine "        ws.Cells(r, 9).Value = ext.Transactions(ti).RefNumber"
+  ts.WriteLine "        r = r + 1"
+  ts.WriteLine "    Next ti"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ' === Income ==="
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Income"""
+  ts.WriteLine "    ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Size = 12"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    WriteNum ws, r, ""Total Month"", ext.Income.TotalMonth: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Taxable Dividends"", ext.Income.TaxableDividendsMonth: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Tax-Exempt Dividends"", ext.Income.TaxExemptDividendsMonth: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Taxable Interest"", ext.Income.TaxableInterestMonth: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Tax-Exempt Interest"", ext.Income.TaxExemptInterestMonth: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Miscellaneous"", ext.Income.MiscellaneousMonth: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Accrued Interest Received"", ext.Income.AccruedInterestReceived: r = r + 1"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ' === Gains & Losses ==="
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Realized Gains & Losses"""
+  ts.WriteLine "    ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Size = 12"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    WriteNum ws, r, ""Short Term (Month)"", ext.Gains.ShortTermRealizedMonth: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Long Term (Month)"", ext.Gains.LongTermRealizedMonth: r = r + 1"
+  ts.WriteLine "    WriteNum ws, r, ""Total Unrealized"", ext.Gains.TotalUnrealized: r = r + 1"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ' === Reconciliation ==="
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Reconciliation"""
+  ts.WriteLine "    ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Size = 12"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Checks are already computed by ExtractFromText -> RunReconciliation"
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Check"""
+  ts.WriteLine "    ws.Cells(r, 2).Value = ""Expected"""
+  ts.WriteLine "    ws.Cells(r, 3).Value = ""Actual"""
+  ts.WriteLine "    ws.Cells(r, 4).Value = ""Diff"""
+  ts.WriteLine "    ws.Cells(r, 5).Value = ""Pass"""
+  ts.WriteLine "    Dim rc As Long"
+  ts.WriteLine "    For rc = 1 To 5: ws.Cells(r, rc).Font.Bold = True: Next rc"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim ci As Long"
+  ts.WriteLine "    For ci = 0 To ext.CheckCount - 1"
+  ts.WriteLine "        ws.Cells(r, 1).Value = ext.Checks(ci).name"
+  ts.WriteLine "        ws.Cells(r, 2).Value = ext.Checks(ci).Expected"
+  ts.WriteLine "        ws.Cells(r, 2).NumberFormat = ""#,##0.00"""
+  ts.WriteLine "        ws.Cells(r, 3).Value = ext.Checks(ci).Actual"
+  ts.WriteLine "        ws.Cells(r, 3).NumberFormat = ""#,##0.00"""
+  ts.WriteLine "        ws.Cells(r, 4).Value = ext.Checks(ci).Diff"
+  ts.WriteLine "        ws.Cells(r, 4).NumberFormat = ""#,##0.00"""
+  ts.WriteLine "        If ext.Checks(ci).Pass Then"
+  ts.WriteLine "            ws.Cells(r, 5).Value = ""PASS"""
+  ts.WriteLine "            ws.Cells(r, 5).Font.Color = RGB(0, 128, 0)"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            ws.Cells(r, 5).Value = ""FAIL"""
+  ts.WriteLine "            ws.Cells(r, 5).Font.Color = RGB(255, 0, 0)"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        r = r + 1"
+  ts.WriteLine "    Next ci"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Format columns"
+  ts.WriteLine "    ws.Columns(""A"").ColumnWidth = 30"
+  ts.WriteLine "    ws.Columns(""B"").ColumnWidth = 20"
+  ts.WriteLine "    ws.Columns(""C"").ColumnWidth = 50"
+  ts.WriteLine "    ws.Columns(""D"").ColumnWidth = 15"
+  ts.WriteLine "    ws.Columns(""E"").ColumnWidth = 15"
+  ts.WriteLine "    ws.Columns(""F"").ColumnWidth = 15"
+  ts.WriteLine "    ws.Columns(""G"").ColumnWidth = 12"
+  ts.WriteLine "    ws.Columns(""H"").ColumnWidth = 12"
+  ts.WriteLine "    ws.Columns(""I"").ColumnWidth = 15"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.Calculation = prevCalc"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub WriteKV(ws As Worksheet, r As Long, label As String, val As String)"
+  ts.WriteLine "    ws.Cells(r, 1).Value = label"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 2).Value = val"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub WriteNum(ws As Worksheet, r As Long, label As String, val As Double)"
+  ts.WriteLine "    ws.Cells(r, 1).Value = label"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 2).Value = val"
+  ts.WriteLine "    ws.Cells(r, 2).NumberFormat = ""#,##0.00"""
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub DeleteSheetIfExists(wsName As String)"
+  ts.WriteLine "    Application.DisplayAlerts = False"
+  ts.WriteLine "    On Error Resume Next"
+  ts.WriteLine "    ThisWorkbook.Worksheets(wsName).Delete"
+  ts.WriteLine "    On Error GoTo 0"
+  ts.WriteLine "    Application.DisplayAlerts = True"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Quick test: extract first page to Immediate window"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub TestPDFExtract()"
+  ts.WriteLine "    Dim filePath As String"
+  ts.WriteLine "    filePath = Application.GetOpenFilename( _"
+  ts.WriteLine "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _"
+  ts.WriteLine "        Title:=""Select a PDF to test"")"
+  ts.WriteLine ""
+  ts.WriteLine "    If filePath = ""False"" Or filePath = """" Then Exit Sub"
+  ts.WriteLine "    On Error GoTo ErrorHandler"
+  ts.WriteLine ""
+  ts.WriteLine "    Debug.Print ""Opening: "" & filePath"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim doc As PDFReader.PDFDocument"
+  ts.WriteLine "    doc = PDFReader.OpenPDF(filePath)"
+  ts.WriteLine ""
+  ts.WriteLine "    Debug.Print ""Pages: "" & doc.pageCount"
+  ts.WriteLine "    Debug.Print ""Encrypted: "" & doc.isEncrypted"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim text As String"
+  ts.WriteLine "    text = PDFTextExtract.ExtractPageText(doc, 0)"
+  ts.WriteLine ""
+  ts.WriteLine "    Debug.Print ""=== Page 1 Text ("" & Len(text) & "" chars) ==="""
+  ts.WriteLine "    Debug.Print Left$(text, 2000)"
+  ts.WriteLine "    Debug.Print ""=== End ==="""
+  ts.WriteLine ""
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine "    Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "ErrorHandler:"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine "    Debug.Print ""ERROR: "" & Err.Description"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Programmatic API"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ExtractPDFToArray(filePath As String) As String()"
+  ts.WriteLine "    Dim doc As PDFReader.PDFDocument"
+  ts.WriteLine "    doc = PDFReader.OpenPDF(filePath)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim pages() As String"
+  ts.WriteLine "    pages = PDFTextExtract.ExtractAllPagesText(doc)"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractPDFToArray = pages"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ExtractPDFToData(filePath As String) As UBSExtract.StatementExtraction"
+  ts.WriteLine "    Dim doc As PDFReader.PDFDocument"
+  ts.WriteLine "    doc = PDFReader.OpenPDF(filePath)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim pages() As String"
+  ts.WriteLine "    pages = PDFTextExtract.ExtractAllPagesText(doc)"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim fullText As String"
+  ts.WriteLine "    fullText = BuildFullText(pages)"
+  ts.WriteLine ""
+  ts.WriteLine "    ExtractPDFToData = UBSExtract.ExtractFromText(fullText)"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' 5. Extract summary/multi-account PDF"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub ExtractSummaryOrMultiPdf()"
+  ts.WriteLine "    Dim filePath As String"
+  ts.WriteLine "    filePath = Application.GetOpenFilename( _"
+  ts.WriteLine "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _"
+  ts.WriteLine "        Title:=""Select a UBS Summary/Multi-Account PDF"")"
+  ts.WriteLine ""
+  ts.WriteLine "    If filePath = ""False"" Or filePath = """" Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = ""Opening PDF..."""
+  ts.WriteLine "    Application.ScreenUpdating = False"
+  ts.WriteLine "    On Error GoTo SummaryErrorHandler"
+  ts.WriteLine ""
+  ts.WriteLine "    ' PDF -> pages"
+  ts.WriteLine "    Dim doc As PDFReader.PDFDocument"
+  ts.WriteLine "    doc = PDFReader.OpenPDF(filePath)"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = ""Extracting text from "" & doc.pageCount & "" pages..."""
+  ts.WriteLine "    Dim pages() As String"
+  ts.WriteLine "    pages = PDFTextExtract.ExtractAllPagesText(doc)"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Detect PDF type and extract"
+  ts.WriteLine "    Dim portfolio As UBSSummary.PortfolioExtraction"
+  ts.WriteLine ""
+  ts.WriteLine "    If UBSSummary.IsSummaryPdf(pages(LBound(pages))) Then"
+  ts.WriteLine "        Application.StatusBar = ""Extracting summary PDF..."""
+  ts.WriteLine "        portfolio = UBSSummary.ExtractSummaryPdf(pages)"
+  ts.WriteLine "    ElseIf UBSSummary.IsMultiAccountPdf(pages) Then"
+  ts.WriteLine "        Application.StatusBar = ""Extracting multi-account PDF..."""
+  ts.WriteLine "        portfolio = UBSSummary.ExtractMultiAccountPdf(pages)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        ' Single account — wrap in portfolio structure"
+  ts.WriteLine "        Application.StatusBar = ""Extracting single-account PDF..."""
+  ts.WriteLine "        Dim fullText As String"
+  ts.WriteLine "        fullText = BuildFullText(pages)"
+  ts.WriteLine "        Dim ext As UBSExtract.StatementExtraction"
+  ts.WriteLine "        ext = UBSExtract.ExtractFromText(fullText)"
+  ts.WriteLine ""
+  ts.WriteLine "        portfolio.AccountCount = 1"
+  ts.WriteLine "        ReDim portfolio.Accounts(0 To 0)"
+  ts.WriteLine "        portfolio.Accounts(0).AccountNumber = ext.Summary.AccountNumber"
+  ts.WriteLine "        portfolio.Accounts(0).Extraction = ext"
+  ts.WriteLine "        portfolio.LoanAccountCount = 0"
+  ts.WriteLine "        ReDim portfolio.LoanAccounts(0 To 0)"
+  ts.WriteLine "        portfolio.WarningCount = 0"
+  ts.WriteLine "        ReDim portfolio.Warnings(0 To 0)"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Output to worksheet"
+  ts.WriteLine "    WritePortfolioToSheet portfolio, filePath"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = """""
+  ts.WriteLine "    Application.ScreenUpdating = True"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim msg As String"
+  ts.WriteLine "    msg = ""Portfolio Extraction Complete"" & vbCrLf & vbCrLf & _"
+  ts.WriteLine "          ""Investment Accounts: "" & portfolio.AccountCount & vbCrLf & _"
+  ts.WriteLine "          ""Loan Accounts: "" & portfolio.LoanAccountCount"
+  ts.WriteLine ""
+  ts.WriteLine "    If portfolio.WarningCount > 0 Then"
+  ts.WriteLine "        msg = msg & vbCrLf & vbCrLf & ""Warnings: "" & portfolio.WarningCount"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    MsgBox msg, vbInformation, ""UBS Portfolio Extractor"""
+  ts.WriteLine "    Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "SummaryErrorHandler:"
+  ts.WriteLine "    Application.StatusBar = """""
+  ts.WriteLine "    Application.ScreenUpdating = True"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine "    MsgBox ""Error: "" & Err.Description, vbCritical, ""Portfolio Extractor Error"""
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' 6. Extract summary/multi-account PDF and write to QPR"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Sub ExtractPortfolioToQPR()"
+  ts.WriteLine "    ' Select PDF"
+  ts.WriteLine "    Dim filePath As String"
+  ts.WriteLine "    filePath = Application.GetOpenFilename( _"
+  ts.WriteLine "        FileFilter:=""PDF Files (*.pdf), *.pdf"", _"
+  ts.WriteLine "        Title:=""Select a UBS Summary/Multi-Account PDF"")"
+  ts.WriteLine "    If filePath = ""False"" Or filePath = """" Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Select QPR workbook"
+  ts.WriteLine "    Dim qprPath As String"
+  ts.WriteLine "    qprPath = Application.GetOpenFilename( _"
+  ts.WriteLine "        FileFilter:=""Excel Files (*.xls*), *.xls*"", _"
+  ts.WriteLine "        Title:=""Select the QPR Workbook"")"
+  ts.WriteLine "    If qprPath = ""False"" Or qprPath = """" Then Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = ""Opening PDF..."""
+  ts.WriteLine "    Application.ScreenUpdating = False"
+  ts.WriteLine "    On Error GoTo PortfolioQPRError"
+  ts.WriteLine ""
+  ts.WriteLine "    ' PDF -> pages"
+  ts.WriteLine "    Dim doc As PDFReader.PDFDocument"
+  ts.WriteLine "    doc = PDFReader.OpenPDF(filePath)"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = ""Extracting text..."""
+  ts.WriteLine "    Dim pages() As String"
+  ts.WriteLine "    pages = PDFTextExtract.ExtractAllPagesText(doc)"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Detect PDF type and extract"
+  ts.WriteLine "    Dim portfolio As UBSSummary.PortfolioExtraction"
+  ts.WriteLine ""
+  ts.WriteLine "    If UBSSummary.IsSummaryPdf(pages(LBound(pages))) Then"
+  ts.WriteLine "        Application.StatusBar = ""Extracting summary PDF..."""
+  ts.WriteLine "        portfolio = UBSSummary.ExtractSummaryPdf(pages)"
+  ts.WriteLine "    ElseIf UBSSummary.IsMultiAccountPdf(pages) Then"
+  ts.WriteLine "        Application.StatusBar = ""Extracting multi-account PDF..."""
+  ts.WriteLine "        portfolio = UBSSummary.ExtractMultiAccountPdf(pages)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        Application.StatusBar = ""Extracting single-account PDF..."""
+  ts.WriteLine "        Dim fullText As String"
+  ts.WriteLine "        fullText = BuildFullText(pages)"
+  ts.WriteLine "        Dim ext As UBSExtract.StatementExtraction"
+  ts.WriteLine "        ext = UBSExtract.ExtractFromText(fullText)"
+  ts.WriteLine ""
+  ts.WriteLine "        portfolio.AccountCount = 1"
+  ts.WriteLine "        ReDim portfolio.Accounts(0 To 0)"
+  ts.WriteLine "        portfolio.Accounts(0).AccountNumber = ext.Summary.AccountNumber"
+  ts.WriteLine "        portfolio.Accounts(0).Extraction = ext"
+  ts.WriteLine "        portfolio.LoanAccountCount = 0"
+  ts.WriteLine "        ReDim portfolio.LoanAccounts(0 To 0)"
+  ts.WriteLine "        portfolio.WarningCount = 0"
+  ts.WriteLine "        ReDim portfolio.Warnings(0 To 0)"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Open QPR workbook and write each account"
+  ts.WriteLine "    Application.StatusBar = ""Writing to QPR..."""
+  ts.WriteLine "    Dim qprWb As Workbook"
+  ts.WriteLine "    Set qprWb = Workbooks.Open(qprPath)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim i As Long"
+  ts.WriteLine "    For i = 0 To portfolio.AccountCount - 1"
+  ts.WriteLine "        If portfolio.Accounts(i).AccountNumber <> """" Then"
+  ts.WriteLine "            Application.StatusBar = ""Writing account "" & portfolio.Accounts(i).AccountNumber & "" to QPR..."""
+  ts.WriteLine "            QPRWriter.WriteQPR portfolio.Accounts(i).Extraction, qprWb"
+  ts.WriteLine "        End If"
+  ts.WriteLine "    Next i"
+  ts.WriteLine ""
+  ts.WriteLine "    Application.StatusBar = """""
+  ts.WriteLine "    Application.ScreenUpdating = True"
+  ts.WriteLine ""
+  ts.WriteLine "    MsgBox ""Wrote "" & portfolio.AccountCount & "" account(s) to QPR."", vbInformation, ""QPR Writer"""
+  ts.WriteLine "    Exit Sub"
+  ts.WriteLine ""
+  ts.WriteLine "PortfolioQPRError:"
+  ts.WriteLine "    Application.StatusBar = """""
+  ts.WriteLine "    Application.ScreenUpdating = True"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine "    MsgBox ""Error: "" & Err.Description, vbCritical, ""Portfolio QPR Error"""
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Helper: write portfolio data to worksheet"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Private Sub WritePortfolioToSheet(portfolio As UBSSummary.PortfolioExtraction, filePath As String)"
+  ts.WriteLine "    Dim wsName As String"
+  ts.WriteLine "    wsName = ""Portfolio Extract"""
+  ts.WriteLine "    DeleteSheetIfExists wsName"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim prevCalc As Long"
+  ts.WriteLine "    prevCalc = Application.Calculation"
+  ts.WriteLine "    Application.Calculation = xlCalculationManual"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim ws As Worksheet"
+  ts.WriteLine "    Set ws = ThisWorkbook.Worksheets.Add"
+  ts.WriteLine "    ws.name = wsName"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim r As Long"
+  ts.WriteLine "    r = 1"
+  ts.WriteLine ""
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""UBS Portfolio Extraction"""
+  ts.WriteLine "    ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Size = 14"
+  ts.WriteLine "    r = r + 1"
+  ts.WriteLine "    ws.Cells(r, 1).Value = ""Source: "" & filePath"
+  ts.WriteLine "    ws.Cells(r, 1).Font.Italic = True"
+  ts.WriteLine "    r = r + 2"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Investment accounts"
+  ts.WriteLine "    Dim ai As Long"
+  ts.WriteLine "    For ai = 0 To portfolio.AccountCount - 1"
+  ts.WriteLine "        Dim ext As UBSExtract.StatementExtraction"
+  ts.WriteLine "        ext = portfolio.Accounts(ai).Extraction"
+  ts.WriteLine ""
+  ts.WriteLine "        ws.Cells(r, 1).Value = ""Account: "" & ext.Summary.AccountNumber & "" — "" & ext.Summary.AccountName"
+  ts.WriteLine "        ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "        ws.Cells(r, 1).Font.Size = 12"
+  ts.WriteLine "        r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "        WriteKV ws, r, ""Period"", ext.Summary.StatementPeriod: r = r + 1"
+  ts.WriteLine "        WriteNum ws, r, ""Opening Value"", ext.Summary.OpeningValue: r = r + 1"
+  ts.WriteLine "        WriteNum ws, r, ""Closing Value"", ext.Summary.ClosingValue: r = r + 1"
+  ts.WriteLine "        WriteKV ws, r, ""Transactions"", CStr(ext.TransactionCount): r = r + 1"
+  ts.WriteLine "        WriteKV ws, r, ""Holdings"", CStr(ext.HoldingCount): r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "        ' Reconciliation checks"
+  ts.WriteLine "        Dim allPass As Boolean"
+  ts.WriteLine "        allPass = True"
+  ts.WriteLine "        Dim ci As Long"
+  ts.WriteLine "        For ci = 0 To ext.CheckCount - 1"
+  ts.WriteLine "            If Not ext.Checks(ci).Pass Then allPass = False"
+  ts.WriteLine "        Next ci"
+  ts.WriteLine ""
+  ts.WriteLine "        If allPass Then"
+  ts.WriteLine "            ws.Cells(r, 1).Value = ""Reconciliation: ALL PASS ("" & ext.CheckCount & "" checks)"""
+  ts.WriteLine "            ws.Cells(r, 1).Font.Color = RGB(0, 128, 0)"
+  ts.WriteLine "        Else"
+  ts.WriteLine "            ws.Cells(r, 1).Value = ""Reconciliation: SOME CHECKS FAILED"""
+  ts.WriteLine "            ws.Cells(r, 1).Font.Color = RGB(255, 0, 0)"
+  ts.WriteLine "        End If"
+  ts.WriteLine "        r = r + 2"
+  ts.WriteLine "    Next ai"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Loan accounts"
+  ts.WriteLine "    If portfolio.LoanAccountCount > 0 Then"
+  ts.WriteLine "        ws.Cells(r, 1).Value = ""Loan Accounts"""
+  ts.WriteLine "        ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "        ws.Cells(r, 1).Font.Size = 12"
+  ts.WriteLine "        r = r + 1"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim li As Long"
+  ts.WriteLine "        For li = 0 To portfolio.LoanAccountCount - 1"
+  ts.WriteLine "            Dim loan As UBSLoanExtract.LoanExtraction"
+  ts.WriteLine "            loan = portfolio.LoanAccounts(li).Extraction"
+  ts.WriteLine ""
+  ts.WriteLine "            ws.Cells(r, 1).Value = ""Loan: "" & loan.Summary.AccountNumbers & "" — "" & loan.Summary.LoanType"
+  ts.WriteLine "            ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "            r = r + 1"
+  ts.WriteLine "            WriteNum ws, r, ""Opening Balance"", loan.Summary.OpeningBalance: r = r + 1"
+  ts.WriteLine "            WriteNum ws, r, ""Closing Balance"", loan.Summary.ClosingBalance: r = r + 1"
+  ts.WriteLine "            WriteNum ws, r, ""Available Credit"", loan.Summary.AvailableCredit: r = r + 1"
+  ts.WriteLine "            If loan.Summary.VariableRate > 0 Then"
+  ts.WriteLine "                ws.Cells(r, 1).Value = ""Variable Rate"""
+  ts.WriteLine "                ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "                ws.Cells(r, 2).Value = loan.Summary.VariableRate & ""%"""
+  ts.WriteLine "                r = r + 1"
+  ts.WriteLine "            End If"
+  ts.WriteLine "            WriteKV ws, r, ""Transactions"", CStr(loan.TransactionCount): r = r + 1"
+  ts.WriteLine "            WriteKV ws, r, ""Fixed Contracts"", CStr(loan.ContractCount): r = r + 1"
+  ts.WriteLine "            r = r + 1"
+  ts.WriteLine "        Next li"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ' Warnings"
+  ts.WriteLine "    If portfolio.WarningCount > 0 Then"
+  ts.WriteLine "        ws.Cells(r, 1).Value = ""Warnings"""
+  ts.WriteLine "        ws.Cells(r, 1).Font.Bold = True"
+  ts.WriteLine "        ws.Cells(r, 1).Font.Size = 12"
+  ts.WriteLine "        ws.Cells(r, 1).Font.Color = RGB(255, 128, 0)"
+  ts.WriteLine "        r = r + 1"
+  ts.WriteLine "        Dim wi As Long"
+  ts.WriteLine "        For wi = 0 To portfolio.WarningCount - 1"
+  ts.WriteLine "            ws.Cells(r, 1).Value = portfolio.Warnings(wi)"
+  ts.WriteLine "            r = r + 1"
+  ts.WriteLine "        Next wi"
+  ts.WriteLine "    End If"
+  ts.WriteLine ""
+  ts.WriteLine "    ws.Columns(""A"").ColumnWidth = 50"
+  ts.WriteLine "    ws.Columns(""B"").ColumnWidth = 20"
+  ts.WriteLine "    Application.Calculation = prevCalc"
+  ts.WriteLine "End Sub"
+  ts.WriteLine ""
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine "' Programmatic API: extract portfolio from PDF file"
+  ts.WriteLine "' ============================================================================"
+  ts.WriteLine ""
+  ts.WriteLine "Public Function ExtractPDFToPortfolio(filePath As String) As UBSSummary.PortfolioExtraction"
+  ts.WriteLine "    Dim doc As PDFReader.PDFDocument"
+  ts.WriteLine "    doc = PDFReader.OpenPDF(filePath)"
+  ts.WriteLine ""
+  ts.WriteLine "    Dim pages() As String"
+  ts.WriteLine "    pages = PDFTextExtract.ExtractAllPagesText(doc)"
+  ts.WriteLine "    PDFCrypto.ReleaseCrypto"
+  ts.WriteLine ""
+  ts.WriteLine "    If UBSSummary.IsSummaryPdf(pages(LBound(pages))) Then"
+  ts.WriteLine "        ExtractPDFToPortfolio = UBSSummary.ExtractSummaryPdf(pages)"
+  ts.WriteLine "    ElseIf UBSSummary.IsMultiAccountPdf(pages) Then"
+  ts.WriteLine "        ExtractPDFToPortfolio = UBSSummary.ExtractMultiAccountPdf(pages)"
+  ts.WriteLine "    Else"
+  ts.WriteLine "        ' Single account — wrap"
+  ts.WriteLine "        Dim fullText As String"
+  ts.WriteLine "        fullText = BuildFullText(pages)"
+  ts.WriteLine "        Dim ext As UBSExtract.StatementExtraction"
+  ts.WriteLine "        ext = UBSExtract.ExtractFromText(fullText)"
+  ts.WriteLine ""
+  ts.WriteLine "        Dim result As UBSSummary.PortfolioExtraction"
+  ts.WriteLine "        result.AccountCount = 1"
+  ts.WriteLine "        ReDim result.Accounts(0 To 0)"
+  ts.WriteLine "        result.Accounts(0).AccountNumber = ext.Summary.AccountNumber"
+  ts.WriteLine "        result.Accounts(0).Extraction = ext"
+  ts.WriteLine "        result.LoanAccountCount = 0"
+  ts.WriteLine "        ReDim result.LoanAccounts(0 To 0)"
+  ts.WriteLine "        result.WarningCount = 0"
+  ts.WriteLine "        ReDim result.Warnings(0 To 0)"
+  ts.WriteLine "        ExtractPDFToPortfolio = result"
+  ts.WriteLine "    End If"
+  ts.WriteLine "End Function"
+  ts.WriteLine ""
+End Sub
