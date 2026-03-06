@@ -331,7 +331,7 @@ Private Function GetModule_PDFCrypto() As String
   GetModule_PDFCrypto = s
 End Function
 
-Private Function GetModule_PDFDeflate() As String
+Private Function GetModule_PDFDeflate_1() As String
   Dim s As String
   s = ""
   s = s & "Attribute VB_Name = ""PDFDeflate""" & vbCrLf
@@ -734,6 +734,12 @@ Private Function GetModule_PDFDeflate() As String
   s = s & "            newSize = newSize * 2" & vbCrLf
   s = s & "        Loop" & vbCrLf
   s = s & "        ReDim Preserve buffer(0 To newSize - 1)" & vbCrLf
+  GetModule_PDFDeflate_1 = s
+End Function
+
+Private Function GetModule_PDFDeflate_2() As String
+  Dim s As String
+  s = ""
   s = s & "    End If" & vbCrLf
   s = s & "End Sub" & vbCrLf
   s = s & "" & vbCrLf
@@ -815,10 +821,16 @@ Private Function GetModule_PDFDeflate() As String
   s = s & "    InflateRaw = output" & vbCrLf
   s = s & "End Function" & vbCrLf
   s = s & "" & vbCrLf
-  GetModule_PDFDeflate = s
+  GetModule_PDFDeflate_2 = s
 End Function
 
-Private Function GetModule_PDFReader() As String
+Private Function GetModule_PDFDeflate() As String
+  GetModule_PDFDeflate = ""
+  GetModule_PDFDeflate = GetModule_PDFDeflate & GetModule_PDFDeflate_1()
+  GetModule_PDFDeflate = GetModule_PDFDeflate & GetModule_PDFDeflate_2()
+End Function
+
+Private Function GetModule_PDFReader_1() As String
   Dim s As String
   s = ""
   s = s & "Attribute VB_Name = ""PDFReader""" & vbCrLf
@@ -1221,6 +1233,12 @@ Private Function GetModule_PDFReader() As String
   s = s & "                Case &H5C: result(outIdx) = &H5C" & vbCrLf
   s = s & "                Case 48 To 55" & vbCrLf
   s = s & "                    Dim octal As String" & vbCrLf
+  GetModule_PDFReader_1 = s
+End Function
+
+Private Function GetModule_PDFReader_2() As String
+  Dim s As String
+  s = ""
   s = s & "                    octal = Chr$(c)" & vbCrLf
   s = s & "                    If pos + 1 < doc.dataLen And doc.data(pos + 1) >= 48 And doc.data(pos + 1) <= 55 Then" & vbCrLf
   s = s & "                        pos = pos + 1" & vbCrLf
@@ -1621,6 +1639,12 @@ Private Function GetModule_PDFReader() As String
   s = s & "                            xobjContent = ExpandXObjectDo(doc, xobjText, xobjContent, depth + 1)" & vbCrLf
   s = s & "                        End If" & vbCrLf
   s = s & "" & vbCrLf
+  GetModule_PDFReader_2 = s
+End Function
+
+Private Function GetModule_PDFReader_3() As String
+  Dim s As String
+  s = ""
   s = s & "                        result = result & vbLf & xobjContent & vbLf" & vbCrLf
   s = s & "                    End If" & vbCrLf
   s = s & "                End If" & vbCrLf
@@ -1886,10 +1910,17 @@ Private Function GetModule_PDFReader() As String
   s = s & "    Loop" & vbCrLf
   s = s & "End Sub" & vbCrLf
   s = s & "" & vbCrLf
-  GetModule_PDFReader = s
+  GetModule_PDFReader_3 = s
 End Function
 
-Private Function GetModule_PDFTextExtract() As String
+Private Function GetModule_PDFReader() As String
+  GetModule_PDFReader = ""
+  GetModule_PDFReader = GetModule_PDFReader & GetModule_PDFReader_1()
+  GetModule_PDFReader = GetModule_PDFReader & GetModule_PDFReader_2()
+  GetModule_PDFReader = GetModule_PDFReader & GetModule_PDFReader_3()
+End Function
+
+Private Function GetModule_PDFTextExtract_1() As String
   Dim s As String
   s = ""
   s = s & "Attribute VB_Name = ""PDFTextExtract""" & vbCrLf
@@ -2292,6 +2323,12 @@ Private Function GetModule_PDFTextExtract() As String
   s = s & "    filteredCount = 0" & vbCrLf
   s = s & "" & vbCrLf
   s = s & "    Dim i As Long" & vbCrLf
+  GetModule_PDFTextExtract_1 = s
+End Function
+
+Private Function GetModule_PDFTextExtract_2() As String
+  Dim s As String
+  s = ""
   s = s & "    For i = LBound(items) To UBound(items)" & vbCrLf
   s = s & "        If Len(items(i).str) > 0 Then" & vbCrLf
   s = s & "            filtered(filteredCount) = items(i)" & vbCrLf
@@ -2523,10 +2560,16 @@ Private Function GetModule_PDFTextExtract() As String
   s = s & "    ExtractAllPagesText = pages" & vbCrLf
   s = s & "End Function" & vbCrLf
   s = s & "" & vbCrLf
-  GetModule_PDFTextExtract = s
+  GetModule_PDFTextExtract_2 = s
 End Function
 
-Private Function GetModule_UBSExtract() As String
+Private Function GetModule_PDFTextExtract() As String
+  GetModule_PDFTextExtract = ""
+  GetModule_PDFTextExtract = GetModule_PDFTextExtract & GetModule_PDFTextExtract_1()
+  GetModule_PDFTextExtract = GetModule_PDFTextExtract & GetModule_PDFTextExtract_2()
+End Function
+
+Private Function GetModule_UBSExtract_1() As String
   Dim s As String
   s = ""
   s = s & "Attribute VB_Name = ""UBSExtract""" & vbCrLf
@@ -2929,6 +2972,12 @@ Private Function GetModule_UBSExtract() As String
   s = s & "    Next i" & vbCrLf
   s = s & "" & vbCrLf
   s = s & "    If numCount > 0 Then Value = numericVals(0)" & vbCrLf
+  GetModule_UBSExtract_1 = s
+End Function
+
+Private Function GetModule_UBSExtract_2() As String
+  Dim s As String
+  s = ""
   s = s & "    If numCount = 2 Then" & vbCrLf
   s = s & "        CostBasis = numericVals(1)" & vbCrLf
   s = s & "    ElseIf numCount = 3 Then" & vbCrLf
@@ -3329,6 +3378,12 @@ Private Function GetModule_UBSExtract() As String
   s = s & "    ' Whitespace-collapse regex (hoisted — reused every line)" & vbCrLf
   s = s & "    Dim reWhitespace As Object" & vbCrLf
   s = s & "    Set reWhitespace = CreateRegex(""\s{2,}"", True)" & vbCrLf
+  GetModule_UBSExtract_2 = s
+End Function
+
+Private Function GetModule_UBSExtract_3() As String
+  Dim s As String
+  s = ""
   s = s & "" & vbCrLf
   s = s & "    ' Activity aliases" & vbCrLf
   s = s & "    ' ""Foreign Tax"" -> ""Foreign Tax Withheld""" & vbCrLf
@@ -3729,6 +3784,12 @@ Private Function GetModule_UBSExtract() As String
   s = s & "    p(14) = ""EXECUTION""" & vbCrLf
   s = s & "    p(15) = ""Quantity"": p(16) = ""Percentage of"": p(17) = ""Value on""" & vbCrLf
   s = s & "    p(18) = ""Dividend and interest income"": p(19) = ""Investment transactions""" & vbCrLf
+  GetModule_UBSExtract_3 = s
+End Function
+
+Private Function GetModule_UBSExtract_4() As String
+  Dim s As String
+  s = ""
   s = s & "    p(20) = ""Account name:"": p(21) = ""Friendly account name:"": p(22) = ""Account number:""" & vbCrLf
   s = s & "    p(23) = ""Account type:"": p(24) = ""Your notes"": p(25) = ""End of statement""" & vbCrLf
   s = s & "    p(26) = ""=== PAGE"": p(27) = ""CNQ7"": p(28) = ""NQ7""" & vbCrLf
@@ -4129,6 +4190,12 @@ Private Function GetModule_UBSExtract() As String
   s = s & "    CleanSecurityName = s" & vbCrLf
   s = s & "End Function" & vbCrLf
   s = s & "" & vbCrLf
+  GetModule_UBSExtract_4 = s
+End Function
+
+Private Function GetModule_UBSExtract_5() As String
+  Dim s As String
+  s = ""
   s = s & "Private Function UpdateSecCategory(lines() As String, fromIdx As Long, toIdx As Long, cur As String) As String" & vbCrLf
   s = s & "    Dim j As Long" & vbCrLf
   s = s & "    UpdateSecCategory = cur" & vbCrLf
@@ -4529,6 +4596,12 @@ Private Function GetModule_UBSExtract() As String
   s = s & "            ' INVESTED placeholder: add cost and value, skip units" & vbCrLf
   s = s & "            If tnums.Count >= 5 Then" & vbCrLf
   s = s & "                tCost = tCost + SafeFloat(tnums(2).Value)" & vbCrLf
+  GetModule_UBSExtract_5 = s
+End Function
+
+Private Function GetModule_UBSExtract_6() As String
+  Dim s As String
+  s = ""
   s = s & "                tValue = tValue + SafeFloat(tnums(4).Value)" & vbCrLf
   s = s & "            End If" & vbCrLf
   s = s & "        ElseIf tnums.Count >= 6 Then" & vbCrLf
@@ -4929,6 +5002,12 @@ Private Function GetModule_UBSExtract() As String
   s = s & "                If IsSecBoilerplate(rl) Then GoTo NextSTCheck" & vbCrLf
   s = s & "                If InStr(1, rl, ""(continued)"") > 0 Or InStr(1, rl, ""continued next page"") > 0 Then GoTo NextSTCheck" & vbCrLf
   s = s & "                If IsSecTradeLine(rl) Then Exit For" & vbCrLf
+  GetModule_UBSExtract_6 = s
+End Function
+
+Private Function GetModule_UBSExtract_7() As String
+  Dim s As String
+  s = ""
   s = s & "                If IsAllcapsName(rl) Then Exit For" & vbCrLf
   s = s & "                If IsCategoryBoundary(rl) Then Exit For" & vbCrLf
   s = s & "            End If" & vbCrLf
@@ -5329,6 +5408,12 @@ Private Function GetModule_UBSExtract() As String
   s = s & "                normValues(fi) = normValues(fi) + oiValues(ei)" & vbCrLf
   s = s & "                normCosts(fi) = normCosts(fi) + oiCosts(ei)" & vbCrLf
   s = s & "                found = True" & vbCrLf
+  GetModule_UBSExtract_7 = s
+End Function
+
+Private Function GetModule_UBSExtract_8() As String
+  Dim s As String
+  s = ""
   s = s & "                Exit For" & vbCrLf
   s = s & "            End If" & vbCrLf
   s = s & "        Next fi" & vbCrLf
@@ -5729,6 +5814,12 @@ Private Function GetModule_UBSExtract() As String
   s = s & "    Dim assignedKeys() As Boolean" & vbCrLf
   s = s & "    ReDim assignedKeys(0 To keyCount - 1)" & vbCrLf
   s = s & "" & vbCrLf
+  GetModule_UBSExtract_8 = s
+End Function
+
+Private Function GetModule_UBSExtract_9() As String
+  Dim s As String
+  s = ""
   s = s & "    ' Subcategory parents" & vbCrLf
   s = s & "    ' ""Municipal securities"" -> ""Fixed income""" & vbCrLf
   s = s & "" & vbCrLf
@@ -5888,7 +5979,20 @@ Private Function GetModule_UBSExtract() As String
   s = s & "    ExtractFromText = result" & vbCrLf
   s = s & "End Function" & vbCrLf
   s = s & "" & vbCrLf
-  GetModule_UBSExtract = s
+  GetModule_UBSExtract_9 = s
+End Function
+
+Private Function GetModule_UBSExtract() As String
+  GetModule_UBSExtract = ""
+  GetModule_UBSExtract = GetModule_UBSExtract & GetModule_UBSExtract_1()
+  GetModule_UBSExtract = GetModule_UBSExtract & GetModule_UBSExtract_2()
+  GetModule_UBSExtract = GetModule_UBSExtract & GetModule_UBSExtract_3()
+  GetModule_UBSExtract = GetModule_UBSExtract & GetModule_UBSExtract_4()
+  GetModule_UBSExtract = GetModule_UBSExtract & GetModule_UBSExtract_5()
+  GetModule_UBSExtract = GetModule_UBSExtract & GetModule_UBSExtract_6()
+  GetModule_UBSExtract = GetModule_UBSExtract & GetModule_UBSExtract_7()
+  GetModule_UBSExtract = GetModule_UBSExtract & GetModule_UBSExtract_8()
+  GetModule_UBSExtract = GetModule_UBSExtract & GetModule_UBSExtract_9()
 End Function
 
 Private Function GetModule_UBSLoanExtract() As String
@@ -6280,7 +6384,7 @@ Private Function GetModule_UBSLoanExtract() As String
   GetModule_UBSLoanExtract = s
 End Function
 
-Private Function GetModule_UBSSummary() As String
+Private Function GetModule_UBSSummary_1() As String
   Dim s As String
   s = ""
   s = s & "Attribute VB_Name = ""UBSSummary""" & vbCrLf
@@ -6683,6 +6787,12 @@ Private Function GetModule_UBSSummary() As String
   s = s & "" & vbCrLf
   s = s & "    If partCount = 0 Then" & vbCrLf
   s = s & "        BuildPagesText = """"" & vbCrLf
+  GetModule_UBSSummary_1 = s
+End Function
+
+Private Function GetModule_UBSSummary_2() As String
+  Dim s As String
+  s = ""
   s = s & "    Else" & vbCrLf
   s = s & "        ' Join with double newline" & vbCrLf
   s = s & "        Dim result As String" & vbCrLf
@@ -7083,6 +7193,12 @@ Private Function GetModule_UBSSummary() As String
   s = s & "    Dim summaryChanges() As SummaryChangeRef" & vbCrLf
   s = s & "    Dim scCount As Long" & vbCrLf
   s = s & "    ParseSummaryChangeTable summaryText, summaryChanges, scCount" & vbCrLf
+  GetModule_UBSSummary_2 = s
+End Function
+
+Private Function GetModule_UBSSummary_3() As String
+  Dim s As String
+  s = ""
   s = s & "" & vbCrLf
   s = s & "    Dim summaryGains() As SummaryGainsRef" & vbCrLf
   s = s & "    Dim sgCount As Long" & vbCrLf
@@ -7139,10 +7255,17 @@ Private Function GetModule_UBSSummary() As String
   s = s & "    ExtractMultiAccountPdf = result" & vbCrLf
   s = s & "End Function" & vbCrLf
   s = s & "" & vbCrLf
-  GetModule_UBSSummary = s
+  GetModule_UBSSummary_3 = s
 End Function
 
-Private Function GetModule_QPRWriter() As String
+Private Function GetModule_UBSSummary() As String
+  GetModule_UBSSummary = ""
+  GetModule_UBSSummary = GetModule_UBSSummary & GetModule_UBSSummary_1()
+  GetModule_UBSSummary = GetModule_UBSSummary & GetModule_UBSSummary_2()
+  GetModule_UBSSummary = GetModule_UBSSummary & GetModule_UBSSummary_3()
+End Function
+
+Private Function GetModule_QPRWriter_1() As String
   Dim s As String
   s = ""
   s = s & "Attribute VB_Name = ""QPRWriter""" & vbCrLf
@@ -7545,6 +7668,12 @@ Private Function GetModule_QPRWriter() As String
   s = s & "        ClassifyTransaction = Null  ' internal transfer" & vbCrLf
   s = s & "    ElseIf ctx.HasCash And Not secInTab Then" & vbCrLf
   s = s & "        ClassifyTransaction = tx.Amount  ' cash perspective" & vbCrLf
+  GetModule_QPRWriter_1 = s
+End Function
+
+Private Function GetModule_QPRWriter_2() As String
+  Dim s As String
+  s = ""
   s = s & "    ElseIf Not ctx.HasCash And secInTab Then" & vbCrLf
   s = s & "        ClassifyTransaction = -tx.Amount  ' security perspective (negated)" & vbCrLf
   s = s & "    Else" & vbCrLf
@@ -7945,6 +8074,12 @@ Private Function GetModule_QPRWriter() As String
   s = s & "            End If" & vbCrLf
   s = s & "NextRow:" & vbCrLf
   s = s & "        Next ii" & vbCrLf
+  GetModule_QPRWriter_2 = s
+End Function
+
+Private Function GetModule_QPRWriter_3() As String
+  Dim s As String
+  s = ""
   s = s & "" & vbCrLf
   s = s & "        ' Write to cells" & vbCrLf
   s = s & "        Dim ws As Worksheet" & vbCrLf
@@ -8010,10 +8145,17 @@ Private Function GetModule_QPRWriter() As String
   s = s & "' NOTE: WriteQPRMulti was removed because VBA cannot store UDTs in a Dictionary." & vbCrLf
   s = s & "' For multi-account processing, use BatchExtractToQPR (calls WriteQPR per file)." & vbCrLf
   s = s & "" & vbCrLf
-  GetModule_QPRWriter = s
+  GetModule_QPRWriter_3 = s
 End Function
 
-Private Function GetModule_PDFExtractorMain() As String
+Private Function GetModule_QPRWriter() As String
+  GetModule_QPRWriter = ""
+  GetModule_QPRWriter = GetModule_QPRWriter & GetModule_QPRWriter_1()
+  GetModule_QPRWriter = GetModule_QPRWriter & GetModule_QPRWriter_2()
+  GetModule_QPRWriter = GetModule_QPRWriter & GetModule_QPRWriter_3()
+End Function
+
+Private Function GetModule_PDFExtractorMain_1() As String
   Dim s As String
   s = ""
   s = s & "Attribute VB_Name = ""PDFExtractorMain""" & vbCrLf
@@ -8416,6 +8558,12 @@ Private Function GetModule_PDFExtractorMain() As String
   s = s & "        ws.Cells(r, 1).Value = ext.Allocations(ai).Category" & vbCrLf
   s = s & "        ws.Cells(r, 2).Value = ext.Allocations(ai).Value" & vbCrLf
   s = s & "        ws.Cells(r, 2).NumberFormat = ""#,##0.00""" & vbCrLf
+  GetModule_PDFExtractorMain_1 = s
+End Function
+
+Private Function GetModule_PDFExtractorMain_2() As String
+  Dim s As String
+  s = ""
   s = s & "        ws.Cells(r, 3).Value = ext.Allocations(ai).Percentage / 100" & vbCrLf
   s = s & "        ws.Cells(r, 3).NumberFormat = ""0.00%""" & vbCrLf
   s = s & "        r = r + 1" & vbCrLf
@@ -8816,6 +8964,12 @@ Private Function GetModule_PDFExtractorMain() As String
   s = s & "    PDFCrypto.ReleaseCrypto" & vbCrLf
   s = s & "    MsgBox ""Error: "" & Err.Description, vbCritical, ""Portfolio QPR Error""" & vbCrLf
   s = s & "End Sub" & vbCrLf
+  GetModule_PDFExtractorMain_2 = s
+End Function
+
+Private Function GetModule_PDFExtractorMain_3() As String
+  Dim s As String
+  s = ""
   s = s & "" & vbCrLf
   s = s & "' ============================================================================" & vbCrLf
   s = s & "' Helper: write portfolio data to worksheet" & vbCrLf
@@ -8965,5 +9119,12 @@ Private Function GetModule_PDFExtractorMain() As String
   s = s & "    End If" & vbCrLf
   s = s & "End Function" & vbCrLf
   s = s & "" & vbCrLf
-  GetModule_PDFExtractorMain = s
+  GetModule_PDFExtractorMain_3 = s
+End Function
+
+Private Function GetModule_PDFExtractorMain() As String
+  GetModule_PDFExtractorMain = ""
+  GetModule_PDFExtractorMain = GetModule_PDFExtractorMain & GetModule_PDFExtractorMain_1()
+  GetModule_PDFExtractorMain = GetModule_PDFExtractorMain & GetModule_PDFExtractorMain_2()
+  GetModule_PDFExtractorMain = GetModule_PDFExtractorMain & GetModule_PDFExtractorMain_3()
 End Function
