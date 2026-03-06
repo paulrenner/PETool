@@ -99,6 +99,7 @@ On Error GoTo 0
 ' Save as .xlsm
 Dim savePath
 savePath = fso.BuildPath(scriptDir, "PDFExtractor.xlsm")
+xl.DisplayAlerts = True
 
 On Error Resume Next
 wb.SaveAs savePath, 52  ' 52 = xlOpenXMLWorkbookMacroEnabled
